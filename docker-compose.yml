@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sarvcast-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    depends_on:
+      - db
+      - redis
+    networks:
+      - sarvcast-network
+
+  db:
+    image: mysql:8.0
+    container_name: sarvcast-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sarvcast
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_USER: sarvcast_user
+      MYSQL_PASSWORD: sarvcast_password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - sarvcast-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sarvcast-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sarvcast-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: sarvcast-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/sites:/etc/nginx/sites-available
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./storage/app/public:/var/www/html/storage/app/public
+    depends_on:
+      - app
+    networks:
+      - sarvcast-network
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sarvcast-queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan queue:work --verbose --tries=3 --timeout=90
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    depends_on:
+      - db
+      - redis
+    networks:
+      - sarvcast-network
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sarvcast-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan schedule:work
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    depends_on:
+      - db
+      - redis
+    networks:
+      - sarvcast-network
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  sarvcast-network:
+    driver: bridge
