@@ -6,11 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\Story;
 use App\Models\Favorite;
 use App\Models\Rating;
+use App\Services\AccessControlService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class StoryController extends Controller
 {
+    protected $accessControlService;
+
+    public function __construct(AccessControlService $accessControlService)
+    {
+        $this->accessControlService = $accessControlService;
+    }
     /**
      * Get paginated list of stories
      */
@@ -75,31 +82,48 @@ class StoryController extends Controller
     /**
      * Get detailed story information
      */
-    public function show(Story $story)
+    public function show(Request $request, Story $story)
     {
         $story->load(['category', 'director', 'writer', 'author', 'narrator', 'episodes', 'people']);
         
+        // Check access control
+        $user = $request->user();
+        $accessInfo = $this->accessControlService->canAccessStory($user ? $user->id : 0, $story->id);
+        
         // Check if user has favorited this story
         $isFavorite = false;
-        if (Auth::check()) {
-            $isFavorite = Favorite::where('user_id', Auth::id())
+        if ($user) {
+            $isFavorite = Favorite::where('user_id', $user->id)
                 ->where('story_id', $story->id)
                 ->exists();
         }
 
         // Get user's rating if authenticated
         $userRating = null;
-        if (Auth::check()) {
-            $rating = Rating::where('user_id', Auth::id())
+        if ($user) {
+            $rating = Rating::where('user_id', $user->id)
                 ->where('story_id', $story->id)
                 ->first();
             $userRating = $rating ? $rating->rating : null;
+        }
+
+        // Filter episodes based on access
+        $accessibleEpisodes = [];
+        if ($accessInfo['has_access']) {
+            foreach ($story->episodes as $episode) {
+                $episodeAccess = $this->accessControlService->canAccessEpisode($user ? $user->id : 0, $episode->id);
+                if ($episodeAccess['has_access']) {
+                    $accessibleEpisodes[] = $episode;
+                }
+            }
         }
 
         return response()->json([
             'success' => true,
             'data' => [
                 'story' => $story,
+                'access_info' => $accessInfo,
+                'accessible_episodes' => $accessibleEpisodes,
                 'is_favorite' => $isFavorite,
                 'user_rating' => $userRating
             ]

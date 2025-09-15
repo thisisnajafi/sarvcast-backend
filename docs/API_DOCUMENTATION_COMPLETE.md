@@ -1665,6 +1665,1393 @@ POST /favorites/bulk
 }
 ```
 
+### Play History & Progress Tracking
+
+#### Get User's Play History
+```http
+GET /play-history
+```
+
+**Query Parameters:**
+- `per_page` (optional): Number of records per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "play_history": [
+            {
+                "id": 1,
+                "user_id": 1,
+                "episode_id": 10,
+                "story_id": 5,
+                "played_at": "2024-01-15T10:00:00Z",
+                "duration_played": 900,
+                "total_duration": 1200,
+                "completed": false,
+                "completion_percentage": 75.0,
+                "remaining_time": 300,
+                "device_info": {
+                    "platform": "android",
+                    "app_version": "1.2.0"
+                },
+                "episode": {
+                    "id": 10,
+                    "title": "قسمت اول: شروع ماجرا",
+                    "episode_number": 1,
+                    "duration": 1200
+                },
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    }
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 5,
+            "per_page": 20,
+            "total": 85,
+            "has_more": true
+        }
+    },
+    "message": "تاریخچه پخش دریافت شد"
+}
+```
+
+#### Record Play Session
+```http
+POST /play-history/record
+```
+
+**Request Body:**
+```json
+{
+    "episode_id": 10,
+    "duration_played": 900,
+    "total_duration": 1200,
+    "device_info": {
+        "platform": "android",
+        "app_version": "1.2.0",
+        "device_model": "Samsung Galaxy S21"
+    }
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "play_history_id": 1,
+        "episode_id": 10,
+        "story_id": 5,
+        "duration_played": 900,
+        "total_duration": 1200,
+        "completion_percentage": 75.0,
+        "completed": false,
+        "played_at": "2024-01-15T10:00:00Z"
+    },
+    "message": "جلسه پخش ثبت شد"
+}
+```
+
+#### Update Play Progress
+```http
+PUT /play-history/{playHistoryId}/progress
+```
+
+**Request Body:**
+```json
+{
+    "duration_played": 1100,
+    "total_duration": 1200
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "play_history_id": 1,
+        "duration_played": 1100,
+        "total_duration": 1200,
+        "completion_percentage": 91.67,
+        "completed": true,
+        "remaining_time": 100,
+        "played_at": "2024-01-15T10:05:00Z"
+    },
+    "message": "پیشرفت پخش به‌روزرسانی شد"
+}
+```
+
+#### Get Recent Play History
+```http
+GET /play-history/recent
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of records to return (default: 10, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "recent_history": [
+            {
+                "id": 1,
+                "episode_id": 10,
+                "story_id": 5,
+                "played_at": "2024-01-15T10:00:00Z",
+                "duration_played": 900,
+                "total_duration": 1200,
+                "completed": false,
+                "completion_percentage": 75.0,
+                "episode": {
+                    "id": 10,
+                    "title": "قسمت اول: شروع ماجرا",
+                    "episode_number": 1
+                },
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی"
+                    }
+                }
+            }
+        ],
+        "limit": 10
+    },
+    "message": "تاریخچه پخش اخیر دریافت شد"
+}
+```
+
+#### Get Completed Episodes
+```http
+GET /play-history/completed
+```
+
+**Query Parameters:**
+- `per_page` (optional): Number of records per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "completed_episodes": [
+            {
+                "id": 2,
+                "episode_id": 8,
+                "story_id": 3,
+                "played_at": "2024-01-14T15:30:00Z",
+                "duration_played": 1800,
+                "total_duration": 1800,
+                "completed": true,
+                "completion_percentage": 100.0,
+                "episode": {
+                    "id": 8,
+                    "title": "قسمت آخر: پایان ماجرا",
+                    "episode_number": 5
+                },
+                "story": {
+                    "id": 3,
+                    "title": "سفیدبرفی و هفت کوتوله",
+                    "category": {
+                        "id": 1,
+                        "name": "داستان‌های کلاسیک"
+                    }
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 2,
+            "per_page": 20,
+            "total": 25,
+            "has_more": true
+        }
+    },
+    "message": "قسمت‌های تکمیل شده دریافت شد"
+}
+```
+
+#### Get In-Progress Episodes
+```http
+GET /play-history/in-progress
+```
+
+**Query Parameters:**
+- `per_page` (optional): Number of records per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "in_progress_episodes": [
+            {
+                "id": 1,
+                "episode_id": 10,
+                "story_id": 5,
+                "played_at": "2024-01-15T10:00:00Z",
+                "duration_played": 900,
+                "total_duration": 1200,
+                "completed": false,
+                "completion_percentage": 75.0,
+                "episode": {
+                    "id": 10,
+                    "title": "قسمت اول: شروع ماجرا",
+                    "episode_number": 1
+                },
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی"
+                    }
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 1,
+            "per_page": 20,
+            "total": 3,
+            "has_more": false
+        }
+    },
+    "message": "قسمت‌های در حال پخش دریافت شد"
+}
+```
+
+#### Get User Play Statistics
+```http
+GET /play-history/stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "total_plays": 85,
+        "completed_plays": 25,
+        "unique_stories": 15,
+        "unique_episodes": 45,
+        "total_play_time": 72000,
+        "total_play_time_hours": 20.0,
+        "recent_plays": 8,
+        "completion_rate": 29.41
+    },
+    "message": "آمار پخش دریافت شد"
+}
+```
+
+#### Get Episode Play Statistics
+```http
+GET /play-history/episode/{episodeId}/stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "episode_id": 10,
+        "stats": {
+            "total_plays": 1250,
+            "completed_plays": 980,
+            "unique_users": 850,
+            "completion_rate": 78.4,
+            "average_completion_time": 1050.5
+        }
+    },
+    "message": "آمار پخش قسمت دریافت شد"
+}
+```
+
+#### Get Story Play Statistics
+```http
+GET /play-history/story/{storyId}/stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "story_id": 5,
+        "stats": {
+            "total_plays": 3500,
+            "completed_plays": 2800,
+            "unique_users": 1200,
+            "completion_rate": 80.0,
+            "average_completion_time": 1100.0
+        }
+    },
+    "message": "آمار پخش داستان دریافت شد"
+}
+```
+
+#### Get Most Played Episodes
+```http
+GET /play-history/most-played
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of episodes to return (default: 10, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "most_played_episodes": [
+            {
+                "episode": {
+                    "id": 1,
+                    "title": "قسمت اول: شروع ماجرا",
+                    "episode_number": 1,
+                    "duration": 1200
+                },
+                "play_count": 2500
+            },
+            {
+                "episode": {
+                    "id": 5,
+                    "title": "قسمت دوم: ادامه ماجرا",
+                    "episode_number": 2,
+                    "duration": 1350
+                },
+                "play_count": 2200
+            }
+        ],
+        "limit": 10
+    },
+    "message": "پربازدیدترین قسمت‌ها دریافت شد"
+}
+```
+
+#### Get Most Played Stories
+```http
+GET /play-history/most-played-stories
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of stories to return (default: 10, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "most_played_stories": [
+            {
+                "story": {
+                    "id": 1,
+                    "title": "سفیدبرفی و هفت کوتوله",
+                    "subtitle": "داستان کلاسیک محبوب کودکان",
+                    "category": {
+                        "id": 1,
+                        "name": "داستان‌های کلاسیک",
+                        "color": "#FF6B6B"
+                    }
+                },
+                "play_count": 5000
+            },
+            {
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "subtitle": "داستان هیجان‌انگیز کودکان",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    }
+                },
+                "play_count": 3500
+            }
+        ],
+        "limit": 10
+    },
+    "message": "پربازدیدترین داستان‌ها دریافت شد"
+}
+```
+
+#### Get Play Analytics
+```http
+GET /play-history/analytics
+```
+
+**Query Parameters:**
+- `days` (optional): Number of days to analyze (default: 30, max: 365)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "period_days": 30,
+        "total_plays": 15000,
+        "completed_plays": 12000,
+        "unique_users": 2500,
+        "total_play_time": 1800000,
+        "total_play_time_hours": 500.0,
+        "completion_rate": 80.0,
+        "daily_plays": [
+            {
+                "date": "2024-01-01",
+                "plays": 450
+            },
+            {
+                "date": "2024-01-02",
+                "plays": 520
+            }
+        ]
+    },
+    "message": "تحلیل پخش دریافت شد"
+}
+```
+
+### Rating & Review System
+
+#### Get User's Ratings
+```http
+GET /ratings
+```
+
+**Query Parameters:**
+- `per_page` (optional): Number of ratings per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "ratings": [
+            {
+                "id": 1,
+                "user_id": 1,
+                "story_id": 5,
+                "episode_id": null,
+                "rating": 5,
+                "review": "داستان بسیار زیبا و آموزنده بود. فرزندم عاشق آن شد!",
+                "star_rating": "★★★★★",
+                "created_at": "2024-01-15T10:00:00Z",
+                "updated_at": "2024-01-15T10:00:00Z",
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    }
+                },
+                "episode": null
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 3,
+            "per_page": 20,
+            "total": 45,
+            "has_more": true
+        }
+    },
+    "message": "امتیازات شما دریافت شد"
+}
+```
+
+#### Submit Story Rating
+```http
+POST /ratings/story
+```
+
+**Request Body:**
+```json
+{
+    "story_id": 5,
+    "rating": 5,
+    "review": "داستان بسیار زیبا و آموزنده بود. فرزندم عاشق آن شد!"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "rating_id": 1,
+        "story_id": 5,
+        "rating": 5,
+        "review": "داستان بسیار زیبا و آموزنده بود. فرزندم عاشق آن شد!",
+        "star_rating": "★★★★★",
+        "stats": {
+            "total_ratings": 1250,
+            "average_rating": 4.5,
+            "rating_distribution": {
+                "1": 25,
+                "2": 50,
+                "3": 200,
+                "4": 400,
+                "5": 575
+            },
+            "reviews_count": 850
+        }
+    },
+    "message": "امتیاز داستان ثبت شد"
+}
+```
+
+#### Submit Episode Rating
+```http
+POST /ratings/episode
+```
+
+**Request Body:**
+```json
+{
+    "episode_id": 10,
+    "rating": 4,
+    "review": "قسمت خوبی بود اما کمی کوتاه بود."
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "rating_id": 2,
+        "episode_id": 10,
+        "rating": 4,
+        "review": "قسمت خوبی بود اما کمی کوتاه بود.",
+        "star_rating": "★★★★☆",
+        "stats": {
+            "total_ratings": 450,
+            "average_rating": 4.2,
+            "rating_distribution": {
+                "1": 10,
+                "2": 20,
+                "3": 80,
+                "4": 150,
+                "5": 190
+            },
+            "reviews_count": 200
+        }
+    },
+    "message": "امتیاز قسمت ثبت شد"
+}
+```
+
+#### Get Story Ratings
+```http
+GET /ratings/story/{storyId}
+```
+
+**Query Parameters:**
+- `per_page` (optional): Number of ratings per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "story_id": 5,
+        "ratings": [
+            {
+                "id": 1,
+                "user_id": 1,
+                "rating": 5,
+                "review": "داستان بسیار زیبا و آموزنده بود.",
+                "star_rating": "★★★★★",
+                "created_at": "2024-01-15T10:00:00Z",
+                "user": {
+                    "id": 1,
+                    "first_name": "علی",
+                    "last_name": "احمدی",
+                    "profile_image_url": "https://api.sarvcast.com/storage/users/user1.jpg"
+                }
+            }
+        ],
+        "stats": {
+            "total_ratings": 1250,
+            "average_rating": 4.5,
+            "rating_distribution": {
+                "1": 25,
+                "2": 50,
+                "3": 200,
+                "4": 400,
+                "5": 575
+            },
+            "reviews_count": 850
+        },
+        "pagination": {
+            "current_page": 1,
+            "last_page": 63,
+            "per_page": 20,
+            "total": 1250,
+            "has_more": true
+        }
+    },
+    "message": "امتیازات داستان دریافت شد"
+}
+```
+
+#### Get Episode Ratings
+```http
+GET /ratings/episode/{episodeId}
+```
+
+**Query Parameters:**
+- `per_page` (optional): Number of ratings per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "episode_id": 10,
+        "ratings": [
+            {
+                "id": 2,
+                "user_id": 1,
+                "rating": 4,
+                "review": "قسمت خوبی بود اما کمی کوتاه بود.",
+                "star_rating": "★★★★☆",
+                "created_at": "2024-01-15T10:00:00Z",
+                "user": {
+                    "id": 1,
+                    "first_name": "علی",
+                    "last_name": "احمدی",
+                    "profile_image_url": "https://api.sarvcast.com/storage/users/user1.jpg"
+                }
+            }
+        ],
+        "stats": {
+            "total_ratings": 450,
+            "average_rating": 4.2,
+            "rating_distribution": {
+                "1": 10,
+                "2": 20,
+                "3": 80,
+                "4": 150,
+                "5": 190
+            },
+            "reviews_count": 200
+        },
+        "pagination": {
+            "current_page": 1,
+            "last_page": 23,
+            "per_page": 20,
+            "total": 450,
+            "has_more": true
+        }
+    },
+    "message": "امتیازات قسمت دریافت شد"
+}
+```
+
+#### Get User's Story Rating
+```http
+GET /ratings/story/{storyId}/user
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "story_id": 5,
+        "has_rated": true,
+        "rating": 5,
+        "review": "داستان بسیار زیبا و آموزنده بود.",
+        "star_rating": "★★★★★",
+        "created_at": "2024-01-15T10:00:00Z"
+    },
+    "message": "امتیاز شما برای این داستان دریافت شد"
+}
+```
+
+#### Get User's Episode Rating
+```http
+GET /ratings/episode/{episodeId}/user
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "episode_id": 10,
+        "has_rated": true,
+        "rating": 4,
+        "review": "قسمت خوبی بود اما کمی کوتاه بود.",
+        "star_rating": "★★★★☆",
+        "created_at": "2024-01-15T10:00:00Z"
+    },
+    "message": "امتیاز شما برای این قسمت دریافت شد"
+}
+```
+
+#### Get Highest Rated Stories
+```http
+GET /ratings/highest-rated-stories
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of stories to return (default: 10, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "highest_rated_stories": [
+            {
+                "story": {
+                    "id": 1,
+                    "title": "سفیدبرفی و هفت کوتوله",
+                    "subtitle": "داستان کلاسیک محبوب کودکان",
+                    "category": {
+                        "id": 1,
+                        "name": "داستان‌های کلاسیک",
+                        "color": "#FF6B6B"
+                    }
+                },
+                "average_rating": 4.8,
+                "rating_count": 2500
+            },
+            {
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "subtitle": "داستان هیجان‌انگیز کودکان",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    }
+                },
+                "average_rating": 4.6,
+                "rating_count": 1800
+            }
+        ],
+        "limit": 10
+    },
+    "message": "بالاترین امتیاز داستان‌ها دریافت شد"
+}
+```
+
+#### Get Highest Rated Episodes
+```http
+GET /ratings/highest-rated-episodes
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of episodes to return (default: 10, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "highest_rated_episodes": [
+            {
+                "episode": {
+                    "id": 1,
+                    "title": "قسمت اول: شروع ماجرا",
+                    "episode_number": 1,
+                    "duration": 1200
+                },
+                "story": {
+                    "id": 1,
+                    "title": "سفیدبرفی و هفت کوتوله",
+                    "category": {
+                        "id": 1,
+                        "name": "داستان‌های کلاسیک",
+                        "color": "#FF6B6B"
+                    }
+                },
+                "average_rating": 4.9,
+                "rating_count": 800
+            },
+            {
+                "episode": {
+                    "id": 5,
+                    "title": "قسمت دوم: ادامه ماجرا",
+                    "episode_number": 2,
+                    "duration": 1350
+                },
+                "story": {
+                    "id": 1,
+                    "title": "سفیدبرفی و هفت کوتوله",
+                    "category": {
+                        "id": 1,
+                        "name": "داستان‌های کلاسیک",
+                        "color": "#FF6B6B"
+                    }
+                },
+                "average_rating": 4.7,
+                "rating_count": 750
+            }
+        ],
+        "limit": 10
+    },
+    "message": "بالاترین امتیاز قسمت‌ها دریافت شد"
+}
+```
+
+#### Get Recent Reviews
+```http
+GET /ratings/recent-reviews
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of reviews to return (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "recent_reviews": [
+            {
+                "id": 1,
+                "user_id": 1,
+                "story_id": 5,
+                "episode_id": null,
+                "rating": 5,
+                "review": "داستان بسیار زیبا و آموزنده بود. فرزندم عاشق آن شد!",
+                "star_rating": "★★★★★",
+                "created_at": "2024-01-15T10:00:00Z",
+                "user": {
+                    "id": 1,
+                    "first_name": "علی",
+                    "last_name": "احمدی",
+                    "profile_image_url": "https://api.sarvcast.com/storage/users/user1.jpg"
+                },
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    }
+                },
+                "episode": null
+            }
+        ],
+        "limit": 20
+    },
+    "message": "آخرین نقدها دریافت شد"
+}
+```
+
+#### Get User Rating Statistics
+```http
+GET /ratings/user-stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "total_ratings": 25,
+        "reviews_count": 15,
+        "average_rating_given": 4.2
+    },
+    "message": "آمار امتیازات شما دریافت شد"
+}
+```
+
+#### Get Rating Analytics
+```http
+GET /ratings/analytics
+```
+
+**Query Parameters:**
+- `days` (optional): Number of days to analyze (default: 30, max: 365)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "period_days": 30,
+        "total_ratings": 5000,
+        "total_reviews": 2500,
+        "average_rating": 4.3,
+        "daily_ratings": [
+            {
+                "date": "2024-01-01",
+                "ratings": 150
+            },
+            {
+                "date": "2024-01-02",
+                "ratings": 180
+            }
+        ],
+        "rating_distribution": {
+            "1": 100,
+            "2": 200,
+            "3": 800,
+            "4": 1500,
+            "5": 2400
+        }
+    },
+    "message": "تحلیل امتیازات دریافت شد"
+}
+```
+
+### Search & Discovery
+
+#### Search Stories
+```http
+GET /search/stories
+```
+
+**Query Parameters:**
+- `q` (optional): Search term
+- `category_id` (optional): Filter by category ID
+- `age_group` (optional): Filter by age group (3-5, 6-9, 10-12, 13+)
+- `min_duration` (optional): Minimum duration in seconds
+- `max_duration` (optional): Maximum duration in seconds
+- `is_premium` (optional): Filter by premium status (true/false)
+- `min_rating` (optional): Minimum average rating (1-5)
+- `person_id` (optional): Filter by person (director, writer, narrator, etc.)
+- `sort_by` (optional): Sort by field (created_at, title, duration, play_count, rating)
+- `sort_order` (optional): Sort order (asc, desc)
+- `per_page` (optional): Number of results per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "stories": [
+            {
+                "id": 5,
+                "title": "ماجراجویی در جنگل جادویی",
+                "subtitle": "داستان هیجان‌انگیز کودکان",
+                "description": "داستان زیبای ماجراجویی در جنگل...",
+                "category_id": 2,
+                "age_group": "6-9",
+                "duration": 2700,
+                "status": "published",
+                "is_premium": false,
+                "play_count": 2500,
+                "avg_rating": 4.5,
+                "rating_count": 156,
+                "favorite_count": 1250,
+                "episode_count": 5,
+                "category": {
+                    "id": 2,
+                    "name": "ماجراجویی",
+                    "color": "#4ECDC4"
+                },
+                "director": {
+                    "id": 1,
+                    "name": "علی احمدی",
+                    "role": "director"
+                },
+                "episodes": [
+                    {
+                        "id": 10,
+                        "title": "قسمت اول: شروع ماجرا",
+                        "episode_number": 1,
+                        "duration": 540
+                    }
+                ]
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 3,
+            "per_page": 20,
+            "total": 45,
+            "has_more": true
+        },
+        "filters_applied": {
+            "search_term": "ماجراجویی",
+            "age_group": "6-9",
+            "sort_by": "rating",
+            "sort_order": "desc"
+        }
+    },
+    "message": "جستجوی داستان‌ها انجام شد"
+}
+```
+
+#### Search Episodes
+```http
+GET /search/episodes
+```
+
+**Query Parameters:**
+- `q` (optional): Search term
+- `story_id` (optional): Filter by story ID
+- `min_duration` (optional): Minimum duration in seconds
+- `max_duration` (optional): Maximum duration in seconds
+- `is_premium` (optional): Filter by premium status (true/false)
+- `episode_number` (optional): Filter by episode number
+- `sort_by` (optional): Sort by field (title, duration, play_count, episode_number)
+- `sort_order` (optional): Sort order (asc, desc)
+- `per_page` (optional): Number of results per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "episodes": [
+            {
+                "id": 10,
+                "title": "قسمت اول: شروع ماجرا",
+                "description": "شروع ماجراجویی در جنگل...",
+                "episode_number": 1,
+                "duration": 540,
+                "status": "published",
+                "is_premium": false,
+                "play_count": 800,
+                "avg_rating": 4.8,
+                "rating_count": 45,
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    }
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 2,
+            "per_page": 20,
+            "total": 25,
+            "has_more": true
+        },
+        "filters_applied": {
+            "search_term": "ماجرا",
+            "story_id": 5,
+            "sort_by": "episode_number",
+            "sort_order": "asc"
+        }
+    },
+    "message": "جستجوی قسمت‌ها انجام شد"
+}
+```
+
+#### Search People
+```http
+GET /search/people
+```
+
+**Query Parameters:**
+- `q` (optional): Search term
+- `role` (optional): Filter by role (director, writer, author, narrator, voice_actor)
+- `sort_by` (optional): Sort by field (name, created_at)
+- `sort_order` (optional): Sort order (asc, desc)
+- `per_page` (optional): Number of results per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "people": [
+            {
+                "id": 1,
+                "name": "علی احمدی",
+                "bio": "کارگردان و نویسنده با تجربه در زمینه داستان‌های کودکان",
+                "role": "director",
+                "image_url": "https://api.sarvcast.com/storage/people/director1.jpg",
+                "story_count": 15,
+                "stories": [
+                    {
+                        "id": 5,
+                        "title": "ماجراجویی در جنگل جادویی"
+                    }
+                ]
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 1,
+            "per_page": 20,
+            "total": 8,
+            "has_more": false
+        },
+        "filters_applied": {
+            "search_term": "علی",
+            "role": "director",
+            "sort_by": "name",
+            "sort_order": "asc"
+        }
+    },
+    "message": "جستجوی افراد انجام شد"
+}
+```
+
+#### Global Search
+```http
+GET /search/global
+```
+
+**Query Parameters:**
+- `q` (required): Search term
+- `limit` (optional): Number of results per type (default: 10, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "stories": [
+            {
+                "id": 5,
+                "title": "ماجراجویی در جنگل جادویی",
+                "subtitle": "داستان هیجان‌انگیز کودکان",
+                "category": {
+                    "id": 2,
+                    "name": "ماجراجویی",
+                    "color": "#4ECDC4"
+                },
+                "type": "story"
+            }
+        ],
+        "episodes": [
+            {
+                "id": 10,
+                "title": "قسمت اول: شروع ماجرا",
+                "episode_number": 1,
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی"
+                    }
+                },
+                "type": "episode"
+            }
+        ],
+        "people": [
+            {
+                "id": 1,
+                "name": "علی احمدی",
+                "role": "director",
+                "type": "person"
+            }
+        ],
+        "categories": [
+            {
+                "id": 2,
+                "name": "ماجراجویی",
+                "description": "داستان‌های ماجراجویی و هیجان‌انگیز",
+                "type": "category"
+            }
+        ]
+    },
+    "message": "جستجوی جامع انجام شد"
+}
+```
+
+#### Get Search Suggestions
+```http
+GET /search/suggestions
+```
+
+**Query Parameters:**
+- `q` (required): Search term
+- `limit` (optional): Number of suggestions (default: 10, max: 20)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "suggestions": [
+            "ماجراجویی در جنگل جادویی",
+            "ماجراجویی",
+            "ماجراجویی در کوهستان",
+            "ماجراجویی در دریا"
+        ],
+        "query": "ماجرا",
+        "limit": 10
+    },
+    "message": "پیشنهادات جستجو دریافت شد"
+}
+```
+
+#### Get Trending Searches
+```http
+GET /search/trending
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of trending searches (default: 10, max: 20)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "trending_searches": [
+            "سفیدبرفی و هفت کوتوله",
+            "ماجراجویی در جنگل جادویی",
+            "داستان‌های کلاسیک",
+            "ماجراجویی",
+            "داستان‌های آموزشی"
+        ],
+        "limit": 10
+    },
+    "message": "جستجوهای ترند دریافت شد"
+}
+```
+
+#### Get Search Filters
+```http
+GET /search/filters
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "categories": [
+            {
+                "id": 1,
+                "name": "داستان‌های کلاسیک",
+                "color": "#FF6B6B"
+            },
+            {
+                "id": 2,
+                "name": "ماجراجویی",
+                "color": "#4ECDC4"
+            }
+        ],
+        "age_groups": ["3-5", "6-9", "10-12", "13+"],
+        "duration_ranges": [
+            {
+                "min": 0,
+                "max": 300,
+                "label": "کمتر از 5 دقیقه"
+            },
+            {
+                "min": 300,
+                "max": 900,
+                "label": "5-15 دقیقه"
+            },
+            {
+                "min": 900,
+                "max": 1800,
+                "label": "15-30 دقیقه"
+            },
+            {
+                "min": 1800,
+                "max": 3600,
+                "label": "30-60 دقیقه"
+            },
+            {
+                "min": 3600,
+                "max": null,
+                "label": "بیش از 60 دقیقه"
+            }
+        ],
+        "person_roles": ["director", "writer", "author", "narrator", "voice_actor"],
+        "sort_options": [
+            {
+                "value": "created_at",
+                "label": "جدیدترین"
+            },
+            {
+                "value": "title",
+                "label": "عنوان"
+            },
+            {
+                "value": "duration",
+                "label": "مدت زمان"
+            },
+            {
+                "value": "play_count",
+                "label": "محبوبیت"
+            },
+            {
+                "value": "rating",
+                "label": "امتیاز"
+            }
+        ]
+    },
+    "message": "فیلترهای جستجو دریافت شد"
+}
+```
+
+#### Get Search Statistics
+```http
+GET /search/stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "total_stories": 150,
+        "total_episodes": 750,
+        "total_categories": 8,
+        "total_people": 45,
+        "most_searched_categories": [
+            {
+                "id": 1,
+                "name": "داستان‌های کلاسیک",
+                "story_count": 45
+            },
+            {
+                "id": 2,
+                "name": "ماجراجویی",
+                "story_count": 35
+            }
+        ],
+        "most_searched_people": [
+            {
+                "id": 1,
+                "name": "علی احمدی",
+                "role": "director",
+                "stories_count": 15
+            },
+            {
+                "id": 2,
+                "name": "فاطمه محمدی",
+                "role": "narrator",
+                "stories_count": 12
+            }
+        ]
+    },
+    "message": "آمار جستجو دریافت شد"
+}
+```
+
 ### Stories
 
 #### Get All Stories

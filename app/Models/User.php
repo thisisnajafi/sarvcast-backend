@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\UserAnalytics;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, UserAnalytics;
 
     /**
      * The attributes that are mass assignable.
@@ -31,6 +32,23 @@ class User extends Authenticatable
         'preferences',
         'last_login_at',
         'password',
+        'registration_source',
+        'referral_code',
+        'referred_by',
+        'device_type',
+        'browser',
+        'os',
+        'country',
+        'city',
+        'total_sessions',
+        'total_play_time',
+        'total_favorites',
+        'total_ratings',
+        'total_spent',
+        'last_activity_at',
+        'first_purchase_at',
+        'last_purchase_at',
+        'analytics_data',
     ];
 
     /**
@@ -54,8 +72,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'last_activity_at' => 'datetime',
+            'first_purchase_at' => 'datetime',
+            'last_purchase_at' => 'datetime',
             'password' => 'hashed',
             'preferences' => 'array',
+            'analytics_data' => 'array',
+            'total_spent' => 'decimal:2',
         ];
     }
 

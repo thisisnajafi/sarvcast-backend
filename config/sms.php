@@ -3,54 +3,149 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | SMS Configuration
+    | SMS Provider Configuration
     |--------------------------------------------------------------------------
     |
-    | Configuration for SMS service provider
+    | Configure your SMS providers here. You can enable multiple providers
+    | and the system will use the first available one.
     |
     */
 
-    'api_key' => env('SMS_API_KEY'),
-    'api_url' => env('SMS_API_URL', 'https://api.sms.ir/v1/send/verify'),
-    'sender' => env('SMS_SENDER', 'سروکست'),
+    'default_provider' => env('SMS_DEFAULT_PROVIDER', 'kavenegar'),
 
-    'verification' => [
-        'code_length' => 6,
-        'expires_in' => 300, // 5 minutes
-        'max_attempts' => 5,
-        'rate_limit_hours' => 1,
+    'providers' => [
+        'kavenegar' => [
+            'enabled' => env('SMS_KAVENEGAR_ENABLED', false),
+            'api_key' => env('SMS_KAVENEGAR_API_KEY'),
+            'sender' => env('SMS_KAVENEGAR_SENDER'),
+            'base_url' => 'https://api.kavenegar.com/v1',
+        ],
+
+        'melipayamak' => [
+            'enabled' => env('SMS_MELIPAYAMAK_ENABLED', false),
+            'username' => env('SMS_MELIPAYAMAK_USERNAME'),
+            'password' => env('SMS_MELIPAYAMAK_PASSWORD'),
+            'sender' => env('SMS_MELIPAYAMAK_SENDER'),
+            'base_url' => 'https://rest.payamak-resan.com/api',
+        ],
+
+        'smsir' => [
+            'enabled' => env('SMS_SMSIR_ENABLED', false),
+            'api_key' => env('SMS_SMSIR_API_KEY'),
+            'sender' => env('SMS_SMSIR_SENDER'),
+            'base_url' => 'https://api.sms.ir/v1',
+        ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS Settings
+    |--------------------------------------------------------------------------
+    |
+    | General SMS settings and limits
+    |
+    */
+
+    'rate_limit' => [
+        'max_per_hour' => env('SMS_RATE_LIMIT_PER_HOUR', 10),
+        'max_per_day' => env('SMS_RATE_LIMIT_PER_DAY', 50),
+    ],
+
+    'message' => [
+        'max_length' => env('SMS_MAX_LENGTH', 1000),
+        'default_encoding' => 'UTF-8',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS Templates
+    |--------------------------------------------------------------------------
+    |
+    | Predefined SMS templates for common use cases
+    |
+    */
 
     'templates' => [
-        'verification' => 'کد تایید شما: {code}\nسروکست - پلتفرم داستان‌های صوتی کودکان',
-        'subscription_created' => 'اشتراک شما با موفقیت ایجاد شد',
-        'subscription_activated' => 'اشتراک شما فعال شد و می‌توانید از تمام امکانات استفاده کنید',
-        'subscription_expired' => 'اشتراک شما منقضی شده است. برای ادامه استفاده، اشتراک جدید خریداری کنید',
-        'subscription_cancelled' => 'اشتراک شما لغو شد',
-        'payment_success' => 'پرداخت شما با موفقیت انجام شد',
-        'payment_failed' => 'پرداخت شما انجام نشد. لطفاً مجدداً تلاش کنید',
-        'new_episode' => 'اپیزود جدید از داستان مورد علاقه شما منتشر شد',
-        'new_story' => 'داستان جدید در دسته‌بندی مورد علاقه شما منتشر شد',
+        'verification' => [
+            'name' => 'کد تایید',
+            'template' => 'کد تایید شما: {code}',
+            'variables' => ['code']
+        ],
+        'welcome' => [
+            'name' => 'خوش‌آمدگویی',
+            'template' => 'به سروکست خوش آمدید! از شنیدن داستان‌های زیبا لذت ببرید.',
+            'variables' => []
+        ],
+        'subscription_activated' => [
+            'name' => 'فعال‌سازی اشتراک',
+            'template' => 'اشتراک شما فعال شد. از دسترسی کامل به محتوا لذت ببرید.',
+            'variables' => []
+        ],
+        'subscription_expiring' => [
+            'name' => 'انقضای اشتراک',
+            'template' => 'اشتراک شما در {days} روز منقضی می‌شود. برای تمدید اقدام کنید.',
+            'variables' => ['days']
+        ],
+        'subscription_expired' => [
+            'name' => 'انقضای اشتراک',
+            'template' => 'اشتراک شما منقضی شده است. برای ادامه استفاده، اشتراک خود را تمدید کنید.',
+            'variables' => []
+        ],
+        'payment_success' => [
+            'name' => 'پرداخت موفق',
+            'template' => 'پرداخت شما با موفقیت انجام شد. مبلغ: {amount} ریال',
+            'variables' => ['amount']
+        ],
+        'payment_failed' => [
+            'name' => 'پرداخت ناموفق',
+            'template' => 'پرداخت شما ناموفق بود. لطفاً مجدداً تلاش کنید.',
+            'variables' => []
+        ],
+        'new_episode' => [
+            'name' => 'قسمت جدید',
+            'template' => 'قسمت جدید "{episode_title}" از داستان "{story_title}" منتشر شد.',
+            'variables' => ['episode_title', 'story_title']
+        ],
+        'new_story' => [
+            'name' => 'داستان جدید',
+            'template' => 'داستان جدید "{story_title}" منتشر شد. از شنیدن آن لذت ببرید.',
+            'variables' => ['story_title']
+        ],
+        'password_reset' => [
+            'name' => 'بازیابی رمز عبور',
+            'template' => 'کد بازیابی رمز عبور شما: {code}',
+            'variables' => ['code']
+        ]
     ],
 
-    'rate_limiting' => [
-        'enabled' => env('SMS_RATE_LIMITING_ENABLED', true),
-        'max_per_hour' => env('SMS_MAX_PER_HOUR', 5),
-        'max_per_day' => env('SMS_MAX_PER_DAY', 20),
-    ],
-
-    'phone_validation' => [
-        'pattern' => '/^(\+98|0)?9[0-9]{9}$/',
-        'country_code' => '+98',
-        'default_prefix' => '0',
-    ],
+    /*
+    |--------------------------------------------------------------------------
+    | SMS Logging
+    |--------------------------------------------------------------------------
+    |
+    | SMS logging and monitoring settings
+    |
+    */
 
     'logging' => [
         'enabled' => env('SMS_LOGGING_ENABLED', true),
-        'log_success' => env('SMS_LOG_SUCCESS', true),
-        'log_failure' => env('SMS_LOG_FAILURE', true),
+        'log_failed_only' => env('SMS_LOG_FAILED_ONLY', false),
+        'retention_days' => env('SMS_LOG_RETENTION_DAYS', 30),
     ],
 
-    'timeout' => env('SMS_TIMEOUT', 30),
-    'retry_attempts' => env('SMS_RETRY_ATTEMPTS', 3),
+    /*
+    |--------------------------------------------------------------------------
+    | SMS Analytics
+    |--------------------------------------------------------------------------
+    |
+    | SMS analytics and statistics settings
+    |
+    */
+
+    'analytics' => [
+        'enabled' => env('SMS_ANALYTICS_ENABLED', true),
+        'track_providers' => env('SMS_TRACK_PROVIDERS', true),
+        'track_templates' => env('SMS_TRACK_TEMPLATES', true),
+        'track_delivery' => env('SMS_TRACK_DELIVERY', true),
+    ],
 ];

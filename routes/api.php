@@ -12,6 +12,10 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\FileUploadController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\RecommendationController;
+use App\Http\Controllers\Api\ContentPersonalizationController;
+use App\Http\Controllers\Api\SocialController;
+use App\Http\Controllers\Api\GamificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -215,6 +219,153 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('favorites/most-favorited', [\App\Http\Controllers\Api\FavoriteController::class, 'mostFavorited']);
         Route::get('favorites/stats', [\App\Http\Controllers\Api\FavoriteController::class, 'stats']);
         Route::post('favorites/bulk', [\App\Http\Controllers\Api\FavoriteController::class, 'bulk']);
+        
+        // Play History routes
+        Route::get('play-history', [\App\Http\Controllers\Api\PlayHistoryController::class, 'index']);
+        Route::post('play-history/record', [\App\Http\Controllers\Api\PlayHistoryController::class, 'record']);
+        Route::put('play-history/{playHistoryId}/progress', [\App\Http\Controllers\Api\PlayHistoryController::class, 'updateProgress']);
+        Route::get('play-history/recent', [\App\Http\Controllers\Api\PlayHistoryController::class, 'recent']);
+        Route::get('play-history/completed', [\App\Http\Controllers\Api\PlayHistoryController::class, 'completed']);
+        Route::get('play-history/in-progress', [\App\Http\Controllers\Api\PlayHistoryController::class, 'inProgress']);
+        Route::get('play-history/stats', [\App\Http\Controllers\Api\PlayHistoryController::class, 'stats']);
+        Route::get('play-history/episode/{episodeId}/stats', [\App\Http\Controllers\Api\PlayHistoryController::class, 'episodeStats']);
+        Route::get('play-history/story/{storyId}/stats', [\App\Http\Controllers\Api\PlayHistoryController::class, 'storyStats']);
+        Route::get('play-history/most-played', [\App\Http\Controllers\Api\PlayHistoryController::class, 'mostPlayed']);
+        Route::get('play-history/most-played-stories', [\App\Http\Controllers\Api\PlayHistoryController::class, 'mostPlayedStories']);
+        Route::get('play-history/analytics', [\App\Http\Controllers\Api\PlayHistoryController::class, 'analytics']);
+        
+        // Rating & Review routes
+        Route::get('ratings', [\App\Http\Controllers\Api\RatingController::class, 'index']);
+        Route::post('ratings/story', [\App\Http\Controllers\Api\RatingController::class, 'submitStoryRating']);
+        Route::post('ratings/episode', [\App\Http\Controllers\Api\RatingController::class, 'submitEpisodeRating']);
+        Route::get('ratings/story/{storyId}', [\App\Http\Controllers\Api\RatingController::class, 'getStoryRatings']);
+        Route::get('ratings/episode/{episodeId}', [\App\Http\Controllers\Api\RatingController::class, 'getEpisodeRatings']);
+        Route::get('ratings/story/{storyId}/user', [\App\Http\Controllers\Api\RatingController::class, 'getUserStoryRating']);
+        Route::get('ratings/episode/{episodeId}/user', [\App\Http\Controllers\Api\RatingController::class, 'getUserEpisodeRating']);
+        Route::get('ratings/highest-rated-stories', [\App\Http\Controllers\Api\RatingController::class, 'getHighestRatedStories']);
+        Route::get('ratings/highest-rated-episodes', [\App\Http\Controllers\Api\RatingController::class, 'getHighestRatedEpisodes']);
+        Route::get('ratings/recent-reviews', [\App\Http\Controllers\Api\RatingController::class, 'getRecentReviews']);
+        Route::get('ratings/user-stats', [\App\Http\Controllers\Api\RatingController::class, 'getUserStats']);
+        Route::get('ratings/analytics', [\App\Http\Controllers\Api\RatingController::class, 'getAnalytics']);
+        
+        // Search & Discovery routes
+        Route::get('search/stories', [\App\Http\Controllers\Api\SearchController::class, 'searchStories']);
+        Route::get('search/episodes', [\App\Http\Controllers\Api\SearchController::class, 'searchEpisodes']);
+        Route::get('search/people', [\App\Http\Controllers\Api\SearchController::class, 'searchPeople']);
+        Route::get('search/global', [\App\Http\Controllers\Api\SearchController::class, 'globalSearch']);
+        Route::get('search/suggestions', [\App\Http\Controllers\Api\SearchController::class, 'getSuggestions']);
+        Route::get('search/trending', [\App\Http\Controllers\Api\SearchController::class, 'getTrending']);
+        Route::get('search/filters', [\App\Http\Controllers\Api\SearchController::class, 'getFilters']);
+        Route::get('search/stats', [\App\Http\Controllers\Api\SearchController::class, 'getStats']);
+        
+        // Subscription Management routes
+        Route::get('subscriptions', [\App\Http\Controllers\Api\SubscriptionController::class, 'index']);
+        Route::get('subscriptions/status', [\App\Http\Controllers\Api\SubscriptionController::class, 'status']);
+        Route::get('subscriptions/plans', [\App\Http\Controllers\Api\SubscriptionController::class, 'plans']);
+        Route::post('subscriptions/calculate-price', [\App\Http\Controllers\Api\SubscriptionController::class, 'calculatePrice']);
+        Route::post('subscriptions', [\App\Http\Controllers\Api\SubscriptionController::class, 'create']);
+        Route::post('subscriptions/{subscriptionId}/activate', [\App\Http\Controllers\Api\SubscriptionController::class, 'activate']);
+        Route::post('subscriptions/{subscriptionId}/cancel', [\App\Http\Controllers\Api\SubscriptionController::class, 'cancel']);
+        Route::post('subscriptions/{subscriptionId}/renew', [\App\Http\Controllers\Api\SubscriptionController::class, 'renew']);
+        Route::post('subscriptions/{subscriptionId}/upgrade', [\App\Http\Controllers\Api\SubscriptionController::class, 'upgrade']);
+        Route::post('subscriptions/trial', [\App\Http\Controllers\Api\SubscriptionController::class, 'createTrial']);
+        Route::get('subscriptions/{subscriptionId}', [\App\Http\Controllers\Api\SubscriptionController::class, 'show']);
+        Route::get('subscriptions/stats', [\App\Http\Controllers\Api\SubscriptionController::class, 'stats']);
+        
+        // Access Control routes
+        Route::get('access/level', [\App\Http\Controllers\Api\AccessControlController::class, 'getUserAccessLevel']);
+        Route::get('access/story/{storyId}', [\App\Http\Controllers\Api\AccessControlController::class, 'checkStoryAccess']);
+        Route::get('access/episode/{episodeId}', [\App\Http\Controllers\Api\AccessControlController::class, 'checkEpisodeAccess']);
+        Route::post('access/download', [\App\Http\Controllers\Api\AccessControlController::class, 'checkDownloadAccess']);
+        Route::get('access/premium-features', [\App\Http\Controllers\Api\AccessControlController::class, 'getPremiumFeatures']);
+        Route::post('access/validate', [\App\Http\Controllers\Api\AccessControlController::class, 'validateContentAccess']);
+        Route::post('access/filtered-content', [\App\Http\Controllers\Api\AccessControlController::class, 'getFilteredContent']);
+        Route::get('access/statistics', [\App\Http\Controllers\Api\AccessControlController::class, 'getAccessStatistics']);
+        
+        // SMS Notifications routes
+        Route::post('sms/send', [\App\Http\Controllers\Api\SmsController::class, 'send']);
+        Route::post('sms/verification-code', [\App\Http\Controllers\Api\SmsController::class, 'sendVerificationCode']);
+        Route::post('sms/template', [\App\Http\Controllers\Api\SmsController::class, 'sendTemplate']);
+        Route::post('sms/bulk', [\App\Http\Controllers\Api\SmsController::class, 'sendBulk']);
+        Route::post('sms/welcome', [\App\Http\Controllers\Api\SmsController::class, 'sendWelcome']);
+        Route::post('sms/subscription-notification', [\App\Http\Controllers\Api\SmsController::class, 'sendSubscriptionNotification']);
+        Route::post('sms/payment-notification', [\App\Http\Controllers\Api\SmsController::class, 'sendPaymentNotification']);
+        Route::post('sms/content-notification', [\App\Http\Controllers\Api\SmsController::class, 'sendContentNotification']);
+        Route::get('sms/statistics', [\App\Http\Controllers\Api\SmsController::class, 'getStatistics']);
+        Route::get('sms/templates', [\App\Http\Controllers\Api\SmsController::class, 'getTemplates']);
+        Route::get('sms/providers', [\App\Http\Controllers\Api\SmsController::class, 'getProviders']);
+        
+        // In-App Notifications routes
+        Route::get('notifications', [\App\Http\Controllers\Api\InAppNotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [\App\Http\Controllers\Api\InAppNotificationController::class, 'unreadCount']);
+        Route::post('notifications/{notificationId}/mark-read', [\App\Http\Controllers\Api\InAppNotificationController::class, 'markAsRead']);
+        Route::post('notifications/mark-all-read', [\App\Http\Controllers\Api\InAppNotificationController::class, 'markAllAsRead']);
+        Route::delete('notifications/{notificationId}', [\App\Http\Controllers\Api\InAppNotificationController::class, 'destroy']);
+        Route::get('notifications/types', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getTypes']);
+        Route::get('notifications/priorities', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getPriorities']);
+        Route::get('notifications/categories', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getCategories']);
+    });
+    
+    // Recommendation routes
+    Route::prefix('recommendations')->middleware('auth:sanctum')->group(function () {
+        Route::get('personalized', [RecommendationController::class, 'getPersonalizedRecommendations']);
+        Route::get('new-user', [RecommendationController::class, 'getNewUserRecommendations']);
+        Route::get('trending', [RecommendationController::class, 'getTrendingRecommendations']);
+        Route::get('similar/{storyId}', [RecommendationController::class, 'getSimilarContent']);
+        Route::get('preferences', [RecommendationController::class, 'getUserPreferences']);
+        Route::get('behavior', [RecommendationController::class, 'getUserBehavior']);
+        Route::get('similar-users', [RecommendationController::class, 'getSimilarUsers']);
+        Route::post('clear-cache', [RecommendationController::class, 'clearRecommendationCache']);
+        Route::get('explanation/{storyId}', [RecommendationController::class, 'getRecommendationExplanation']);
+    });
+    
+    // Content Personalization routes
+    Route::prefix('personalization')->middleware('auth:sanctum')->group(function () {
+        Route::get('feed', [ContentPersonalizationController::class, 'getPersonalizedFeed']);
+        Route::get('search', [ContentPersonalizationController::class, 'getPersonalizedSearch']);
+        Route::get('category/{categoryId}/recommendations', [ContentPersonalizationController::class, 'getPersonalizedCategoryRecommendations']);
+        Route::get('dashboard', [ContentPersonalizationController::class, 'getPersonalizedDashboard']);
+        Route::post('learn-preferences', [ContentPersonalizationController::class, 'learnPreferences']);
+        Route::post('update-preferences', [ContentPersonalizationController::class, 'updatePreferencesFromInteraction']);
+        Route::get('preferences', [ContentPersonalizationController::class, 'getUserPreferences']);
+        Route::get('behavior', [ContentPersonalizationController::class, 'getUserBehavior']);
+        Route::get('suggestions', [ContentPersonalizationController::class, 'getContentSuggestions']);
+        Route::get('insights', [ContentPersonalizationController::class, 'getPersonalizedInsights']);
+        Route::post('clear-cache', [ContentPersonalizationController::class, 'clearPersonalizationCache']);
+        Route::get('stats', [ContentPersonalizationController::class, 'getPersonalizationStats']);
+    });
+    
+    // Social Features routes
+    Route::prefix('social')->middleware('auth:sanctum')->group(function () {
+        Route::post('follow/{userId}', [SocialController::class, 'followUser']);
+        Route::delete('unfollow/{userId}', [SocialController::class, 'unfollowUser']);
+        Route::post('share', [SocialController::class, 'shareContent']);
+        Route::get('followers/{userId}', [SocialController::class, 'getUserFollowers']);
+        Route::get('following/{userId}', [SocialController::class, 'getUserFollowing']);
+        Route::get('activity-feed', [SocialController::class, 'getUserActivityFeed']);
+        Route::post('playlists', [SocialController::class, 'createPlaylist']);
+        Route::post('playlists/{playlistId}/add', [SocialController::class, 'addToPlaylist']);
+        Route::post('comments', [SocialController::class, 'addComment']);
+        Route::post('comments/{commentId}/like', [SocialController::class, 'likeComment']);
+        Route::get('stats/{userId}', [SocialController::class, 'getUserSocialStats']);
+        Route::get('trending', [SocialController::class, 'getTrendingContent']);
+        Route::get('follow-status/{userId}', [SocialController::class, 'checkFollowStatus']);
+    });
+    
+    // Gamification routes
+    Route::prefix('gamification')->middleware('auth:sanctum')->group(function () {
+        Route::get('profile', [GamificationController::class, 'getUserProfile']);
+        Route::post('award-points', [GamificationController::class, 'awardPoints']);
+        Route::get('leaderboard/{slug}', [GamificationController::class, 'getLeaderboard']);
+        Route::post('leaderboard/{slug}/update', [GamificationController::class, 'updateLeaderboard']);
+        Route::post('streak', [GamificationController::class, 'updateStreak']);
+        Route::get('challenges', [GamificationController::class, 'getAvailableChallenges']);
+        Route::post('challenges/{challengeId}/join', [GamificationController::class, 'joinChallenge']);
+        Route::get('achievements', [GamificationController::class, 'getUserAchievements']);
+        Route::get('badges', [GamificationController::class, 'getUserBadges']);
+        Route::get('streaks', [GamificationController::class, 'getUserStreaks']);
+        Route::get('all-achievements', [GamificationController::class, 'getAllAchievements']);
+        Route::get('all-badges', [GamificationController::class, 'getAllBadges']);
     });
 });
 
@@ -230,4 +381,10 @@ Route::prefix('v1/admin')->middleware(['auth:sanctum', 'admin'])->group(function
     
     Route::get('subscriptions', [\App\Http\Controllers\Admin\SubscriptionController::class, 'index']);
     Route::get('analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index']);
+    
+    // Admin In-App Notifications routes
+    Route::post('notifications/create', [\App\Http\Controllers\Api\InAppNotificationController::class, 'create']);
+    Route::post('notifications/send-multiple', [\App\Http\Controllers\Api\InAppNotificationController::class, 'sendToMultiple']);
+    Route::get('notifications/statistics', [\App\Http\Controllers\Api\InAppNotificationController::class, 'statistics']);
+    Route::post('notifications/cleanup-expired', [\App\Http\Controllers\Api\InAppNotificationController::class, 'cleanupExpired']);
 });

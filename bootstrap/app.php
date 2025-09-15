@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'cache.api' => \App\Http\Middleware\CacheApiResponses::class,
             'security' => \App\Http\Middleware\SecurityMiddleware::class,
+            'premium.access' => \App\Http\Middleware\CheckPremiumAccess::class,
+            'content.access' => \App\Http\Middleware\CheckContentAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
