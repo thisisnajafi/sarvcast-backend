@@ -192,6 +192,29 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('audio/validate', [\App\Http\Controllers\Api\AudioProcessingController::class, 'validateAudio']);
         Route::get('audio/stats', [\App\Http\Controllers\Api\AudioProcessingController::class, 'getStats']);
         Route::post('audio/cleanup', [\App\Http\Controllers\Api\AudioProcessingController::class, 'cleanup']);
+        
+        // Image processing routes
+        Route::post('image/process', [\App\Http\Controllers\Api\ImageProcessingController::class, 'processImage']);
+        Route::post('image/resize', [\App\Http\Controllers\Api\ImageProcessingController::class, 'resizeImage']);
+        Route::post('image/crop', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cropImage']);
+        Route::post('image/watermark', [\App\Http\Controllers\Api\ImageProcessingController::class, 'addWatermark']);
+        Route::post('image/optimize', [\App\Http\Controllers\Api\ImageProcessingController::class, 'optimizeImage']);
+        Route::post('image/thumbnail', [\App\Http\Controllers\Api\ImageProcessingController::class, 'generateThumbnail']);
+        Route::post('image/multiple-sizes', [\App\Http\Controllers\Api\ImageProcessingController::class, 'generateMultipleSizes']);
+        Route::get('image/info', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getImageInfo']);
+        Route::post('image/validate', [\App\Http\Controllers\Api\ImageProcessingController::class, 'validateImage']);
+        Route::get('image/stats', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getStats']);
+        Route::post('image/cleanup', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cleanup']);
+        
+        // Favorites routes
+        Route::get('favorites', [\App\Http\Controllers\Api\FavoriteController::class, 'index']);
+        Route::post('favorites', [\App\Http\Controllers\Api\FavoriteController::class, 'store']);
+        Route::delete('favorites/{storyId}', [\App\Http\Controllers\Api\FavoriteController::class, 'destroy']);
+        Route::post('favorites/toggle', [\App\Http\Controllers\Api\FavoriteController::class, 'toggle']);
+        Route::get('favorites/check/{storyId}', [\App\Http\Controllers\Api\FavoriteController::class, 'check']);
+        Route::get('favorites/most-favorited', [\App\Http\Controllers\Api\FavoriteController::class, 'mostFavorited']);
+        Route::get('favorites/stats', [\App\Http\Controllers\Api\FavoriteController::class, 'stats']);
+        Route::post('favorites/bulk', [\App\Http\Controllers\Api\FavoriteController::class, 'bulk']);
     });
 });
 

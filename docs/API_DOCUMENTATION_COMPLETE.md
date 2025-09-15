@@ -996,6 +996,675 @@ POST /audio/cleanup
 }
 ```
 
+### Image Processing
+
+#### Process Image File
+```http
+POST /image/process
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg",
+    "resize": "800,600,true",
+    "quality": 90,
+    "watermark": true,
+    "watermark_position": "bottom-right",
+    "watermark_opacity": 0.7,
+    "crop": "0,0,800,600",
+    "rotate": 0,
+    "flip": null,
+    "brightness": 0,
+    "contrast": 0,
+    "blur": 0,
+    "sharpen": 0,
+    "format": "jpg",
+    "optimize": true,
+    "progressive": true
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "images/2024/01/story_cover.jpg",
+        "processed_file": "images/2024/01/story_cover_processed.jpg",
+        "image_info": {
+            "width": 800,
+            "height": 600,
+            "format": "image/jpeg",
+            "size": 245760,
+            "aspect_ratio": 1.33,
+            "orientation": "landscape",
+            "colorspace": "RGB",
+            "has_alpha": false
+        },
+        "processing_info": {
+            "original_size": 524288,
+            "processed_size": 245760,
+            "compression_ratio": 53.13,
+            "processing_options": {
+                "resize": [800, 600, true],
+                "quality": 90,
+                "watermark": true
+            },
+            "processing_time": 0.5
+        }
+    },
+    "message": "تصویر با موفقیت پردازش شد"
+}
+```
+
+#### Resize Image
+```http
+POST /image/resize
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg",
+    "width": 800,
+    "height": 600,
+    "maintain_aspect_ratio": true
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "images/2024/01/story_cover.jpg",
+        "resized_file": "images/2024/01/story_cover_processed.jpg",
+        "width": 800,
+        "height": 600,
+        "maintain_aspect_ratio": true
+    },
+    "message": "تغییر اندازه تصویر با موفقیت انجام شد"
+}
+```
+
+#### Crop Image
+```http
+POST /image/crop
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg",
+    "x": 100,
+    "y": 100,
+    "width": 600,
+    "height": 400
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "images/2024/01/story_cover.jpg",
+        "cropped_file": "images/2024/01/story_cover_processed.jpg",
+        "crop_area": {
+            "x": 100,
+            "y": 100,
+            "width": 600,
+            "height": 400
+        }
+    },
+    "message": "برش تصویر با موفقیت انجام شد"
+}
+```
+
+#### Add Watermark
+```http
+POST /image/watermark
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg",
+    "watermark_path": "assets/images/watermark.png",
+    "position": "bottom-right",
+    "opacity": 0.7
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "images/2024/01/story_cover.jpg",
+        "watermarked_file": "images/2024/01/story_cover_processed.jpg",
+        "watermark_position": "bottom-right",
+        "watermark_opacity": 0.7
+    },
+    "message": "واترمارک با موفقیت اضافه شد"
+}
+```
+
+#### Optimize Image
+```http
+POST /image/optimize
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg",
+    "quality": 85
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "images/2024/01/story_cover.jpg",
+        "optimized_file": "images/2024/01/story_cover_processed.jpg",
+        "quality": 85
+    },
+    "message": "بهینه‌سازی تصویر با موفقیت انجام شد"
+}
+```
+
+#### Generate Thumbnail
+```http
+POST /image/thumbnail
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg",
+    "width": 300,
+    "height": 300
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "images/2024/01/story_cover.jpg",
+        "thumbnail_file": "images/2024/01/story_cover_processed.jpg",
+        "thumbnail_size": {
+            "width": 300,
+            "height": 300
+        }
+    },
+    "message": "تصویر بندانگشتی با موفقیت ایجاد شد"
+}
+```
+
+#### Generate Multiple Sizes
+```http
+POST /image/multiple-sizes
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg",
+    "sizes": {
+        "small": {
+            "width": 300,
+            "height": 300,
+            "quality": 85,
+            "format": "jpg"
+        },
+        "medium": {
+            "width": 600,
+            "height": 600,
+            "quality": 90,
+            "format": "jpg"
+        },
+        "large": {
+            "width": 1200,
+            "height": 1200,
+            "quality": 95,
+            "format": "jpg"
+        }
+    }
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "images/2024/01/story_cover.jpg",
+        "processed_files": {
+            "small": "images/2024/01/story_cover_processed.jpg",
+            "medium": "images/2024/01/story_cover_processed_1.jpg",
+            "large": "images/2024/01/story_cover_processed_2.jpg"
+        },
+        "sizes": {
+            "small": {
+                "width": 300,
+                "height": 300,
+                "quality": 85,
+                "format": "jpg"
+            },
+            "medium": {
+                "width": 600,
+                "height": 600,
+                "quality": 90,
+                "format": "jpg"
+            },
+            "large": {
+                "width": 1200,
+                "height": 1200,
+                "quality": 95,
+                "format": "jpg"
+            }
+        }
+    },
+    "message": "اندازه‌های مختلف با موفقیت ایجاد شد"
+}
+```
+
+#### Get Image Information
+```http
+GET /image/info?file_path=images/2024/01/story_cover.jpg
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "file_path": "images/2024/01/story_cover.jpg",
+        "image_info": {
+            "width": 1200,
+            "height": 800,
+            "format": "image/jpeg",
+            "size": 524288,
+            "aspect_ratio": 1.5,
+            "orientation": "landscape",
+            "colorspace": "RGB",
+            "has_alpha": false
+        }
+    },
+    "message": "اطلاعات تصویر دریافت شد"
+}
+```
+
+#### Validate Image File
+```http
+POST /image/validate
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "images/2024/01/story_cover.jpg"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "info": {
+            "width": 1200,
+            "height": 800,
+            "format": "image/jpeg",
+            "size": 524288,
+            "aspect_ratio": 1.5,
+            "orientation": "landscape",
+            "colorspace": "RGB",
+            "has_alpha": false
+        }
+    },
+    "message": "تصویر معتبر است"
+}
+```
+
+#### Get Processing Statistics
+```http
+GET /image/stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "temp_files_count": 8,
+        "temp_files_size": 10485760,
+        "temp_files_size_mb": 10.0,
+        "supported_formats": ["jpg", "jpeg", "png", "gif", "webp", "bmp", "tiff"],
+        "default_quality": 90,
+        "output_format": "jpg",
+        "watermark_available": true
+    },
+    "message": "آمار پردازش تصویر دریافت شد"
+}
+```
+
+#### Cleanup Temporary Files
+```http
+POST /image/cleanup
+```
+
+**Request Body:**
+```json
+{
+    "file_paths": ["temp/images/file1.jpg", "temp/images/file2.png"]
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "cleaned_files": 2
+    },
+    "message": "2 فایل موقت پاک شد"
+}
+```
+
+### Favorites
+
+#### Get User's Favorites
+```http
+GET /favorites
+```
+
+**Query Parameters:**
+- `per_page` (optional): Number of favorites per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "favorites": [
+            {
+                "id": 1,
+                "user_id": 1,
+                "story_id": 5,
+                "created_at": "2024-01-15T10:00:00Z",
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "subtitle": "داستان هیجان‌انگیز کودکان",
+                    "description": "داستان زیبای ماجراجویی در جنگل...",
+                    "category_id": 2,
+                    "age_group": "6-9",
+                    "duration": 45,
+                    "status": "published",
+                    "is_premium": false,
+                    "play_count": 2500,
+                    "rating": 4.8,
+                    "rating_count": 156,
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    },
+                    "episodes": [
+                        {
+                            "id": 10,
+                            "title": "قسمت اول: شروع ماجرا",
+                            "episode_number": 1,
+                            "duration": 15
+                        }
+                    ]
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 3,
+            "per_page": 20,
+            "total": 45,
+            "has_more": true
+        }
+    },
+    "message": "لیست علاقه‌مندی‌ها دریافت شد"
+}
+```
+
+#### Add Story to Favorites
+```http
+POST /favorites
+```
+
+**Request Body:**
+```json
+{
+    "story_id": 5
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "story_id": 5,
+        "is_favorited": true,
+        "favorite_count": 1250
+    },
+    "message": "داستان به علاقه‌مندی‌ها اضافه شد"
+}
+```
+
+#### Remove Story from Favorites
+```http
+DELETE /favorites/{storyId}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "story_id": 5,
+        "is_favorited": false,
+        "favorite_count": 1249
+    },
+    "message": "داستان از علاقه‌مندی‌ها حذف شد"
+}
+```
+
+#### Toggle Favorite Status
+```http
+POST /favorites/toggle
+```
+
+**Request Body:**
+```json
+{
+    "story_id": 5
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "story_id": 5,
+        "action": "added",
+        "is_favorited": true,
+        "favorite_count": 1250
+    },
+    "message": "داستان به علاقه‌مندی‌ها اضافه شد"
+}
+```
+
+#### Check Favorite Status
+```http
+GET /favorites/check/{storyId}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "story_id": 5,
+        "is_favorited": true,
+        "favorite_count": 1250
+    },
+    "message": "داستان در علاقه‌مندی‌ها است"
+}
+```
+
+#### Get Most Favorited Stories
+```http
+GET /favorites/most-favorited
+```
+
+**Query Parameters:**
+- `limit` (optional): Number of stories to return (default: 10, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "stories": [
+            {
+                "story": {
+                    "id": 1,
+                    "title": "سفیدبرفی و هفت کوتوله",
+                    "subtitle": "داستان کلاسیک محبوب کودکان",
+                    "description": "داستان زیبای سفیدبرفی...",
+                    "category": {
+                        "id": 1,
+                        "name": "داستان‌های کلاسیک",
+                        "color": "#FF6B6B"
+                    }
+                },
+                "favorite_count": 2500
+            },
+            {
+                "story": {
+                    "id": 5,
+                    "title": "ماجراجویی در جنگل جادویی",
+                    "subtitle": "داستان هیجان‌انگیز کودکان",
+                    "description": "داستان زیبای ماجراجویی...",
+                    "category": {
+                        "id": 2,
+                        "name": "ماجراجویی",
+                        "color": "#4ECDC4"
+                    }
+                },
+                "favorite_count": 1800
+            }
+        ],
+        "limit": 10
+    },
+    "message": "محبوب‌ترین داستان‌ها دریافت شد"
+}
+```
+
+#### Get Favorite Statistics
+```http
+GET /favorites/stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "total_favorites": 45,
+        "recent_favorites": 8,
+        "monthly_favorites": 25,
+        "most_favorited_story": {
+            "story_id": 1,
+            "count": 5,
+            "story": {
+                "id": 1,
+                "title": "سفیدبرفی و هفت کوتوله",
+                "subtitle": "داستان کلاسیک محبوب کودکان"
+            }
+        }
+    },
+    "message": "آمار علاقه‌مندی‌ها دریافت شد"
+}
+```
+
+#### Bulk Add/Remove Favorites
+```http
+POST /favorites/bulk
+```
+
+**Request Body:**
+```json
+{
+    "action": "add",
+    "story_ids": [1, 2, 3, 4, 5]
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "action": "add",
+        "total_processed": 5,
+        "success_count": 4,
+        "error_count": 1,
+        "results": [
+            {
+                "story_id": 1,
+                "action": "add",
+                "success": true,
+                "message": "اضافه شد"
+            },
+            {
+                "story_id": 2,
+                "action": "add",
+                "success": true,
+                "message": "اضافه شد"
+            },
+            {
+                "story_id": 3,
+                "action": "add",
+                "success": false,
+                "message": "قبلاً اضافه شده بود"
+            },
+            {
+                "story_id": 4,
+                "action": "add",
+                "success": true,
+                "message": "اضافه شد"
+            },
+            {
+                "story_id": 5,
+                "action": "add",
+                "success": true,
+                "message": "اضافه شد"
+            }
+        ]
+    },
+    "message": "عملیات add برای 4 داستان با موفقیت انجام شد"
+}
+```
+
 ### Stories
 
 #### Get All Stories
