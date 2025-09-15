@@ -1,126 +1,254 @@
 #!/bin/bash
 
-# SarvCast Deployment Script
-# This script handles the deployment of the Laravel application
+# SarvCast Production Deployment Script
+# This script deploys the SarvCast application to production
 
 set -e
 
-echo "🚀 Starting SarvCast deployment..."
+echo "🚀 Starting SarvCast Production Deployment..."
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+# Configuration
+PROJECT_NAME="sarvcast"
+DOMAIN="sarvcast.com"
+SSL_EMAIL="admin@sarvcast.com"
+BACKUP_DIR="/backups/sarvcast"
+LOG_FILE="/var/log/sarvcast-deploy.log"
+
+# Functions
+log() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a $LOG_FILE
 }
 
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
+success() {
+    echo -e "${GREEN}✅ $1${NC}" | tee -a $LOG_FILE
 }
 
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}" | tee -a $LOG_FILE
 }
 
-# Check if we're in the right directory
-if [ ! -f "artisan" ]; then
-    print_error "This script must be run from the Laravel project root directory"
+error() {
+    echo -e "${RED}❌ $1${NC}" | tee -a $LOG_FILE
     exit 1
+}
+
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then
+    error "Please run as root"
 fi
 
-# Check if PHP is installed
-if ! command -v php &> /dev/null; then
-    print_error "PHP is not installed or not in PATH"
-    exit 1
+# Check if Docker is installed
+if ! command -v docker &> /dev/null; then
+    error "Docker is not installed"
 fi
 
-# Check if Composer is installed
-if ! command -v composer &> /dev/null; then
-    print_error "Composer is not installed or not in PATH"
-    exit 1
+if ! command -v docker-compose &> /dev/null; then
+    error "Docker Compose is not installed"
 fi
 
-print_status "Environment checks passed"
+log "Starting deployment process..."
 
-# Install/Update dependencies
-print_status "Installing dependencies..."
-composer install --no-dev --optimize-autoloader
+# Create necessary directories
+log "Creating necessary directories..."
+mkdir -p $BACKUP_DIR
+mkdir -p /var/log/sarvcast
+mkdir -p /etc/nginx/ssl
+mkdir -p /var/www/sarvcast
 
-# Generate application key if not exists
-if [ -z "$(grep APP_KEY= .env 2>/dev/null || echo '')" ] || [ "$(grep APP_KEY= .env 2>/dev/null | cut -d'=' -f2)" = "" ]; then
-    print_status "Generating application key..."
-    php artisan key:generate
+# Backup existing data if exists
+if [ -d "/var/www/sarvcast" ]; then
+    log "Creating backup of existing installation..."
+    tar -czf $BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).tar.gz /var/www/sarvcast
+    success "Backup created successfully"
 fi
 
-# Clear and cache configuration
-print_status "Optimizing application..."
-php artisan config:clear
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+# Stop existing services
+log "Stopping existing services..."
+docker-compose -f docker-compose.production.yml down || true
+systemctl stop nginx || true
+systemctl stop mysql || true
+systemctl stop redis || true
+
+# Copy application files
+log "Copying application files..."
+cp -r . /var/www/sarvcast/
+cd /var/www/sarvcast
+
+# Set permissions
+log "Setting proper permissions..."
+chown -R www-data:www-data /var/www/sarvcast
+chmod -R 755 /var/www/sarvcast
+chmod -R 777 /var/www/sarvcast/storage
+chmod -R 777 /var/www/sarvcast/bootstrap/cache
+
+# Generate SSL certificates
+log "Generating SSL certificates..."
+if [ ! -f "/etc/nginx/ssl/sarvcast.crt" ]; then
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout /etc/nginx/ssl/sarvcast.key \
+        -out /etc/nginx/ssl/sarvcast.crt \
+        -subj "/C=IR/ST=Tehran/L=Tehran/O=SarvCast/OU=IT/CN=$DOMAIN"
+    success "SSL certificates generated"
+else
+    warning "SSL certificates already exist"
+fi
+
+# Create environment file
+log "Creating production environment file..."
+if [ ! -f ".env" ]; then
+    cp .env.example .env
+    warning "Please update .env file with production values"
+fi
+
+# Install dependencies
+log "Installing PHP dependencies..."
+docker run --rm -v $(pwd):/app -w /app composer:latest install --no-dev --optimize-autoloader --no-interaction
+
+# Build frontend assets
+log "Building frontend assets..."
+docker run --rm -v $(pwd):/app -w /app node:18-alpine sh -c "npm ci --only=production && npm run build"
+
+# Generate application key
+log "Generating application key..."
+docker run --rm -v $(pwd):/app -w /app php:8.2-cli php artisan key:generate
 
 # Run database migrations
-print_status "Running database migrations..."
-php artisan migrate --force
+log "Running database migrations..."
+docker-compose -f docker-compose.production.yml up -d mysql redis
+sleep 30
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan migrate --force
 
-# Seed database if needed
-if [ "$1" = "--seed" ]; then
-    print_status "Seeding database..."
-    php artisan db:seed --force
-fi
+# Seed database
+log "Seeding database..."
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan db:seed --force
 
-# Create storage symlink
-print_status "Creating storage symlink..."
-php artisan storage:link
+# Cache configuration
+log "Caching configuration..."
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan config:cache
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan route:cache
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan view:cache
 
-# Set proper permissions
-print_status "Setting permissions..."
-chmod -R 755 storage
-chmod -R 755 bootstrap/cache
+# Start all services
+log "Starting all services..."
+docker-compose -f docker-compose.production.yml up -d
 
-# Clear old logs
-print_status "Clearing old logs..."
-find storage/logs -name "*.log" -mtime +7 -delete 2>/dev/null || true
-
-# Run tests
-print_status "Running tests..."
-php artisan test --parallel
-
-# Create backup of current deployment
-if [ -d "storage/app/backups" ]; then
-    print_status "Creating deployment backup..."
-    tar -czf "storage/app/backups/deployment-$(date +%Y%m%d-%H%M%S).tar.gz" \
-        --exclude="vendor" \
-        --exclude="node_modules" \
-        --exclude=".git" \
-        --exclude="storage/logs" \
-        --exclude="storage/app/backups" \
-        .
-fi
+# Wait for services to be ready
+log "Waiting for services to be ready..."
+sleep 60
 
 # Health check
-print_status "Performing health check..."
-php artisan about
+log "Performing health check..."
+if curl -f http://localhost/health > /dev/null 2>&1; then
+    success "Application is healthy"
+else
+    error "Health check failed"
+fi
 
-print_status "✅ Deployment completed successfully!"
+# Setup monitoring
+log "Setting up monitoring..."
+if [ -f "monitoring/setup-monitoring.sh" ]; then
+    bash monitoring/setup-monitoring.sh
+fi
 
-# Display next steps
+# Setup backup cron job
+log "Setting up backup cron job..."
+(crontab -l 2>/dev/null; echo "0 2 * * * /var/www/sarvcast/scripts/backup.sh") | crontab -
+
+# Setup log rotation
+log "Setting up log rotation..."
+cat > /etc/logrotate.d/sarvcast << EOF
+/var/log/sarvcast/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 www-data www-data
+    postrotate
+        docker-compose -f /var/www/sarvcast/docker-compose.production.yml restart nginx
+    endscript
+}
+EOF
+
+# Setup systemd service
+log "Setting up systemd service..."
+cat > /etc/systemd/system/sarvcast.service << EOF
+[Unit]
+Description=SarvCast Application
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/var/www/sarvcast
+ExecStart=/usr/bin/docker-compose -f docker-compose.production.yml up -d
+ExecStop=/usr/bin/docker-compose -f docker-compose.production.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable sarvcast.service
+
+# Final checks
+log "Performing final checks..."
+
+# Check if all containers are running
+if docker-compose -f docker-compose.production.yml ps | grep -q "Up"; then
+    success "All containers are running"
+else
+    error "Some containers failed to start"
+fi
+
+# Check if application is accessible
+if curl -f https://$DOMAIN/health > /dev/null 2>&1; then
+    success "Application is accessible via HTTPS"
+else
+    warning "Application may not be accessible via HTTPS yet"
+fi
+
+# Display deployment summary
 echo ""
-echo "📋 Next steps:"
-echo "1. Update your web server configuration"
-echo "2. Set up SSL certificate"
-echo "3. Configure environment variables"
-echo "4. Set up cron jobs for scheduled tasks"
-echo "5. Configure log rotation"
-echo "6. Set up monitoring and alerts"
+echo "🎉 Deployment completed successfully!"
 echo ""
-echo "🔧 Useful commands:"
-echo "- php artisan queue:work (for background jobs)"
-echo "- php artisan schedule:run (for scheduled tasks)"
-echo "- php artisan optimize (for performance optimization)"
-echo "- php artisan config:cache (for configuration caching)"
+echo "📋 Deployment Summary:"
+echo "   • Application: $PROJECT_NAME"
+echo "   • Domain: $DOMAIN"
+echo "   • SSL: Enabled"
+echo "   • Monitoring: Enabled"
+echo "   • Backup: Configured"
+echo "   • Logs: /var/log/sarvcast/"
 echo ""
+echo "🔗 Access URLs:"
+echo "   • Application: https://$DOMAIN"
+echo "   • Admin Panel: https://$DOMAIN/admin"
+echo "   • API: https://$DOMAIN/api/v1"
+echo "   • Monitoring: http://$DOMAIN:3000 (Grafana)"
+echo "   • Metrics: http://$DOMAIN:9090 (Prometheus)"
+echo ""
+echo "📝 Next Steps:"
+echo "   1. Update .env file with production values"
+echo "   2. Configure DNS to point to this server"
+echo "   3. Test all functionality"
+echo "   4. Setup monitoring alerts"
+echo "   5. Configure backup verification"
+echo ""
+echo "📚 Documentation:"
+echo "   • Logs: tail -f $LOG_FILE"
+echo "   • Status: systemctl status sarvcast"
+echo "   • Restart: systemctl restart sarvcast"
+echo "   • Logs: docker-compose -f docker-compose.production.yml logs"
+echo ""
+
+success "Deployment completed successfully!"
