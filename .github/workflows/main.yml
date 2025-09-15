@@ -18,15 +18,15 @@ jobs:
         with:
           php-version: 8.2
 
-      - name: Setup MySQL
-        uses: mirromutth/mysql-action@v1.1
-        with:
-          mysql version: '8.0'
-          mysql root password: 'iWY]RgUhnqiu'
-          mysql database: 'h273779_lgb'
-          mysql user: 'h273779_lgb'
-          mysql host: 'localhost'
-          mysql password: 'iWY]RgUhnqiu'
+    #   - name: Setup MySQL
+    #     uses: mirromutth/mysql-action@v1.1
+    #     with:
+    #       mysql version: '8.0'
+    #       mysql root password: 'iWY]RgUhnqiu'
+    #       mysql database: 'h273779_lgb'
+    #       mysql user: 'h273779_lgb'
+    #       mysql host: 'localhost'
+    #       mysql password: 'iWY]RgUhnqiu'
 
       - name: Cache Composer packages
         id: composer-cache

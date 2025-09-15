@@ -505,6 +505,497 @@ GET /people/{id}/statistics
 }
 ```
 
+### File Upload
+
+#### Upload Image
+```http
+POST /upload/image
+```
+
+**Request Body (multipart/form-data):**
+- `image` (required): Image file (jpg, jpeg, png, gif, webp)
+- `resize` (optional): Resize image (width,height) e.g., "800,600"
+- `quality` (optional): Image quality (1-100, default: 90)
+- `watermark` (optional): Add watermark (true/false, default: false)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "file_id": "img_1234567890",
+        "filename": "image_20240115_120000.jpg",
+        "original_name": "profile.jpg",
+        "path": "images/2024/01/image_20240115_120000.jpg",
+        "url": "https://api.sarvcast.com/storage/images/2024/01/image_20240115_120000.jpg",
+        "size": 245760,
+        "mime_type": "image/jpeg",
+        "dimensions": {
+            "width": 800,
+            "height": 600
+        },
+        "uploaded_at": "2024-01-15T12:00:00Z"
+    },
+    "message": "تصویر با موفقیت آپلود شد"
+}
+```
+
+#### Upload Audio
+```http
+POST /upload/audio
+```
+
+**Request Body (multipart/form-data):**
+- `audio` (required): Audio file (mp3, wav, m4a, aac, ogg)
+- `extract_metadata` (optional): Extract metadata (true/false, default: true)
+- `convert_format` (optional): Convert to mp3 (true/false, default: false)
+- `bitrate` (optional): Audio bitrate (128, 192, 256, 320, default: 192)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "file_id": "aud_1234567890",
+        "filename": "audio_20240115_120000.mp3",
+        "original_name": "story_episode_1.mp3",
+        "path": "audio/2024/01/audio_20240115_120000.mp3",
+        "url": "https://api.sarvcast.com/storage/audio/2024/01/audio_20240115_120000.mp3",
+        "size": 5242880,
+        "mime_type": "audio/mpeg",
+        "duration": 180,
+        "bitrate": 192,
+        "metadata": {
+            "title": "قسمت اول: شروع ماجرا",
+            "artist": "علی احمدی",
+            "album": "ماجراجویی در جنگل جادویی"
+        },
+        "uploaded_at": "2024-01-15T12:00:00Z"
+    },
+    "message": "فایل صوتی با موفقیت آپلود شد"
+}
+```
+
+#### Upload Document
+```http
+POST /upload/document
+```
+
+**Request Body (multipart/form-data):**
+- `document` (required): Document file (pdf, doc, docx, txt, rtf)
+- `extract_text` (optional): Extract text content (true/false, default: false)
+- `ocr` (optional): OCR for images in PDF (true/false, default: false)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "file_id": "doc_1234567890",
+        "filename": "document_20240115_120000.pdf",
+        "original_name": "story_script.pdf",
+        "path": "documents/2024/01/document_20240115_120000.pdf",
+        "url": "https://api.sarvcast.com/storage/documents/2024/01/document_20240115_120000.pdf",
+        "size": 1048576,
+        "mime_type": "application/pdf",
+        "pages": 5,
+        "extracted_text": "متن استخراج شده از سند...",
+        "uploaded_at": "2024-01-15T12:00:00Z"
+    },
+    "message": "سند با موفقیت آپلود شد"
+}
+```
+
+#### Upload Multiple Files
+```http
+POST /upload/multiple
+```
+
+**Request Body (multipart/form-data):**
+- `files[]` (required): Array of files
+- `type` (required): File type (image, audio, document, mixed)
+- `resize` (optional): Resize images (width,height)
+- `quality` (optional): Image quality (1-100)
+- `extract_metadata` (optional): Extract metadata (true/false)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "uploaded_files": [
+            {
+                "file_id": "img_1234567890",
+                "filename": "image_20240115_120000.jpg",
+                "url": "https://api.sarvcast.com/storage/images/2024/01/image_20240115_120000.jpg",
+                "size": 245760
+            },
+            {
+                "file_id": "aud_1234567891",
+                "filename": "audio_20240115_120001.mp3",
+                "url": "https://api.sarvcast.com/storage/audio/2024/01/audio_20240115_120001.mp3",
+                "size": 5242880
+            }
+        ],
+        "total_files": 2,
+        "total_size": 5488640,
+        "uploaded_at": "2024-01-15T12:00:00Z"
+    },
+    "message": "2 فایل با موفقیت آپلود شد"
+}
+```
+
+#### Delete File
+```http
+DELETE /upload/delete
+```
+
+**Request Body:**
+```json
+{
+    "file_id": "img_1234567890"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "فایل با موفقیت حذف شد"
+}
+```
+
+#### Get File Info
+```http
+GET /upload/info?file_id=img_1234567890
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "file_id": "img_1234567890",
+        "filename": "image_20240115_120000.jpg",
+        "original_name": "profile.jpg",
+        "path": "images/2024/01/image_20240115_120000.jpg",
+        "url": "https://api.sarvcast.com/storage/images/2024/01/image_20240115_120000.jpg",
+        "size": 245760,
+        "mime_type": "image/jpeg",
+        "dimensions": {
+            "width": 800,
+            "height": 600
+        },
+        "uploaded_at": "2024-01-15T12:00:00Z"
+    }
+}
+```
+
+#### Cleanup Temp Files
+```http
+POST /upload/cleanup
+```
+
+**Request Body:**
+```json
+{
+    "file_ids": ["img_1234567890", "aud_1234567891"]
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "cleaned_files": 2,
+        "freed_space": 5488640
+    },
+    "message": "2 فایل موقت با موفقیت پاک شد"
+}
+```
+
+#### Get Upload Config
+```http
+GET /upload/config
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "max_file_size": {
+            "image": 5242880,
+            "audio": 52428800,
+            "document": 10485760
+        },
+        "allowed_extensions": {
+            "image": ["jpg", "jpeg", "png", "gif", "webp"],
+            "audio": ["mp3", "wav", "m4a", "aac", "ogg"],
+            "document": ["pdf", "doc", "docx", "txt", "rtf"]
+        },
+        "storage_paths": {
+            "image": "images",
+            "audio": "audio",
+            "document": "documents"
+        },
+        "processing_options": {
+            "image_resize": true,
+            "image_quality": 90,
+            "audio_conversion": true,
+            "audio_bitrate": 192,
+            "document_ocr": false
+        }
+    }
+}
+```
+
+### Audio Processing
+
+#### Process Audio File
+```http
+POST /audio/process
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "audio/2024/01/story_episode_1.mp3",
+    "convert_format": "mp3",
+    "bitrate": 192,
+    "normalize": true,
+    "fade_in": 2,
+    "fade_out": 3,
+    "trim_start": 0,
+    "trim_end": 180,
+    "volume": 1.2,
+    "quality": "high"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "audio/2024/01/story_episode_1.mp3",
+        "processed_file": "audio/2024/01/story_episode_1_processed.mp3",
+        "metadata": {
+            "duration": 180,
+            "bitrate": 192000,
+            "sample_rate": 44100,
+            "channels": 2,
+            "format": "mp3",
+            "title": "قسمت اول: شروع ماجرا",
+            "artist": "علی احمدی"
+        },
+        "processing_info": {
+            "command": "ffmpeg -i ...",
+            "execution_time": 15.5,
+            "output_size": 5242880,
+            "processing_options": {
+                "convert_format": "mp3",
+                "bitrate": 192,
+                "normalize": true
+            }
+        }
+    },
+    "message": "فایل صوتی با موفقیت پردازش شد"
+}
+```
+
+#### Extract Metadata
+```http
+POST /audio/extract-metadata
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "audio/2024/01/story_episode_1.mp3"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "file_path": "audio/2024/01/story_episode_1.mp3",
+        "metadata": {
+            "duration": 180.5,
+            "bitrate": 192000,
+            "sample_rate": 44100,
+            "channels": 2,
+            "format": "mp3",
+            "title": "قسمت اول: شروع ماجرا",
+            "artist": "علی احمدی",
+            "album": "ماجراجویی در جنگل جادویی",
+            "year": "2024",
+            "genre": "Children's Story"
+        }
+    },
+    "message": "متادیتا با موفقیت استخراج شد"
+}
+```
+
+#### Convert Format
+```http
+POST /audio/convert
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "audio/2024/01/story_episode_1.wav",
+    "target_format": "mp3",
+    "bitrate": 192
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "audio/2024/01/story_episode_1.wav",
+        "converted_file": "audio/2024/01/story_episode_1_processed.mp3",
+        "target_format": "mp3",
+        "bitrate": 192
+    },
+    "message": "تبدیل فرمت با موفقیت انجام شد"
+}
+```
+
+#### Normalize Audio
+```http
+POST /audio/normalize
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "audio/2024/01/story_episode_1.mp3"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "audio/2024/01/story_episode_1.mp3",
+        "normalized_file": "audio/2024/01/story_episode_1_processed.mp3"
+    },
+    "message": "نرمال‌سازی صدا با موفقیت انجام شد"
+}
+```
+
+#### Trim Audio
+```http
+POST /audio/trim
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "audio/2024/01/story_episode_1.mp3",
+    "start_seconds": 10,
+    "end_seconds": 170
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "original_file": "audio/2024/01/story_episode_1.mp3",
+        "trimmed_file": "audio/2024/01/story_episode_1_processed.mp3",
+        "start_seconds": 10,
+        "end_seconds": 170
+    },
+    "message": "برش فایل صوتی با موفقیت انجام شد"
+}
+```
+
+#### Validate Audio File
+```http
+POST /audio/validate
+```
+
+**Request Body:**
+```json
+{
+    "file_path": "audio/2024/01/story_episode_1.mp3"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "valid": true,
+        "errors": [],
+        "warnings": [],
+        "info": {
+            "duration": 180,
+            "bitrate": 192000,
+            "sample_rate": 44100,
+            "channels": 2,
+            "format": "mp3"
+        }
+    },
+    "message": "فایل صوتی معتبر است"
+}
+```
+
+#### Get Processing Statistics
+```http
+GET /audio/stats
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "temp_files_count": 5,
+        "temp_files_size": 52428800,
+        "temp_files_size_mb": 50.0,
+        "supported_formats": ["mp3", "wav", "m4a", "aac", "ogg", "flac"],
+        "default_bitrate": 192,
+        "output_format": "mp3"
+    },
+    "message": "آمار پردازش صدا دریافت شد"
+}
+```
+
+#### Cleanup Temporary Files
+```http
+POST /audio/cleanup
+```
+
+**Request Body:**
+```json
+{
+    "file_paths": ["temp/audio/file1.mp3", "temp/audio/file2.wav"]
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "cleaned_files": 2
+    },
+    "message": "2 فایل موقت پاک شد"
+}
+```
+
 ### Stories
 
 #### Get All Stories

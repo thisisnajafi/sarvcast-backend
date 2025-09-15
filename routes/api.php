@@ -57,6 +57,13 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('people/{person}', [PersonController::class, 'show'])->middleware('cache.api:1800'); // 30 minutes
     Route::get('people/{person}/statistics', [PersonController::class, 'statistics'])->middleware('cache.api:300'); // 5 minutes
     
+    // File upload routes
+    Route::post('upload/image', [FileUploadController::class, 'uploadImage']);
+    Route::post('upload/audio', [FileUploadController::class, 'uploadAudio']);
+    Route::post('upload/document', [FileUploadController::class, 'uploadDocument']);
+    Route::post('upload/multiple', [FileUploadController::class, 'uploadMultiple']);
+    Route::get('upload/config', [FileUploadController::class, 'getUploadConfig']);
+    
     // Health check routes
     Route::get('health', [HealthController::class, 'health']);
     Route::get('health/metrics', [HealthController::class, 'metrics']);
@@ -165,6 +172,26 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('device/register', [\App\Http\Controllers\Api\MobileController::class, 'registerDevice']);
         Route::post('device/token', [\App\Http\Controllers\Api\MobileController::class, 'updateFcmToken']);
         Route::delete('device/unregister', [\App\Http\Controllers\Api\MobileController::class, 'unregisterDevice']);
+        
+        // File upload routes
+        Route::post('upload/image', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadImage']);
+        Route::post('upload/audio', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadAudio']);
+        Route::post('upload/document', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadDocument']);
+        Route::post('upload/multiple', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadMultiple']);
+        Route::delete('upload/delete', [\App\Http\Controllers\Api\FileUploadController::class, 'deleteFile']);
+        Route::get('upload/info', [\App\Http\Controllers\Api\FileUploadController::class, 'getFileInfo']);
+        Route::post('upload/cleanup', [\App\Http\Controllers\Api\FileUploadController::class, 'cleanupTempFiles']);
+        Route::get('upload/config', [\App\Http\Controllers\Api\FileUploadController::class, 'getUploadConfig']);
+        
+        // Audio processing routes
+        Route::post('audio/process', [\App\Http\Controllers\Api\AudioProcessingController::class, 'processAudio']);
+        Route::post('audio/extract-metadata', [\App\Http\Controllers\Api\AudioProcessingController::class, 'extractMetadata']);
+        Route::post('audio/convert', [\App\Http\Controllers\Api\AudioProcessingController::class, 'convertFormat']);
+        Route::post('audio/normalize', [\App\Http\Controllers\Api\AudioProcessingController::class, 'normalizeAudio']);
+        Route::post('audio/trim', [\App\Http\Controllers\Api\AudioProcessingController::class, 'trimAudio']);
+        Route::post('audio/validate', [\App\Http\Controllers\Api\AudioProcessingController::class, 'validateAudio']);
+        Route::get('audio/stats', [\App\Http\Controllers\Api\AudioProcessingController::class, 'getStats']);
+        Route::post('audio/cleanup', [\App\Http\Controllers\Api\AudioProcessingController::class, 'cleanup']);
     });
 });
 
