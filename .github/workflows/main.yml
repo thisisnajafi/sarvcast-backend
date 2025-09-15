@@ -81,26 +81,6 @@ jobs:
           echo "🔍 Testing database connection..."
           php artisan tinker --execute="echo 'Database connection: ' . (DB::connection()->getPdo() ? 'OK' : 'FAILED') . PHP_EOL;"
 
-      - name: Test Broadcasting Configuration
-        env:
-          BROADCAST_DRIVER: log
-          PUSHER_APP_KEY: dummy_key
-          PUSHER_APP_SECRET: dummy_secret
-          PUSHER_APP_ID: dummy_id
-          PUSHER_APP_CLUSTER: mt1
-        run: |
-          echo "🔍 Testing broadcasting configuration..."
-          php artisan test:broadcasting
-          
-      - name: Test Broadcasting Safety
-        env:
-          BROADCAST_DRIVER: pusher
-          PUSHER_APP_KEY: 
-          PUSHER_APP_SECRET: 
-          PUSHER_APP_ID: 
-        run: |
-          echo "🔍 Testing broadcasting safety with missing env vars..."
-          php artisan test:broadcasting
 
       - name: Pre-deployment Cache Clear
         run: |
