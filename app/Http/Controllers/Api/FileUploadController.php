@@ -3,17 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\FileService;
+use App\Services\FileUploadService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class FileUploadController extends Controller
 {
-    protected $fileService;
+    protected $fileUploadService;
 
-    public function __construct(FileService $fileService)
+    public function __construct(FileUploadService $fileUploadService)
     {
-        $this->fileService = $fileService;
+        $this->fileUploadService = $fileUploadService;
     }
 
     /**
