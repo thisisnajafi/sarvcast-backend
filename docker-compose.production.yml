@@ -1,17 +1,35 @@
 version: '3.8'
 
 services:
-  # Laravel Application
-  app:
+  # Nginx Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: sarvcast_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/sites-available:/etc/nginx/sites-available:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./storage/app/public:/var/www/storage/app/public:ro
+      - ./public:/var/www/public:ro
+    depends_on:
+      - php-fpm
+    restart: unless-stopped
+    networks:
+      - sarvcast_network
+
+  # PHP-FPM Application Server
+  php-fpm:
     build:
       context: .
       dockerfile: Dockerfile.production
-    container_name: sarvcast_app
-    restart: unless-stopped
-    working_dir: /var/www/html
+    container_name: sarvcast_php
     volumes:
-      - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+      - .:/var/www
+      - ./storage:/var/www/storage
+      - ./bootstrap/cache:/var/www/bootstrap/cache
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
@@ -20,31 +38,14 @@ services:
       - DB_USERNAME=sarvcast_user
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
       - CACHE_DRIVER=redis
       - SESSION_DRIVER=redis
-      - QUEUE_CONNECTION=redis
     depends_on:
       - mysql
       - redis
-    networks:
-      - sarvcast_network
-
-  # Nginx Web Server
-  nginx:
-    image: nginx:alpine
-    container_name: sarvcast_nginx
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./public:/var/www/html/public
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./docker/nginx/sites-available:/etc/nginx/sites-available
-      - ./docker/ssl:/etc/nginx/ssl
-      - ./storage/app/public:/var/www/html/storage/app/public
-    depends_on:
-      - app
     networks:
       - sarvcast_network
 
@@ -52,130 +53,58 @@ services:
   mysql:
     image: mysql:8.0
     container_name: sarvcast_mysql
-    restart: unless-stopped
     environment:
-      MYSQL_DATABASE: sarvcast_production
-      MYSQL_USER: sarvcast_user
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=sarvcast_production
+      - MYSQL_USER=sarvcast_user
+      - MYSQL_PASSWORD=${DB_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./docker/mysql/my.cnf:/etc/mysql/my.cnf
+      - ./mysql/conf.d:/etc/mysql/conf.d:ro
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "3306:3306"
+    restart: unless-stopped
     networks:
       - sarvcast_network
 
-  # Redis Cache
+  # Redis Cache & Queue
   redis:
     image: redis:7-alpine
     container_name: sarvcast_redis
-    restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
+    restart: unless-stopped
     networks:
       - sarvcast_network
 
-  # Queue Worker
-  queue:
+  # Supervisor for Queue Workers
+  supervisor:
     build:
       context: .
-      dockerfile: Dockerfile.production
-    container_name: sarvcast_queue
-    restart: unless-stopped
-    working_dir: /var/www/html
-    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+      dockerfile: Dockerfile.supervisor
+    container_name: sarvcast_supervisor
     volumes:
-      - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
-      - DB_HOST=mysql
-      - DB_DATABASE=sarvcast_production
-      - DB_USERNAME=sarvcast_user
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
-      - QUEUE_CONNECTION=redis
+      - .:/var/www
+      - ./supervisor/supervisord.conf:/etc/supervisor/supervisord.conf:ro
     depends_on:
-      - mysql
+      - php-fpm
       - redis
+    restart: unless-stopped
     networks:
       - sarvcast_network
 
-  # Scheduler
-  scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
-    container_name: sarvcast_scheduler
-    restart: unless-stopped
-    working_dir: /var/www/html
-    command: php artisan schedule:work
-    volumes:
-      - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
-      - DB_HOST=mysql
-      - DB_DATABASE=sarvcast_production
-      - DB_USERNAME=sarvcast_user
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
-      - QUEUE_CONNECTION=redis
-    depends_on:
-      - mysql
-      - redis
-    networks:
-      - sarvcast_network
-
-  # Backup Service
-  backup:
-    build:
-      context: .
-      dockerfile: Dockerfile.production
-    container_name: sarvcast_backup
-    restart: unless-stopped
-    working_dir: /var/www/html
-    command: php artisan sarvcast:backup --type=full
-    volumes:
-      - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
-      - backup_data:/var/backups/sarvcast
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
-      - DB_HOST=mysql
-      - DB_DATABASE=sarvcast_production
-      - DB_USERNAME=sarvcast_user
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=redis
-      - CACHE_DRIVER=redis
-      - SESSION_DRIVER=redis
-      - QUEUE_CONNECTION=redis
-    depends_on:
-      - mysql
-      - redis
-    networks:
-      - sarvcast_network
-
-  # Monitoring (Optional)
-  monitoring:
+  # Prometheus Monitoring
+  prometheus:
     image: prom/prometheus:latest
-    container_name: sarvcast_monitoring
-    restart: unless-stopped
+    container_name: sarvcast_prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -184,6 +113,24 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - sarvcast_network
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sarvcast_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
     networks:
       - sarvcast_network
 
@@ -192,9 +139,9 @@ volumes:
     driver: local
   redis_data:
     driver: local
-  backup_data:
-    driver: local
   prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:

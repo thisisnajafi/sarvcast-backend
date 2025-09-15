@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ContentPersonalizationController;
 use App\Http\Controllers\Api\SocialController;
 use App\Http\Controllers\Api\GamificationController;
+use App\Http\Controllers\Admin\PersonController;
 
 /*
 |--------------------------------------------------------------------------

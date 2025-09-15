@@ -1,0 +1,78 @@
+FROM php:8.2-cli-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    supervisor \
+    curl \
+    libpng-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    git \
+    oniguruma-dev \
+    libzip-dev \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libwebp-dev \
+    libxpm-dev \
+    libvpx-dev \
+    ffmpeg \
+    imagemagick \
+    imagemagick-dev \
+    redis \
+    mysql-client
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd \
+    --with-freetype \
+    --with-jpeg \
+    --with-webp \
+    --with-xpm \
+    --with-vpx
+
+RUN docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    intl \
+    opcache
+
+# Install ImageMagick and Redis extensions
+RUN pecl install imagick redis && \
+    docker-php-ext-enable imagick redis
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www
+
+# Copy application files
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www && \
+    chmod -R 755 /var/www/storage && \
+    chmod -R 755 /var/www/bootstrap/cache
+
+# Create necessary directories
+RUN mkdir -p /var/www/storage/logs && \
+    mkdir -p /var/www/storage/framework/cache && \
+    mkdir -p /var/www/storage/framework/sessions && \
+    mkdir -p /var/www/storage/framework/views
+
+# Configure Supervisor
+COPY supervisor/supervisord.conf /etc/supervisor/supervisord.conf
+
+# Expose port
+EXPOSE 9001
+
+# Start Supervisor
+CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
