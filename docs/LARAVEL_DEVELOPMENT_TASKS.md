@@ -45,110 +45,110 @@ Complete Laravel API backend and Tailwind CSS admin dashboard for SarvCast Persi
 - [x] Configure file storage (local + S3)
 
 #### Task 1.2: Database Schema Design
-- [ ] Create users table migration
-- [ ] Create user_profiles table migration
-- [ ] Create categories table migration
-- [ ] Create stories table migration
-- [ ] Create episodes table migration
-- [ ] Create people table migration
-- [ ] Create subscriptions table migration
-- [ ] Create payments table migration
-- [ ] Create play_histories table migration
-- [ ] Create favorites table migration
-- [ ] Create ratings table migration
-- [ ] Create notifications table migration
-- [ ] Create pivot tables for many-to-many relationships
-- [ ] Add proper indexes and foreign key constraints
-- [ ] Create database seeders for initial data
+- [x] Create users table migration
+- [x] Create user_profiles table migration
+- [x] Create categories table migration
+- [x] Create stories table migration
+- [x] Create episodes table migration
+- [x] Create people table migration
+- [x] Create subscriptions table migration
+- [x] Create payments table migration
+- [x] Create play_histories table migration
+- [x] Create favorites table migration
+- [x] Create ratings table migration
+- [x] Create notifications table migration
+- [x] Create pivot tables for many-to-many relationships
+- [x] Add proper indexes and foreign key constraints
+- [x] Create database seeders for initial data
 
 #### Task 1.3: Model Creation & Relationships
-- [ ] Create User model with relationships
-- [ ] Create UserProfile model
-- [ ] Create Story model with relationships
-- [ ] Create Episode model
-- [ ] Create Category model
-- [ ] Create Person model
-- [ ] Create Subscription model
-- [ ] Create Payment model
-- [ ] Create PlayHistory model
-- [ ] Create Favorite model
-- [ ] Create Rating model
-- [ ] Create Notification model
-- [ ] Define all model relationships (hasMany, belongsTo, belongsToMany)
-- [ ] Add model scopes and accessors/mutators
-- [ ] Implement model factories for testing
+- [x] Create User model with relationships
+- [x] Create UserProfile model
+- [x] Create Story model with relationships
+- [x] Create Episode model
+- [x] Create Category model
+- [x] Create Person model
+- [x] Create Subscription model
+- [x] Create Payment model
+- [x] Create PlayHistory model
+- [x] Create Favorite model
+- [x] Create Rating model
+- [x] Create Notification model
+- [x] Define all model relationships (hasMany, belongsTo, belongsToMany)
+- [x] Add model scopes and accessors/mutators
+- [x] Implement model factories for testing
 
 #### Task 1.4: Basic API Structure
-- [ ] Create API routes structure
-- [ ] Set up API middleware (auth, rate limiting, CORS)
-- [ ] Create base API controller
-- [ ] Implement API response formatting
-- [ ] Set up API versioning
-- [ ] Create API documentation structure
-- [ ] Implement error handling middleware
+- [x] Create API routes structure
+- [x] Set up API middleware (auth, rate limiting, CORS)
+- [x] Create base API controller
+- [x] Implement API response formatting
+- [x] Set up API versioning
+- [x] Create API documentation structure
+- [x] Implement error handling middleware
 
 ### Phase 2: Authentication & User Management (Week 2-3)
 
 #### Task 2.1: Authentication System
-- [ ] Create AuthController with register, login, logout methods
-- [ ] Implement JWT token generation and validation
-- [ ] Create password reset functionality
-- [ ] Implement email verification
-- [ ] Add phone number verification
-- [ ] Create refresh token mechanism
-- [ ] Implement account lockout after failed attempts
-- [ ] Add two-factor authentication (optional)
+- [x] Create AuthController with register, login, logout methods
+- [x] Implement JWT token generation and validation
+- [x] Create password reset functionality
+- [x] Implement email verification
+- [x] Add phone number verification
+- [x] Create refresh token mechanism
+- [x] Implement account lockout after failed attempts
+- [x] Add two-factor authentication (optional)
 
 #### Task 2.2: User Management
-- [ ] Create UserController with CRUD operations
-- [ ] Implement user profile management
-- [ ] Create child profile management system
-- [ ] Add user preferences handling
-- [ ] Implement user search and filtering
-- [ ] Create user activity logging
-- [ ] Add user status management (active, suspended, etc.)
-- [ ] Implement user deletion with data cleanup
+- [x] Create UserController with CRUD operations
+- [x] Implement user profile management
+- [x] Create child profile management system
+- [x] Add user preferences handling
+- [x] Implement user search and filtering
+- [x] Create user activity logging
+- [x] Add user status management (active, suspended, etc.)
+- [x] Implement user deletion with data cleanup
 
 #### Task 2.3: Authorization & Permissions
-- [ ] Set up role-based access control
-- [ ] Create admin, parent, child roles
-- [ ] Implement permission system
-- [ ] Create middleware for role checking
-- [ ] Add parental control middleware
-- [ ] Implement content access restrictions
-- [ ] Create admin-only endpoints
-- [ ] Add audit logging for admin actions
+- [x] Set up role-based access control
+- [x] Create admin, parent, child roles
+- [x] Implement permission system
+- [x] Create middleware for role checking
+- [x] Add parental control middleware
+- [x] Implement content access restrictions
+- [x] Create admin-only endpoints
+- [x] Add audit logging for admin actions
 
 ### Phase 3: Content Management System (Week 3-4)
 
 #### Task 3.1: Story Management
-- [ ] Create StoryController with full CRUD operations
-- [ ] Implement story creation with file uploads
-- [ ] Add story image processing (resize, optimize)
-- [ ] Create story search functionality
-- [ ] Implement story filtering by category, age group, etc.
-- [ ] Add story status workflow (draft, pending, approved, published)
-- [ ] Create story bulk operations
-- [ ] Implement story analytics tracking
+- [x] Create StoryController with full CRUD operations
+- [x] Implement story creation with file uploads
+- [x] Add story image processing (resize, optimize)
+- [x] Create story search functionality
+- [x] Implement story filtering by category, age group, etc.
+- [x] Add story status workflow (draft, pending, approved, published)
+- [x] Create story bulk operations
+- [x] Implement story analytics tracking
 
 #### Task 3.2: Episode Management
-- [ ] Create EpisodeController
-- [ ] Implement episode CRUD operations
-- [ ] Add audio file upload and processing
-- [ ] Create episode image management
-- [ ] Implement episode ordering within stories
-- [ ] Add episode status management
-- [ ] Create episode analytics
-- [ ] Implement episode download tracking
+- [x] Create EpisodeController
+- [x] Implement episode CRUD operations
+- [x] Add audio file upload and processing
+- [x] Create episode image management
+- [x] Implement episode ordering within stories
+- [x] Add episode status management
+- [x] Create episode analytics
+- [x] Implement episode download tracking
 
 #### Task 3.3: Category Management
-- [ ] Create CategoryController
-- [ ] Implement category CRUD operations
-- [ ] Add category image management
-- [ ] Create category hierarchy (if needed)
-- [ ] Implement category statistics
-- [ ] Add category ordering/sorting
-- [ ] Create category-based content filtering
+- [x] Create CategoryController
+- [x] Implement category CRUD operations
+- [x] Add category image management
+- [x] Create category hierarchy (if needed)
+- [x] Implement category statistics
+- [x] Add category ordering/sorting
+- [x] Create category-based content filtering
 
 #### Task 3.4: Person Management (Voice Actors, Directors, etc.)
 - [ ] Create PersonController
@@ -245,13 +245,13 @@ Complete Laravel API backend and Tailwind CSS admin dashboard for SarvCast Persi
 - [ ] Create subscription notifications
 
 #### Task 6.2: Payment Integration
-- [ ] Integrate ZarinPal payment gateway
-- [ ] Add Pay.ir integration
-- [ ] Implement payment processing
-- [ ] Create payment verification
-- [ ] Add payment history
-- [ ] Implement refund processing
-- [ ] Create payment analytics
+- [x] Integrate ZarinPal payment gateway
+- [x] ~~Add Pay.ir integration~~ (Removed as per requirements)
+- [x] Implement payment processing
+- [x] Create payment verification
+- [x] Add payment history
+- [x] Implement refund processing
+- [x] Create payment analytics
 
 #### Task 6.3: Access Control
 - [ ] Implement premium content access
@@ -300,31 +300,31 @@ Complete Laravel API backend and Tailwind CSS admin dashboard for SarvCast Persi
 ### Phase 8: Admin Dashboard Frontend (Week 8-9)
 
 #### Task 8.1: Dashboard Setup
-- [ ] Set up Tailwind CSS
-- [ ] Create admin layout structure
-- [ ] Implement responsive navigation
-- [ ] Add RTL support
-- [ ] Create admin authentication
-- [ ] Implement admin middleware
-- [ ] Add admin route protection
+- [x] Set up Tailwind CSS
+- [x] Create admin layout structure
+- [x] Implement responsive navigation
+- [x] Add RTL support
+- [x] Create admin authentication
+- [x] Implement admin middleware
+- [x] Add admin route protection
 
 #### Task 8.2: Dashboard Components
-- [ ] Create reusable UI components
-- [ ] Implement data tables
-- [ ] Add form components
-- [ ] Create modal components
-- [ ] Implement loading states
-- [ ] Add error handling
-- [ ] Create notification components
+- [x] Create reusable UI components
+- [x] Implement data tables
+- [x] Add form components
+- [x] Create modal components
+- [x] Implement loading states
+- [x] Add error handling
+- [x] Create notification components
 
 #### Task 8.3: Dashboard Pages
-- [ ] Create dashboard overview page
-- [ ] Implement user management page
-- [ ] Create story management page
-- [ ] Add episode management page
-- [ ] Implement category management page
-- [ ] Create subscription management page
-- [ ] Add analytics dashboard
+- [x] Create dashboard overview page
+- [x] Implement user management page
+- [x] Create story management page
+- [x] Add episode management page
+- [x] Implement category management page
+- [x] Create subscription management page
+- [x] Add analytics dashboard
 
 ### Phase 9: Content Management Interface (Week 9-10)
 
