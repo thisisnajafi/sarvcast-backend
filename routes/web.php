@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\StoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\EpisodeController;
+use App\Http\Controllers\Admin\PersonController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\AnalyticsController;
@@ -34,6 +35,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:sanctum', 'admin'])->g
     
     // Categories
     Route::resource('categories', CategoryController::class);
+    
+    // People
+    Route::resource('people', PersonController::class);
     
     // Users
     Route::resource('users', UserController::class);

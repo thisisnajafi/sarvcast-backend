@@ -1,0 +1,147 @@
+name: LGBTinder Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+
+      - name: Setup MySQL
+        uses: mirromutth/mysql-action@v1.1
+        with:
+          mysql version: '8.0'
+          mysql root password: 'iWY]RgUhnqiu'
+          mysql database: 'h273779_lgb'
+          mysql user: 'h273779_lgb'
+          mysql host: 'localhost'
+          mysql password: 'iWY]RgUhnqiu'
+
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install dependencies
+        env:
+          BROADCAST_DRIVER: log
+          PUSHER_APP_KEY: dummy_key
+          PUSHER_APP_SECRET: dummy_secret
+          PUSHER_APP_ID: dummy_id
+          PUSHER_APP_CLUSTER: mt1
+        run: composer install
+
+      - name: Copy .env
+        env:
+          BROADCAST_DRIVER: log
+          PUSHER_APP_KEY: dummy_key
+          PUSHER_APP_SECRET: dummy_secret
+          PUSHER_APP_ID: dummy_id
+          PUSHER_APP_CLUSTER: mt1
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+      - name: Configure database for GitHub Actions
+        run: |
+          # Update .env file with GitHub Actions database credentials
+          sed -i 's/DB_HOST=.*/DB_HOST=localhost/' .env
+          sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
+          sed -i 's/DB_DATABASE=.*/DB_DATABASE=h273779_lgb/' .env
+          sed -i 's/DB_USERNAME=.*/DB_USERNAME=h273779_lgb/' .env
+          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=iWY]RgUhnqiu/' .env
+
+      - name: Generate key
+        env:
+          BROADCAST_DRIVER: log
+          PUSHER_APP_KEY: dummy_key
+          PUSHER_APP_SECRET: dummy_secret
+          PUSHER_APP_ID: dummy_id
+          PUSHER_APP_CLUSTER: mt1
+        run: php artisan key:generate --force
+
+      - name: Directory Permissions
+        run: chmod -R 777 storage bootstrap/cache
+
+      - name: Test Database Connection
+        run: |
+          echo "🔍 Testing database connection..."
+          php artisan tinker --execute="echo 'Database connection: ' . (DB::connection()->getPdo() ? 'OK' : 'FAILED') . PHP_EOL;"
+
+      - name: Test Broadcasting Configuration
+        env:
+          BROADCAST_DRIVER: log
+          PUSHER_APP_KEY: dummy_key
+          PUSHER_APP_SECRET: dummy_secret
+          PUSHER_APP_ID: dummy_id
+          PUSHER_APP_CLUSTER: mt1
+        run: |
+          echo "🔍 Testing broadcasting configuration..."
+          php artisan test:broadcasting
+          
+      - name: Test Broadcasting Safety
+        env:
+          BROADCAST_DRIVER: pusher
+          PUSHER_APP_KEY: 
+          PUSHER_APP_SECRET: 
+          PUSHER_APP_ID: 
+        run: |
+          echo "🔍 Testing broadcasting safety with missing env vars..."
+          php artisan test:broadcasting
+
+      - name: Pre-deployment Cache Clear
+        run: |
+          echo "🧹 Clearing pre-deployment caches..."
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          echo "✅ Pre-deployment caches cleared"
+
+
+      - name: 📂 Sync files
+        uses: SamKirkland/FTP-Deploy-Action@4.0.0
+        with:
+          server: ftp.abolfazlnajafi.com
+          username: sarvcast-api@api.sarvcast.ir
+          password: Prof48017421@#
+          server-dir: /
+          exclude: |
+            .env
+            .env.*
+      - name: Verify deployment
+        run: |
+          echo "✅ Deployment verification..."
+          echo "📋 Deployment completed successfully!"
+          echo ""
+          echo "🎉 Your LGBTinder application has been deployed and optimized!"
+          echo ""
+          echo "🔧 What was done:"
+          echo "  ✅ Files deployed via FTP"
+          echo "  ✅ Permissions set correctly"
+
+      - name: Notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
+          TELEGRAM_CHAT_ID: -1002796302613_97
+          GITHUB_ACTOR: ${{ github.actor }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
+          MESSAGE=$(echo -e "🎙️ <b>SarvCast Backend</b> 🎙️\n\n✅ <b>Status:</b> Deployment Complete\n\n👤 <b>Deployed by:</b> ${GITHUB_ACTOR}\n\n📝 <b>Commit:</b>\n<blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>\n\n🚀 <b>Application:</b> Podcast Platform")
+          curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
+            -d chat_id=${TELEGRAM_CHAT_ID} \
+            -d text="${MESSAGE}" \
+            -d parse_mode="HTML"

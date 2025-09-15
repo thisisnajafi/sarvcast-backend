@@ -344,6 +344,167 @@ GET /categories/{id}/stories
 }
 ```
 
+### People
+
+#### Get All People
+```http
+GET /people
+```
+
+**Query Parameters:**
+- `page` (optional): Page number for pagination
+- `per_page` (optional): Number of people per page (default: 20, max: 100)
+- `search` (optional): Search in name and bio
+- `role` (optional): Filter by role (voice_actor, director, writer, producer, author, narrator)
+- `verified` (optional): Filter by verification status (true/false)
+- `sort_by` (optional): Sort by (name, total_stories, total_episodes, average_rating, created_at)
+- `sort_order` (optional): Sort order (asc/desc)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "people": [
+            {
+                "id": 1,
+                "name": "علی احمدی",
+                "bio": "صداپیشه و کارگردان با تجربه در زمینه داستان‌های کودکان",
+                "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+                "roles": ["voice_actor", "director"],
+                "total_stories": 15,
+                "total_episodes": 45,
+                "average_rating": 4.5,
+                "is_verified": true,
+                "last_active_at": "2024-01-15T10:00:00Z",
+                "created_at": "2024-01-01T10:00:00Z"
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "last_page": 5,
+            "per_page": 20,
+            "total": 100
+        }
+    }
+}
+```
+
+#### Get Person Details
+```http
+GET /people/{id}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "name": "علی احمدی",
+        "bio": "صداپیشه و کارگردان با تجربه در زمینه داستان‌های کودکان",
+        "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+        "roles": ["voice_actor", "director"],
+        "total_stories": 15,
+        "total_episodes": 45,
+        "average_rating": 4.5,
+        "is_verified": true,
+        "last_active_at": "2024-01-15T10:00:00Z",
+        "created_at": "2024-01-01T10:00:00Z",
+        "stories": [
+            {
+                "id": 1,
+                "title": "ماجراجویی در جنگل جادویی",
+                "status": "published",
+                "total_episodes": 3
+            }
+        ],
+        "episodes": [
+            {
+                "id": 1,
+                "title": "قسمت اول: شروع ماجرا",
+                "story_id": 1,
+                "episode_number": 1
+            }
+        ]
+    }
+}
+```
+
+#### Search People
+```http
+GET /people/search
+```
+
+**Query Parameters:**
+- `query` (required): Search term (min: 2, max: 100)
+- `role` (optional): Filter by role
+- `limit` (optional): Maximum results (default: 20, max: 50)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "name": "علی احمدی",
+            "bio": "صداپیشه و کارگردان...",
+            "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+            "roles": ["voice_actor", "director"],
+            "is_verified": true
+        }
+    ]
+}
+```
+
+#### Get People by Role
+```http
+GET /people/role/{role}
+```
+
+**Path Parameters:**
+- `role`: Role type (voice_actor, director, writer, producer, author, narrator)
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": 1,
+            "name": "علی احمدی",
+            "bio": "صداپیشه و کارگردان...",
+            "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+            "roles": ["voice_actor", "director"],
+            "is_verified": true
+        }
+    ]
+}
+```
+
+#### Get Person Statistics
+```http
+GET /people/{id}/statistics
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "total_stories": 15,
+        "total_episodes": 45,
+        "average_rating": 4.5,
+        "total_play_count": 1250,
+        "roles": ["voice_actor", "director"],
+        "is_verified": true,
+        "created_at": "2024-01-01T10:00:00Z",
+        "last_active_at": "2024-01-15T10:00:00Z"
+    }
+}
+```
+
 ### Stories
 
 #### Get All Stories

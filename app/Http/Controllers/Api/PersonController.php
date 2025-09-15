@@ -296,4 +296,135 @@ class PersonController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get person statistics
+     */
+    public function statistics(Person $person): JsonResponse
+    {
+        try {
+            $stats = [
+                'total_stories' => $person->stories()->count(),
+                'total_episodes' => $person->episodes()->count(),
+                'average_rating' => $person->average_rating,
+                'total_play_count' => $person->stories()->sum('play_count'),
+                'roles' => $person->roles,
+                'is_verified' => $person->is_verified,
+                'created_at' => $person->created_at,
+                'last_active_at' => $person->last_active_at
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $stats
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching person statistics', [
+                'error' => $e->getMessage(),
+                'person_id' => $person->id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت آمار فرد'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get people by role
+     */
+    public function getByRole(Request $request, string $role): JsonResponse
+    {
+        try {
+            $validRoles = ['voice_actor', 'director', 'writer', 'producer', 'author', 'narrator'];
+            
+            if (!in_array($role, $validRoles)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'نقش نامعتبر است'
+                ], 422);
+            }
+
+            $people = Person::whereJsonContains('roles', $role)
+                ->orderBy('name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $people
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching people by role', [
+                'error' => $e->getMessage(),
+                'role' => $role
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت افراد بر اساس نقش'
+            ], 500);
+        }
+    }
+
+    /**
+     * Search people
+     */
+    public function search(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'query' => 'required|string|min:2|max:100',
+                'role' => 'nullable|string|in:voice_actor,director,writer,producer,author,narrator',
+                'limit' => 'nullable|integer|min:1|max:50'
+            ], [
+                'query.required' => 'عبارت جستجو الزامی است',
+                'query.min' => 'عبارت جستجو باید حداقل 2 کاراکتر باشد',
+                'query.max' => 'عبارت جستجو نمی‌تواند بیش از 100 کاراکتر باشد',
+                'role.in' => 'نقش نامعتبر است',
+                'limit.max' => 'حداکثر 50 نتیجه قابل نمایش است'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در اعتبارسنجی داده‌ها',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $query = Person::query();
+            $searchTerm = $request->query;
+
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('bio', 'like', "%{$searchTerm}%");
+            });
+
+            if ($request->has('role')) {
+                $query->whereJsonContains('roles', $request->role);
+            }
+
+            $limit = $request->get('limit', 20);
+            $people = $query->limit($limit)->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $people
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error searching people', [
+                'error' => $e->getMessage(),
+                'request' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در جستجوی افراد'
+            ], 500);
+        }
+    }
 }
