@@ -782,4 +782,313 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = User::with(['profiles', 'activeSubscription', 'subscriptions', 'payments']);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone_number', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by role
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by subscription
+        if ($request->filled('has_subscription')) {
+            if ($request->boolean('has_subscription')) {
+                $query->whereHas('subscriptions', function($q) {
+                    $q->where('status', 'active')->where('end_date', '>', now());
+                });
+            } else {
+                $query->whereDoesntHave('subscriptions', function($q) {
+                    $q->where('status', 'active')->where('end_date', '>', now());
+                });
+            }
+        }
+
+        $users = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $users->items(),
+            'pagination' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+            ]
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|unique:users',
+            'phone_number' => 'nullable|string|unique:users',
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'password' => 'required|string|min:8',
+            'role' => 'required|in:parent,child,admin',
+            'parent_id' => 'nullable|exists:users,id',
+            'status' => 'required|in:active,inactive,suspended,pending',
+            'language' => 'nullable|string|max:10',
+            'timezone' => 'nullable|string|max:50',
+        ]);
+
+        $data = $request->except(['password_confirmation']);
+        $data['password'] = Hash::make($request->password);
+
+        $user = User::create($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کاربر با موفقیت ایجاد شد.',
+            'data' => $user->load(['profiles', 'activeSubscription'])
+        ]);
+    }
+
+    public function apiShow(User $user)
+    {
+        $user->load(['profiles', 'activeSubscription', 'subscriptions', 'payments', 'playHistories', 'favorites', 'ratings']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $user
+        ]);
+    }
+
+    public function apiUpdate(Request $request, User $user)
+    {
+        $request->validate([
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'phone_number' => 'nullable|string|unique:users,phone_number,' . $user->id,
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'password' => 'nullable|string|min:8',
+            'role' => 'required|in:parent,child,admin',
+            'parent_id' => 'nullable|exists:users,id',
+            'status' => 'required|in:active,inactive,suspended,pending',
+            'language' => 'nullable|string|max:10',
+            'timezone' => 'nullable|string|max:50',
+        ]);
+
+        $data = $request->except(['password_confirmation']);
+        
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        } else {
+            unset($data['password']);
+        }
+
+        $user->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کاربر با موفقیت به‌روزرسانی شد.',
+            'data' => $user->load(['profiles', 'activeSubscription'])
+        ]);
+    }
+
+    public function apiDestroy(User $user)
+    {
+        // Prevent deletion of admin users
+        if ($user->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نمی‌توان کاربران مدیر را حذف کرد.'
+            ], 403);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کاربر با موفقیت حذف شد.'
+        ]);
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:activate,deactivate,suspend,delete,change_role,change_status,send_notification',
+            'user_ids' => 'required|array|min:1',
+            'user_ids.*' => 'integer|exists:users,id',
+            'status' => 'required_if:action,change_status|string|in:active,inactive,suspended,pending',
+            'role' => 'required_if:action,change_role|string|in:parent,child,admin',
+            'notification_title' => 'required_if:action,send_notification|string|max:255',
+            'notification_message' => 'required_if:action,send_notification|string|max:1000',
+            'notification_type' => 'required_if:action,send_notification|string|in:info,success,warning,error',
+            'notification_priority' => 'nullable|string|in:low,normal,high,urgent'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $userIds = $request->user_ids;
+            $action = $request->action;
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($userIds as $userId) {
+                try {
+                    $user = User::findOrFail($userId);
+
+                    // Prevent operations on admin users
+                    if ($user->isAdmin() && in_array($action, ['delete', 'suspend', 'change_role'])) {
+                        $failureCount++;
+                        continue;
+                    }
+
+                    switch ($action) {
+                        case 'activate':
+                            $user->update(['status' => 'active']);
+                            break;
+
+                        case 'deactivate':
+                            $user->update(['status' => 'inactive']);
+                            break;
+
+                        case 'suspend':
+                            $user->update(['status' => 'suspended']);
+                            break;
+
+                        case 'delete':
+                            $user->delete();
+                            break;
+
+                        case 'change_status':
+                            $user->update(['status' => $request->status]);
+                            break;
+
+                        case 'change_role':
+                            $user->update(['role' => $request->role]);
+                            break;
+
+                        case 'send_notification':
+                            $this->notificationService->createNotification(
+                                $user->id,
+                                $request->notification_type,
+                                $request->notification_title,
+                                $request->notification_message,
+                                [
+                                    'priority' => $request->notification_priority ?? 'normal',
+                                    'is_important' => $request->notification_priority === 'urgent'
+                                ]
+                            );
+                            break;
+                    }
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $failureCount++;
+                    Log::error('Bulk action failed for user', [
+                        'user_id' => $userId,
+                        'action' => $action,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $message = "عملیات {$action} روی {$successCount} کاربر انجام شد";
+            if ($failureCount > 0) {
+                $message .= " و {$failureCount} کاربر ناموفق بود";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'success_count' => $successCount,
+                'failure_count' => $failureCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk action failed', [
+                'action' => $request->action,
+                'user_ids' => $request->user_ids,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_users' => User::count(),
+            'active_users' => User::where('status', 'active')->count(),
+            'inactive_users' => User::where('status', 'inactive')->count(),
+            'suspended_users' => User::where('status', 'suspended')->count(),
+            'pending_users' => User::where('status', 'pending')->count(),
+            'parent_users' => User::where('role', 'parent')->count(),
+            'child_users' => User::where('role', 'child')->count(),
+            'admin_users' => User::where('role', 'admin')->count(),
+            'users_with_subscription' => User::whereHas('subscriptions', function($q) {
+                $q->where('status', 'active')->where('end_date', '>', now());
+            })->count(),
+            'users_without_subscription' => User::whereDoesntHave('subscriptions', function($q) {
+                $q->where('status', 'active')->where('end_date', '>', now());
+            })->count(),
+            'total_revenue' => Payment::where('status', 'completed')->sum('amount'),
+            'avg_payment_amount' => round(Payment::where('status', 'completed')->avg('amount'), 2),
+            'total_payments' => Payment::where('status', 'completed')->count(),
+            'total_play_time' => PlayHistory::sum('duration_played'),
+            'total_ratings' => Rating::count(),
+            'total_favorites' => Favorite::count(),
+            'users_by_status' => User::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'users_by_role' => User::selectRaw('role, COUNT(*) as count')
+                ->groupBy('role')
+                ->get(),
+            'users_by_subscription_type' => User::selectRaw('subscriptions.type, COUNT(*) as count')
+                ->join('subscriptions', 'users.id', '=', 'subscriptions.user_id')
+                ->where('subscriptions.status', 'active')
+                ->where('subscriptions.end_date', '>', now())
+                ->groupBy('subscriptions.type')
+                ->get(),
+            'recent_users' => User::with(['activeSubscription'])
+                ->latest()
+                ->limit(10)
+                ->get(),
+            'top_paying_users' => User::withSum(['payments as total_payments' => function($q) {
+                $q->where('status', 'completed');
+            }], 'amount')
+            ->orderBy('total_payments', 'desc')
+            ->limit(10)
+            ->get(),
+            'most_active_users' => User::withSum('playHistories', 'duration_played')
+                ->orderBy('play_histories_sum_duration_played', 'desc')
+                ->limit(10)
+                ->get()
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
 }

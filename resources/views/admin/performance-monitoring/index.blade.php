@@ -265,10 +265,5 @@
     </div>
 </div>
 
-<script>
-// Auto-refresh page every 30 seconds
-setInterval(function() {
-    location.reload();
-}, 30000);
-</script>
+<script src="{{ asset('js/admin/performance-monitoring-manager.js') }}"></script>
 @endsection

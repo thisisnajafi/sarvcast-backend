@@ -491,4 +491,340 @@ class PerformanceMonitoringController extends Controller
             return rand(0, 100); // Simulated data
         });
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = PerformanceAlert::query();
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by severity
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+
+        // Filter by metric type
+        if ($request->filled('metric_type')) {
+            $query->where('metric_type', $request->metric_type);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $alerts = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $alerts->items(),
+            'pagination' => [
+                'current_page' => $alerts->currentPage(),
+                'last_page' => $alerts->lastPage(),
+                'per_page' => $alerts->perPage(),
+                'total' => $alerts->total(),
+            ]
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'metric_type' => 'required|in:response_time,memory_usage,cpu_usage,disk_usage,error_rate,active_users',
+            'threshold_value' => 'required|numeric|min:0',
+            'threshold_operator' => 'required|in:>,<,>=,<=,==,!=',
+            'severity' => 'required|in:low,medium,high,critical',
+            'is_active' => 'boolean',
+            'notification_channels' => 'nullable|array',
+            'notification_channels.*' => 'string|in:email,sms,webhook',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $alert = PerformanceAlert::create([
+                'name' => $request->name,
+                'description' => $request->description,
+                'metric_type' => $request->metric_type,
+                'threshold_value' => $request->threshold_value,
+                'threshold_operator' => $request->threshold_operator,
+                'severity' => $request->severity,
+                'status' => 'active',
+                'is_active' => $request->boolean('is_active', true),
+                'notification_channels' => $request->notification_channels ? json_encode($request->notification_channels) : null,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'هشدار عملکرد با موفقیت ایجاد شد.',
+                'data' => $alert
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating performance alert: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ایجاد هشدار عملکرد: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiShow(PerformanceAlert $performanceAlert)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $performanceAlert
+        ]);
+    }
+
+    public function apiUpdate(Request $request, PerformanceAlert $performanceAlert)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'metric_type' => 'required|in:response_time,memory_usage,cpu_usage,disk_usage,error_rate,active_users',
+            'threshold_value' => 'required|numeric|min:0',
+            'threshold_operator' => 'required|in:>,<,>=,<=,==,!=',
+            'severity' => 'required|in:low,medium,high,critical',
+            'status' => 'required|in:active,inactive,triggered',
+            'is_active' => 'boolean',
+            'notification_channels' => 'nullable|array',
+            'notification_channels.*' => 'string|in:email,sms,webhook',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $performanceAlert->update([
+                'name' => $request->name,
+                'description' => $request->description,
+                'metric_type' => $request->metric_type,
+                'threshold_value' => $request->threshold_value,
+                'threshold_operator' => $request->threshold_operator,
+                'severity' => $request->severity,
+                'status' => $request->status,
+                'is_active' => $request->boolean('is_active'),
+                'notification_channels' => $request->notification_channels ? json_encode($request->notification_channels) : null,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'هشدار عملکرد با موفقیت به‌روزرسانی شد.',
+                'data' => $performanceAlert
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating performance alert: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در به‌روزرسانی هشدار عملکرد: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiDestroy(PerformanceAlert $performanceAlert)
+    {
+        try {
+            $performanceAlert->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'هشدار عملکرد با موفقیت حذف شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error deleting performance alert: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در حذف هشدار عملکرد: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:activate,deactivate,delete',
+            'alert_ids' => 'required|array|min:1',
+            'alert_ids.*' => 'integer|exists:performance_alerts,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $alertIds = $request->alert_ids;
+            $action = $request->action;
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($alertIds as $alertId) {
+                try {
+                    $alert = PerformanceAlert::findOrFail($alertId);
+
+                    switch ($action) {
+                        case 'activate':
+                            $alert->update(['status' => 'active', 'is_active' => true]);
+                            break;
+
+                        case 'deactivate':
+                            $alert->update(['status' => 'inactive', 'is_active' => false]);
+                            break;
+
+                        case 'delete':
+                            $alert->delete();
+                            break;
+                    }
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $failureCount++;
+                    Log::error('Bulk action failed for performance alert', [
+                        'alert_id' => $alertId,
+                        'action' => $action,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $actionLabels = [
+                'activate' => 'فعال‌سازی',
+                'deactivate' => 'غیرفعال‌سازی',
+                'delete' => 'حذف',
+            ];
+
+            $message = "عملیات {$actionLabels[$action]} روی {$successCount} هشدار عملکرد انجام شد";
+            if ($failureCount > 0) {
+                $message .= " و {$failureCount} هشدار ناموفق بود";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'success_count' => $successCount,
+                'failure_count' => $failureCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk action failed', [
+                'action' => $request->action,
+                'alert_ids' => $request->alert_ids,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_alerts' => PerformanceAlert::count(),
+            'active_alerts' => PerformanceAlert::where('status', 'active')->count(),
+            'inactive_alerts' => PerformanceAlert::where('status', 'inactive')->count(),
+            'triggered_alerts' => PerformanceAlert::where('status', 'triggered')->count(),
+            'alerts_by_severity' => PerformanceAlert::selectRaw('severity, COUNT(*) as count')
+                ->groupBy('severity')
+                ->get(),
+            'alerts_by_metric_type' => PerformanceAlert::selectRaw('metric_type, COUNT(*) as count')
+                ->groupBy('metric_type')
+                ->get(),
+            'alerts_by_status' => PerformanceAlert::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'recent_alerts' => PerformanceAlert::orderBy('created_at', 'desc')->limit(10)->get(),
+            'alerts_by_month' => PerformanceAlert::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
+
+    public function apiOverview(Request $request)
+    {
+        $overview = [
+            'total_requests' => $this->getTotalRequests(),
+            'average_response_time' => $this->getAverageResponseTime(),
+            'error_rate' => $this->getErrorRate(),
+            'uptime_percentage' => $this->getUptimePercentage(),
+            'active_users' => $this->getActiveUsers(),
+            'memory_usage' => $this->getMemoryUsage(),
+            'cpu_usage' => $this->getCpuUsage(),
+            'disk_usage' => $this->getDiskUsage(),
+            'active_connections' => $this->getActiveConnections(),
+            'queue_size' => $this->getQueueSize(),
+            'system_health' => $this->getSystemHealth(),
+            'performance_charts' => $this->getPerformanceChartData($request),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $overview
+        ]);
+    }
+
+    public function apiMetrics(Request $request)
+    {
+        $dateFrom = $request->date_from ? Carbon::parse($request->date_from) : now()->subDays(7);
+        $dateTo = $request->date_to ? Carbon::parse($request->date_to) : now();
+
+        $metrics = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $metrics
+        ]);
+    }
+
+    public function apiHealth()
+    {
+        $health = $this->getSystemHealth();
+
+        return response()->json([
+            'success' => true,
+            'data' => $health
+        ]);
+    }
 }

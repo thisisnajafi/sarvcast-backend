@@ -565,4 +565,383 @@ class ContentModerationController extends Controller
 
         return $labels[$status] ?? $status;
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = ContentModeration::with(['user', 'story', 'episode', 'moderator']);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('reason', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($q) use ($search) {
+                      $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by content type
+        if ($request->filled('content_type')) {
+            $query->where('content_type', $request->content_type);
+        }
+
+        // Filter by severity
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+
+        // Filter by moderator
+        if ($request->filled('moderator_id')) {
+            $query->where('moderator_id', $request->moderator_id);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $moderations = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $moderations->items(),
+            'pagination' => [
+                'current_page' => $moderations->currentPage(),
+                'last_page' => $moderations->lastPage(),
+                'per_page' => $moderations->perPage(),
+                'total' => $moderations->total(),
+            ]
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'content_type' => 'required|in:story,episode,comment,review,user_profile',
+            'content_id' => 'required|integer',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'reason' => 'required|string|max:500',
+            'severity' => 'required|in:low,medium,high',
+            'notes' => 'nullable|string|max:1000',
+            'evidence_files' => 'nullable|array',
+            'evidence_files.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx|max:5120',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $moderation = ContentModeration::create([
+                'user_id' => $request->user_id,
+                'content_type' => $request->content_type,
+                'content_id' => $request->content_id,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'reason' => $request->reason,
+                'severity' => $request->severity,
+                'status' => 'pending',
+                'notes' => $request->notes,
+            ]);
+
+            // Handle evidence files upload
+            if ($request->hasFile('evidence_files')) {
+                $files = [];
+                foreach ($request->file('evidence_files') as $file) {
+                    $path = $file->store('moderation/evidence', 'public');
+                    $files[] = $path;
+                }
+                $moderation->update(['evidence_files' => json_encode($files)]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'گزارش نظارت محتوا با موفقیت ایجاد شد.',
+                'data' => $moderation->load(['user', 'story', 'episode', 'moderator'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating content moderation: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ایجاد گزارش نظارت محتوا: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiShow(ContentModeration $contentModeration)
+    {
+        $contentModeration->load(['user', 'story', 'episode', 'moderator']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $contentModeration
+        ]);
+    }
+
+    public function apiUpdate(Request $request, ContentModeration $contentModeration)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'content_type' => 'required|in:story,episode,comment,review,user_profile',
+            'content_id' => 'required|integer',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'reason' => 'required|string|max:500',
+            'severity' => 'required|in:low,medium,high',
+            'status' => 'required|in:pending,approved,rejected',
+            'notes' => 'nullable|string|max:1000',
+            'moderator_id' => 'nullable|exists:users,id',
+            'evidence_files' => 'nullable|array',
+            'evidence_files.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx|max:5120',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $updateData = [
+                'user_id' => $request->user_id,
+                'content_type' => $request->content_type,
+                'content_id' => $request->content_id,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'reason' => $request->reason,
+                'severity' => $request->severity,
+                'status' => $request->status,
+                'notes' => $request->notes,
+            ];
+
+            // Update moderator if status is being changed
+            if ($request->status !== 'pending' && !$contentModeration->moderator_id) {
+                $updateData['moderator_id'] = auth()->id();
+                $updateData['moderated_at'] = now();
+            }
+
+            $contentModeration->update($updateData);
+
+            // Handle evidence files upload
+            if ($request->hasFile('evidence_files')) {
+                // Delete old evidence files
+                if ($contentModeration->evidence_files) {
+                    $oldFiles = json_decode($contentModeration->evidence_files, true);
+                    foreach ($oldFiles as $file) {
+                        Storage::disk('public')->delete($file);
+                    }
+                }
+
+                $files = [];
+                foreach ($request->file('evidence_files') as $file) {
+                    $path = $file->store('moderation/evidence', 'public');
+                    $files[] = $path;
+                }
+                $contentModeration->update(['evidence_files' => json_encode($files)]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'گزارش نظارت محتوا با موفقیت به‌روزرسانی شد.',
+                'data' => $contentModeration->load(['user', 'story', 'episode', 'moderator'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating content moderation: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در به‌روزرسانی گزارش نظارت محتوا: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiDestroy(ContentModeration $contentModeration)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Delete associated evidence files
+            if ($contentModeration->evidence_files) {
+                $files = json_decode($contentModeration->evidence_files, true);
+                foreach ($files as $file) {
+                    Storage::disk('public')->delete($file);
+                }
+            }
+
+            $contentModeration->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'گزارش نظارت محتوا با موفقیت حذف شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting content moderation: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در حذف گزارش نظارت محتوا: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:approve,reject,delete',
+            'moderation_ids' => 'required|array|min:1',
+            'moderation_ids.*' => 'integer|exists:content_moderations,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $moderationIds = $request->moderation_ids;
+            $action = $request->action;
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($moderationIds as $moderationId) {
+                try {
+                    $moderation = ContentModeration::findOrFail($moderationId);
+
+                    switch ($action) {
+                        case 'approve':
+                            $moderation->update([
+                                'status' => 'approved',
+                                'moderator_id' => auth()->id(),
+                                'moderated_at' => now(),
+                            ]);
+                            break;
+
+                        case 'reject':
+                            $moderation->update([
+                                'status' => 'rejected',
+                                'moderator_id' => auth()->id(),
+                                'moderated_at' => now(),
+                            ]);
+                            break;
+
+                        case 'delete':
+                            // Delete associated evidence files
+                            if ($moderation->evidence_files) {
+                                $files = json_decode($moderation->evidence_files, true);
+                                foreach ($files as $file) {
+                                    Storage::disk('public')->delete($file);
+                                }
+                            }
+                            $moderation->delete();
+                            break;
+                    }
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $failureCount++;
+                    Log::error('Bulk action failed for content moderation', [
+                        'moderation_id' => $moderationId,
+                        'action' => $action,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $actionLabels = [
+                'approve' => 'تأیید',
+                'reject' => 'رد',
+                'delete' => 'حذف',
+            ];
+
+            $message = "عملیات {$actionLabels[$action]} روی {$successCount} گزارش نظارت انجام شد";
+            if ($failureCount > 0) {
+                $message .= " و {$failureCount} گزارش ناموفق بود";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'success_count' => $successCount,
+                'failure_count' => $failureCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk action failed', [
+                'action' => $request->action,
+                'moderation_ids' => $request->moderation_ids,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_moderations' => ContentModeration::count(),
+            'pending_moderations' => ContentModeration::where('status', 'pending')->count(),
+            'approved_moderations' => ContentModeration::where('status', 'approved')->count(),
+            'rejected_moderations' => ContentModeration::where('status', 'rejected')->count(),
+            'moderations_by_content_type' => ContentModeration::selectRaw('content_type, COUNT(*) as count')
+                ->groupBy('content_type')
+                ->get(),
+            'moderations_by_severity' => ContentModeration::selectRaw('severity, COUNT(*) as count')
+                ->groupBy('severity')
+                ->get(),
+            'moderations_by_status' => ContentModeration::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'top_reporters' => ContentModeration::selectRaw('user_id, COUNT(*) as report_count')
+                ->with('user')
+                ->groupBy('user_id')
+                ->orderBy('report_count', 'desc')
+                ->limit(10)
+                ->get(),
+            'moderations_by_month' => ContentModeration::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get(),
+            'recent_moderations' => ContentModeration::with(['user', 'story', 'episode', 'moderator'])
+                ->latest()
+                ->limit(10)
+                ->get(),
+            'moderations_today' => ContentModeration::whereDate('created_at', today())->count(),
+            'moderations_this_week' => ContentModeration::where('created_at', '>=', now()->startOfWeek())->count(),
+            'moderations_this_month' => ContentModeration::where('created_at', '>=', now()->startOfMonth())->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
 }

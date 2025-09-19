@@ -507,4 +507,361 @@ class GamificationController extends Controller
 
         return $labels[$type] ?? $type;
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = Gamification::with(['story', 'episode']);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter by active status
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        // Filter by story
+        if ($request->filled('story_id')) {
+            $query->where('story_id', $request->story_id);
+        }
+
+        // Filter by episode
+        if ($request->filled('episode_id')) {
+            $query->where('episode_id', $request->episode_id);
+        }
+
+        $gamifications = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $gamifications->items(),
+            'pagination' => [
+                'current_page' => $gamifications->currentPage(),
+                'last_page' => $gamifications->lastPage(),
+                'per_page' => $gamifications->perPage(),
+                'total' => $gamifications->total(),
+            ]
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:achievement,badge,level,reward,challenge',
+            'description' => 'nullable|string|max:1000',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'points_required' => 'required|integer|min:0',
+            'reward_points' => 'required|integer|min:0',
+            'reward_coins' => 'required|integer|min:0',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'badge_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_active' => 'boolean',
+            'conditions' => 'nullable|array',
+            'conditions.*.type' => 'required|string',
+            'conditions.*.value' => 'required|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $gamification = Gamification::create([
+                'title' => $request->title,
+                'type' => $request->type,
+                'description' => $request->description,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'points_required' => $request->points_required,
+                'reward_points' => $request->reward_points,
+                'reward_coins' => $request->reward_coins,
+                'is_active' => $request->boolean('is_active', true),
+                'conditions' => $request->conditions ? json_encode($request->conditions) : null,
+            ]);
+
+            // Handle file uploads
+            if ($request->hasFile('icon')) {
+                $iconPath = $request->file('icon')->store('gamification/icons', 'public');
+                $gamification->update(['icon' => $iconPath]);
+            }
+
+            if ($request->hasFile('badge_image')) {
+                $badgePath = $request->file('badge_image')->store('gamification/badges', 'public');
+                $gamification->update(['badge_image' => $badgePath]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'عنصر گیمیفیکیشن با موفقیت ایجاد شد.',
+                'data' => $gamification->load(['story', 'episode'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating gamification: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ایجاد عنصر گیمیفیکیشن: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiShow(Gamification $gamification)
+    {
+        $gamification->load(['story', 'episode']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $gamification
+        ]);
+    }
+
+    public function apiUpdate(Request $request, Gamification $gamification)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:achievement,badge,level,reward,challenge',
+            'description' => 'nullable|string|max:1000',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'points_required' => 'required|integer|min:0',
+            'reward_points' => 'required|integer|min:0',
+            'reward_coins' => 'required|integer|min:0',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'badge_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'is_active' => 'boolean',
+            'conditions' => 'nullable|array',
+            'conditions.*.type' => 'required|string',
+            'conditions.*.value' => 'required|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $gamification->update([
+                'title' => $request->title,
+                'type' => $request->type,
+                'description' => $request->description,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'points_required' => $request->points_required,
+                'reward_points' => $request->reward_points,
+                'reward_coins' => $request->reward_coins,
+                'is_active' => $request->boolean('is_active'),
+                'conditions' => $request->conditions ? json_encode($request->conditions) : null,
+            ]);
+
+            // Handle file uploads
+            if ($request->hasFile('icon')) {
+                // Delete old icon
+                if ($gamification->icon) {
+                    Storage::disk('public')->delete($gamification->icon);
+                }
+                $iconPath = $request->file('icon')->store('gamification/icons', 'public');
+                $gamification->update(['icon' => $iconPath]);
+            }
+
+            if ($request->hasFile('badge_image')) {
+                // Delete old badge image
+                if ($gamification->badge_image) {
+                    Storage::disk('public')->delete($gamification->badge_image);
+                }
+                $badgePath = $request->file('badge_image')->store('gamification/badges', 'public');
+                $gamification->update(['badge_image' => $badgePath]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'عنصر گیمیفیکیشن با موفقیت به‌روزرسانی شد.',
+                'data' => $gamification->load(['story', 'episode'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating gamification: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در به‌روزرسانی عنصر گیمیفیکیشن: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiDestroy(Gamification $gamification)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Delete associated files
+            if ($gamification->icon) {
+                Storage::disk('public')->delete($gamification->icon);
+            }
+            if ($gamification->badge_image) {
+                Storage::disk('public')->delete($gamification->badge_image);
+            }
+
+            $gamification->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'عنصر گیمیفیکیشن با موفقیت حذف شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting gamification: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در حذف عنصر گیمیفیکیشن: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:activate,deactivate,delete',
+            'gamification_ids' => 'required|array|min:1',
+            'gamification_ids.*' => 'integer|exists:gamifications,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $gamificationIds = $request->gamification_ids;
+            $action = $request->action;
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($gamificationIds as $gamificationId) {
+                try {
+                    $gamification = Gamification::findOrFail($gamificationId);
+
+                    switch ($action) {
+                        case 'activate':
+                            $gamification->update(['is_active' => true]);
+                            break;
+
+                        case 'deactivate':
+                            $gamification->update(['is_active' => false]);
+                            break;
+
+                        case 'delete':
+                            // Delete associated files
+                            if ($gamification->icon) {
+                                Storage::disk('public')->delete($gamification->icon);
+                            }
+                            if ($gamification->badge_image) {
+                                Storage::disk('public')->delete($gamification->badge_image);
+                            }
+                            $gamification->delete();
+                            break;
+                    }
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $failureCount++;
+                    Log::error('Bulk action failed for gamification', [
+                        'gamification_id' => $gamificationId,
+                        'action' => $action,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $actionLabels = [
+                'activate' => 'فعال‌سازی',
+                'deactivate' => 'غیرفعال‌سازی',
+                'delete' => 'حذف',
+            ];
+
+            $message = "عملیات {$actionLabels[$action]} روی {$successCount} عنصر گیمیفیکیشن انجام شد";
+            if ($failureCount > 0) {
+                $message .= " و {$failureCount} عنصر ناموفق بود";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'success_count' => $successCount,
+                'failure_count' => $failureCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk action failed', [
+                'action' => $request->action,
+                'gamification_ids' => $request->gamification_ids,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_gamifications' => Gamification::count(),
+            'active_gamifications' => Gamification::where('is_active', true)->count(),
+            'inactive_gamifications' => Gamification::where('is_active', false)->count(),
+            'gamifications_by_type' => Gamification::selectRaw('type, COUNT(*) as count')
+                ->groupBy('type')
+                ->get(),
+            'gamifications_by_story' => Gamification::selectRaw('story_id, COUNT(*) as count')
+                ->with('story')
+                ->groupBy('story_id')
+                ->orderBy('count', 'desc')
+                ->limit(10)
+                ->get(),
+            'total_rewards_given' => DB::table('user_gamifications')->sum('reward_points'),
+            'total_coins_given' => DB::table('user_gamifications')->sum('reward_coins'),
+            'top_achievers' => DB::table('user_gamifications')
+                ->selectRaw('user_id, COUNT(*) as achievement_count')
+                ->selectRaw('SUM(reward_points) as total_points')
+                ->selectRaw('SUM(reward_coins) as total_coins')
+                ->groupBy('user_id')
+                ->orderBy('achievement_count', 'desc')
+                ->limit(10)
+                ->get(),
+            'recent_gamifications' => Gamification::with(['story', 'episode'])
+                ->latest()
+                ->limit(10)
+                ->get(),
+            'total_points_required' => Gamification::sum('points_required'),
+            'total_reward_points' => Gamification::sum('reward_points'),
+            'total_reward_coins' => Gamification::sum('reward_coins'),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
 }

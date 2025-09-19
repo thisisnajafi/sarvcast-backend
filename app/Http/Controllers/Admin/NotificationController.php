@@ -430,4 +430,370 @@ class NotificationController extends Controller
             // PushNotification::send($user, $notificationData);
         }
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = Notification::with(['sender', 'recipient']);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('message', 'like', "%{$search}%")
+                  ->orWhereHas('sender', function ($q) use ($search) {
+                      $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('recipient', function ($q) use ($search) {
+                      $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter by priority
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->priority);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by read status
+        if ($request->filled('is_read')) {
+            $query->where('is_read', $request->boolean('is_read'));
+        }
+
+        // Filter by sender
+        if ($request->filled('sender_id')) {
+            $query->where('sender_id', $request->sender_id);
+        }
+
+        // Filter by recipient
+        if ($request->filled('recipient_id')) {
+            $query->where('recipient_id', $request->recipient_id);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $notifications = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $notifications->items(),
+            'pagination' => [
+                'current_page' => $notifications->currentPage(),
+                'last_page' => $notifications->lastPage(),
+                'per_page' => $notifications->perPage(),
+                'total' => $notifications->total(),
+            ]
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'type' => 'required|in:info,warning,error,success',
+            'priority' => 'required|in:low,medium,high,urgent',
+            'recipient_id' => 'nullable|exists:users,id',
+            'recipient_type' => 'required|in:all,user,role',
+            'send_email' => 'boolean',
+            'send_sms' => 'boolean',
+            'send_push' => 'boolean',
+            'scheduled_at' => 'nullable|date|after:now',
+            'expires_at' => 'nullable|date|after:now',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $notification = Notification::create([
+                'title' => $request->title,
+                'message' => $request->message,
+                'type' => $request->type,
+                'priority' => $request->priority,
+                'sender_id' => auth()->id(),
+                'recipient_id' => $request->recipient_id,
+                'recipient_type' => $request->recipient_type,
+                'status' => 'pending',
+                'send_email' => $request->boolean('send_email', false),
+                'send_sms' => $request->boolean('send_sms', false),
+                'send_push' => $request->boolean('send_push', true),
+                'scheduled_at' => $request->scheduled_at,
+                'expires_at' => $request->expires_at,
+            ]);
+
+            // Send notification if not scheduled
+            if (!$request->scheduled_at) {
+                $this->sendNotifications($notification->toArray());
+                $notification->update(['status' => 'sent', 'sent_at' => now()]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'اعلان با موفقیت ایجاد شد.',
+                'data' => $notification->load(['sender', 'recipient'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating notification: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ایجاد اعلان: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiShow(Notification $notification)
+    {
+        $notification->load(['sender', 'recipient']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $notification
+        ]);
+    }
+
+    public function apiUpdate(Request $request, Notification $notification)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'type' => 'required|in:info,warning,error,success',
+            'priority' => 'required|in:low,medium,high,urgent',
+            'recipient_id' => 'nullable|exists:users,id',
+            'recipient_type' => 'required|in:all,user,role',
+            'status' => 'required|in:pending,sent,failed',
+            'send_email' => 'boolean',
+            'send_sms' => 'boolean',
+            'send_push' => 'boolean',
+            'scheduled_at' => 'nullable|date',
+            'expires_at' => 'nullable|date',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $notification->update([
+                'title' => $request->title,
+                'message' => $request->message,
+                'type' => $request->type,
+                'priority' => $request->priority,
+                'recipient_id' => $request->recipient_id,
+                'recipient_type' => $request->recipient_type,
+                'status' => $request->status,
+                'send_email' => $request->boolean('send_email'),
+                'send_sms' => $request->boolean('send_sms'),
+                'send_push' => $request->boolean('send_push'),
+                'scheduled_at' => $request->scheduled_at,
+                'expires_at' => $request->expires_at,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'اعلان با موفقیت به‌روزرسانی شد.',
+                'data' => $notification->load(['sender', 'recipient'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating notification: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در به‌روزرسانی اعلان: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiDestroy(Notification $notification)
+    {
+        try {
+            $notification->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'اعلان با موفقیت حذف شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error deleting notification: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در حذف اعلان: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:send,mark_read,mark_unread,delete',
+            'notification_ids' => 'required|array|min:1',
+            'notification_ids.*' => 'integer|exists:notifications,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $notificationIds = $request->notification_ids;
+            $action = $request->action;
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($notificationIds as $notificationId) {
+                try {
+                    $notification = Notification::findOrFail($notificationId);
+
+                    switch ($action) {
+                        case 'send':
+                            $this->sendNotifications($notification->toArray());
+                            $notification->update(['status' => 'sent', 'sent_at' => now()]);
+                            break;
+
+                        case 'mark_read':
+                            $notification->update(['is_read' => true, 'read_at' => now()]);
+                            break;
+
+                        case 'mark_unread':
+                            $notification->update(['is_read' => false, 'read_at' => null]);
+                            break;
+
+                        case 'delete':
+                            $notification->delete();
+                            break;
+                    }
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $failureCount++;
+                    Log::error('Bulk action failed for notification', [
+                        'notification_id' => $notificationId,
+                        'action' => $action,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $actionLabels = [
+                'send' => 'ارسال',
+                'mark_read' => 'علامت‌گذاری به عنوان خوانده شده',
+                'mark_unread' => 'علامت‌گذاری به عنوان خوانده نشده',
+                'delete' => 'حذف',
+            ];
+
+            $message = "عملیات {$actionLabels[$action]} روی {$successCount} اعلان انجام شد";
+            if ($failureCount > 0) {
+                $message .= " و {$failureCount} اعلان ناموفق بود";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'success_count' => $successCount,
+                'failure_count' => $failureCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk action failed', [
+                'action' => $request->action,
+                'notification_ids' => $request->notification_ids,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_notifications' => Notification::count(),
+            'sent_notifications' => Notification::where('status', 'sent')->count(),
+            'pending_notifications' => Notification::where('status', 'pending')->count(),
+            'failed_notifications' => Notification::where('status', 'failed')->count(),
+            'read_notifications' => Notification::where('is_read', true)->count(),
+            'unread_notifications' => Notification::where('is_read', false)->count(),
+            'notifications_by_type' => Notification::selectRaw('type, COUNT(*) as count')
+                ->groupBy('type')
+                ->get(),
+            'notifications_by_priority' => Notification::selectRaw('priority, COUNT(*) as count')
+                ->groupBy('priority')
+                ->get(),
+            'notifications_by_status' => Notification::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'notifications_by_month' => Notification::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get(),
+            'recent_notifications' => Notification::with(['sender', 'recipient'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get(),
+            'scheduled_notifications' => Notification::whereNotNull('scheduled_at')->count(),
+            'expired_notifications' => Notification::where('expires_at', '<', now())->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
+
+    public function apiSend(Notification $notification)
+    {
+        try {
+            $this->sendNotifications($notification->toArray());
+            $notification->update(['status' => 'sent', 'sent_at' => now()]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'اعلان با موفقیت ارسال شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error sending notification: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ارسال اعلان: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

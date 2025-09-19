@@ -218,4 +218,365 @@ class AudioManagementController extends Controller
 
         return view('admin.audio-management.statistics', compact('stats'));
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = AudioFile::with(['episode', 'story']);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('original_name', 'like', "%{$search}%")
+                  ->orWhere('file_name', 'like', "%{$search}%")
+                  ->orWhereHas('episode', function ($q) use ($search) {
+                      $q->where('title', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('story', function ($q) use ($search) {
+                      $q->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by file type
+        if ($request->filled('file_type')) {
+            $query->where('file_type', $request->file_type);
+        }
+
+        // Filter by episode
+        if ($request->filled('episode_id')) {
+            $query->where('episode_id', $request->episode_id);
+        }
+
+        // Filter by story
+        if ($request->filled('story_id')) {
+            $query->where('story_id', $request->story_id);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $audioFiles = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $audioFiles->items(),
+            'pagination' => [
+                'current_page' => $audioFiles->currentPage(),
+                'last_page' => $audioFiles->lastPage(),
+                'per_page' => $audioFiles->perPage(),
+                'total' => $audioFiles->total(),
+            ]
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:mp3,wav,ogg,m4a,aac|max:102400', // 100MB max
+            'episode_id' => 'nullable|exists:episodes,id',
+            'story_id' => 'nullable|exists:stories,id',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'tags' => 'nullable|string|max:500',
+            'is_public' => 'boolean',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $file = $request->file('file');
+            $originalName = $file->getClientOriginalName();
+            $fileName = time() . '_' . $originalName;
+            $filePath = $file->storeAs('audio', $fileName, 'public');
+            $fileSize = $file->getSize();
+            $fileType = $file->getClientOriginalExtension();
+
+            $audioFile = AudioFile::create([
+                'original_name' => $originalName,
+                'file_name' => $fileName,
+                'file_path' => $filePath,
+                'file_size' => $fileSize,
+                'file_type' => $fileType,
+                'episode_id' => $request->episode_id,
+                'story_id' => $request->story_id,
+                'title' => $request->title ?: pathinfo($originalName, PATHINFO_FILENAME),
+                'description' => $request->description,
+                'tags' => $request->tags,
+                'status' => 'pending',
+                'is_public' => $request->boolean('is_public', true),
+            ]);
+
+            // Start processing
+            $this->processAudioFile($audioFile);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'فایل صوتی با موفقیت آپلود شد.',
+                'data' => $audioFile->load(['episode', 'story'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error uploading audio file: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در آپلود فایل صوتی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiShow(AudioFile $audioFile)
+    {
+        $audioFile->load(['episode', 'story']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $audioFile
+        ]);
+    }
+
+    public function apiUpdate(Request $request, AudioFile $audioFile)
+    {
+        $request->validate([
+            'episode_id' => 'nullable|exists:episodes,id',
+            'story_id' => 'nullable|exists:stories,id',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'tags' => 'nullable|string|max:500',
+            'is_public' => 'boolean',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $audioFile->update([
+                'episode_id' => $request->episode_id,
+                'story_id' => $request->story_id,
+                'title' => $request->title,
+                'description' => $request->description,
+                'tags' => $request->tags,
+                'is_public' => $request->boolean('is_public'),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'فایل صوتی با موفقیت به‌روزرسانی شد.',
+                'data' => $audioFile->load(['episode', 'story'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating audio file: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در به‌روزرسانی فایل صوتی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiDestroy(AudioFile $audioFile)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Delete file from storage
+            if (Storage::disk('public')->exists($audioFile->file_path)) {
+                Storage::disk('public')->delete($audioFile->file_path);
+            }
+
+            $audioFile->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'فایل صوتی با موفقیت حذف شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting audio file: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در حذف فایل صوتی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:delete,process,make_public,make_private',
+            'audio_file_ids' => 'required|array|min:1',
+            'audio_file_ids.*' => 'integer|exists:audio_files,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $audioFileIds = $request->audio_file_ids;
+            $action = $request->action;
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($audioFileIds as $audioFileId) {
+                try {
+                    $audioFile = AudioFile::findOrFail($audioFileId);
+
+                    switch ($action) {
+                        case 'delete':
+                            // Delete file from storage
+                            if (Storage::disk('public')->exists($audioFile->file_path)) {
+                                Storage::disk('public')->delete($audioFile->file_path);
+                            }
+                            $audioFile->delete();
+                            break;
+
+                        case 'process':
+                            $this->processAudioFile($audioFile);
+                            break;
+
+                        case 'make_public':
+                            $audioFile->update(['is_public' => true]);
+                            break;
+
+                        case 'make_private':
+                            $audioFile->update(['is_public' => false]);
+                            break;
+                    }
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $failureCount++;
+                    Log::error('Bulk action failed for audio file', [
+                        'audio_file_id' => $audioFileId,
+                        'action' => $action,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $actionLabels = [
+                'delete' => 'حذف',
+                'process' => 'پردازش',
+                'make_public' => 'عمومی کردن',
+                'make_private' => 'خصوصی کردن',
+            ];
+
+            $message = "عملیات {$actionLabels[$action]} روی {$successCount} فایل صوتی انجام شد";
+            if ($failureCount > 0) {
+                $message .= " و {$failureCount} فایل ناموفق بود";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'success_count' => $successCount,
+                'failure_count' => $failureCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk action failed', [
+                'action' => $request->action,
+                'audio_file_ids' => $request->audio_file_ids,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_files' => AudioFile::count(),
+            'processed_files' => AudioFile::where('status', 'processed')->count(),
+            'processing_files' => AudioFile::where('status', 'processing')->count(),
+            'failed_files' => AudioFile::where('status', 'failed')->count(),
+            'pending_files' => AudioFile::where('status', 'pending')->count(),
+            'public_files' => AudioFile::where('is_public', true)->count(),
+            'private_files' => AudioFile::where('is_public', false)->count(),
+            'total_size' => AudioFile::sum('file_size'),
+            'average_size' => AudioFile::avg('file_size'),
+            'files_by_type' => AudioFile::selectRaw('file_type, COUNT(*) as count')
+                ->groupBy('file_type')
+                ->get(),
+            'files_by_status' => AudioFile::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'files_by_month' => AudioFile::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get(),
+            'recent_files' => AudioFile::with(['episode', 'story'])
+                ->latest()
+                ->limit(10)
+                ->get(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
+
+    public function apiDownload(AudioFile $audioFile)
+    {
+        if (!Storage::disk('public')->exists($audioFile->file_path)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فایل صوتی یافت نشد.'
+            ], 404);
+        }
+
+        return Storage::disk('public')->download($audioFile->file_path, $audioFile->original_name);
+    }
+
+    public function apiProcess(AudioFile $audioFile)
+    {
+        try {
+            $this->processAudioFile($audioFile);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'فرآیند پردازش فایل صوتی شروع شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error starting audio processing: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در شروع پردازش فایل صوتی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

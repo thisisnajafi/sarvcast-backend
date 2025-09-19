@@ -286,45 +286,5 @@
     </div>
 </div>
 
-<script>
-function selectAll() {
-    document.querySelectorAll('.question-checkbox').forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    document.getElementById('select-all').checked = true;
-}
-
-function deselectAll() {
-    document.querySelectorAll('.question-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    document.getElementById('select-all').checked = false;
-}
-
-function toggleAll() {
-    const selectAll = document.getElementById('select-all');
-    document.querySelectorAll('.question-checkbox').forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-}
-
-// Update bulk form with selected question IDs
-document.getElementById('bulk-form').addEventListener('submit', function(e) {
-    const selectedCheckboxes = document.querySelectorAll('.question-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        e.preventDefault();
-        alert('لطفاً حداقل یک سؤال را انتخاب کنید.');
-        return;
-    }
-    
-    // Add hidden inputs for selected question IDs
-    selectedCheckboxes.forEach(checkbox => {
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'question_ids[]';
-        hiddenInput.value = checkbox.value;
-        this.appendChild(hiddenInput);
-    });
-});
-</script>
+<script src="{{ asset('js/admin/quiz-manager.js') }}"></script>
 @endsection

@@ -383,4 +383,364 @@ class TimelineManagementController extends Controller
 
         return view('admin.timeline-management.statistics', compact('stats'));
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = Timeline::with(['story', 'episode']);
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('story', function ($q) use ($search) {
+                      $q->where('title', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('episode', function ($q) use ($search) {
+                      $q->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by type
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by priority
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->priority);
+        }
+
+        // Filter by story
+        if ($request->filled('story_id')) {
+            $query->where('story_id', $request->story_id);
+        }
+
+        // Filter by episode
+        if ($request->filled('episode_id')) {
+            $query->where('episode_id', $request->episode_id);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $timelines = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $timelines->items(),
+            'pagination' => [
+                'current_page' => $timelines->currentPage(),
+                'last_page' => $timelines->lastPage(),
+                'per_page' => $timelines->perPage(),
+                'total' => $timelines->total(),
+            ]
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:story,episode,character,event,location',
+            'description' => 'nullable|string|max:1000',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'required|in:active,inactive,draft',
+            'priority' => 'required|in:low,medium,high',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'color' => 'nullable|string|max:7',
+            'tags' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $timeline = Timeline::create([
+                'title' => $request->title,
+                'type' => $request->type,
+                'description' => $request->description,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'status' => $request->status,
+                'priority' => $request->priority,
+                'color' => $request->color,
+                'tags' => $request->tags,
+            ]);
+
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('timeline/images', 'public');
+                $timeline->update(['image' => $imagePath]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تایم‌لاین با موفقیت ایجاد شد.',
+                'data' => $timeline->load(['story', 'episode'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error creating timeline: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ایجاد تایم‌لاین: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiShow(Timeline $timeline)
+    {
+        $timeline->load(['story', 'episode']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $timeline
+        ]);
+    }
+
+    public function apiUpdate(Request $request, Timeline $timeline)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:story,episode,character,event,location',
+            'description' => 'nullable|string|max:1000',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'required|in:active,inactive,draft',
+            'priority' => 'required|in:low,medium,high',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'color' => 'nullable|string|max:7',
+            'tags' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $timeline->update([
+                'title' => $request->title,
+                'type' => $request->type,
+                'description' => $request->description,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'status' => $request->status,
+                'priority' => $request->priority,
+                'color' => $request->color,
+                'tags' => $request->tags,
+            ]);
+
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                // Delete old image
+                if ($timeline->image) {
+                    Storage::disk('public')->delete($timeline->image);
+                }
+                $imagePath = $request->file('image')->store('timeline/images', 'public');
+                $timeline->update(['image' => $imagePath]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تایم‌لاین با موفقیت به‌روزرسانی شد.',
+                'data' => $timeline->load(['story', 'episode'])
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating timeline: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در به‌روزرسانی تایم‌لاین: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiDestroy(Timeline $timeline)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Delete associated image
+            if ($timeline->image) {
+                Storage::disk('public')->delete($timeline->image);
+            }
+
+            $timeline->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تایم‌لاین با موفقیت حذف شد.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error deleting timeline: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در حذف تایم‌لاین: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:activate,deactivate,delete,change_priority',
+            'timeline_ids' => 'required|array|min:1',
+            'timeline_ids.*' => 'integer|exists:timelines,id',
+            'priority' => 'required_if:action,change_priority|string|in:low,medium,high',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $timelineIds = $request->timeline_ids;
+            $action = $request->action;
+            $successCount = 0;
+            $failureCount = 0;
+
+            foreach ($timelineIds as $timelineId) {
+                try {
+                    $timeline = Timeline::findOrFail($timelineId);
+
+                    switch ($action) {
+                        case 'activate':
+                            $timeline->update(['status' => 'active']);
+                            break;
+
+                        case 'deactivate':
+                            $timeline->update(['status' => 'inactive']);
+                            break;
+
+                        case 'delete':
+                            // Delete associated image
+                            if ($timeline->image) {
+                                Storage::disk('public')->delete($timeline->image);
+                            }
+                            $timeline->delete();
+                            break;
+
+                        case 'change_priority':
+                            $timeline->update(['priority' => $request->priority]);
+                            break;
+                    }
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    $failureCount++;
+                    Log::error('Bulk action failed for timeline', [
+                        'timeline_id' => $timelineId,
+                        'action' => $action,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $actionLabels = [
+                'activate' => 'فعال‌سازی',
+                'deactivate' => 'غیرفعال‌سازی',
+                'delete' => 'حذف',
+                'change_priority' => 'تغییر اولویت',
+            ];
+
+            $message = "عملیات {$actionLabels[$action]} روی {$successCount} تایم‌لاین انجام شد";
+            if ($failureCount > 0) {
+                $message .= " و {$failureCount} تایم‌لاین ناموفق بود";
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'success_count' => $successCount,
+                'failure_count' => $failureCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bulk action failed', [
+                'action' => $request->action,
+                'timeline_ids' => $request->timeline_ids,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_timelines' => Timeline::count(),
+            'active_timelines' => Timeline::where('status', 'active')->count(),
+            'inactive_timelines' => Timeline::where('status', 'inactive')->count(),
+            'draft_timelines' => Timeline::where('status', 'draft')->count(),
+            'timelines_by_type' => Timeline::selectRaw('type, COUNT(*) as count')
+                ->groupBy('type')
+                ->get(),
+            'timelines_by_status' => Timeline::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'timelines_by_priority' => Timeline::selectRaw('priority, COUNT(*) as count')
+                ->groupBy('priority')
+                ->get(),
+            'timelines_by_story' => Timeline::selectRaw('story_id, COUNT(*) as count')
+                ->with('story')
+                ->groupBy('story_id')
+                ->orderBy('count', 'desc')
+                ->limit(10)
+                ->get(),
+            'timelines_by_month' => Timeline::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get(),
+            'recent_timelines' => Timeline::with(['story', 'episode'])
+                ->latest()
+                ->limit(10)
+                ->get(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
 }

@@ -291,45 +291,5 @@
     </div>
 </div>
 
-<script>
-function selectAll() {
-    document.querySelectorAll('.gamification-checkbox').forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    document.getElementById('select-all').checked = true;
-}
-
-function deselectAll() {
-    document.querySelectorAll('.gamification-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    document.getElementById('select-all').checked = false;
-}
-
-function toggleAll() {
-    const selectAll = document.getElementById('select-all');
-    document.querySelectorAll('.gamification-checkbox').forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-}
-
-// Update bulk form with selected gamification IDs
-document.getElementById('bulk-form').addEventListener('submit', function(e) {
-    const selectedCheckboxes = document.querySelectorAll('.gamification-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        e.preventDefault();
-        alert('لطفاً حداقل یک عنصر را انتخاب کنید.');
-        return;
-    }
-    
-    // Add hidden inputs for selected gamification IDs
-    selectedCheckboxes.forEach(checkbox => {
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'gamification_ids[]';
-        hiddenInput.value = checkbox.value;
-        this.appendChild(hiddenInput);
-    });
-});
-</script>
+<script src="{{ asset('js/admin/gamification-manager.js') }}"></script>
 @endsection

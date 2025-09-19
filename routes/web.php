@@ -621,6 +621,62 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('/export', [\App\Http\Controllers\Admin\CouponController::class, 'export'])->name('export');
         Route::get('/statistics', [\App\Http\Controllers\Admin\CouponController::class, 'statistics'])->name('statistics');
     });
+
+    // Commission Payment Management Routes
+    Route::prefix('commission-payments')->name('commission-payments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'store'])->name('store');
+        Route::get('/{commissionPayment}', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'show'])->name('show');
+        Route::get('/{commissionPayment}/edit', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'edit'])->name('edit');
+        Route::put('/{commissionPayment}', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'update'])->name('update');
+        Route::delete('/{commissionPayment}', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'statistics'])->name('statistics');
+    });
+
+    // Affiliate Program Management Routes
+    Route::prefix('affiliate')->name('affiliate.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AffiliateController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\AffiliateController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\AffiliateController::class, 'store'])->name('store');
+        Route::get('/{affiliate}', [\App\Http\Controllers\Admin\AffiliateController::class, 'show'])->name('show');
+        Route::get('/{affiliate}/edit', [\App\Http\Controllers\Admin\AffiliateController::class, 'edit'])->name('edit');
+        Route::put('/{affiliate}', [\App\Http\Controllers\Admin\AffiliateController::class, 'update'])->name('update');
+        Route::delete('/{affiliate}', [\App\Http\Controllers\Admin\AffiliateController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\AffiliateController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\AffiliateController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\AffiliateController::class, 'statistics'])->name('statistics');
+    });
+
+    // Subscription Plan Management Routes
+    Route::prefix('subscription-plans')->name('subscription-plans.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'store'])->name('store');
+        Route::get('/{subscriptionPlan}', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'show'])->name('show');
+        Route::get('/{subscriptionPlan}/edit', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'edit'])->name('edit');
+        Route::put('/{subscriptionPlan}', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'update'])->name('update');
+        Route::delete('/{subscriptionPlan}', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'statistics'])->name('statistics');
+    });
+
+    // Role Management Routes
+    Route::prefix('roles')->name('roles.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\RoleController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\RoleController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\RoleController::class, 'store'])->name('store');
+        Route::get('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'show'])->name('show');
+        Route::get('/{role}/edit', [\App\Http\Controllers\Admin\RoleController::class, 'edit'])->name('edit');
+        Route::put('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'update'])->name('update');
+        Route::delete('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\RoleController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\RoleController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\RoleController::class, 'statistics'])->name('statistics');
+    });
 });
 
 // Payment Callback Routes

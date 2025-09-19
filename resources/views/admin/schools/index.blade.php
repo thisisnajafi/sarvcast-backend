@@ -290,45 +290,5 @@
     </div>
 </div>
 
-<script>
-function selectAll() {
-    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    document.getElementById('select-all').checked = true;
-}
-
-function deselectAll() {
-    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    document.getElementById('select-all').checked = false;
-}
-
-function toggleAll() {
-    const selectAll = document.getElementById('select-all');
-    document.querySelectorAll('.school-checkbox').forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-}
-
-// Update bulk form with selected school IDs
-document.getElementById('bulk-form').addEventListener('submit', function(e) {
-    const selectedCheckboxes = document.querySelectorAll('.school-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        e.preventDefault();
-        alert('لطفاً حداقل یک مدرسه را انتخاب کنید.');
-        return;
-    }
-    
-    // Add hidden inputs for selected school IDs
-    selectedCheckboxes.forEach(checkbox => {
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'school_ids[]';
-        hiddenInput.value = checkbox.value;
-        this.appendChild(hiddenInput);
-    });
-});
-</script>
+<script src="{{ asset('js/admin/school-partnership-manager.js') }}"></script>
 @endsection
