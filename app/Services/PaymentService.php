@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Events\SalesNotificationEvent;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -151,6 +152,9 @@ class PaymentService
                             'start_date' => now()
                         ]);
                     }
+                    
+                    // Fire sales notification event
+                    event(new SalesNotificationEvent($payment, $payment->subscription));
                     
                     return [
                         'success' => true,

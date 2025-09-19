@@ -70,6 +70,22 @@ class Episode extends Model
     }
 
     /**
+     * Get the scenes for the episode
+     */
+    public function scenes()
+    {
+        return $this->hasMany(StoryScene::class);
+    }
+
+    /**
+     * Get the image generation jobs for the episode
+     */
+    public function imageGenerationJobs()
+    {
+        return $this->hasMany(ImageGenerationJob::class);
+    }
+
+    /**
      * Get the voice actors for the episode
      */
     public function voiceActors()

@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'security' => \App\Http\Middleware\SecurityMiddleware::class,
             'premium.access' => \App\Http\Middleware\CheckPremiumAccess::class,
             'content.access' => \App\Http\Middleware\CheckContentAccess::class,
+            'permission' => \App\Http\Middleware\CheckPermission::class,
+            '2fa' => \App\Http\Middleware\RequireTwoFactorAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

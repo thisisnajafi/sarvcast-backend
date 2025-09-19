@@ -10,6 +10,8 @@ class ImageTimeline extends Model
     protected $fillable = [
         'episode_id',
         'voice_actor_id',
+        'character_id',
+        'scene_id',
         'start_time',
         'end_time',
         'image_url',
@@ -40,6 +42,22 @@ class ImageTimeline extends Model
     public function voiceActor(): BelongsTo
     {
         return $this->belongsTo(EpisodeVoiceActor::class);
+    }
+
+    /**
+     * Get the character associated with this image timeline
+     */
+    public function character(): BelongsTo
+    {
+        return $this->belongsTo(StoryCharacter::class);
+    }
+
+    /**
+     * Get the scene associated with this image timeline
+     */
+    public function scene(): BelongsTo
+    {
+        return $this->belongsTo(StoryScene::class);
     }
 
     /**

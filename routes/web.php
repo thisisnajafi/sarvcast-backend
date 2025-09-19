@@ -33,11 +33,19 @@ Route::prefix('admin/auth')->name('admin.auth.')->group(function () {
     Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
 });
 
+// Admin 2FA Routes
+Route::prefix('admin/2fa')->name('admin.2fa.')->middleware(['auth:web', 'admin'])->group(function () {
+    Route::get('verify', [\App\Http\Controllers\Admin\TwoFactorAuthController::class, 'showVerifyForm'])->name('verify');
+    Route::post('verify', [\App\Http\Controllers\Admin\TwoFactorAuthController::class, 'verify'])->name('verify.post');
+    Route::post('send-code', [\App\Http\Controllers\Admin\TwoFactorAuthController::class, 'sendCode'])->name('send-code');
+    Route::post('skip', [\App\Http\Controllers\Admin\TwoFactorAuthController::class, 'skip'])->name('skip');
+});
+
 // Admin Dashboard Route
 Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard')->middleware(['auth:web', 'admin']);
 
 // Admin Routes
-Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
     // Stories
@@ -114,6 +122,52 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
     Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics');
     Route::get('analytics/data', [AnalyticsController::class, 'getAnalyticsData'])->name('analytics.data');
     
+    // Coin Analytics
+    Route::get('analytics/coin', function () {
+        return view('admin.analytics.coin-analytics');
+    })->name('analytics.coin');
+    
+    // Referral Analytics
+    Route::get('analytics/referral', function () {
+        return view('admin.analytics.referral-analytics');
+    })->name('analytics.referral');
+    
+    // Coupon Management
+    Route::prefix('coupons')->name('coupons.')->group(function () {
+        Route::get('/', function () {
+            return view('admin.coupons.index');
+        })->name('index');
+    });
+    
+    // Commission Payments Management
+    Route::prefix('commission-payments')->name('commission-payments.')->group(function () {
+        Route::get('/', function () {
+            return view('admin.commission-payments.index');
+        })->name('index');
+    });
+    
+    // Coin Management
+    Route::prefix('coins')->name('coins.')->group(function () {
+        Route::get('/', function () {
+            return view('admin.coins.index');
+        })->name('index');
+    });
+    
+    // Admin Dashboard
+    Route::get('/', function () {
+        return view('admin.dashboard.index');
+    })->name('dashboard');
+    
+    // Role Management
+    Route::prefix('roles')->name('roles.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\RoleController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\RoleController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\RoleController::class, 'store'])->name('store');
+        Route::get('/{role}/edit', [\App\Http\Controllers\Admin\RoleController::class, 'edit'])->name('edit');
+        Route::put('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'update'])->name('update');
+        Route::delete('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'destroy'])->name('destroy');
+    });
+    
     // User Analytics
     Route::prefix('user-analytics')->name('user-analytics.')->group(function () {
         Route::get('/', [UserAnalyticsController::class, 'index'])->name('index');
@@ -189,6 +243,21 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
         Route::post('reports/{report}/resolve', [ContentModerationController::class, 'resolveReport'])->name('reports.resolve');
     });
     
+    // Affiliate Management Routes
+    Route::prefix('affiliate')->name('affiliate.')->group(function () {
+        Route::get('/', function () {
+            return view('admin.affiliate.dashboard');
+        })->name('dashboard');
+        
+        Route::get('/partners', function () {
+            return view('admin.affiliate.partners');
+        })->name('partners');
+        
+        Route::get('/commissions', function () {
+            return view('admin.affiliate.commissions');
+        })->name('commissions');
+    });
+
     // Admin Dashboard API Routes
     Route::prefix('api')->name('api.')->group(function () {
         Route::get('dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'stats'])->name('dashboard.stats');
@@ -293,6 +362,265 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
         Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password.update');
         Route::put('/info', [ProfileController::class, 'updateInfo'])->name('info.update');
     });
+
+    // Subscription Management Routes
+    Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SubscriptionController::class, 'index'])->name('index');
+        Route::get('/plans', [\App\Http\Controllers\Admin\SubscriptionController::class, 'plans'])->name('plans');
+        Route::get('/analytics', [\App\Http\Controllers\Admin\SubscriptionController::class, 'analytics'])->name('analytics');
+        Route::get('/export', [\App\Http\Controllers\Admin\SubscriptionController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\SubscriptionController::class, 'statistics'])->name('statistics');
+        Route::get('/{subscription}', [\App\Http\Controllers\Admin\SubscriptionController::class, 'show'])->name('show');
+        Route::post('/{subscription}/cancel', [\App\Http\Controllers\Admin\SubscriptionController::class, 'cancel'])->name('cancel');
+        Route::post('/{subscription}/reactivate', [\App\Http\Controllers\Admin\SubscriptionController::class, 'reactivate'])->name('reactivate');
+    });
+
+    // Plan Management Routes
+    Route::prefix('plans')->name('plans.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\PlanController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\PlanController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\PlanController::class, 'store'])->name('store');
+        Route::get('/{plan}', [\App\Http\Controllers\Admin\PlanController::class, 'show'])->name('show');
+        Route::get('/{plan}/edit', [\App\Http\Controllers\Admin\PlanController::class, 'edit'])->name('edit');
+        Route::put('/{plan}', [\App\Http\Controllers\Admin\PlanController::class, 'update'])->name('update');
+        Route::delete('/{plan}', [\App\Http\Controllers\Admin\PlanController::class, 'destroy'])->name('destroy');
+        Route::post('/{plan}/toggle-status', [\App\Http\Controllers\Admin\PlanController::class, 'toggleStatus'])->name('toggle-status');
+    });
+
+    // Teacher Account Management Routes
+    Route::prefix('teachers')->name('teachers.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\TeacherController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\TeacherController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\TeacherController::class, 'store'])->name('store');
+        Route::get('/{teacher}', [\App\Http\Controllers\Admin\TeacherController::class, 'show'])->name('show');
+        Route::get('/{teacher}/edit', [\App\Http\Controllers\Admin\TeacherController::class, 'edit'])->name('edit');
+        Route::put('/{teacher}', [\App\Http\Controllers\Admin\TeacherController::class, 'update'])->name('update');
+        Route::delete('/{teacher}', [\App\Http\Controllers\Admin\TeacherController::class, 'destroy'])->name('destroy');
+        Route::post('/{teacher}/verify', [\App\Http\Controllers\Admin\TeacherController::class, 'verify'])->name('verify');
+        Route::post('/{teacher}/suspend', [\App\Http\Controllers\Admin\TeacherController::class, 'suspend'])->name('suspend');
+        Route::post('/{teacher}/activate', [\App\Http\Controllers\Admin\TeacherController::class, 'activate'])->name('activate');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\TeacherController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\TeacherController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\TeacherController::class, 'statistics'])->name('statistics');
+    });
+
+    // Influencer Campaign Management Routes
+    Route::prefix('influencers')->name('influencers.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\InfluencerController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\InfluencerController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\InfluencerController::class, 'store'])->name('store');
+        Route::get('/{influencer}', [\App\Http\Controllers\Admin\InfluencerController::class, 'show'])->name('show');
+        Route::get('/{influencer}/edit', [\App\Http\Controllers\Admin\InfluencerController::class, 'edit'])->name('edit');
+        Route::put('/{influencer}', [\App\Http\Controllers\Admin\InfluencerController::class, 'update'])->name('update');
+        Route::delete('/{influencer}', [\App\Http\Controllers\Admin\InfluencerController::class, 'destroy'])->name('destroy');
+        Route::post('/{influencer}/verify', [\App\Http\Controllers\Admin\InfluencerController::class, 'verify'])->name('verify');
+        Route::post('/{influencer}/suspend', [\App\Http\Controllers\Admin\InfluencerController::class, 'suspend'])->name('suspend');
+        Route::post('/{influencer}/activate', [\App\Http\Controllers\Admin\InfluencerController::class, 'activate'])->name('activate');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\InfluencerController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\InfluencerController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\InfluencerController::class, 'statistics'])->name('statistics');
+    });
+
+    // School Partnership Management Routes
+    Route::prefix('schools')->name('schools.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SchoolController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\SchoolController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\SchoolController::class, 'store'])->name('store');
+        Route::get('/{school}', [\App\Http\Controllers\Admin\SchoolController::class, 'show'])->name('show');
+        Route::get('/{school}/edit', [\App\Http\Controllers\Admin\SchoolController::class, 'edit'])->name('edit');
+        Route::put('/{school}', [\App\Http\Controllers\Admin\SchoolController::class, 'update'])->name('update');
+        Route::delete('/{school}', [\App\Http\Controllers\Admin\SchoolController::class, 'destroy'])->name('destroy');
+        Route::post('/{school}/verify', [\App\Http\Controllers\Admin\SchoolController::class, 'verify'])->name('verify');
+        Route::post('/{school}/suspend', [\App\Http\Controllers\Admin\SchoolController::class, 'suspend'])->name('suspend');
+        Route::post('/{school}/activate', [\App\Http\Controllers\Admin\SchoolController::class, 'activate'])->name('activate');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\SchoolController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\SchoolController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\SchoolController::class, 'statistics'])->name('statistics');
+    });
+
+    // Corporate Sponsorship Management Routes
+    Route::prefix('corporate')->name('corporate.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\CorporateController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\CorporateController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\CorporateController::class, 'store'])->name('store');
+        Route::get('/{corporate}', [\App\Http\Controllers\Admin\CorporateController::class, 'show'])->name('show');
+        Route::get('/{corporate}/edit', [\App\Http\Controllers\Admin\CorporateController::class, 'edit'])->name('edit');
+        Route::put('/{corporate}', [\App\Http\Controllers\Admin\CorporateController::class, 'update'])->name('update');
+        Route::delete('/{corporate}', [\App\Http\Controllers\Admin\CorporateController::class, 'destroy'])->name('destroy');
+        Route::post('/{corporate}/verify', [\App\Http\Controllers\Admin\CorporateController::class, 'verify'])->name('verify');
+        Route::post('/{corporate}/suspend', [\App\Http\Controllers\Admin\CorporateController::class, 'suspend'])->name('suspend');
+        Route::post('/{corporate}/activate', [\App\Http\Controllers\Admin\CorporateController::class, 'activate'])->name('activate');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CorporateController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\CorporateController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\CorporateController::class, 'statistics'])->name('statistics');
+    });
+
+    // Quiz System Management Routes
+    Route::prefix('quiz')->name('quiz.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\QuizController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\QuizController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\QuizController::class, 'store'])->name('store');
+        Route::get('/{quiz}', [\App\Http\Controllers\Admin\QuizController::class, 'show'])->name('show');
+        Route::get('/{quiz}/edit', [\App\Http\Controllers\Admin\QuizController::class, 'edit'])->name('edit');
+        Route::put('/{quiz}', [\App\Http\Controllers\Admin\QuizController::class, 'update'])->name('update');
+        Route::delete('/{quiz}', [\App\Http\Controllers\Admin\QuizController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\QuizController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\QuizController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\QuizController::class, 'statistics'])->name('statistics');
+    });
+
+    // Referral System Management Routes
+    Route::prefix('referrals')->name('referrals.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ReferralController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\ReferralController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\ReferralController::class, 'store'])->name('store');
+        Route::get('/{referral}', [\App\Http\Controllers\Admin\ReferralController::class, 'show'])->name('show');
+        Route::get('/{referral}/edit', [\App\Http\Controllers\Admin\ReferralController::class, 'edit'])->name('edit');
+        Route::put('/{referral}', [\App\Http\Controllers\Admin\ReferralController::class, 'update'])->name('update');
+        Route::delete('/{referral}', [\App\Http\Controllers\Admin\ReferralController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\ReferralController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\ReferralController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\ReferralController::class, 'statistics'])->name('statistics');
+    });
+
+    // Gamification System Management Routes
+    Route::prefix('gamification')->name('gamification.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\GamificationController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\GamificationController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\GamificationController::class, 'store'])->name('store');
+        Route::get('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'show'])->name('show');
+        Route::get('/{gamification}/edit', [\App\Http\Controllers\Admin\GamificationController::class, 'edit'])->name('edit');
+        Route::put('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'update'])->name('update');
+        Route::delete('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\GamificationController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\GamificationController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\GamificationController::class, 'statistics'])->name('statistics');
+    });
+
+    // Backup and Recovery Management Routes
+    Route::prefix('backup')->name('backup.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\BackupController::class, 'index'])->name('index');
+        Route::post('/create-full', [\App\Http\Controllers\Admin\BackupController::class, 'createFullBackup'])->name('create-full');
+        Route::post('/create-incremental', [\App\Http\Controllers\Admin\BackupController::class, 'createIncrementalBackup'])->name('create-incremental');
+        Route::post('/restore', [\App\Http\Controllers\Admin\BackupController::class, 'restoreBackup'])->name('restore');
+        Route::get('/download/{backupId}', [\App\Http\Controllers\Admin\BackupController::class, 'downloadBackup'])->name('download');
+        Route::delete('/{backupId}', [\App\Http\Controllers\Admin\BackupController::class, 'deleteBackup'])->name('delete');
+        Route::post('/cleanup', [\App\Http\Controllers\Admin\BackupController::class, 'cleanupOldBackups'])->name('cleanup');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\BackupController::class, 'getBackupStats'])->name('statistics');
+        Route::post('/schedule', [\App\Http\Controllers\Admin\BackupController::class, 'scheduleBackups'])->name('schedule');
+    });
+
+    // Performance Monitoring Management Routes
+    Route::prefix('performance')->name('performance.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'index'])->name('index');
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'dashboard'])->name('dashboard');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'statistics'])->name('statistics');
+        Route::get('/real-time', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'realTime'])->name('real-time');
+        Route::get('/report', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'report'])->name('report');
+        Route::post('/cleanup', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'cleanup'])->name('cleanup');
+        Route::get('/alerts', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'alerts'])->name('alerts');
+    });
+
+    // Role Management Routes
+    Route::prefix('roles')->name('roles.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\RoleController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\RoleController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\RoleController::class, 'store'])->name('store');
+        Route::get('/{role}/edit', [\App\Http\Controllers\Admin\RoleController::class, 'edit'])->name('edit');
+        Route::put('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'update'])->name('update');
+        Route::delete('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'destroy'])->name('destroy');
+        Route::post('/assign', [\App\Http\Controllers\Admin\RoleController::class, 'assignRole'])->name('assign');
+        Route::delete('/{user}/roles/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'removeRole'])->name('remove');
+    });
+
+    // User Permission Management Routes
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::post('/{user}/permissions/{permission}', [\App\Http\Controllers\Admin\UserController::class, 'togglePermission'])->name('toggle-permission');
+    });
+
+    // Audio Management Routes
+    Route::prefix('audio-management')->name('audio-management.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AudioManagementController::class, 'index'])->name('index');
+        Route::get('/upload', [\App\Http\Controllers\Admin\AudioManagementController::class, 'upload'])->name('upload');
+        Route::post('/upload', [\App\Http\Controllers\Admin\AudioManagementController::class, 'store'])->name('store');
+        Route::get('/{audio}', [\App\Http\Controllers\Admin\AudioManagementController::class, 'show'])->name('show');
+        Route::get('/{audio}/edit', [\App\Http\Controllers\Admin\AudioManagementController::class, 'edit'])->name('edit');
+        Route::put('/{audio}', [\App\Http\Controllers\Admin\AudioManagementController::class, 'update'])->name('update');
+        Route::delete('/{audio}', [\App\Http\Controllers\Admin\AudioManagementController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\AudioManagementController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\AudioManagementController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\AudioManagementController::class, 'statistics'])->name('statistics');
+    });
+
+    // Timeline Management Routes
+    Route::prefix('timeline-management')->name('timeline-management.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'store'])->name('store');
+        Route::get('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'show'])->name('show');
+        Route::get('/{timeline}/edit', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'edit'])->name('edit');
+        Route::put('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'update'])->name('update');
+        Route::delete('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'statistics'])->name('statistics');
+    });
+
+    // File Upload Management Routes
+    Route::prefix('file-upload')->name('file-upload.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\FileUploadController::class, 'index'])->name('index');
+        Route::get('/upload', [\App\Http\Controllers\Admin\FileUploadController::class, 'upload'])->name('upload');
+        Route::post('/upload', [\App\Http\Controllers\Admin\FileUploadController::class, 'store'])->name('store');
+        Route::get('/{file}', [\App\Http\Controllers\Admin\FileUploadController::class, 'show'])->name('show');
+        Route::get('/{file}/edit', [\App\Http\Controllers\Admin\FileUploadController::class, 'edit'])->name('edit');
+        Route::put('/{file}', [\App\Http\Controllers\Admin\FileUploadController::class, 'update'])->name('update');
+        Route::delete('/{file}', [\App\Http\Controllers\Admin\FileUploadController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\FileUploadController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\FileUploadController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\FileUploadController::class, 'statistics'])->name('statistics');
+    });
+
+    // Notifications Management Routes
+    Route::prefix('notifications-management')->name('notifications-management.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\NotificationController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\NotificationController::class, 'store'])->name('store');
+        Route::get('/{notification}', [\App\Http\Controllers\Admin\NotificationController::class, 'show'])->name('show');
+        Route::get('/{notification}/edit', [\App\Http\Controllers\Admin\NotificationController::class, 'edit'])->name('edit');
+        Route::put('/{notification}', [\App\Http\Controllers\Admin\NotificationController::class, 'update'])->name('update');
+        Route::delete('/{notification}', [\App\Http\Controllers\Admin\NotificationController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\NotificationController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\NotificationController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\NotificationController::class, 'statistics'])->name('statistics');
+    });
+
+    // Coin Management Routes
+    Route::prefix('coins')->name('coins.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\CoinController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\CoinController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\CoinController::class, 'store'])->name('store');
+        Route::get('/{coin}', [\App\Http\Controllers\Admin\CoinController::class, 'show'])->name('show');
+        Route::get('/{coin}/edit', [\App\Http\Controllers\Admin\CoinController::class, 'edit'])->name('edit');
+        Route::put('/{coin}', [\App\Http\Controllers\Admin\CoinController::class, 'update'])->name('update');
+        Route::delete('/{coin}', [\App\Http\Controllers\Admin\CoinController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CoinController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\CoinController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\CoinController::class, 'statistics'])->name('statistics');
+    });
+
+    // Coupon Management Routes
+    Route::prefix('coupons')->name('coupons.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\CouponController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\CouponController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\CouponController::class, 'store'])->name('store');
+        Route::get('/{coupon}', [\App\Http\Controllers\Admin\CouponController::class, 'show'])->name('show');
+        Route::get('/{coupon}/edit', [\App\Http\Controllers\Admin\CouponController::class, 'edit'])->name('edit');
+        Route::put('/{coupon}', [\App\Http\Controllers\Admin\CouponController::class, 'update'])->name('update');
+        Route::delete('/{coupon}', [\App\Http\Controllers\Admin\CouponController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CouponController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\CouponController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\CouponController::class, 'statistics'])->name('statistics');
+    });
 });
 
 // Payment Callback Routes
@@ -300,4 +628,34 @@ Route::prefix('payment')->group(function () {
     Route::get('zarinpal/callback', [PaymentCallbackController::class, 'zarinpalCallback']);
     Route::get('success', [PaymentCallbackController::class, 'success'])->name('payment.success');
     Route::get('failure', [PaymentCallbackController::class, 'failure'])->name('payment.failure');
+});
+
+// User Coin Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/coins', function () {
+        return view('user.coins.dashboard');
+    })->name('user.coins.dashboard');
+    
+    Route::get('/coins/transactions', function () {
+        return view('user.coins.transactions');
+    })->name('user.coins.transactions');
+    
+    Route::get('/coins/redemption', function () {
+        return view('user.coins.redemption');
+    })->name('user.coins.redemption');
+});
+
+// User Quiz Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/quiz/episode', function () {
+        return view('user.quiz.episode-quiz');
+    })->name('user.quiz.episode');
+    
+    Route::get('/quiz/history', function () {
+        return view('user.quiz.quiz-history');
+    })->name('user.quiz.history');
+    
+    Route::get('/quiz/statistics', function () {
+        return view('user.quiz.quiz-statistics');
+    })->name('user.quiz.statistics');
 });

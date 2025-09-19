@@ -165,8 +165,8 @@ class EpisodeController extends Controller
      */
     public function create()
     {
-        $stories = Story::published()->get();
-        $narrators = Person::where('type', 'narrator')->get();
+        $stories = Story::whereIn('status', ['published', 'approved'])->get();
+        $narrators = Person::whereJsonContains('roles', 'narrator')->get();
 
         return view('admin.episodes.create', compact('stories', 'narrators'));
     }
@@ -292,6 +292,56 @@ class EpisodeController extends Controller
 
             $episode = Episode::create($data);
 
+            // Handle voice actors data
+            if ($request->filled('voice_actors_data')) {
+                $voiceActorsData = json_decode($request->voice_actors_data, true);
+                foreach ($voiceActorsData as $voiceActorData) {
+                    $episode->voiceActors()->create([
+                        'person_id' => $voiceActorData['person_id'],
+                        'role' => $voiceActorData['role'],
+                        'character_name' => $voiceActorData['character_name'],
+                        'voice_description' => $voiceActorData['voice_description'],
+                        'start_time' => 0, // Default to 0 since timing is not managed here
+                        'end_time' => $episode->duration, // Default to full episode duration
+                        'is_primary' => $voiceActorData['is_primary'] ?? false,
+                    ]);
+                }
+                
+                // Update episode with voice actor info
+                $episode->update([
+                    'has_multiple_voice_actors' => count($voiceActorsData) > 1,
+                    'voice_actor_count' => count($voiceActorsData)
+                ]);
+            }
+
+            // Handle image timeline data
+            if ($request->filled('image_timeline_data')) {
+                $imageTimelineData = json_decode($request->image_timeline_data, true);
+                foreach ($imageTimelineData as $timelineData) {
+                    // Handle image file upload
+                    $imagePath = null;
+                    if (isset($timelineData['image_file'])) {
+                        // This would need to be handled differently since we can't directly access files from JSON
+                        // We'll need to modify the approach
+                    }
+                    
+                    $episode->imageTimelines()->create([
+                        'start_time' => $timelineData['start_time'],
+                        'end_time' => $timelineData['end_time'],
+                        'image_url' => $imagePath,
+                        'image_order' => $timelineData['image_order'],
+                        'scene_description' => $timelineData['scene_description'],
+                        'transition_type' => $timelineData['transition_type'],
+                        'is_key_frame' => $timelineData['is_key_frame'] ?? false,
+                    ]);
+                }
+                
+                // Update episode with image timeline info
+                $episode->update([
+                    'use_image_timeline' => count($imageTimelineData) > 0
+                ]);
+            }
+
             // Attach people if provided
             if ($request->filled('people')) {
                 $episode->people()->attach($request->people);
@@ -299,10 +349,17 @@ class EpisodeController extends Controller
 
             // Send notification if published
             if ($episode->status === 'published') {
-                $this->notificationService->createNewEpisodeNotification(
-                    0, // Will be sent to all users
-                    $episode->story->title,
-                    $episode->title
+                $this->notificationService->sendToAllUsers(
+                    'content',
+                    'قسمت جدید منتشر شد',
+                    "قسمت جدید \"{$episode->title}\" از داستان \"{$episode->story->title}\" منتشر شد.",
+                    [
+                        'is_important' => true,
+                        'action_type' => 'button',
+                        'action_text' => 'شنیدن قسمت',
+                        'action_url' => '/episodes/latest',
+                        'data' => ['story_title' => $episode->story->title, 'episode_title' => $episode->title]
+                    ]
                 );
             }
 
@@ -340,8 +397,8 @@ class EpisodeController extends Controller
      */
     public function edit(Episode $episode)
     {
-        $stories = Story::published()->get();
-        $narrators = Person::where('type', 'narrator')->get();
+        $stories = Story::whereIn('status', ['published', 'approved'])->get();
+        $narrators = Person::whereJsonContains('roles', 'narrator')->get();
 
         return view('admin.episodes.edit', compact('episode', 'stories', 'narrators'));
     }
@@ -735,10 +792,17 @@ class EpisodeController extends Controller
             ]);
 
             // Send notification to all users about new episode
-            $this->notificationService->createNewEpisodeNotification(
-                0, // Will be sent to all users
-                $episode->story->title,
-                $episode->title
+            $this->notificationService->sendToAllUsers(
+                'content',
+                'قسمت جدید منتشر شد',
+                "قسمت جدید \"{$episode->title}\" از داستان \"{$episode->story->title}\" منتشر شد.",
+                [
+                    'is_important' => true,
+                    'action_type' => 'button',
+                    'action_text' => 'شنیدن قسمت',
+                    'action_url' => '/episodes/latest',
+                    'data' => ['story_title' => $episode->story->title, 'episode_title' => $episode->title]
+                ]
             );
 
             DB::commit();

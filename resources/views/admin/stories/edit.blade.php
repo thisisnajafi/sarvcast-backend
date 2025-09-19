@@ -252,7 +252,7 @@
             <!-- Tags -->
             <div class="mb-6">
                 <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">برچسب‌ها</label>
-                <input type="text" name="tags" id="tags" value="{{ old('tags', is_array($story->tags) ? implode(', ', $story->tags) : $story->tags) }}" 
+                <input type="text" name="tags" id="tags" value="{{ old('tags') ? (is_array(old('tags')) ? implode(', ', old('tags')) : old('tags')) : (is_array($story->tags) ? implode(', ', $story->tags) : $story->tags) }}" 
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('tags') border-red-500 @enderror"
                        placeholder="برچسب‌ها را با کاما جدا کنید">
                 @error('tags')

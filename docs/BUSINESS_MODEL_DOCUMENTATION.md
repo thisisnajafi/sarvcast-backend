@@ -55,6 +55,163 @@ The platform generates revenue through multiple subscription tiers:
 - **Learning Rewards**: 5 coins for correct quiz answers
 - **Coin Redemption**: Convert coins to subscription days or premium content
 
+### 6. Coupon Code System (Revenue Sharing Platform)
+A comprehensive coupon code system that enables revenue sharing with partners, influencers, teachers, and affiliates while providing discounts to users.
+
+#### Coupon Code Types & Revenue Sharing Structure
+
+##### **Influencer Coupons**
+- **Revenue Share**: 20% of subscription revenue from their coupon usage
+- **User Discount**: 15-25% discount on subscription for users
+- **Code Format**: INF + 6 random characters (e.g., INFABC123)
+- **Usage Tracking**: Complete analytics of coupon performance
+- **Payment Schedule**: Monthly commission payments
+
+##### **Teacher/Educator Coupons**
+- **Revenue Share**: 15% of subscription revenue from their coupon usage
+- **User Discount**: 10-20% discount on subscription for users
+- **Code Format**: TCH + 6 random characters (e.g., TCHXYZ789)
+- **Bulk Licensing**: Special rates for classroom subscriptions
+- **Payment Schedule**: Monthly commission payments
+
+##### **Partner Coupons**
+- **Revenue Share**: 10% of subscription revenue from their coupon usage
+- **User Discount**: 5-15% discount on subscription for users
+- **Code Format**: PRT + 6 random characters (e.g., PRTDEF456)
+- **Business Partnerships**: Corporate and institutional partnerships
+- **Payment Schedule**: Monthly commission payments
+
+##### **Promotional Coupons**
+- **Revenue Share**: 0% (company promotional campaigns)
+- **User Discount**: 10-30% discount on subscription for users
+- **Code Format**: PROMO + 6 random characters (e.g., PROMOGHI789)
+- **Marketing Campaigns**: Seasonal promotions and special offers
+- **No Commission**: Pure marketing tool for user acquisition
+
+#### Coupon Code Features
+- **Unique Codes**: Each partner gets unique, trackable coupon codes
+- **Usage Limits**: Set maximum usage limits per code (total and per user)
+- **Expiration Dates**: Time-limited codes for campaigns
+- **Discount Types**: Percentage or fixed amount discounts
+- **Revenue Tracking**: Complete tracking of revenue generated per code
+- **Automatic Commission Calculation**: Real-time commission calculation
+- **Payment History**: Complete audit trail of all payments
+- **Manual Override**: Admin ability to manually process payments
+- **Payment Reset**: Permission to reset payment status for corrections
+
+---
+
+## 🎯 Coupon Code Management System
+
+### Admin Management Features
+
+#### **Coupon Code Creation & Management**
+- **Create Coupons**: Generate unique coupon codes for partners, influencers, and teachers
+- **Partner Assignment**: Assign coupons to specific affiliate partners
+- **Usage Limits**: Set maximum usage limits (total and per user)
+- **Expiration Control**: Set start and end dates for coupon validity
+- **Discount Configuration**: Configure percentage or fixed amount discounts
+- **Bulk Operations**: Create multiple coupons for campaigns
+
+#### **Revenue Sharing Management**
+- **Automatic Commission Calculation**: Real-time calculation based on partner type
+- **Commission Rates**: Configurable rates per partner type
+  - Influencers: 20% of subscription revenue
+  - Teachers: 15% of subscription revenue
+  - Partners: 10% of subscription revenue
+  - Promotional: 0% (no commission)
+- **Payment Tracking**: Complete audit trail of all commission payments
+- **Manual Override**: Admin ability to adjust commission amounts
+
+#### **Payment Processing System**
+- **Payment Workflow**: Pending → Processing → Paid status tracking
+- **Manual Payment Processing**: Admin can manually process payments
+- **Bulk Payment Processing**: Process multiple payments simultaneously
+- **Payment Reset**: Permission to reset payment status for corrections
+- **Payment History**: Complete history of all payment operations
+- **Bank Transfer Integration**: Support for bank transfers and digital wallets
+
+#### **Analytics & Reporting**
+- **Coupon Performance**: Track usage, revenue, and conversion rates
+- **Partner Analytics**: Individual partner performance metrics
+- **Revenue Reports**: Detailed revenue sharing reports
+- **Payment Reports**: Commission payment tracking and history
+- **Usage Statistics**: Real-time usage statistics and trends
+
+### Partner Dashboard Features
+
+#### **Coupon Management**
+- **View My Coupons**: Partners can view all their assigned coupon codes
+- **Usage Statistics**: Real-time usage statistics for their coupons
+- **Performance Metrics**: Conversion rates and revenue generated
+- **Code Status**: Active/inactive status and expiration dates
+
+#### **Commission Tracking**
+- **Payment History**: Complete history of commission payments
+- **Pending Payments**: View pending commission payments
+- **Payment Status**: Track payment processing status
+- **Earnings Summary**: Total earnings and commission breakdown
+
+#### **Analytics Dashboard**
+- **Usage Analytics**: Detailed analytics of coupon usage
+- **Revenue Tracking**: Track revenue generated from their coupons
+- **User Demographics**: Analytics of users who used their coupons
+- **Performance Trends**: Historical performance data and trends
+
+### User Experience
+
+#### **Coupon Usage**
+- **Code Validation**: Real-time validation of coupon codes
+- **Discount Application**: Automatic discount calculation and application
+- **Usage Tracking**: Track coupon usage history
+- **Savings Summary**: View total savings from coupon usage
+
+#### **Subscription Benefits**
+- **Discounted Subscriptions**: Reduced subscription costs
+- **Partner Benefits**: Access to partner-exclusive content
+- **Special Offers**: Access to promotional campaigns
+- **Referral Rewards**: Additional rewards for successful referrals
+
+### Technical Implementation
+
+#### **Database Schema**
+- **coupon_codes**: Store coupon code information and configuration
+- **coupon_usages**: Track individual coupon usage instances
+- **commission_payments**: Manage commission payment processing
+- **payment_history**: Complete audit trail of all payment operations
+
+#### **API Endpoints**
+- **Coupon Management**: Create, validate, and track coupon codes
+- **Commission Processing**: Process and manage commission payments
+- **Analytics**: Retrieve performance and usage analytics
+- **Payment Operations**: Handle payment processing and status updates
+
+#### **Security Features**
+- **Permission System**: Role-based access control for admin operations
+- **Audit Logging**: Complete audit trail of all operations
+- **Payment Security**: Secure payment processing and data protection
+- **Fraud Prevention**: Usage limits and validation to prevent abuse
+
+### Business Benefits
+
+#### **Revenue Growth**
+- **Partner Incentives**: Motivate partners to promote the platform
+- **User Acquisition**: Attract new users through partner networks
+- **Retention**: Increase user retention through discounted subscriptions
+- **Market Expansion**: Reach new markets through partner networks
+
+#### **Operational Efficiency**
+- **Automated Processing**: Reduce manual work in commission calculations
+- **Real-time Tracking**: Immediate visibility into coupon performance
+- **Bulk Operations**: Efficient management of multiple coupons and payments
+- **Reporting**: Comprehensive reporting for business intelligence
+
+#### **Partner Satisfaction**
+- **Transparent Tracking**: Clear visibility into earnings and performance
+- **Timely Payments**: Regular and reliable commission payments
+- **Performance Analytics**: Detailed analytics for optimization
+- **Easy Management**: Simple interface for coupon and payment management
+
 ---
 
 ## 📈 Business Model Features

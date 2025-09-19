@@ -40,32 +40,28 @@ class AuthController extends Controller
         $phoneNumber = $request->phone_number;
         
         // Check rate limiting
-        $rateLimit = $this->smsService->getRateLimitInfo($phoneNumber);
-        if (!$rateLimit['can_send']) {
+        if ($this->smsService->hasTooManyAttempts($phoneNumber, 'login')) {
             return response()->json([
                 'success' => false,
                 'message' => 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً کمی صبر کنید.'
             ], 429);
         }
 
-        // Record attempt
-        $this->smsService->recordAttempt($phoneNumber);
-
-        // Send verification code
-        $result = $this->smsService->sendVerificationCode($phoneNumber);
+        // Send OTP code
+        $result = $this->smsService->sendOtp($phoneNumber, 'login');
 
         if ($result['success']) {
             return response()->json([
                 'success' => true,
-                'message' => $result['message'],
+                'message' => 'کد تایید به شماره شما ارسال شد',
                 'data' => [
-                    'expires_in' => $result['expires_in']
+                    'expires_in' => 300 // 5 minutes
                 ]
             ]);
         } else {
             return response()->json([
                 'success' => false,
-                'message' => $result['message']
+                'message' => 'خطا در ارسال کد تایید. لطفاً مجدداً تلاش کنید.'
             ], 400);
         }
     }
@@ -96,12 +92,12 @@ class AuthController extends Controller
         $verificationCode = $request->verification_code;
 
         // Verify SMS code
-        $verification = $this->smsService->verifyCode($phoneNumber, $verificationCode);
+        $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'login');
         
-        if (!$verification['success']) {
+        if (!$verification) {
             return response()->json([
                 'success' => false,
-                'message' => $verification['message']
+                'message' => 'کد تایید نامعتبر یا منقضی شده است'
             ], 400);
         }
 
@@ -157,12 +153,12 @@ class AuthController extends Controller
         $verificationCode = $request->verification_code;
 
         // Verify SMS code
-        $verification = $this->smsService->verifyCode($phoneNumber, $verificationCode);
+        $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'login');
         
-        if (!$verification['success']) {
+        if (!$verification) {
             return response()->json([
                 'success' => false,
-                'message' => $verification['message']
+                'message' => 'کد تایید نامعتبر یا منقضی شده است'
             ], 400);
         }
 

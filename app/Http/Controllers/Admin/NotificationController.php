@@ -5,211 +5,429 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\User;
-use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationController extends Controller
 {
-    protected $notificationService;
-
-    public function __construct(NotificationService $notificationService)
-    {
-        $this->notificationService = $notificationService;
-    }
-
     /**
-     * Display a listing of notifications
+     * Display a listing of notifications.
      */
     public function index(Request $request)
     {
-        $query = Notification::with('user');
+        $query = Notification::with(['sender', 'recipient']);
 
-        // Apply filters
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('message', 'like', "%{$search}%")
+                  ->orWhereHas('sender', function ($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('recipient', function ($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by type
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
-        if ($request->filled('read')) {
-            if ($request->boolean('read')) {
-                $query->whereNotNull('read_at');
-            } else {
-                $query->whereNull('read_at');
-            }
+        // Filter by priority
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->priority);
         }
 
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('message', 'like', '%' . $request->search . '%');
-            });
+        // Filter by recipient
+        if ($request->filled('recipient_id')) {
+            $query->where('recipient_id', $request->recipient_id);
         }
 
-        $notifications = $query->latest()->paginate(20);
-        $users = User::select('id', 'first_name', 'last_name', 'email')->get();
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
 
-        return view('admin.notifications.index', compact('notifications', 'users'));
+        $notifications = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        // Get statistics
+        $stats = [
+            'total' => Notification::count(),
+            'sent' => Notification::where('status', 'sent')->count(),
+            'pending' => Notification::where('status', 'pending')->count(),
+            'failed' => Notification::where('status', 'failed')->count(),
+            'read' => Notification::where('is_read', true)->count(),
+            'unread' => Notification::where('is_read', false)->count(),
+            'system' => Notification::where('type', 'system')->count(),
+            'user' => Notification::where('type', 'user')->count(),
+            'marketing' => Notification::where('type', 'marketing')->count(),
+            'urgent' => Notification::where('priority', 'urgent')->count(),
+        ];
+
+        $users = User::where('is_active', true)->get();
+
+        return view('admin.notifications.index', compact('notifications', 'stats', 'users'));
     }
 
     /**
-     * Show the form for creating a new notification
+     * Show the form for creating a new notification.
      */
     public function create()
     {
-        $users = User::select('id', 'first_name', 'last_name', 'email')->get();
-        $templates = config('notification.templates');
-
-        return view('admin.notifications.create', compact('users', 'templates'));
+        $users = User::where('is_active', true)->get();
+        return view('admin.notifications.create', compact('users'));
     }
 
     /**
-     * Store a newly created notification
+     * Store a newly created notification.
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'user_ids' => 'required|array|min:1',
-            'user_ids.*' => 'exists:users,id',
-            'title' => 'required|string|max:200',
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
             'message' => 'required|string|max:1000',
-            'type' => 'required|in:info,success,warning,error',
-            'channels' => 'required|array|min:1',
-            'channels.*' => 'in:in_app,push,email,sms',
-            'data' => 'nullable|array'
+            'type' => 'required|in:system,user,marketing,alert',
+            'priority' => 'required|in:low,medium,high,urgent',
+            'recipient_type' => 'required|in:all,user,specific',
+            'recipient_id' => 'nullable|exists:users,id',
+            'send_email' => 'boolean',
+            'send_sms' => 'boolean',
+            'send_push' => 'boolean',
+            'scheduled_at' => 'nullable|date|after:now',
+            'expires_at' => 'nullable|date|after:now',
         ]);
 
-        $results = $this->notificationService->sendBulkNotification(
-            $request->user_ids,
-            $request->title,
-            $request->message,
-            $request->type,
-            $request->channels
-        );
-
-        $successCount = 0;
-        $failureCount = 0;
-
-        foreach ($results as $userId => $userResults) {
-            foreach ($userResults as $channel => $success) {
-                if ($success) {
-                    $successCount++;
-                } else {
-                    $failureCount++;
-                }
-            }
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
         }
 
-        return redirect()->route('admin.notifications.index')
-            ->with('success', "اعلان ارسال شد. موفق: {$successCount}, ناموفق: {$failureCount}");
+        try {
+            DB::beginTransaction();
+
+            $notificationData = [
+                'title' => $request->title,
+                'message' => $request->message,
+                'type' => $request->type,
+                'priority' => $request->priority,
+                'recipient_type' => $request->recipient_type,
+                'recipient_id' => $request->recipient_id,
+                'send_email' => $request->has('send_email'),
+                'send_sms' => $request->has('send_sms'),
+                'send_push' => $request->has('send_push'),
+                'scheduled_at' => $request->scheduled_at,
+                'expires_at' => $request->expires_at,
+                'status' => $request->scheduled_at ? 'pending' : 'sent',
+                'sender_id' => auth()->id(),
+            ];
+
+            if ($request->recipient_type === 'all') {
+                // Create notification for all users
+                $users = User::where('is_active', true)->get();
+                foreach ($users as $user) {
+                    Notification::create(array_merge($notificationData, [
+                        'recipient_id' => $user->id,
+                    ]));
+                }
+            } else {
+                // Create single notification
+                Notification::create($notificationData);
+            }
+
+            // Send immediate notifications if not scheduled
+            if (!$request->scheduled_at) {
+                $this->sendNotifications($notificationData);
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.notifications.index')
+                ->with('success', 'اعلان با موفقیت ایجاد شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در ایجاد اعلان: ' . $e->getMessage()])
+                ->withInput();
+        }
     }
 
     /**
-     * Display the specified notification
+     * Display the specified notification.
      */
     public function show(Notification $notification)
     {
-        $notification->load('user');
-        return view('admin.notifications.show', compact('notification'));
+        $notification->load(['sender', 'recipient']);
+        
+        // Get related notifications
+        $relatedNotifications = Notification::where('type', $notification->type)
+            ->where('id', '!=', $notification->id)
+            ->with(['sender', 'recipient'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        return view('admin.notifications.show', compact('notification', 'relatedNotifications'));
     }
 
     /**
-     * Mark notification as read
+     * Show the form for editing the specified notification.
      */
-    public function markAsRead(Notification $notification)
+    public function edit(Notification $notification)
     {
-        $this->notificationService->markAsRead($notification);
-
-        return redirect()->route('admin.notifications.index')
-            ->with('success', 'اعلان به عنوان خوانده شده علامت‌گذاری شد');
+        $users = User::where('is_active', true)->get();
+        return view('admin.notifications.edit', compact('notification', 'users'));
     }
 
     /**
-     * Mark all notifications as read for a user
+     * Update the specified notification.
      */
-    public function markAllAsRead(User $user)
+    public function update(Request $request, Notification $notification)
     {
-        $this->notificationService->markAllAsRead($user);
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'type' => 'required|in:system,user,marketing,alert',
+            'priority' => 'required|in:low,medium,high,urgent',
+            'recipient_type' => 'required|in:all,user,specific',
+            'recipient_id' => 'nullable|exists:users,id',
+            'send_email' => 'boolean',
+            'send_sms' => 'boolean',
+            'send_push' => 'boolean',
+            'scheduled_at' => 'nullable|date|after:now',
+            'expires_at' => 'nullable|date|after:now',
+            'status' => 'required|in:pending,sent,failed',
+        ]);
 
-        return redirect()->route('admin.notifications.index')
-            ->with('success', 'همه اعلان‌های کاربر به عنوان خوانده شده علامت‌گذاری شد');
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $notification->update([
+                'title' => $request->title,
+                'message' => $request->message,
+                'type' => $request->type,
+                'priority' => $request->priority,
+                'recipient_type' => $request->recipient_type,
+                'recipient_id' => $request->recipient_id,
+                'send_email' => $request->has('send_email'),
+                'send_sms' => $request->has('send_sms'),
+                'send_push' => $request->has('send_push'),
+                'scheduled_at' => $request->scheduled_at,
+                'expires_at' => $request->expires_at,
+                'status' => $request->status,
+            ]);
+
+            return redirect()->route('admin.notifications.index')
+                ->with('success', 'اعلان با موفقیت به‌روزرسانی شد.');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در به‌روزرسانی اعلان: ' . $e->getMessage()])
+                ->withInput();
+        }
     }
 
     /**
-     * Remove the specified notification
+     * Remove the specified notification.
      */
     public function destroy(Notification $notification)
     {
-        $notification->delete();
-
-        return redirect()->route('admin.notifications.index')
-            ->with('success', 'اعلان حذف شد');
+        try {
+            $notification->delete();
+            return redirect()->route('admin.notifications.index')
+                ->with('success', 'اعلان با موفقیت حذف شد.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در حذف اعلان: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Send test notification
+     * Send notification immediately.
      */
-    public function sendTest(Request $request)
+    public function send(Notification $notification)
     {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'title' => 'required|string|max:200',
-            'message' => 'required|string|max:1000',
-            'type' => 'required|in:info,success,warning,error',
-            'channels' => 'required|array|min:1',
-            'channels.*' => 'in:in_app,push,email,sms'
+        try {
+            $this->sendNotifications([
+                'title' => $notification->title,
+                'message' => $notification->message,
+                'type' => $notification->type,
+                'priority' => $notification->priority,
+                'recipient_id' => $notification->recipient_id,
+                'send_email' => $notification->send_email,
+                'send_sms' => $notification->send_sms,
+                'send_push' => $notification->send_push,
+            ]);
+
+            $notification->update(['status' => 'sent', 'sent_at' => now()]);
+
+            return redirect()->back()
+                ->with('success', 'اعلان با موفقیت ارسال شد.');
+
+        } catch (\Exception $e) {
+            $notification->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در ارسال اعلان: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Mark notification as read.
+     */
+    public function markAsRead(Notification $notification)
+    {
+        try {
+            $notification->update(['is_read' => true, 'read_at' => now()]);
+            return redirect()->back()
+                ->with('success', 'اعلان به عنوان خوانده شده علامت‌گذاری شد.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در علامت‌گذاری: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Bulk actions on notifications.
+     */
+    public function bulkAction(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'action' => 'required|in:send,mark_read,mark_unread,delete',
+            'notification_ids' => 'required|array|min:1',
+            'notification_ids.*' => 'exists:notifications,id',
         ]);
 
-        $user = User::find($request->user_id);
-        
-        $results = [];
-        foreach ($request->channels as $channel) {
-            switch ($channel) {
-                case 'push':
-                    $results['push'] = $this->notificationService->sendPushNotification($user, $request->title, $request->message);
-                    break;
-                case 'email':
-                    $results['email'] = $this->notificationService->sendEmailNotification($user, $request->title, 'emails.notification', [
-                        'title' => $request->title,
-                        'message' => $request->message,
-                        'user' => $user
-                    ]);
-                    break;
-                case 'sms':
-                    $results['sms'] = $this->notificationService->sendSmsNotification($user, $request->message);
-                    break;
-                case 'in_app':
-                    $results['in_app'] = $this->notificationService->sendInAppNotification($user, $request->title, $request->message, $request->type);
-                    break;
-            }
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors(['error' => 'لطفاً حداقل یک اعلان را انتخاب کنید.']);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'اعلان تست ارسال شد',
-            'results' => $results
-        ]);
+        try {
+            DB::beginTransaction();
+
+            $notifications = Notification::whereIn('id', $request->notification_ids);
+
+            switch ($request->action) {
+                case 'send':
+                    foreach ($notifications->get() as $notification) {
+                        $this->sendNotifications([
+                            'title' => $notification->title,
+                            'message' => $notification->message,
+                            'type' => $notification->type,
+                            'priority' => $notification->priority,
+                            'recipient_id' => $notification->recipient_id,
+                            'send_email' => $notification->send_email,
+                            'send_sms' => $notification->send_sms,
+                            'send_push' => $notification->send_push,
+                        ]);
+                    }
+                    $notifications->update(['status' => 'sent', 'sent_at' => now()]);
+                    break;
+
+                case 'mark_read':
+                    $notifications->update(['is_read' => true, 'read_at' => now()]);
+                    break;
+
+                case 'mark_unread':
+                    $notifications->update(['is_read' => false, 'read_at' => null]);
+                    break;
+
+                case 'delete':
+                    $notifications->delete();
+                    break;
+            }
+
+            DB::commit();
+
+            $actionLabels = [
+                'send' => 'ارسال',
+                'mark_read' => 'علامت‌گذاری به عنوان خوانده شده',
+                'mark_unread' => 'علامت‌گذاری به عنوان خوانده نشده',
+                'delete' => 'حذف',
+            ];
+
+            return redirect()->back()
+                ->with('success', 'عملیات ' . $actionLabels[$request->action] . ' با موفقیت انجام شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در انجام عملیات: ' . $e->getMessage()]);
+        }
     }
 
     /**
-     * Get notification statistics
+     * Get notification statistics.
      */
     public function statistics()
     {
         $stats = [
             'total_notifications' => Notification::count(),
-            'unread_notifications' => Notification::whereNull('read_at')->count(),
-            'notifications_by_type' => Notification::selectRaw('type, COUNT(*) as count')
+            'sent_notifications' => Notification::where('status', 'sent')->count(),
+            'pending_notifications' => Notification::where('status', 'pending')->count(),
+            'failed_notifications' => Notification::where('status', 'failed')->count(),
+            'read_notifications' => Notification::where('is_read', true)->count(),
+            'unread_notifications' => Notification::where('is_read', false)->count(),
+            'by_type' => Notification::selectRaw('type, COUNT(*) as count')
                 ->groupBy('type')
-                ->get()
-                ->pluck('count', 'type'),
-            'notifications_today' => Notification::whereDate('created_at', today())->count(),
-            'notifications_this_week' => Notification::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-            'notifications_this_month' => Notification::whereMonth('created_at', now()->month)->count(),
+                ->get(),
+            'by_priority' => Notification::selectRaw('priority, COUNT(*) as count')
+                ->groupBy('priority')
+                ->get(),
+            'by_status' => Notification::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'notifications_by_month' => Notification::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get(),
+            'recent_notifications' => Notification::with(['sender', 'recipient'])->orderBy('created_at', 'desc')->limit(10)->get(),
         ];
 
         return view('admin.notifications.statistics', compact('stats'));
+    }
+
+    /**
+     * Send notifications through various channels.
+     */
+    private function sendNotifications($notificationData)
+    {
+        // In a real application, you would implement actual sending logic here
+        // For now, we'll just simulate the process
+        
+        if ($notificationData['send_email']) {
+            // Send email notification
+            // Mail::to($user)->send(new NotificationMail($notificationData));
+        }
+
+        if ($notificationData['send_sms']) {
+            // Send SMS notification
+            // SMS::send($user->phone, $notificationData['message']);
+        }
+
+        if ($notificationData['send_push']) {
+            // Send push notification
+            // PushNotification::send($user, $notificationData);
+        }
     }
 }

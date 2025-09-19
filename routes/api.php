@@ -19,6 +19,14 @@ use App\Http\Controllers\Api\GamificationController;
 use App\Http\Controllers\Api\ImageTimelineController;
 use App\Http\Controllers\Api\EpisodeVoiceActorController;
 use App\Http\Controllers\Api\StoryCommentController;
+use App\Http\Controllers\Api\CoinController;
+use App\Http\Controllers\Api\QuizController;
+use App\Http\Controllers\Api\ReferralController;
+use App\Http\Controllers\Api\AffiliateController;
+use App\Http\Controllers\Api\TeacherController;
+use App\Http\Controllers\Api\InfluencerController;
+use App\Http\Controllers\Api\SchoolController;
+use App\Http\Controllers\Api\CorporateController;
 use App\Http\Controllers\Admin\PersonController;
 
 /*
@@ -405,6 +413,208 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::prefix('comments')->middleware('auth:sanctum')->group(function () {
         Route::get('my-comments', [StoryCommentController::class, 'getUserComments']);
         Route::delete('{commentId}', [StoryCommentController::class, 'deleteComment']);
+    });
+
+    // Coin System routes
+    Route::prefix('coins')->middleware('auth:sanctum')->group(function () {
+        Route::get('balance', [CoinController::class, 'getBalance']);
+        Route::get('transactions', [CoinController::class, 'getTransactions']);
+        Route::get('statistics', [CoinController::class, 'getStatistics']);
+        Route::post('spend', [CoinController::class, 'spendCoins']);
+        Route::get('redemption-options', [CoinController::class, 'getRedemptionOptions']);
+        
+        // Admin only routes
+        Route::post('award', [CoinController::class, 'awardCoins']);
+        Route::get('global-statistics', [CoinController::class, 'getGlobalStatistics']);
+        Route::get('admin-transactions', [CoinController::class, 'getAdminTransactions']);
+        Route::get('admin-users', [CoinController::class, 'getAdminUsers']);
+        Route::get('admin-redemption-options', [CoinController::class, 'getAdminRedemptionOptions']);
+        Route::post('admin-redemption-options', [CoinController::class, 'createRedemptionOption']);
+        Route::put('admin-redemption-options/{id}/toggle', [CoinController::class, 'toggleRedemptionOption']);
+        Route::delete('admin-redemption-options/{id}', [CoinController::class, 'deleteRedemptionOption']);
+    });
+
+    // Coin Analytics routes
+    Route::prefix('coin-analytics')->middleware('auth:sanctum')->group(function () {
+        Route::get('overview', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getOverview']);
+        Route::get('earning-sources', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getEarningSources']);
+        Route::get('spending-patterns', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getSpendingPatterns']);
+        Route::get('transaction-trends', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getTransactionTrends']);
+        Route::get('user-distribution', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getUserDistribution']);
+        Route::get('quiz-performance', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getQuizPerformance']);
+        Route::get('referral-performance', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getReferralPerformance']);
+        Route::get('top-earners', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getTopEarners']);
+        Route::get('system-health', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getSystemHealth']);
+        Route::get('comprehensive-report', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getComprehensiveReport']);
+    });
+
+    // Quiz System routes
+    Route::prefix('quiz')->middleware('auth:sanctum')->group(function () {
+        Route::get('episodes/{episodeId}/questions', [QuizController::class, 'getEpisodeQuestions']);
+        Route::post('submit-answer', [QuizController::class, 'submitAnswer']);
+        Route::get('statistics', [QuizController::class, 'getUserStatistics']);
+        Route::get('episodes/{episodeId}/statistics', [QuizController::class, 'getEpisodeStatistics']);
+        
+        // Admin only routes
+        Route::get('global-statistics', [QuizController::class, 'getGlobalStatistics']);
+        Route::post('questions', [QuizController::class, 'createQuestion']);
+        Route::put('questions/{questionId}', [QuizController::class, 'updateQuestion']);
+        Route::delete('questions/{questionId}', [QuizController::class, 'deleteQuestion']);
+    });
+
+    // Referral System routes
+    Route::prefix('referral')->middleware('auth:sanctum')->group(function () {
+        Route::get('code', [ReferralController::class, 'getReferralCode']);
+        Route::get('statistics', [ReferralController::class, 'getReferralStatistics']);
+        Route::get('referrals', [ReferralController::class, 'getReferrals']);
+        Route::post('use-code', [ReferralController::class, 'useReferralCode']);
+        Route::post('check-completion', [ReferralController::class, 'checkReferralCompletion']);
+        
+        // Admin only routes
+        Route::get('global-statistics', [ReferralController::class, 'getGlobalStatistics']);
+        Route::get('top-referrers', [ReferralController::class, 'getTopReferrers']);
+    });
+
+    // Referral Analytics routes
+    Route::prefix('referral-analytics')->middleware('auth:sanctum')->group(function () {
+        Route::get('overview', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getOverview']);
+        Route::get('trends', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getTrends']);
+        Route::get('top-referrers', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getTopReferrers']);
+        Route::get('sources', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getSources']);
+        Route::get('performance-by-timeframe', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getPerformanceByTimeframe']);
+        Route::get('funnel-analysis', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getFunnelAnalysis']);
+        Route::get('geographic-distribution', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getGeographicDistribution']);
+        Route::get('revenue-analysis', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getRevenueAnalysis']);
+        Route::get('system-health', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getSystemHealth']);
+        Route::get('comprehensive-report', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getComprehensiveReport']);
+    });
+
+    // Coupon System routes
+    Route::prefix('coupons')->middleware('auth:sanctum')->group(function () {
+        Route::post('validate', [\App\Http\Controllers\Api\CouponController::class, 'validateCoupon']);
+        Route::post('use', [\App\Http\Controllers\Api\CouponController::class, 'useCoupon']);
+        Route::get('my-coupons', [\App\Http\Controllers\Api\CouponController::class, 'getMyCoupons']);
+        Route::get('my-usage', [\App\Http\Controllers\Api\CouponController::class, 'getCouponUsage']);
+        Route::get('my-statistics', [\App\Http\Controllers\Api\CouponController::class, 'getCouponStatistics']);
+        
+        // Admin only routes
+        Route::post('create', [\App\Http\Controllers\Api\CouponController::class, 'createCoupon']);
+        Route::get('all', [\App\Http\Controllers\Api\CouponController::class, 'getCoupons']);
+        Route::get('usage', [\App\Http\Controllers\Api\CouponController::class, 'getAllCouponUsage']);
+        Route::get('global-statistics', [\App\Http\Controllers\Api\CouponController::class, 'getGlobalStatistics']);
+    });
+
+    // Commission Payment routes
+    Route::prefix('commission-payments')->middleware('auth:sanctum')->group(function () {
+        Route::get('my-payments', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getMyPayments']);
+        Route::get('my-history', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getPaymentHistory']);
+        
+        // Admin only routes
+        Route::get('pending', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getPendingPayments']);
+        Route::post('process', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'processPayment']);
+        Route::post('mark-paid', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'markAsPaid']);
+        Route::post('mark-failed', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'markAsFailed']);
+        Route::post('create-manual', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'createManualPayment']);
+        Route::post('bulk-process', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'bulkProcessPayments']);
+        Route::get('all', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getAllPayments']);
+        Route::get('statistics', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getPaymentStatistics']);
+    });
+
+    // Affiliate Program routes
+    Route::prefix('affiliate')->middleware('auth:sanctum')->group(function () {
+        Route::post('partners', [AffiliateController::class, 'createPartner']);
+        Route::get('partners/{type}', [AffiliateController::class, 'getPartnersByType']);
+        Route::get('requirements', [AffiliateController::class, 'getProgramRequirements']);
+        Route::get('commission-rates', [AffiliateController::class, 'getTierCommissionRates']);
+        Route::post('commissions', [AffiliateController::class, 'createCommission']);
+        Route::get('partners/{partnerId}/statistics', [AffiliateController::class, 'getPartnerStatistics']);
+        
+        // Admin only routes
+        Route::put('partners/{partnerId}/verify', [AffiliateController::class, 'verifyPartner']);
+        Route::put('partners/{partnerId}/suspend', [AffiliateController::class, 'suspendPartner']);
+        Route::put('commissions/{commissionId}/approve', [AffiliateController::class, 'approveCommission']);
+        Route::put('commissions/{commissionId}/pay', [AffiliateController::class, 'markCommissionAsPaid']);
+        Route::get('commissions/pending', [AffiliateController::class, 'getPendingCommissions']);
+        Route::post('commissions/bulk-approve', [AffiliateController::class, 'processBulkCommissionApprovals']);
+        Route::get('global-statistics', [AffiliateController::class, 'getGlobalStatistics']);
+    });
+
+    // Teacher/Educator Program routes
+    Route::prefix('teacher')->middleware('auth:sanctum')->group(function () {
+        Route::post('account', [TeacherController::class, 'createTeacherAccount']);
+        Route::get('account', [TeacherController::class, 'getTeacherAccount']);
+        Route::post('student-license', [TeacherController::class, 'createStudentLicense']);
+        Route::get('student-licenses', [TeacherController::class, 'getStudentLicenses']);
+        Route::get('benefits', [TeacherController::class, 'getProgramBenefits']);
+        Route::get('institution-types', [TeacherController::class, 'getInstitutionTypes']);
+        Route::get('teaching-subjects', [TeacherController::class, 'getTeachingSubjects']);
+        Route::get('teacher-accounts/{teacherAccountId}/student-licenses', [TeacherController::class, 'getTeacherStudentLicenses']);
+        
+        // Admin only routes
+        Route::put('teacher-accounts/{teacherAccountId}/verify', [TeacherController::class, 'verifyTeacherAccount']);
+        Route::get('global-statistics', [TeacherController::class, 'getGlobalStatistics']);
+        Route::post('process-expired-licenses', [TeacherController::class, 'processExpiredLicenses']);
+    });
+
+    // Influencer Program routes
+    Route::prefix('influencer')->middleware('auth:sanctum')->group(function () {
+        Route::post('campaigns', [InfluencerController::class, 'createCampaign']);
+        Route::post('content', [InfluencerController::class, 'submitContent']);
+        Route::get('campaigns/{campaignId}', [InfluencerController::class, 'getCampaign']);
+        Route::get('partners/{partnerId}/campaigns', [InfluencerController::class, 'getPartnerCampaigns']);
+        Route::get('campaigns/{campaignId}/content', [InfluencerController::class, 'getCampaignContent']);
+        Route::get('campaign-types', [InfluencerController::class, 'getCampaignTypes']);
+        Route::get('content-types', [InfluencerController::class, 'getContentTypes']);
+        Route::get('platforms', [InfluencerController::class, 'getPlatforms']);
+        Route::get('compensation-rates', [InfluencerController::class, 'getTierCompensationRates']);
+        Route::put('content/{contentId}/metrics', [InfluencerController::class, 'updateContentMetrics']);
+        
+        // Admin only routes
+        Route::put('content/{contentId}/approve', [InfluencerController::class, 'approveContent']);
+        Route::put('content/{contentId}/reject', [InfluencerController::class, 'rejectContent']);
+        Route::get('global-statistics', [InfluencerController::class, 'getGlobalStatistics']);
+    });
+
+    // School Partnership Program routes
+    Route::prefix('school')->middleware('auth:sanctum')->group(function () {
+        Route::post('partnerships', [SchoolController::class, 'createPartnership']);
+        Route::post('licenses', [SchoolController::class, 'createLicense']);
+        Route::get('partnerships/{partnershipId}', [SchoolController::class, 'getPartnership']);
+        Route::get('partnerships/{partnershipId}/licenses', [SchoolController::class, 'getPartnershipLicenses']);
+        Route::get('user-licenses', [SchoolController::class, 'getUserLicenses']);
+        Route::get('partnership-models', [SchoolController::class, 'getPartnershipModels']);
+        Route::get('school-types', [SchoolController::class, 'getSchoolTypes']);
+        Route::get('school-levels', [SchoolController::class, 'getSchoolLevels']);
+        Route::get('partnership-benefits', [SchoolController::class, 'getPartnershipBenefits']);
+        
+        // Admin only routes
+        Route::put('partnerships/{partnershipId}/verify', [SchoolController::class, 'verifyPartnership']);
+        Route::get('global-statistics', [SchoolController::class, 'getGlobalStatistics']);
+        Route::post('process-expired-licenses', [SchoolController::class, 'processExpiredLicenses']);
+    });
+
+    // Corporate Sponsorship Program routes
+    Route::prefix('corporate')->middleware('auth:sanctum')->group(function () {
+        Route::post('sponsorships', [CorporateController::class, 'createSponsorship']);
+        Route::post('content', [CorporateController::class, 'createContent']);
+        Route::get('sponsorships/{sponsorshipId}', [CorporateController::class, 'getSponsorship']);
+        Route::get('sponsorships/{sponsorshipId}/content', [CorporateController::class, 'getSponsorshipContent']);
+        Route::get('content/{contentId}/analytics', [CorporateController::class, 'getContentAnalytics']);
+        Route::get('sponsorships/{sponsorshipId}/analytics', [CorporateController::class, 'getSponsorshipAnalytics']);
+        Route::get('sponsorship-types', [CorporateController::class, 'getSponsorshipTypes']);
+        Route::get('company-types', [CorporateController::class, 'getCompanyTypes']);
+        Route::get('industries', [CorporateController::class, 'getIndustries']);
+        Route::get('company-sizes', [CorporateController::class, 'getCompanySizes']);
+        Route::get('payment-frequencies', [CorporateController::class, 'getPaymentFrequencies']);
+        Route::get('sponsorship-benefits', [CorporateController::class, 'getSponsorshipBenefits']);
+        Route::get('content-types', [CorporateController::class, 'getContentTypes']);
+        Route::get('placement-types', [CorporateController::class, 'getPlacementTypes']);
+        Route::put('content/{contentId}/event', [CorporateController::class, 'recordEvent']);
+        
+        // Admin only routes
+        Route::put('content/{contentId}/approve', [CorporateController::class, 'approveContent']);
+        Route::put('content/{contentId}/reject', [CorporateController::class, 'rejectContent']);
+        Route::get('global-statistics', [CorporateController::class, 'getGlobalStatistics']);
     });
 });
 

@@ -3,15 +3,65 @@
 @section('title', 'افزودن اپیزود جدید')
 
 @section('content')
-<div class="max-w-4xl mx-auto">
+<div class="max-w-6xl mx-auto">
     <div class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900">افزودن اپیزود جدید</h1>
         <p class="text-gray-600 mt-2">اطلاعات اپیزود جدید را وارد کنید</p>
     </div>
 
-    <form method="POST" action="{{ route('admin.episodes.store') }}" enctype="multipart/form-data" class="space-y-6">
+    <form method="POST" action="{{ route('admin.episodes.store') }}" enctype="multipart/form-data" class="space-y-6" id="episode-form">
         @csrf
         
+        <!-- Audio File Upload - MOVED TO TOP -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">فایل صوتی *</h2>
+            
+            <div class="space-y-4">
+                <!-- Audio File Upload -->
+                <div>
+                    <label for="audio_file" class="block text-sm font-medium text-gray-700 mb-2">آپلود فایل صوتی</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="audio_file" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
+                                    <span>آپلود فایل صوتی</span>
+                                    <input id="audio_file" name="audio_file" type="file" accept="audio/*" required class="sr-only" onchange="handleAudioUpload(this)">
+                                </label>
+                                <p class="pr-1">یا کشیدن و رها کردن</p>
+                            </div>
+                            <p class="text-xs text-gray-500">MP3, WAV, M4A تا 100MB</p>
+                            <p id="audio-file-name" class="text-sm text-gray-900 mt-2"></p>
+                        </div>
+                    </div>
+                    @error('audio_file')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Audio Player (Hidden initially) -->
+                <div id="audio-player-section" class="hidden">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-md font-medium text-gray-900 mb-3">پخش کننده صوتی</h3>
+                        <audio id="audio-player" controls class="w-full mb-4">
+                            <source id="audio-source" src="" type="audio/mpeg">
+                            مرورگر شما از پخش کننده صوتی پشتیبانی نمی‌کند.
+                        </audio>
+                        <div class="flex items-center justify-between text-sm text-gray-600">
+                            <span id="current-time">00:00</span>
+                            <span id="total-duration">00:00</span>
+                        </div>
+                        <div class="mt-2">
+                            <input type="range" id="time-slider" min="0" max="100" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Basic Information -->
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">اطلاعات اصلی</h2>
             
@@ -50,27 +100,12 @@
                     @enderror
                 </div>
 
-                <!-- Duration -->
+                <!-- Duration - Auto-filled from audio -->
                 <div>
                     <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">مدت زمان (ثانیه) *</label>
-                    <input type="number" name="duration" id="duration" value="{{ old('duration') }}" required min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror" placeholder="300">
+                    <input type="number" name="duration" id="duration" value="{{ old('duration') }}" required min="1" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror" placeholder="خودکار از فایل صوتی">
+                    <p class="text-xs text-gray-500 mt-1">مدت زمان به صورت خودکار از فایل صوتی استخراج می‌شود</p>
                     @error('duration')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Narrator -->
-                <div>
-                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی</label>
-                    <select name="narrator_id" id="narrator_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
-                        <option value="">انتخاب راوی</option>
-                        @foreach($narrators as $narrator)
-                            <option value="{{ $narrator->id }}" {{ old('narrator_id') == $narrator->id ? 'selected' : '' }}>
-                                {{ $narrator->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('narrator_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
@@ -80,6 +115,19 @@
                     <label for="release_date" class="block text-sm font-medium text-gray-700 mb-2">تاریخ انتشار</label>
                     <input type="date" name="release_date" id="release_date" value="{{ old('release_date') }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('release_date') border-red-500 @enderror">
                     @error('release_date')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Status -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت *</label>
+                    <select name="status" id="status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('status') border-red-500 @enderror">
+                        <option value="draft" {{ old('status') == 'draft' ? 'selected' : '' }}>پیش‌نویس</option>
+                        <option value="published" {{ old('status') == 'published' ? 'selected' : '' }}>منتشر شده</option>
+                        <option value="archived" {{ old('status') == 'archived' ? 'selected' : '' }}>آرشیو شده</option>
+                    </select>
+                    @error('status')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
@@ -95,58 +143,77 @@
             </div>
         </div>
 
-        <!-- Media Files -->
+        <!-- Voice Actors Management -->
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">فایل‌های رسانه</h2>
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">مدیریت صداپیشه‌ها</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Audio File -->
-                <div>
-                    <label for="audio_file" class="block text-sm font-medium text-gray-700 mb-2">فایل صوتی *</label>
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
-                        <div class="space-y-1 text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                            <div class="flex text-sm text-gray-600">
-                                <label for="audio_file" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
-                                    <span>آپلود فایل صوتی</span>
-                                    <input id="audio_file" name="audio_file" type="file" accept="audio/*" required class="sr-only" onchange="updateAudioFileName(this)">
-                                </label>
-                                <p class="pr-1">یا کشیدن و رها کردن</p>
-                            </div>
-                            <p class="text-xs text-gray-500">MP3, WAV, M4A تا 100MB</p>
-                            <p id="audio-file-name" class="text-sm text-gray-900 mt-2"></p>
-                        </div>
-                    </div>
-                    @error('audio_file')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+            <div class="space-y-4">
+                <!-- Add Voice Actor Button -->
+                <div class="flex justify-between items-center">
+                    <p class="text-sm text-gray-600">صداپیشه‌ها و زمان‌بندی آن‌ها را تعریف کنید</p>
+                    <button type="button" id="add-voice-actor" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                        افزودن صداپیشه
+                    </button>
                 </div>
 
-                <!-- Cover Image -->
-                <div>
-                    <label for="cover_image" class="block text-sm font-medium text-gray-700 mb-2">تصویر کاور</label>
-                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
-                        <div class="space-y-1 text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                            <div class="flex text-sm text-gray-600">
-                                <label for="cover_image" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
-                                    <span>آپلود تصویر</span>
-                                    <input id="cover_image" name="cover_image" type="file" accept="image/*" class="sr-only" onchange="updateImageFileName(this)">
-                                </label>
-                                <p class="pr-1">یا کشیدن و رها کردن</p>
-                            </div>
-                            <p class="text-xs text-gray-500">PNG, JPG, JPEG تا 5MB</p>
-                            <p id="image-file-name" class="text-sm text-gray-900 mt-2"></p>
-                        </div>
-                    </div>
-                    @error('cover_image')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                <!-- Voice Actors List -->
+                <div id="voice-actors-list" class="space-y-4">
+                    <!-- Voice actors will be added here dynamically -->
                 </div>
+
+                <!-- Hidden inputs for voice actors data -->
+                <input type="hidden" name="voice_actors_data" id="voice-actors-data">
+            </div>
+        </div>
+
+        <!-- Image Timeline Management -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">مدیریت تصاویر بر اساس زمان</h2>
+            
+            <div class="space-y-4">
+                <!-- Add Image Timeline Button -->
+                <div class="flex justify-between items-center">
+                    <p class="text-sm text-gray-600">تصاویر را بر اساس زمان‌بندی صداپیشه‌ها اضافه کنید</p>
+                    <button type="button" id="add-image-timeline" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        افزودن تصویر
+                    </button>
+                </div>
+
+                <!-- Image Timeline List -->
+                <div id="image-timeline-list" class="space-y-4">
+                    <!-- Image timelines will be added here dynamically -->
+                </div>
+
+                <!-- Hidden inputs for image timeline data -->
+                <input type="hidden" name="image_timeline_data" id="image-timeline-data">
+            </div>
+        </div>
+
+        <!-- Cover Image -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">تصویر کاور</h2>
+            
+            <div>
+                <label for="cover_image" class="block text-sm font-medium text-gray-700 mb-2">تصویر کاور</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="cover_image" class="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
+                                <span>آپلود تصویر</span>
+                                <input id="cover_image" name="cover_image" type="file" accept="image/*" class="sr-only" onchange="updateImageFileName(this)">
+                            </label>
+                            <p class="pr-1">یا کشیدن و رها کردن</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PNG, JPG, JPEG تا 5MB</p>
+                        <p id="image-file-name" class="text-sm text-gray-900 mt-2"></p>
+                    </div>
+                </div>
+                @error('cover_image')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
             </div>
         </div>
 
@@ -155,19 +222,6 @@
             <h2 class="text-lg font-semibold text-gray-900 mb-4">تنظیمات</h2>
             
             <div class="space-y-4">
-                <!-- Status -->
-                <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت *</label>
-                    <select name="status" id="status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('status') border-red-500 @enderror">
-                        <option value="draft" {{ old('status') == 'draft' ? 'selected' : '' }}>پیش‌نویس</option>
-                        <option value="published" {{ old('status') == 'published' ? 'selected' : '' }}>منتشر شده</option>
-                        <option value="archived" {{ old('status') == 'archived' ? 'selected' : '' }}>آرشیو شده</option>
-                    </select>
-                    @error('status')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-
                 <!-- Premium Status -->
                 <div class="flex items-center">
                     <input type="checkbox" name="is_premium" id="is_premium" value="1" {{ old('is_premium') ? 'checked' : '' }} class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
@@ -191,9 +245,134 @@
 </div>
 
 <script>
-function updateAudioFileName(input) {
-    const fileName = input.files[0] ? input.files[0].name : '';
-    document.getElementById('audio-file-name').textContent = fileName;
+// Global variables
+let audioPlayer = null;
+let currentAudioFile = null;
+let voiceActorsData = [];
+let imageTimelineData = [];
+let voiceActorCounter = 0;
+let imageTimelineCounter = 0;
+
+// Available voice actors (from server)
+const availableVoiceActors = @json($narrators);
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAudioPlayer();
+    initializeVoiceActorManagement();
+    initializeImageTimelineManagement();
+});
+
+// Audio Player Functions
+function initializeAudioPlayer() {
+    audioPlayer = document.getElementById('audio-player');
+    const timeSlider = document.getElementById('time-slider');
+    const currentTimeSpan = document.getElementById('current-time');
+    const totalDurationSpan = document.getElementById('total-duration');
+
+    if (audioPlayer) {
+        audioPlayer.addEventListener('loadedmetadata', function() {
+            const duration = audioPlayer.duration;
+            totalDurationSpan.textContent = formatTime(duration);
+            timeSlider.max = duration;
+        });
+
+        audioPlayer.addEventListener('timeupdate', function() {
+            const currentTime = audioPlayer.currentTime;
+            currentTimeSpan.textContent = formatTime(currentTime);
+            timeSlider.value = currentTime;
+        });
+
+        timeSlider.addEventListener('input', function() {
+            audioPlayer.currentTime = timeSlider.value;
+        });
+    }
+}
+
+function handleAudioUpload(input) {
+    const file = input.files[0];
+    if (file) {
+        document.getElementById('audio-file-name').textContent = file.name;
+        
+        // Create object URL for the audio file
+        const audioURL = URL.createObjectURL(file);
+        const audioSource = document.getElementById('audio-source');
+        const audioPlayerSection = document.getElementById('audio-player-section');
+        const durationField = document.getElementById('duration');
+        
+        audioSource.src = audioURL;
+        audioPlayer.load();
+        
+        // Show audio player
+        audioPlayerSection.classList.remove('hidden');
+        
+        // Show loading state for duration
+        durationField.value = 'در حال بارگذاری...';
+        durationField.classList.add('text-blue-600');
+        
+        // Update duration field when metadata is loaded
+        audioPlayer.addEventListener('loadedmetadata', function() {
+            const duration = Math.floor(audioPlayer.duration);
+            durationField.value = duration;
+            durationField.classList.remove('text-blue-600');
+            
+            // Update the time slider max value
+            const timeSlider = document.getElementById('time-slider');
+            timeSlider.max = duration;
+            
+            // Show success message
+            showDurationSuccess(duration);
+            
+            // Initialize first image timeline automatically
+            if (typeof initializeFirstImageTimeline === 'function') {
+                initializeFirstImageTimeline();
+            }
+        });
+        
+        // Handle loading errors
+        audioPlayer.addEventListener('error', function() {
+            durationField.value = '';
+            durationField.classList.remove('text-blue-600');
+            durationField.classList.add('text-red-600');
+            durationField.placeholder = 'خطا در بارگذاری فایل صوتی';
+        });
+        
+        currentAudioFile = file;
+    }
+}
+
+function showDurationSuccess(duration) {
+    const durationField = document.getElementById('duration');
+    const minutes = Math.floor(duration / 60);
+    const seconds = duration % 60;
+    const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Create a temporary success message
+    const successMessage = document.createElement('div');
+    successMessage.className = 'text-green-600 text-xs mt-1';
+    successMessage.textContent = `مدت زمان استخراج شد: ${formattedDuration}`;
+    
+    // Remove any existing success message
+    const existingMessage = durationField.parentNode.querySelector('.text-green-600');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    // Add the success message
+    durationField.parentNode.appendChild(successMessage);
+    
+    // Remove the message after 3 seconds
+    setTimeout(() => {
+        if (successMessage.parentNode) {
+            successMessage.remove();
+        }
+    }, 3000);
+}
+
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 function updateImageFileName(input) {
@@ -201,4 +380,6 @@ function updateImageFileName(input) {
     document.getElementById('image-file-name').textContent = fileName;
 }
 </script>
+
+<script src="{{ asset('js/admin-episode-management.js') }}"></script>
 @endsection

@@ -222,6 +222,30 @@ class Story extends Model
     }
 
     /**
+     * Get the characters for the story.
+     */
+    public function characters()
+    {
+        return $this->hasMany(StoryCharacter::class);
+    }
+
+    /**
+     * Get the scenes for the story.
+     */
+    public function scenes()
+    {
+        return $this->hasMany(StoryScene::class);
+    }
+
+    /**
+     * Get the image generation jobs for the story.
+     */
+    public function imageGenerationJobs()
+    {
+        return $this->hasMany(ImageGenerationJob::class);
+    }
+
+    /**
      * Get the moderator who reviewed this story.
      */
     public function moderator()

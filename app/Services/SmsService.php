@@ -2,678 +2,226 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
 
 class SmsService
 {
-    /**
-     * SMS Provider configurations
-     */
-    protected $providers = [
-        'kavenegar' => [
-            'name' => 'کاوه‌نگار',
-            'api_key' => null,
-            'sender' => null,
-            'base_url' => 'https://api.kavenegar.com/v1',
-            'enabled' => false
-        ],
-        'melipayamak' => [
-            'name' => 'ملی‌پیامک',
-            'username' => null,
-            'password' => null,
-            'sender' => null,
-            'base_url' => 'https://rest.payamak-resan.com/api',
-            'enabled' => false
-        ],
-        'smsir' => [
-            'name' => 'پیامک آی‌آر',
-            'api_key' => null,
-            'sender' => null,
-            'base_url' => 'https://api.sms.ir/v1',
-            'enabled' => false
-        ]
-    ];
+    private string $apiToken;
+    private string $baseUrl = 'https://rest.payamak-panel.com/api/SendSMS/SendSMS';
+
+    public function __construct()
+    {
+        $this->apiToken = config('services.melipayamk.token', '77c431b7-aec5-4313-b744-d2f16bf760ab');
+    }
 
     /**
-     * SMS Templates
+     * Send SMS using Melipayamk service
      */
-    protected $templates = [
-        'verification' => [
-            'name' => 'کد تایید',
-            'template' => 'کد تایید شما: {code}',
-            'variables' => ['code']
-        ],
-        'welcome' => [
-            'name' => 'خوش‌آمدگویی',
-            'template' => 'به سروکست خوش آمدید! از شنیدن داستان‌های زیبا لذت ببرید.',
-            'variables' => []
-        ],
-        'subscription_activated' => [
-            'name' => 'فعال‌سازی اشتراک',
-            'template' => 'اشتراک شما فعال شد. از دسترسی کامل به محتوا لذت ببرید.',
-            'variables' => []
-        ],
-        'subscription_expiring' => [
-            'name' => 'انقضای اشتراک',
-            'template' => 'اشتراک شما در {days} روز منقضی می‌شود. برای تمدید اقدام کنید.',
-            'variables' => ['days']
-        ],
-        'subscription_expired' => [
-            'name' => 'انقضای اشتراک',
-            'template' => 'اشتراک شما منقضی شده است. برای ادامه استفاده، اشتراک خود را تمدید کنید.',
-            'variables' => []
-        ],
-        'payment_success' => [
-            'name' => 'پرداخت موفق',
-            'template' => 'پرداخت شما با موفقیت انجام شد. مبلغ: {amount} ریال',
-            'variables' => ['amount']
-        ],
-        'payment_failed' => [
-            'name' => 'پرداخت ناموفق',
-            'template' => 'پرداخت شما ناموفق بود. لطفاً مجدداً تلاش کنید.',
-            'variables' => []
-        ],
-        'new_episode' => [
-            'name' => 'قسمت جدید',
-            'template' => 'قسمت جدید "{episode_title}" از داستان "{story_title}" منتشر شد.',
-            'variables' => ['episode_title', 'story_title']
-        ],
-        'new_story' => [
-            'name' => 'داستان جدید',
-            'template' => 'داستان جدید "{story_title}" منتشر شد. از شنیدن آن لذت ببرید.',
-            'variables' => ['story_title']
-        ],
-        'password_reset' => [
-            'name' => 'بازیابی رمز عبور',
-            'template' => 'کد بازیابی رمز عبور شما: {code}',
-            'variables' => ['code']
-        ]
-    ];
-
-    /**
-     * Send SMS using specified provider
-     */
-    public function sendSms(string $phoneNumber, string $message, string $provider = null): array
+    public function sendSms(string $to, string $message): array
     {
         try {
-            // Validate phone number
-            if (!$this->validatePhoneNumber($phoneNumber)) {
-                return [
-                    'success' => false,
-                    'message' => 'شماره تلفن نامعتبر است',
-                    'error_code' => 'INVALID_PHONE'
-                ];
-            }
+            $response = Http::timeout(30)->asForm()->post($this->baseUrl, [
+                'username' => $this->apiToken,
+                'password' => $this->apiToken,
+                'to' => $this->formatPhoneNumber($to),
+                'from' => config('services.melipayamk.sender', '50004001414000'),
+                'text' => $message,
+                'isFlash' => false
+            ]);
 
-            // Clean phone number
-            $phoneNumber = $this->cleanPhoneNumber($phoneNumber);
+            $result = $response->json();
 
-            // Check rate limiting
-            if (!$this->checkRateLimit($phoneNumber)) {
-                return [
-                    'success' => false,
-                    'message' => 'تعداد پیامک‌های ارسالی بیش از حد مجاز است',
-                    'error_code' => 'RATE_LIMIT_EXCEEDED'
-                ];
-            }
+            Log::info('SMS sent via Melipayamk', [
+                'to' => $to,
+                'message' => $message,
+                'response' => $result
+            ]);
 
-            // Get active provider
-            $activeProvider = $this->getActiveProvider($provider);
-
-            if (!$activeProvider) {
-                return [
-                    'success' => false,
-                    'message' => 'ارائه‌دهنده پیامک فعال نیست',
-                    'error_code' => 'NO_ACTIVE_PROVIDER'
-                ];
-            }
-
-            // Send SMS
-            $result = $this->sendViaProvider($activeProvider, $phoneNumber, $message);
-
-            // Log the attempt
-            $this->logSmsAttempt($phoneNumber, $message, $activeProvider, $result);
-
-            // Update rate limiting
-            $this->updateRateLimit($phoneNumber);
-
-            return $result;
+            return [
+                'success' => $response->successful() && isset($result['RetStatus']) && $result['RetStatus'] == 1,
+                'response' => $result,
+                'message_id' => $result['StrRetStatus'] ?? $result['Value'] ?? null
+            ];
 
         } catch (\Exception $e) {
             Log::error('SMS sending failed', [
-                'phone_number' => $phoneNumber,
-                'message' => $message,
-                'provider' => $provider,
-                'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'خطا در ارسال پیامک',
-                'error_code' => 'SEND_FAILED'
-            ];
-        }
-    }
-
-    /**
-     * Send SMS using template
-     */
-    public function sendTemplateSms(string $phoneNumber, string $templateKey, array $variables = [], string $provider = null): array
-    {
-        try {
-            if (!isset($this->templates[$templateKey])) {
-                return [
-                    'success' => false,
-                    'message' => 'قالب پیامک یافت نشد',
-                    'error_code' => 'TEMPLATE_NOT_FOUND'
-                ];
-            }
-
-            $template = $this->templates[$templateKey];
-            $message = $this->buildMessageFromTemplate($template, $variables);
-
-            return $this->sendSms($phoneNumber, $message, $provider);
-
-        } catch (\Exception $e) {
-            Log::error('Template SMS sending failed', [
-                'phone_number' => $phoneNumber,
-                'template_key' => $templateKey,
-                'variables' => $variables,
-                'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'خطا در ارسال پیامک قالب‌دار',
-                'error_code' => 'TEMPLATE_SEND_FAILED'
-            ];
-        }
-    }
-
-    /**
-     * Send verification code
-     */
-    public function sendVerificationCode(string $phoneNumber, string $code, string $provider = null): array
-    {
-        return $this->sendTemplateSms($phoneNumber, 'verification', ['code' => $code], $provider);
-    }
-
-    /**
-     * Send welcome message
-     */
-    public function sendWelcomeMessage(string $phoneNumber, string $provider = null): array
-    {
-        return $this->sendTemplateSms($phoneNumber, 'welcome', [], $provider);
-    }
-
-    /**
-     * Send subscription notification
-     */
-    public function sendSubscriptionNotification(string $phoneNumber, string $type, array $data = [], string $provider = null): array
-    {
-        $templateKey = 'subscription_' . $type;
-        return $this->sendTemplateSms($phoneNumber, $templateKey, $data, $provider);
-    }
-
-    /**
-     * Send payment notification
-     */
-    public function sendPaymentNotification(string $phoneNumber, string $type, array $data = [], string $provider = null): array
-    {
-        $templateKey = 'payment_' . $type;
-        return $this->sendTemplateSms($phoneNumber, $templateKey, $data, $provider);
-    }
-
-    /**
-     * Send content notification
-     */
-    public function sendContentNotification(string $phoneNumber, string $type, array $data = [], string $provider = null): array
-    {
-        $templateKey = 'new_' . $type;
-        return $this->sendTemplateSms($phoneNumber, $templateKey, $data, $provider);
-    }
-
-    /**
-     * Send bulk SMS
-     */
-    public function sendBulkSms(array $phoneNumbers, string $message, string $provider = null): array
-    {
-        try {
-            $results = [];
-            $successCount = 0;
-            $failureCount = 0;
-
-            foreach ($phoneNumbers as $phoneNumber) {
-                $result = $this->sendSms($phoneNumber, $message, $provider);
-                $results[] = [
-                    'phone_number' => $phoneNumber,
-                    'result' => $result
-                ];
-
-                if ($result['success']) {
-                    $successCount++;
-                } else {
-                    $failureCount++;
-                }
-            }
-
-            return [
-                'success' => true,
-                'data' => [
-                    'total_sent' => count($phoneNumbers),
-                    'success_count' => $successCount,
-                    'failure_count' => $failureCount,
-                    'results' => $results
-                ],
-                'message' => "پیامک‌های گروهی ارسال شد. موفق: {$successCount}, ناموفق: {$failureCount}"
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Bulk SMS sending failed', [
-                'phone_numbers' => $phoneNumbers,
+                'to' => $to,
                 'message' => $message,
                 'error' => $e->getMessage()
             ]);
 
             return [
                 'success' => false,
-                'message' => 'خطا در ارسال پیامک‌های گروهی',
-                'error_code' => 'BULK_SEND_FAILED'
-            ];
-        }
-    }
-
-    /**
-     * Get SMS statistics
-     */
-    public function getSmsStatistics(): array
-    {
-        try {
-            $today = now()->format('Y-m-d');
-            $thisMonth = now()->format('Y-m');
-            $lastMonth = now()->subMonth()->format('Y-m');
-
-            $stats = [
-                'today' => [
-                    'sent' => Cache::get("sms_stats_sent_{$today}", 0),
-                    'failed' => Cache::get("sms_stats_failed_{$today}", 0),
-                    'success_rate' => $this->calculateSuccessRate($today)
-                ],
-                'this_month' => [
-                    'sent' => Cache::get("sms_stats_sent_{$thisMonth}", 0),
-                    'failed' => Cache::get("sms_stats_failed_{$thisMonth}", 0),
-                    'success_rate' => $this->calculateSuccessRate($thisMonth)
-                ],
-                'last_month' => [
-                    'sent' => Cache::get("sms_stats_sent_{$lastMonth}", 0),
-                    'failed' => Cache::get("sms_stats_failed_{$lastMonth}", 0),
-                    'success_rate' => $this->calculateSuccessRate($lastMonth)
-                ],
-                'providers' => $this->getProviderStats(),
-                'templates' => $this->getTemplateStats()
-            ];
-
-            return [
-                'success' => true,
-                'data' => $stats,
-                'message' => 'آمار پیامک‌ها دریافت شد'
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Failed to get SMS statistics', [
                 'error' => $e->getMessage()
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'خطا در دریافت آمار پیامک‌ها'
             ];
         }
     }
 
     /**
-     * Get available templates
+     * Generate and send OTP code
      */
-    public function getTemplates(): array
+    public function sendOtp(string $phoneNumber, string $purpose = 'verification'): array
     {
-        return [
-            'success' => true,
-            'data' => [
-                'templates' => $this->templates
-            ],
-            'message' => 'قالب‌های پیامک دریافت شد'
-        ];
-    }
-
-    /**
-     * Get provider configurations
-     */
-    public function getProviders(): array
-    {
-        return [
-            'success' => true,
-            'data' => [
-                'providers' => $this->providers
-            ],
-            'message' => 'ارائه‌دهندگان پیامک دریافت شد'
-        ];
-    }
-
-    /**
-     * Send SMS via specific provider
-     */
-    protected function sendViaProvider(string $provider, string $phoneNumber, string $message): array
-    {
-        switch ($provider) {
-            case 'kavenegar':
-                return $this->sendViaKavenegar($phoneNumber, $message);
-            case 'melipayamak':
-                return $this->sendViaMelipayamak($phoneNumber, $message);
-            case 'smsir':
-                return $this->sendViaSmsir($phoneNumber, $message);
-            default:
-                return [
-                    'success' => false,
-                    'message' => 'ارائه‌دهنده پشتیبانی نمی‌شود',
-                    'error_code' => 'UNSUPPORTED_PROVIDER'
-                ];
-        }
-    }
-
-    /**
-     * Send SMS via Kavenegar
-     */
-    protected function sendViaKavenegar(string $phoneNumber, string $message): array
-    {
-        try {
-            $apiKey = config('sms.kavenegar.api_key');
-            $sender = config('sms.kavenegar.sender');
-
-            if (!$apiKey || !$sender) {
-                return [
-                    'success' => false,
-                    'message' => 'تنظیمات کاوه‌نگار ناقص است',
-                    'error_code' => 'INCOMPLETE_CONFIG'
-                ];
-            }
-
-            $response = Http::post("https://api.kavenegar.com/v1/{$apiKey}/sms/send.json", [
-                'receptor' => $phoneNumber,
-                'sender' => $sender,
-                'message' => $message
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return [
-                    'success' => true,
-                    'message' => 'پیامک با موفقیت ارسال شد',
-                    'data' => [
-                        'provider' => 'kavenegar',
-                        'message_id' => $data['entries'][0]['messageid'] ?? null
-                    ]
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'message' => 'خطا در ارسال پیامک از طریق کاوه‌نگار',
-                    'error_code' => 'KAVENEGAR_ERROR'
-                ];
-            }
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'خطا در ارتباط با کاوه‌نگار',
-                'error_code' => 'KAVENEGAR_CONNECTION_ERROR'
-            ];
-        }
-    }
-
-    /**
-     * Send SMS via Melipayamak
-     */
-    protected function sendViaMelipayamak(string $phoneNumber, string $message): array
-    {
-        try {
-            $username = config('sms.melipayamak.username');
-            $password = config('sms.melipayamak.password');
-            $sender = config('sms.melipayamak.sender');
-
-            if (!$username || !$password || !$sender) {
-                return [
-                    'success' => false,
-                    'message' => 'تنظیمات ملی‌پیامک ناقص است',
-                    'error_code' => 'INCOMPLETE_CONFIG'
-                ];
-            }
-
-            $response = Http::post('https://rest.payamak-resan.com/api/SendSMS/SendSMS', [
-                'username' => $username,
-                'password' => $password,
-                'to' => $phoneNumber,
-                'from' => $sender,
-                'text' => $message
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return [
-                    'success' => true,
-                    'message' => 'پیامک با موفقیت ارسال شد',
-                    'data' => [
-                        'provider' => 'melipayamak',
-                        'message_id' => $data['RetStatus'] ?? null
-                    ]
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'message' => 'خطا در ارسال پیامک از طریق ملی‌پیامک',
-                    'error_code' => 'MELIPAYAMAK_ERROR'
-                ];
-            }
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'خطا در ارتباط با ملی‌پیامک',
-                'error_code' => 'MELIPAYAMAK_CONNECTION_ERROR'
-            ];
-        }
-    }
-
-    /**
-     * Send SMS via SMS.ir
-     */
-    protected function sendViaSmsir(string $phoneNumber, string $message): array
-    {
-        try {
-            $apiKey = config('sms.smsir.api_key');
-            $sender = config('sms.smsir.sender');
-
-            if (!$apiKey || !$sender) {
-                return [
-                    'success' => false,
-                    'message' => 'تنظیمات پیامک آی‌آر ناقص است',
-                    'error_code' => 'INCOMPLETE_CONFIG'
-                ];
-            }
-
-            $response = Http::withHeaders([
-                'X-API-KEY' => $apiKey
-            ])->post('https://api.sms.ir/v1/send/verify', [
-                'mobile' => $phoneNumber,
-                'message' => $message
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return [
-                    'success' => true,
-                    'message' => 'پیامک با موفقیت ارسال شد',
-                    'data' => [
-                        'provider' => 'smsir',
-                        'message_id' => $data['data']['messageId'] ?? null
-                    ]
-                ];
-            } else {
-                return [
-                    'success' => false,
-                    'message' => 'خطا در ارسال پیامک از طریق پیامک آی‌آر',
-                    'error_code' => 'SMSIR_ERROR'
-                ];
-            }
-
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => 'خطا در ارتباط با پیامک آی‌آر',
-                'error_code' => 'SMSIR_CONNECTION_ERROR'
-            ];
-        }
-    }
-
-    /**
-     * Validate phone number
-     */
-    protected function validatePhoneNumber(string $phoneNumber): bool
-    {
-        // Remove all non-digit characters
-        $cleaned = preg_replace('/[^0-9]/', '', $phoneNumber);
+        $otpCode = $this->generateOtpCode();
         
-        // Check if it's a valid Iranian mobile number
-        return preg_match('/^09[0-9]{9}$/', $cleaned) || preg_match('/^9[0-9]{9}$/', $cleaned);
-    }
+        // Store OTP in cache for 5 minutes
+        $cacheKey = "otp_{$phoneNumber}_{$purpose}";
+        Cache::put($cacheKey, $otpCode, 300); // 5 minutes
 
-    /**
-     * Clean phone number
-     */
-    protected function cleanPhoneNumber(string $phoneNumber): string
-    {
-        $cleaned = preg_replace('/[^0-9]/', '', $phoneNumber);
+        $message = $this->getOtpMessage($otpCode, $purpose);
         
-        // Add country code if missing
-        if (strlen($cleaned) === 10 && str_starts_with($cleaned, '9')) {
-            $cleaned = '0' . $cleaned;
-        }
-        
-        return $cleaned;
-    }
-
-    /**
-     * Check rate limiting
-     */
-    protected function checkRateLimit(string $phoneNumber): bool
-    {
-        $key = "sms_rate_limit_{$phoneNumber}";
-        $limit = Cache::get($key, 0);
-        
-        // Allow maximum 10 SMS per hour per phone number
-        return $limit < 10;
-    }
-
-    /**
-     * Update rate limiting
-     */
-    protected function updateRateLimit(string $phoneNumber): void
-    {
-        $key = "sms_rate_limit_{$phoneNumber}";
-        $current = Cache::get($key, 0);
-        Cache::put($key, $current + 1, 3600); // 1 hour
-    }
-
-    /**
-     * Get active provider
-     */
-    protected function getActiveProvider(string $provider = null): ?string
-    {
-        if ($provider && isset($this->providers[$provider]) && $this->providers[$provider]['enabled']) {
-            return $provider;
-        }
-
-        // Find first enabled provider
-        foreach ($this->providers as $key => $config) {
-            if ($config['enabled']) {
-                return $key;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Build message from template
-     */
-    protected function buildMessageFromTemplate(array $template, array $variables): string
-    {
-        $message = $template['template'];
-        
-        foreach ($variables as $key => $value) {
-            $message = str_replace("{{$key}}", $value, $message);
-        }
-        
-        return $message;
-    }
-
-    /**
-     * Log SMS attempt
-     */
-    protected function logSmsAttempt(string $phoneNumber, string $message, string $provider, array $result): void
-    {
-        $logData = [
-            'phone_number' => $phoneNumber,
-            'message' => $message,
-            'provider' => $provider,
-            'success' => $result['success'],
-            'timestamp' => now()
-        ];
-
-        Log::info('SMS attempt', $logData);
-
-        // Update statistics
-        $date = now()->format('Y-m-d');
-        $month = now()->format('Y-m');
+        $result = $this->sendSms($phoneNumber, $message);
         
         if ($result['success']) {
-            Cache::increment("sms_stats_sent_{$date}");
-            Cache::increment("sms_stats_sent_{$month}");
-        } else {
-            Cache::increment("sms_stats_failed_{$date}");
-            Cache::increment("sms_stats_failed_{$month}");
+            // Store OTP attempt in database
+            $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Verify OTP code
+     */
+    public function verifyOtp(string $phoneNumber, string $code, string $purpose = 'verification'): bool
+    {
+        $cacheKey = "otp_{$phoneNumber}_{$purpose}";
+        $storedCode = Cache::get($cacheKey);
+
+        if ($storedCode && $storedCode === $code) {
+            // Remove OTP from cache after successful verification
+            Cache::forget($cacheKey);
+            
+            // Update OTP attempt as verified
+            $this->updateOtpAttempt($phoneNumber, $code, $purpose, true);
+            
+            return true;
+        }
+
+        // Log failed attempt
+        $this->updateOtpAttempt($phoneNumber, $code, $purpose, false);
+        
+        return false;
+    }
+
+    /**
+     * Send payment notification to affiliate
+     */
+    public function sendPaymentNotification(string $phoneNumber, float $amount, string $currency = 'IRT'): array
+    {
+        $message = "پرداخت کمیسیون شما به مبلغ " . number_format($amount) . " " . $currency . " به حساب بانکی شما واریز شد. با تشکر از همکاری شما.";
+        
+        return $this->sendSms($phoneNumber, $message);
+    }
+
+    /**
+     * Generate 6-digit OTP code
+     */
+    private function generateOtpCode(): string
+    {
+        return str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Format phone number for Iran
+     */
+    private function formatPhoneNumber(string $phoneNumber): string
+    {
+        // Remove any non-numeric characters
+        $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+        
+        // Add country code if not present
+        if (strlen($phoneNumber) == 10 && substr($phoneNumber, 0, 1) == '9') {
+            $phoneNumber = '98' . $phoneNumber;
+        } elseif (strlen($phoneNumber) == 11 && substr($phoneNumber, 0, 2) == '09') {
+            $phoneNumber = '98' . substr($phoneNumber, 1);
+        }
+
+        return $phoneNumber;
+    }
+
+    /**
+     * Get OTP message based on purpose
+     */
+    private function getOtpMessage(string $code, string $purpose): string
+    {
+        switch ($purpose) {
+            case 'login':
+                return "کد ورود شما: {$code}\nاین کد تا ۵ دقیقه معتبر است.";
+            case 'admin_2fa':
+                return "کد تایید دو مرحله‌ای: {$code}\nاین کد تا ۵ دقیقه معتبر است.";
+            case 'verification':
+            default:
+                return "کد تایید شما: {$code}\nاین کد تا ۵ دقیقه معتبر است.";
         }
     }
 
     /**
-     * Calculate success rate
+     * Store OTP attempt in database
      */
-    protected function calculateSuccessRate(string $period): float
+    private function storeOtpAttempt(string $phoneNumber, string $code, string $purpose): void
     {
-        $sent = Cache::get("sms_stats_sent_{$period}", 0);
-        $failed = Cache::get("sms_stats_failed_{$period}", 0);
-        $total = $sent + $failed;
-        
-        return $total > 0 ? round(($sent / $total) * 100, 2) : 0;
+        try {
+            \App\Models\OtpAttempt::create([
+                'phone_number' => $phoneNumber,
+                'code' => $code,
+                'purpose' => $purpose,
+                'verified' => false,
+                'expires_at' => now()->addMinutes(5)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to store OTP attempt', [
+                'phone_number' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
-     * Get provider statistics
+     * Update OTP attempt verification status
      */
-    protected function getProviderStats(): array
+    private function updateOtpAttempt(string $phoneNumber, string $code, string $purpose, bool $verified): void
     {
-        // This would be implemented based on your specific needs
-        return [];
+        try {
+            \App\Models\OtpAttempt::where('phone_number', $phoneNumber)
+                ->where('code', $code)
+                ->where('purpose', $purpose)
+                ->where('verified', false)
+                ->where('expires_at', '>', now())
+                ->update(['verified' => $verified]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update OTP attempt', [
+                'phone_number' => $phoneNumber,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
-     * Get template statistics
+     * Check if phone number has too many OTP attempts
      */
-    protected function getTemplateStats(): array
+    public function hasTooManyAttempts(string $phoneNumber, string $purpose = 'verification'): bool
     {
-        // This would be implemented based on your specific needs
-        return [];
+        $attempts = \App\Models\OtpAttempt::where('phone_number', $phoneNumber)
+            ->where('purpose', $purpose)
+            ->where('created_at', '>=', now()->subHour())
+            ->count();
+
+        return $attempts >= 5; // Max 5 attempts per hour
+    }
+
+    /**
+     * Get remaining attempts for phone number
+     */
+    public function getRemainingAttempts(string $phoneNumber, string $purpose = 'verification'): int
+    {
+        $attempts = \App\Models\OtpAttempt::where('phone_number', $phoneNumber)
+            ->where('purpose', $purpose)
+            ->where('created_at', '>=', now()->subHour())
+            ->count();
+
+        return max(0, 5 - $attempts);
     }
 }

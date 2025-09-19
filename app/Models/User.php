@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Events\NewUserRegistrationEvent;
 use App\UserAnalytics;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -26,6 +28,7 @@ class User extends Authenticatable
         'profile_image_url',
         'role',
         'status',
+        'requires_2fa',
         'email_verified_at',
         'phone_verified_at',
         'parent_id',
@@ -71,6 +74,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'requires_2fa' => 'boolean',
             'last_login_at' => 'datetime',
             'last_activity_at' => 'datetime',
             'first_purchase_at' => 'datetime',
@@ -162,13 +166,6 @@ class User extends Authenticatable
         return $this->hasOne(Subscription::class)->where('status', 'active');
     }
 
-    /**
-     * Check if user is admin.
-     */
-    public function isAdmin()
-    {
-        return $this->role === 'admin';
-    }
 
     /**
      * Check if user is parent.
@@ -360,5 +357,110 @@ class User extends Authenticatable
     public function getJalaliLastLoginAtRelativeAttribute()
     {
         return $this->last_login_at ? \App\Helpers\JalaliHelper::getRelativeTime($this->last_login_at) : null;
+    }
+
+    /**
+     * Role and Permission Management
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'user_role');
+    }
+
+    public function permissions()
+    {
+        return Permission::whereHas('roles', function ($query) {
+            $query->whereHas('users', function ($userQuery) {
+                $userQuery->where('user_id', $this->id);
+            });
+        });
+    }
+
+    public function directPermissions()
+    {
+        return $this->belongsToMany(Permission::class, 'user_permissions');
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->roles()->where('name', $role)->exists();
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        // Super admin has all permissions
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        
+        // Check role-based permissions
+        $hasRolePermission = $this->permissions()->where('name', $permission)->exists();
+        
+        // Check direct permissions
+        $hasDirectPermission = $this->directPermissions()->where('name', $permission)->exists();
+        
+        return $hasRolePermission || $hasDirectPermission;
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return $this->roles()->whereIn('name', $roles)->exists();
+    }
+
+    public function hasAnyPermission(array $permissions): bool
+    {
+        return $this->permissions()->whereIn('name', $permissions)->exists();
+    }
+
+    public function assignRole(Role $role): void
+    {
+        if (!$this->hasRole($role->name)) {
+            $this->roles()->attach($role);
+        }
+    }
+
+    public function removeRole(Role $role): void
+    {
+        $this->roles()->detach($role);
+    }
+
+    public function syncRoles(array $roles): void
+    {
+        $this->roles()->sync($roles);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('super_admin');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasAnyRole(['super_admin', 'admin']);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($user) {
+            if (empty($user->status)) {
+                $user->status = 'active';
+            }
+            if (empty($user->role)) {
+                $user->role = 'parent';
+            }
+            if (empty($user->language)) {
+                $user->language = 'fa';
+            }
+            if (empty($user->timezone)) {
+                $user->timezone = 'Asia/Tehran';
+            }
+        });
+
+        static::created(function ($user) {
+            // Fire new user registration event
+            event(new NewUserRegistrationEvent($user));
+        });
     }
 }

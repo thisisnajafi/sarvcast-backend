@@ -3,347 +3,566 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ContentModeration;
+use App\Models\User;
 use App\Models\Story;
 use App\Models\Episode;
-use App\Models\User;
-use App\Models\Rating;
-use App\Models\Report;
-use App\Services\InAppNotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class ContentModerationController extends Controller
 {
-    protected $notificationService;
-
-    public function __construct(InAppNotificationService $notificationService)
-    {
-        $this->notificationService = $notificationService;
-    }
-
     /**
-     * Display moderation dashboard
+     * Display a listing of content moderation items.
      */
     public function index(Request $request)
     {
-        $query = Story::with(['category', 'director', 'narrator', 'episodes']);
+        $query = ContentModeration::with(['user', 'story', 'episode']);
 
-        // Apply moderation filters
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('content_type', 'like', "%{$search}%")
+                  ->orWhere('reason', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($q) use ($search) {
+                      $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('story', function ($q) use ($search) {
+                      $q->where('title', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('episode', function ($q) use ($search) {
+                      $q->where('title', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('moderation_status')) {
-            $query->where('moderation_status', $request->moderation_status);
+        // Filter by content type
+        if ($request->filled('content_type')) {
+            $query->where('content_type', $request->content_type);
         }
 
-        if ($request->filled('priority')) {
-            $query->where('moderation_priority', $request->priority);
+        // Filter by severity
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
         }
 
+        // Filter by moderator
         if ($request->filled('moderator_id')) {
             $query->where('moderator_id', $request->moderator_id);
         }
 
+        // Filter by date range
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
-
         if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        if ($request->filled('search')) {
-            $query->where(function($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('subtitle', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
-            });
-        }
+        $moderations = $query->orderBy('created_at', 'desc')->paginate(20);
 
-        // Apply sorting
-        $sort = $request->get('sort', 'created_at');
-        $direction = $request->get('direction', 'desc');
-        
-        switch ($sort) {
-            case 'title':
-                $query->orderBy('title', $direction);
-                break;
-            case 'moderation_status':
-                $query->orderBy('moderation_status', $direction);
-                break;
-            case 'moderation_priority':
-                $query->orderBy('moderation_priority', $direction);
-                break;
-            case 'moderator_id':
-                $query->orderBy('moderator_id', $direction);
-                break;
-            case 'moderation_date':
-                $query->orderBy('moderated_at', $direction);
-                break;
-            default:
-                $query->orderBy('created_at', $direction);
-        }
-
-        $perPage = $request->get('per_page', 20);
-        $perPage = min($perPage, 100);
-
-        $stories = $query->paginate($perPage);
-        
-        // Get moderation statistics
+        // Get statistics
         $stats = [
-            'total_pending' => Story::where('moderation_status', 'pending')->count(),
-            'total_approved' => Story::where('moderation_status', 'approved')->count(),
-            'total_rejected' => Story::where('moderation_status', 'rejected')->count(),
-            'total_flagged' => Story::where('moderation_status', 'flagged')->count(),
-            'high_priority' => Story::where('moderation_priority', 'high')->count(),
-            'medium_priority' => Story::where('moderation_priority', 'medium')->count(),
-            'low_priority' => Story::where('moderation_priority', 'low')->count(),
-            'pending_episodes' => Episode::where('moderation_status', 'pending')->count(),
-            'total_reports' => Report::count(),
-            'unresolved_reports' => Report::where('status', 'pending')->count(),
-            'moderators' => User::where('role', 'moderator')->count(),
-            'avg_moderation_time' => $this->getAverageModerationTime()
+            'total' => ContentModeration::count(),
+            'pending' => ContentModeration::where('status', 'pending')->count(),
+            'approved' => ContentModeration::where('status', 'approved')->count(),
+            'rejected' => ContentModeration::where('status', 'rejected')->count(),
+            'high_severity' => ContentModeration::where('severity', 'high')->count(),
+            'medium_severity' => ContentModeration::where('severity', 'medium')->count(),
+            'low_severity' => ContentModeration::where('severity', 'low')->count(),
         ];
 
-        // Get moderators for filter
-        $moderators = User::where('role', 'moderator')->get();
+        $moderators = User::where('role', 'admin')->orWhere('role', 'moderator')->get();
+        $stories = Story::where('is_active', true)->get();
+        $episodes = Episode::where('is_active', true)->get();
 
-        return view('admin.moderation.index', compact('stories', 'stats', 'moderators'));
+        return view('admin.content-moderation.index', compact('moderations', 'stats', 'moderators', 'stories', 'episodes'));
     }
 
     /**
-     * Show content for moderation
+     * Show the form for creating a new content moderation item.
      */
-    public function show(Story $story)
+    public function create()
     {
-        $story->load(['category', 'director', 'narrator', 'episodes', 'moderator']);
-        
-        // Get moderation history
-        $moderationHistory = $story->moderationHistory ?? [];
-        
-        // Get reports for this story
-        $reports = Report::where('content_type', 'story')
-            ->where('content_id', $story->id)
-            ->with('reporter')
-            ->latest()
-            ->get();
+        $users = User::where('is_active', true)->get();
+        $stories = Story::where('is_active', true)->get();
+        $episodes = Episode::where('is_active', true)->get();
+        return view('admin.content-moderation.create', compact('users', 'stories', 'episodes'));
+    }
 
-        // Get similar content for comparison
-        $similarStories = Story::where('category_id', $story->category_id)
-            ->where('id', '!=', $story->id)
-            ->where('moderation_status', 'approved')
+    /**
+     * Store a newly created content moderation item.
+     */
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'content_type' => 'required|in:story,episode,comment,review,user_profile',
+            'content_id' => 'required|integer',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'reason' => 'required|string|max:255',
+            'severity' => 'required|in:low,medium,high',
+            'status' => 'required|in:pending,approved,rejected',
+            'notes' => 'nullable|string|max:1000',
+            'evidence_files' => 'nullable|array|max:5',
+            'evidence_files.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $data = [
+                'user_id' => $request->user_id,
+                'content_type' => $request->content_type,
+                'content_id' => $request->content_id,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'reason' => $request->reason,
+                'severity' => $request->severity,
+                'status' => $request->status,
+                'notes' => $request->notes,
+                'moderator_id' => auth()->id(),
+            ];
+
+            // Handle evidence files upload
+            if ($request->hasFile('evidence_files')) {
+                $evidenceFiles = [];
+                foreach ($request->file('evidence_files') as $file) {
+                    $path = $file->store('moderation/evidence', 'public');
+                    $evidenceFiles[] = $path;
+                }
+                $data['evidence_files'] = json_encode($evidenceFiles);
+            }
+
+            $moderation = ContentModeration::create($data);
+
+            DB::commit();
+
+            return redirect()->route('admin.content-moderation.index')
+                ->with('success', 'آیتم نظارت بر محتوا با موفقیت ایجاد شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در ایجاد آیتم نظارت بر محتوا: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    /**
+     * Display the specified content moderation item.
+     */
+    public function show(ContentModeration $contentModeration)
+    {
+        $contentModeration->load(['user', 'story', 'episode', 'moderator']);
+        
+        // Get related moderations
+        $relatedModerations = ContentModeration::where('user_id', $contentModeration->user_id)
+            ->where('id', '!=', $contentModeration->id)
+            ->with(['story', 'episode'])
+            ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
 
-        return view('admin.moderation.show', compact('story', 'moderationHistory', 'reports', 'similarStories'));
+        return view('admin.content-moderation.show', compact('contentModeration', 'relatedModerations'));
     }
 
     /**
-     * Approve content
+     * Show the form for editing the specified content moderation item.
      */
-    public function approve(Request $request, Story $story)
+    public function edit(ContentModeration $contentModeration)
     {
-        $request->validate([
+        $users = User::where('is_active', true)->get();
+        $stories = Story::where('is_active', true)->get();
+        $episodes = Episode::where('is_active', true)->get();
+        return view('admin.content-moderation.edit', compact('contentModeration', 'users', 'stories', 'episodes'));
+    }
+
+    /**
+     * Update the specified content moderation item.
+     */
+    public function update(Request $request, ContentModeration $contentModeration)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'content_type' => 'required|in:story,episode,comment,review,user_profile',
+            'content_id' => 'required|integer',
+            'story_id' => 'nullable|exists:stories,id',
+            'episode_id' => 'nullable|exists:episodes,id',
+            'reason' => 'required|string|max:255',
+            'severity' => 'required|in:low,medium,high',
+            'status' => 'required|in:pending,approved,rejected',
             'notes' => 'nullable|string|max:1000',
-            'rating' => 'nullable|integer|min:1|max:5',
-            'age_rating' => 'nullable|string|in:G,PG,PG-13,R',
-            'content_warnings' => 'nullable|array',
-            'content_warnings.*' => 'string|max:100'
-        ], [
-            'notes.max' => 'یادداشت نمی‌تواند بیشتر از 1000 کاراکتر باشد',
-            'rating.min' => 'امتیاز باید حداقل 1 باشد',
-            'rating.max' => 'امتیاز نمی‌تواند بیشتر از 5 باشد',
-            'age_rating.in' => 'رده سنی نامعتبر است',
-            'content_warnings.array' => 'هشدارهای محتوا باید آرایه باشند',
-            'content_warnings.*.max' => 'هر هشدار نمی‌تواند بیشتر از 100 کاراکتر باشد'
+            'evidence_files' => 'nullable|array|max:5',
+            'evidence_files.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx|max:10240',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
 
         try {
             DB::beginTransaction();
 
-            $story->update([
-                'moderation_status' => 'approved',
+            $data = [
+                'user_id' => $request->user_id,
+                'content_type' => $request->content_type,
+                'content_id' => $request->content_id,
+                'story_id' => $request->story_id,
+                'episode_id' => $request->episode_id,
+                'reason' => $request->reason,
+                'severity' => $request->severity,
+                'status' => $request->status,
+                'notes' => $request->notes,
+                'moderator_id' => auth()->id(),
+            ];
+
+            // Handle evidence files upload
+            if ($request->hasFile('evidence_files')) {
+                // Delete old evidence files
+                if ($contentModeration->evidence_files) {
+                    $oldFiles = json_decode($contentModeration->evidence_files, true);
+                    foreach ($oldFiles as $file) {
+                        Storage::disk('public')->delete($file);
+                    }
+                }
+
+                $evidenceFiles = [];
+                foreach ($request->file('evidence_files') as $file) {
+                    $path = $file->store('moderation/evidence', 'public');
+                    $evidenceFiles[] = $path;
+                }
+                $data['evidence_files'] = json_encode($evidenceFiles);
+            }
+
+            $contentModeration->update($data);
+
+            DB::commit();
+
+            return redirect()->route('admin.content-moderation.index')
+                ->with('success', 'آیتم نظارت بر محتوا با موفقیت به‌روزرسانی شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در به‌روزرسانی آیتم نظارت بر محتوا: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    /**
+     * Remove the specified content moderation item.
+     */
+    public function destroy(ContentModeration $contentModeration)
+    {
+        try {
+            // Delete associated evidence files
+            if ($contentModeration->evidence_files) {
+                $files = json_decode($contentModeration->evidence_files, true);
+                foreach ($files as $file) {
+                    Storage::disk('public')->delete($file);
+                }
+            }
+
+            $contentModeration->delete();
+            return redirect()->route('admin.content-moderation.index')
+                ->with('success', 'آیتم نظارت بر محتوا با موفقیت حذف شد.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در حذف آیتم نظارت بر محتوا: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Approve content moderation.
+     */
+    public function approve(ContentModeration $contentModeration)
+    {
+        try {
+            $contentModeration->update([
+                'status' => 'approved',
                 'moderator_id' => auth()->id(),
                 'moderated_at' => now(),
-                'moderation_notes' => $request->notes,
-                'moderation_rating' => $request->rating,
-                'age_rating' => $request->age_rating,
-                'content_warnings' => $request->content_warnings,
-                'status' => 'published'
             ]);
 
-            // Update episodes status
-            $story->episodes()->update([
-                'moderation_status' => 'approved',
+            return redirect()->back()
+                ->with('success', 'آیتم نظارت بر محتوا با موفقیت تأیید شد.');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در تأیید آیتم نظارت بر محتوا: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Reject content moderation.
+     */
+    public function reject(ContentModeration $contentModeration)
+    {
+        try {
+            $contentModeration->update([
+                'status' => 'rejected',
                 'moderator_id' => auth()->id(),
                 'moderated_at' => now(),
-                'status' => 'published'
             ]);
 
-            // Send notification to content creator
-            if ($story->created_by) {
-                $this->notificationService->createNotification(
-                    $story->created_by,
-                    'success',
-                    'محتوای شما تایید شد',
-                    "داستان '{$story->title}' با موفقیت تایید و منتشر شد.",
-                    [
-                        'action_type' => 'link',
-                        'action_url' => route('stories.show', $story->id),
-                        'action_text' => 'مشاهده داستان'
-                    ]
-                );
+            return redirect()->back()
+                ->with('success', 'آیتم نظارت بر محتوا با موفقیت رد شد.');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withErrors(['error' => 'خطا در رد آیتم نظارت بر محتوا: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Bulk actions on content moderation items.
+     */
+    public function bulkAction(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'action' => 'required|in:approve,reject,delete',
+            'moderation_ids' => 'required|array|min:1',
+            'moderation_ids.*' => 'exists:content_moderations,id',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors(['error' => 'لطفاً حداقل یک آیتم را انتخاب کنید.']);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $moderations = ContentModeration::whereIn('id', $request->moderation_ids);
+
+            switch ($request->action) {
+                case 'approve':
+                    $moderations->update([
+                        'status' => 'approved',
+                        'moderator_id' => auth()->id(),
+                        'moderated_at' => now(),
+                    ]);
+                    break;
+
+                case 'reject':
+                    $moderations->update([
+                        'status' => 'rejected',
+                        'moderator_id' => auth()->id(),
+                        'moderated_at' => now(),
+                    ]);
+                    break;
+
+                case 'delete':
+                    // Delete associated evidence files
+                    foreach ($moderations->get() as $moderation) {
+                        if ($moderation->evidence_files) {
+                            $files = json_decode($moderation->evidence_files, true);
+                            foreach ($files as $file) {
+                                Storage::disk('public')->delete($file);
+                            }
+                        }
+                    }
+                    $moderations->delete();
+                    break;
             }
 
             DB::commit();
 
-            return redirect()->route('admin.moderation.index')
-                ->with('success', 'محتوا با موفقیت تایید شد.');
+            $actionLabels = [
+                'approve' => 'تأیید',
+                'reject' => 'رد',
+                'delete' => 'حذف',
+            ];
+
+            return redirect()->back()
+                ->with('success', 'عملیات ' . $actionLabels[$request->action] . ' با موفقیت انجام شد.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Failed to approve content', [
-                'story_id' => $story->id,
-                'error' => $e->getMessage()
-            ]);
-
             return redirect()->back()
-                ->with('error', 'خطا در تایید محتوا: ' . $e->getMessage());
+                ->withErrors(['error' => 'خطا در انجام عملیات: ' . $e->getMessage()]);
         }
     }
 
     /**
-     * Reject content
+     * Export content moderation data.
      */
-    public function reject(Request $request, Story $story)
+    public function export(Request $request)
     {
-        $request->validate([
-            'reason' => 'required|string|max:1000',
-            'rejection_code' => 'required|string|in:inappropriate_content,violence,language,sexual_content,copyright_violation,quality_issues,other',
-            'suggestions' => 'nullable|string|max:1000',
-            'allow_resubmission' => 'boolean'
-        ], [
-            'reason.required' => 'دلیل رد الزامی است',
-            'reason.max' => 'دلیل رد نمی‌تواند بیشتر از 1000 کاراکتر باشد',
-            'rejection_code.required' => 'کد رد الزامی است',
-            'rejection_code.in' => 'کد رد نامعتبر است',
-            'suggestions.max' => 'پیشنهادات نمی‌تواند بیشتر از 1000 کاراکتر باشد'
-        ]);
+        $query = ContentModeration::with(['user', 'story', 'episode', 'moderator']);
 
-        try {
-            DB::beginTransaction();
+        // Apply same filters as index
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('reason', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%");
+            });
+        }
 
-            $story->update([
-                'moderation_status' => 'rejected',
-                'moderator_id' => auth()->id(),
-                'moderated_at' => now(),
-                'moderation_notes' => $request->reason,
-                'rejection_code' => $request->rejection_code,
-                'rejection_suggestions' => $request->suggestions,
-                'allow_resubmission' => $request->boolean('allow_resubmission'),
-                'status' => 'rejected'
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('content_type')) {
+            $query->where('content_type', $request->content_type);
+        }
+
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+
+        $moderations = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'content_moderation_' . now()->format('Y_m_d_H_i_s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($moderations) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fwrite($file, "\xEF\xBB\xBF");
+            
+            // Headers
+            fputcsv($file, [
+                'کاربر',
+                'نوع محتوا',
+                'شناسه محتوا',
+                'داستان',
+                'اپیزود',
+                'دلیل',
+                'شدت',
+                'وضعیت',
+                'یادداشت',
+                'ناظر',
+                'تاریخ ایجاد',
+                'تاریخ نظارت'
             ]);
 
-            // Update episodes status
-            $story->episodes()->update([
-                'moderation_status' => 'rejected',
-                'moderator_id' => auth()->id(),
-                'moderated_at' => now(),
-                'status' => 'rejected'
-            ]);
-
-            // Send notification to content creator
-            if ($story->created_by) {
-                $this->notificationService->createNotification(
-                    $story->created_by,
-                    'error',
-                    'محتوای شما رد شد',
-                    "داستان '{$story->title}' رد شد. دلیل: {$request->reason}",
-                    [
-                        'action_type' => 'link',
-                        'action_url' => route('stories.edit', $story->id),
-                        'action_text' => 'ویرایش داستان'
-                    ]
-                );
+            foreach ($moderations as $moderation) {
+                fputcsv($file, [
+                    $moderation->user ? $moderation->user->first_name . ' ' . $moderation->user->last_name : '-',
+                    $this->getContentTypeLabel($moderation->content_type),
+                    $moderation->content_id,
+                    $moderation->story ? $moderation->story->title : '-',
+                    $moderation->episode ? $moderation->episode->title : '-',
+                    $moderation->reason,
+                    $this->getSeverityLabel($moderation->severity),
+                    $this->getStatusLabel($moderation->status),
+                    $moderation->notes,
+                    $moderation->moderator ? $moderation->moderator->first_name . ' ' . $moderation->moderator->last_name : '-',
+                    $moderation->created_at->format('Y/m/d H:i'),
+                    $moderation->moderated_at ? $moderation->moderated_at->format('Y/m/d H:i') : '-',
+                ]);
             }
 
-            DB::commit();
+            fclose($file);
+        };
 
-            return redirect()->route('admin.moderation.index')
-                ->with('success', 'محتوا با موفقیت رد شد.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to reject content', [
-                'story_id' => $story->id,
-                'error' => $e->getMessage()
-            ]);
-
-            return redirect()->back()
-                ->with('error', 'خطا در رد محتوا: ' . $e->getMessage());
-        }
+        return response()->stream($callback, 200, $headers);
     }
 
     /**
-     * Flag content for review
+     * Get content moderation statistics.
      */
-    public function flag(Request $request, Story $story)
+    public function statistics()
     {
-        $request->validate([
-            'reason' => 'required|string|max:1000',
-            'priority' => 'required|string|in:low,medium,high',
-            'flag_type' => 'required|string|in:content_concern,quality_issue,copyright_issue,other'
-        ], [
-            'reason.required' => 'دلیل پرچم‌گذاری الزامی است',
-            'reason.max' => 'دلیل پرچم‌گذاری نمی‌تواند بیشتر از 1000 کاراکتر باشد',
-            'priority.required' => 'اولویت الزامی است',
-            'priority.in' => 'اولویت نامعتبر است',
-            'flag_type.required' => 'نوع پرچم الزامی است',
-            'flag_type.in' => 'نوع پرچم نامعتبر است'
-        ]);
+        $stats = [
+            'total_moderations' => ContentModeration::count(),
+            'pending_moderations' => ContentModeration::where('status', 'pending')->count(),
+            'approved_moderations' => ContentModeration::where('status', 'approved')->count(),
+            'rejected_moderations' => ContentModeration::where('status', 'rejected')->count(),
+            'by_content_type' => ContentModeration::selectRaw('content_type, COUNT(*) as count')
+                ->groupBy('content_type')
+                ->get(),
+            'by_severity' => ContentModeration::selectRaw('severity, COUNT(*) as count')
+                ->groupBy('severity')
+                ->get(),
+            'by_status' => ContentModeration::selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get(),
+            'top_reporters' => ContentModeration::selectRaw('user_id, COUNT(*) as report_count')
+                ->with('user')
+                ->groupBy('user_id')
+                ->orderBy('report_count', 'desc')
+                ->limit(10)
+                ->get(),
+            'moderations_by_month' => ContentModeration::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+                ->groupBy('month')
+                ->orderBy('month', 'desc')
+                ->limit(12)
+                ->get(),
+        ];
 
-        try {
-            DB::beginTransaction();
-
-            $story->update([
-                'moderation_status' => 'flagged',
-                'moderator_id' => auth()->id(),
-                'moderated_at' => now(),
-                'moderation_notes' => $request->reason,
-                'moderation_priority' => $request->priority,
-                'flag_type' => $request->flag_type,
-                'status' => 'pending'
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('admin.moderation.index')
-                ->with('success', 'محتوا با موفقیت پرچم‌گذاری شد.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to flag content', [
-                'story_id' => $story->id,
-                'error' => $e->getMessage()
-            ]);
-
-            return redirect()->back()
-                ->with('error', 'خطا در پرچم‌گذاری محتوا: ' . $e->getMessage());
-        }
+        return view('admin.content-moderation.statistics', compact('stats'));
     }
 
     /**
-     * Get average moderation time
+     * Get content type label.
      */
-    private function getAverageModerationTime()
+    private function getContentTypeLabel($type)
     {
-        $avgTime = Story::whereNotNull('moderated_at')
-            ->whereNotNull('created_at')
-            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, moderated_at)) as avg_hours')
-            ->value('avg_hours');
+        $labels = [
+            'story' => 'داستان',
+            'episode' => 'اپیزود',
+            'comment' => 'نظر',
+            'review' => 'بررسی',
+            'user_profile' => 'پروفایل کاربر',
+        ];
 
-        return round($avgTime ?? 0, 2);
+        return $labels[$type] ?? $type;
+    }
+
+    /**
+     * Get severity label.
+     */
+    private function getSeverityLabel($severity)
+    {
+        $labels = [
+            'low' => 'کم',
+            'medium' => 'متوسط',
+            'high' => 'زیاد',
+        ];
+
+        return $labels[$severity] ?? $severity;
+    }
+
+    /**
+     * Get status label.
+     */
+    private function getStatusLabel($status)
+    {
+        $labels = [
+            'pending' => 'در انتظار',
+            'approved' => 'تأیید شده',
+            'rejected' => 'رد شده',
+        ];
+
+        return $labels[$status] ?? $status;
     }
 }

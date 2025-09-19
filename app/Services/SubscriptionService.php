@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\Payment;
+use App\Events\SubscriptionRenewalEvent;
+use App\Events\SubscriptionCancellationEvent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -12,37 +15,20 @@ use Carbon\Carbon;
 class SubscriptionService
 {
     /**
-     * Available subscription plans
+     * Get available subscription plans from database
      */
-    const PLANS = [
-        '1month' => [
-            'name' => 'اشتراک یک ماهه',
-            'duration_days' => 30,
-            'price' => 50000, // IRR
-            'description' => 'دسترسی کامل به تمام محتوا برای یک ماه'
-        ],
-        '3months' => [
-            'name' => 'اشتراک سه‌ماهه',
-            'duration_days' => 90,
-            'price' => 135000, // IRR
-            'description' => 'دسترسی کامل به تمام محتوا برای سه ماه',
-            'discount' => 10 // 10% discount
-        ],
-        '6months' => [
-            'name' => 'اشتراک شش‌ماهه',
-            'duration_days' => 180,
-            'price' => 240000, // IRR
-            'description' => 'دسترسی کامل به تمام محتوا برای شش ماه',
-            'discount' => 20 // 20% discount
-        ],
-        '1year' => [
-            'name' => 'اشتراک یک ساله',
-            'duration_days' => 365,
-            'price' => 400000, // IRR
-            'description' => 'دسترسی کامل به تمام محتوا برای یک سال',
-            'discount' => 33 // 33% discount
-        ]
-    ];
+    public function getPlans(): array
+    {
+        return SubscriptionPlan::active()->ordered()->get()->keyBy('slug')->toArray();
+    }
+
+    /**
+     * Get a specific plan by slug
+     */
+    public function getPlan(string $slug): ?SubscriptionPlan
+    {
+        return SubscriptionPlan::active()->where('slug', $slug)->first();
+    }
 
     /**
      * Create a new subscription
@@ -53,12 +39,12 @@ class SubscriptionService
             DB::beginTransaction();
 
             // Validate plan type
-            if (!isset(self::PLANS[$type])) {
+            $plan = $this->getPlan($type);
+            if (!$plan) {
                 throw new \InvalidArgumentException('Invalid subscription plan type');
             }
 
             $user = User::findOrFail($userId);
-            $plan = self::PLANS[$type];
 
             // Check if user already has an active subscription
             $activeSubscription = $this->getActiveSubscription($userId);
@@ -68,7 +54,7 @@ class SubscriptionService
 
             // Calculate subscription dates
             $startDate = $options['start_date'] ?? now();
-            $endDate = Carbon::parse($startDate)->addDays($plan['duration_days']);
+            $endDate = Carbon::parse($startDate)->addDays($plan->duration_days);
 
             // Create subscription
             $subscription = Subscription::create([
@@ -77,8 +63,8 @@ class SubscriptionService
                 'status' => $options['status'] ?? 'pending',
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'price' => $plan['price'],
-                'currency' => 'IRR',
+                'price' => $plan->price,
+                'currency' => $plan->currency,
                 'auto_renew' => $options['auto_renew'] ?? true,
                 'payment_method' => $options['payment_method'] ?? null,
                 'transaction_id' => $options['transaction_id'] ?? null
@@ -160,8 +146,13 @@ class SubscriptionService
 
             $subscription->update([
                 'status' => 'cancelled',
-                'auto_renew' => false
+                'auto_renew' => false,
+                'cancellation_reason' => $reason,
+                'cancelled_at' => now()
             ]);
+
+            // Fire subscription cancellation event
+            event(new SubscriptionCancellationEvent($subscription));
 
             DB::commit();
 
@@ -201,12 +192,18 @@ class SubscriptionService
                 throw new \InvalidArgumentException('Auto-renew is disabled for this subscription');
             }
 
-            $plan = self::PLANS[$subscription->type];
-            $newEndDate = Carbon::parse($subscription->end_date)->addDays($plan['duration_days']);
+            $plan = $this->getPlan($subscription->type);
+            if (!$plan) {
+                throw new \InvalidArgumentException('Plan not found');
+            }
+            $newEndDate = Carbon::parse($subscription->end_date)->addDays($plan->duration_days);
 
             $subscription->update([
                 'end_date' => $newEndDate
             ]);
+
+            // Fire subscription renewal event
+            event(new SubscriptionRenewalEvent($subscription));
 
             DB::commit();
 
@@ -282,7 +279,7 @@ class SubscriptionService
             'expires_at' => $activeSubscription->end_date,
             'days_remaining' => max(0, $daysRemaining),
             'auto_renew' => $activeSubscription->auto_renew,
-            'plan_info' => self::PLANS[$activeSubscription->type]
+            'plan_info' => $this->getPlan($activeSubscription->type)
         ];
     }
 
@@ -291,7 +288,7 @@ class SubscriptionService
      */
     public function getAvailablePlans(): array
     {
-        return self::PLANS;
+        return $this->getPlans();
     }
 
     /**
@@ -299,25 +296,25 @@ class SubscriptionService
      */
     public function calculatePrice(string $type, array $options = []): array
     {
-        if (!isset(self::PLANS[$type])) {
+        $plan = $this->getPlan($type);
+        if (!$plan) {
             throw new \InvalidArgumentException('Invalid subscription plan type');
         }
 
-        $plan = self::PLANS[$type];
-        $basePrice = $plan['price'];
-        $discount = $plan['discount'] ?? 0;
+        $basePrice = $plan->price;
+        $discount = $plan->discount_percentage;
         $discountedPrice = $basePrice - ($basePrice * $discount / 100);
 
         return [
             'type' => $type,
-            'name' => $plan['name'],
+            'name' => $plan->name,
             'base_price' => $basePrice,
             'discount_percentage' => $discount,
             'discounted_price' => $discountedPrice,
             'savings' => $basePrice - $discountedPrice,
-            'currency' => 'IRR',
-            'duration_days' => $plan['duration_days'],
-            'description' => $plan['description']
+            'currency' => $plan->currency,
+            'duration_days' => $plan->duration_days,
+            'description' => $plan->description
         ];
     }
 
@@ -427,7 +424,7 @@ class SubscriptionService
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'price' => 0, // Free trial
-                'currency' => 'IRR',
+                'currency' => 'IRT',
                 'auto_renew' => false
             ]);
 
@@ -465,17 +462,20 @@ class SubscriptionService
                 throw new \InvalidArgumentException('Only active subscriptions can be upgraded');
             }
 
-            if (!isset(self::PLANS[$newType])) {
+            $newPlan = $this->getPlan($newType);
+            if (!$newPlan) {
                 throw new \InvalidArgumentException('Invalid subscription plan type');
             }
 
-            $newPlan = self::PLANS[$newType];
             $remainingDays = Carbon::parse($subscription->end_date)->diffInDays(now());
             
             // Calculate prorated price
-            $currentPlan = self::PLANS[$subscription->type];
-            $currentDailyPrice = $currentPlan['price'] / $currentPlan['duration_days'];
-            $newDailyPrice = $newPlan['price'] / $newPlan['duration_days'];
+            $currentPlan = $this->getPlan($subscription->type);
+            if (!$currentPlan) {
+                throw new \InvalidArgumentException('Current plan not found');
+            }
+            $currentDailyPrice = $currentPlan->price / $currentPlan->duration_days;
+            $newDailyPrice = $newPlan->price / $newPlan->duration_days;
             
             $priceDifference = ($newDailyPrice - $currentDailyPrice) * $remainingDays;
 

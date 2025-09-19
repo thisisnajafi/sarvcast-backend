@@ -155,6 +155,78 @@
             </div>
         </div>
 
+        <!-- Role and Permission Management -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">مدیریت نقش‌ها و مجوزها</h2>
+            
+            <!-- Current Roles -->
+            <div class="mb-6">
+                <h3 class="text-md font-medium text-gray-900 mb-3">نقش‌های فعلی</h3>
+                <div class="flex flex-wrap gap-2">
+                    @forelse($user->roles as $role)
+                    <div class="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                        <span>{{ $role->display_name }}</span>
+                        @if($role->name !== 'super_admin' || !$user->isSuperAdmin())
+                        <button type="button" onclick="removeRole({{ $user->id }}, {{ $role->id }})" 
+                                class="mr-2 text-blue-600 hover:text-blue-800">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                        @endif
+                    </div>
+                    @empty
+                    <p class="text-gray-500 text-sm">هیچ نقشی اختصاص داده نشده است</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Assign New Role -->
+            <div class="mb-6">
+                <h3 class="text-md font-medium text-gray-900 mb-3">اختصاص نقش جدید</h3>
+                <div class="flex gap-4">
+                    <select id="new-role-select" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">انتخاب نقش</option>
+                        @foreach($availableRoles as $role)
+                            @if(!$user->hasRole($role->name))
+                            <option value="{{ $role->id }}">{{ $role->display_name }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+                    <button type="button" onclick="assignRole()" 
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        اختصاص نقش
+                    </button>
+                </div>
+            </div>
+
+            <!-- Direct Permissions -->
+            <div class="mb-6">
+                <h3 class="text-md font-medium text-gray-900 mb-3">مجوزهای مستقیم</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach($permissions as $group => $groupPermissions)
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h4 class="text-sm font-medium text-gray-900 mb-3">{{ ucfirst(str_replace('_', ' ', $group)) }}</h4>
+                        <div class="space-y-2">
+                            @foreach($groupPermissions as $permission)
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       id="permission-{{ $permission->id }}" 
+                                       class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                       {{ $user->directPermissions()->where('permissions.id', $permission->id)->exists() ? 'checked' : '' }}
+                                       onchange="togglePermission({{ $user->id }}, {{ $permission->id }}, this.checked)">
+                                <label for="permission-{{ $permission->id }}" class="mr-2 text-sm text-gray-700">
+                                    {{ $permission->display_name }}
+                                </label>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
         <!-- Actions -->
         <div class="flex justify-end space-x-4 space-x-reverse">
             <a href="{{ route('admin.users.show', $user) }}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
@@ -178,5 +250,118 @@ document.getElementById('role').addEventListener('change', function() {
         document.getElementById('parent_id').required = false;
     }
 });
+
+// Role Management Functions
+function assignRole() {
+    const roleId = document.getElementById('new-role-select').value;
+    if (!roleId) {
+        alert('لطفاً یک نقش انتخاب کنید');
+        return;
+    }
+
+    if (confirm('آیا مطمئن هستید که می‌خواهید این نقش را به کاربر اختصاص دهید؟')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route("admin.roles.assign") }}';
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        const userIdInput = document.createElement('input');
+        userIdInput.type = 'hidden';
+        userIdInput.name = 'user_id';
+        userIdInput.value = '{{ $user->id }}';
+        
+        const roleIdInput = document.createElement('input');
+        roleIdInput.type = 'hidden';
+        roleIdInput.name = 'role_id';
+        roleIdInput.value = roleId;
+        
+        form.appendChild(csrfToken);
+        form.appendChild(userIdInput);
+        form.appendChild(roleIdInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function removeRole(userId, roleId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید این نقش را از کاربر حذف کنید؟')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/users/${userId}/roles/${roleId}`;
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        const methodInput = document.createElement('input');
+        methodInput.type = 'hidden';
+        methodInput.name = '_method';
+        methodInput.value = 'DELETE';
+        
+        form.appendChild(csrfToken);
+        form.appendChild(methodInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function togglePermission(userId, permissionId, isChecked) {
+    const action = isChecked ? 'grant' : 'revoke';
+    const message = isChecked ? 'آیا مطمئن هستید که می‌خواهید این مجوز را به کاربر اعطا کنید؟' : 'آیا مطمئن هستید که می‌خواهید این مجوز را از کاربر حذف کنید؟';
+    
+    if (confirm(message)) {
+        fetch(`/admin/users/${userId}/permissions/${permissionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                action: action
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                showNotification(data.message, 'success');
+            } else {
+                // Show error message
+                showNotification(data.message || 'خطا در اعمال تغییرات', 'error');
+                // Revert checkbox state
+                document.getElementById(`permission-${permissionId}`).checked = !isChecked;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('خطا در اعمال تغییرات', 'error');
+            // Revert checkbox state
+            document.getElementById(`permission-${permissionId}`).checked = !isChecked;
+        });
+    } else {
+        // Revert checkbox state if user cancels
+        document.getElementById(`permission-${permissionId}`).checked = !isChecked;
+    }
+}
+
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
 </script>
 @endsection

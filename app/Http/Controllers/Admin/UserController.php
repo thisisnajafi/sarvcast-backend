@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\PlayHistory;
 use App\Models\Favorite;
 use App\Models\Rating;
+use App\Models\Permission;
 use App\Services\InAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -245,7 +246,10 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $parents = User::where('role', 'parent')->where('id', '!=', $user->id)->get();
-        return view('admin.users.edit', compact('user', 'parents'));
+        $availableRoles = \App\Models\Role::all();
+        $permissions = \App\Models\Permission::all()->groupBy('group');
+        
+        return view('admin.users.edit', compact('user', 'parents', 'availableRoles', 'permissions'));
     }
 
     /**
@@ -739,5 +743,43 @@ class UserController extends Controller
                 ]
             ]
         ]);
+    }
+
+    /**
+     * Toggle permission for a user
+     */
+    public function togglePermission(Request $request, User $user, Permission $permission)
+    {
+        try {
+            $action = $request->input('action'); // 'grant' or 'revoke'
+            
+            if ($action === 'grant') {
+                // Grant direct permission to user
+                if (!$user->directPermissions()->where('permissions.id', $permission->id)->exists()) {
+                    $user->directPermissions()->attach($permission);
+                }
+                $message = 'مجوز با موفقیت به کاربر اعطا شد.';
+            } elseif ($action === 'revoke') {
+                // Revoke direct permission from user
+                $user->directPermissions()->detach($permission);
+                $message = 'مجوز با موفقیت از کاربر حذف شد.';
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'عمل نامعتبر است.'
+                ], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error toggling permission: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در اعمال تغییرات مجوز.'
+            ], 500);
+        }
     }
 }

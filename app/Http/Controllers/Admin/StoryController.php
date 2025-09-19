@@ -175,13 +175,21 @@ class StoryController extends Controller
      */
     public function store(Request $request)
     {
+        // Convert comma-separated tags string to array
+        if ($request->has('tags') && is_string($request->tags)) {
+            // Handle both Persian (،) and English (,) commas
+            $tagsString = str_replace('،', ',', $request->tags);
+            $request->merge([
+                'tags' => array_filter(array_map('trim', explode(',', $tagsString)))
+            ]);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:200',
             'subtitle' => 'nullable|string|max:300',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'age_group' => 'required|string',
-            'language' => 'required|string',
             'duration' => 'required|integer|min:1',
             'director_id' => 'nullable|exists:people,id',
             'writer_id' => 'nullable|exists:people,id',
@@ -190,10 +198,25 @@ class StoryController extends Controller
             'is_premium' => 'boolean',
             'is_completely_free' => 'boolean',
             'status' => 'required|in:draft,pending,approved,rejected,published',
-            'image_url' => 'required|url',
-            'cover_image_url' => 'nullable|url',
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
         ]);
+
+        // Set default language (all stories are in Persian)
+        $validated['language'] = 'persian';
+
+        // Handle file uploads
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('stories', 'public');
+            $validated['image_url'] = asset('storage/' . $imagePath);
+        }
+        
+        if ($request->hasFile('cover_image')) {
+            $coverImagePath = $request->file('cover_image')->store('stories', 'public');
+            $validated['cover_image_url'] = asset('storage/' . $coverImagePath);
+        }
 
         $story = Story::create($validated);
 
@@ -227,13 +250,21 @@ class StoryController extends Controller
      */
     public function update(Request $request, Story $story)
     {
+        // Convert comma-separated tags string to array
+        if ($request->has('tags') && is_string($request->tags)) {
+            // Handle both Persian (،) and English (,) commas
+            $tagsString = str_replace('،', ',', $request->tags);
+            $request->merge([
+                'tags' => array_filter(array_map('trim', explode(',', $tagsString)))
+            ]);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:200',
             'subtitle' => 'nullable|string|max:300',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'age_group' => 'required|string',
-            'language' => 'required|string',
             'duration' => 'required|integer|min:1',
             'director_id' => 'nullable|exists:people,id',
             'writer_id' => 'nullable|exists:people,id',
@@ -242,10 +273,25 @@ class StoryController extends Controller
             'is_premium' => 'boolean',
             'is_completely_free' => 'boolean',
             'status' => 'required|in:draft,pending,approved,rejected,published',
-            'image_url' => 'required|url',
-            'cover_image_url' => 'nullable|url',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
         ]);
+
+        // Set default language (all stories are in Persian)
+        $validated['language'] = 'persian';
+
+        // Handle file uploads
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('stories', 'public');
+            $validated['image_url'] = asset('storage/' . $imagePath);
+        }
+        
+        if ($request->hasFile('cover_image')) {
+            $coverImagePath = $request->file('cover_image')->store('stories', 'public');
+            $validated['cover_image_url'] = asset('storage/' . $coverImagePath);
+        }
 
         $story->update($validated);
 

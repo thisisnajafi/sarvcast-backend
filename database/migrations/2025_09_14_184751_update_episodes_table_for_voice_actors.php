@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('episodes', function (Blueprint $table) {
-            $table->boolean('has_multiple_voice_actors')->default(false)->after('use_image_timeline')->comment('Whether episode has multiple voice actors');
-            $table->unsignedInteger('voice_actor_count')->default(0)->after('has_multiple_voice_actors')->comment('Total number of voice actors in episode');
+            $table->boolean('has_multiple_voice_actors')->default(false)->comment('Whether episode has multiple voice actors');
+            $table->unsignedInteger('voice_actor_count')->default(0)->comment('Total number of voice actors in episode');
         });
     }
 
