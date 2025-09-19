@@ -22,7 +22,13 @@ class EpisodeController extends Controller
      */
     public function show(Request $request, Episode $episode)
     {
+        $includeTimeline = $request->get('include_timeline', false);
+        
         $episode->load(['story', 'narrator', 'people']);
+        
+        if ($includeTimeline && $episode->use_image_timeline) {
+            $episode->load('imageTimelines');
+        }
 
         // Check access control
         $user = $request->user();
@@ -40,12 +46,21 @@ class EpisodeController extends Controller
             ], 403);
         }
 
+        $responseData = [
+            'episode' => $episode,
+            'access_info' => $accessInfo
+        ];
+
+        // Add timeline data if requested
+        if ($includeTimeline && $episode->use_image_timeline) {
+            $responseData['image_timeline'] = $episode->imageTimelines->map(function($timeline) {
+                return $timeline->toApiResponse();
+            });
+        }
+
         return response()->json([
             'success' => true,
-            'data' => [
-                'episode' => $episode,
-                'access_info' => $accessInfo
-            ]
+            'data' => $responseData
         ]);
     }
 

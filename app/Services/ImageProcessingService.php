@@ -205,9 +205,9 @@ class ImageProcessingService
     }
 
     /**
-     * Get image information
+     * Get image information from file path
      */
-    public function getImageInfo(string $filePath): array
+    public function getImageInfoFromFile(string $filePath): array
     {
         try {
             $image = Image::make($filePath);
@@ -255,7 +255,7 @@ class ImageProcessingService
             }
 
             // Get image info
-            $imageInfo = $this->getImageInfo($filePath);
+            $imageInfo = $this->getImageInfoFromFile($filePath);
             if (empty($imageInfo)) {
                 $result['errors'][] = 'فایل تصویری معتبر نیست';
             } else {

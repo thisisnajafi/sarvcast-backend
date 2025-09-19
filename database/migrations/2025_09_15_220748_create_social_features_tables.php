@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('follower_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('following_id')->constrained('users')->onDelete('cascade');
-            $table->timestamp('followed_at');
+            $table->timestamp('followed_at')->nullable();
             $table->boolean('is_mutual')->default(false);
             $table->json('metadata')->nullable(); // Additional follow data
             
@@ -37,7 +37,7 @@ return new class extends Migration
             $table->text('message')->nullable(); // Custom message with share
             $table->string('share_url')->nullable(); // Generated share URL
             $table->json('metadata')->nullable(); // Additional share data
-            $table->timestamp('shared_at');
+            $table->timestamp('shared_at')->nullable();
             
             $table->index(['user_id', 'shared_at']);
             $table->index(['shareable_type', 'shareable_id']);
@@ -56,7 +56,7 @@ return new class extends Migration
             $table->json('activity_data')->nullable(); // Additional activity data
             $table->boolean('is_public')->default(true); // Whether activity is public
             $table->boolean('is_anonymous')->default(false); // Whether activity is anonymous
-            $table->timestamp('activity_at');
+            $table->timestamp('activity_at')->nullable();
             
             $table->index(['user_id', 'activity_at']);
             $table->index(['activity_type', 'activity_at']);
@@ -75,8 +75,8 @@ return new class extends Migration
             $table->string('cover_image')->nullable();
             $table->json('metadata')->nullable(); // Additional playlist data
             $table->integer('sort_order')->default(0);
-            $table->timestamp('created_at');
-            $table->timestamp('updated_at');
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
             
             $table->index(['user_id', 'created_at']);
             $table->index(['is_public', 'created_at']);
@@ -90,7 +90,7 @@ return new class extends Migration
             $table->string('item_type'); // story, episode
             $table->unsignedBigInteger('item_id');
             $table->integer('sort_order')->default(0);
-            $table->timestamp('added_at');
+            $table->timestamp('added_at')->nullable();
             
             $table->unique(['playlist_id', 'item_type', 'item_id']);
             $table->index(['playlist_id', 'sort_order']);
@@ -110,8 +110,8 @@ return new class extends Migration
             $table->integer('likes_count')->default(0);
             $table->integer('replies_count')->default(0);
             $table->json('metadata')->nullable(); // Additional comment data
-            $table->timestamp('commented_at');
-            $table->timestamp('updated_at');
+            $table->timestamp('commented_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
             
             $table->index(['user_id', 'commented_at']);
             $table->index(['commentable_type', 'commentable_id']);
@@ -125,7 +125,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('comment_id')->constrained('user_comments')->onDelete('cascade');
-            $table->timestamp('liked_at');
+            $table->timestamp('liked_at')->nullable();
             
             $table->unique(['user_id', 'comment_id']);
             $table->index(['comment_id', 'liked_at']);
@@ -141,7 +141,7 @@ return new class extends Migration
             $table->unsignedBigInteger('mentionable_id');
             $table->text('context')->nullable(); // Context where mention occurred
             $table->boolean('is_read')->default(false);
-            $table->timestamp('mentioned_at');
+            $table->timestamp('mentioned_at')->nullable();
             
             $table->index(['user_id', 'mentioned_at']);
             $table->index(['mentioned_by', 'mentioned_at']);
@@ -157,12 +157,12 @@ return new class extends Migration
             $table->string('target_type'); // story, episode, user, comment, etc.
             $table->unsignedBigInteger('target_id');
             $table->json('interaction_data')->nullable(); // Additional interaction data
-            $table->timestamp('interacted_at');
+            $table->timestamp('interacted_at')->nullable();
             
             $table->index(['user_id', 'interacted_at']);
             $table->index(['interaction_type', 'interacted_at']);
             $table->index(['target_type', 'target_id']);
-            $table->unique(['user_id', 'interaction_type', 'target_type', 'target_id']);
+            $table->unique(['user_id', 'interaction_type', 'target_type', 'target_id'], 'social_interactions_unique');
         });
 
         // User social settings table
@@ -179,7 +179,7 @@ return new class extends Migration
             $table->boolean('notify_comments')->default(true);
             $table->boolean('notify_mentions')->default(true);
             $table->json('privacy_settings')->nullable(); // Additional privacy settings
-            $table->timestamp('updated_at');
+            $table->timestamp('updated_at')->nullable();
             
             $table->unique('user_id');
         });
@@ -193,9 +193,9 @@ return new class extends Migration
             $table->date('metric_date');
             $table->integer('metric_value')->default(0);
             $table->json('metric_data')->nullable(); // Additional metric data
-            $table->timestamp('calculated_at');
+            $table->timestamp('calculated_at')->nullable();
             
-            $table->unique(['metric_type', 'target_type', 'target_id', 'metric_date']);
+            $table->unique(['metric_type', 'target_type', 'target_id', 'metric_date'], 'social_metrics_unique');
             $table->index(['metric_type', 'metric_date']);
             $table->index(['target_type', 'target_id']);
             $table->index(['metric_date', 'metric_value']);

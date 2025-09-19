@@ -28,7 +28,6 @@ return new class extends Migration
             $table->index('user_id');
             $table->index('story_id');
             $table->index('episode_id');
-            $table->check('rating >= 1 AND rating <= 5');
         });
     }
 

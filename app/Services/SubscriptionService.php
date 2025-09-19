@@ -15,32 +15,32 @@ class SubscriptionService
      * Available subscription plans
      */
     const PLANS = [
-        'monthly' => [
-            'name' => 'اشتراک ماهانه',
+        '1month' => [
+            'name' => 'اشتراک یک ماهه',
             'duration_days' => 30,
             'price' => 50000, // IRR
             'description' => 'دسترسی کامل به تمام محتوا برای یک ماه'
         ],
-        'quarterly' => [
+        '3months' => [
             'name' => 'اشتراک سه‌ماهه',
             'duration_days' => 90,
-            'price' => 120000, // IRR
+            'price' => 135000, // IRR
             'description' => 'دسترسی کامل به تمام محتوا برای سه ماه',
+            'discount' => 10 // 10% discount
+        ],
+        '6months' => [
+            'name' => 'اشتراک شش‌ماهه',
+            'duration_days' => 180,
+            'price' => 240000, // IRR
+            'description' => 'دسترسی کامل به تمام محتوا برای شش ماه',
             'discount' => 20 // 20% discount
         ],
-        'yearly' => [
-            'name' => 'اشتراک سالانه',
+        '1year' => [
+            'name' => 'اشتراک یک ساله',
             'duration_days' => 365,
             'price' => 400000, // IRR
             'description' => 'دسترسی کامل به تمام محتوا برای یک سال',
             'discount' => 33 // 33% discount
-        ],
-        'family' => [
-            'name' => 'اشتراک خانوادگی',
-            'duration_days' => 365,
-            'price' => 600000, // IRR
-            'description' => 'دسترسی کامل برای کل خانواده (تا 5 نفر)',
-            'max_users' => 5
         ]
     ];
 

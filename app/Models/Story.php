@@ -5,6 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+// Missing model imports
+use App\Models\Category;
+use App\Models\Person;
+use App\Models\Episode;
+use App\Models\StoryComment;
+use App\Models\Favorite;
+use App\Models\Rating;
+use App\Models\PlayHistory;
+use App\Models\User;
+
 class Story extends Model
 {
     use HasFactory;
@@ -135,6 +145,22 @@ class Story extends Model
     public function episodes()
     {
         return $this->hasMany(Episode::class);
+    }
+
+    /**
+     * Get the comments for the story.
+     */
+    public function comments()
+    {
+        return $this->hasMany(StoryComment::class);
+    }
+
+    /**
+     * Get the approved comments for the story.
+     */
+    public function approvedComments()
+    {
+        return $this->hasMany(StoryComment::class)->approved()->visible()->latest();
     }
 
     /**
@@ -394,5 +420,69 @@ class Story extends Model
             'R' => 'بالای 17 سال',
             default => 'نامشخص'
         };
+    }
+
+    /**
+     * Get Jalali formatted created_at date
+     */
+    public function getJalaliCreatedAtAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatForDisplay($this->created_at, 'Y/m/d');
+    }
+
+    /**
+     * Get Jalali formatted created_at date with Persian month
+     */
+    public function getJalaliCreatedAtWithMonthAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonth($this->created_at);
+    }
+
+    /**
+     * Get Jalali formatted created_at date with Persian month and time
+     */
+    public function getJalaliCreatedAtWithMonthAndTimeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonthAndTime($this->created_at);
+    }
+
+    /**
+     * Get Jalali formatted updated_at date
+     */
+    public function getJalaliUpdatedAtAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatForDisplay($this->updated_at, 'Y/m/d');
+    }
+
+    /**
+     * Get Jalali formatted updated_at date with Persian month
+     */
+    public function getJalaliUpdatedAtWithMonthAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonth($this->updated_at);
+    }
+
+    /**
+     * Get Jalali formatted updated_at date with Persian month and time
+     */
+    public function getJalaliUpdatedAtWithMonthAndTimeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonthAndTime($this->updated_at);
+    }
+
+    /**
+     * Get Jalali relative time for created_at
+     */
+    public function getJalaliCreatedAtRelativeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::getRelativeTime($this->created_at);
+    }
+
+    /**
+     * Get Jalali relative time for updated_at
+     */
+    public function getJalaliUpdatedAtRelativeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::getRelativeTime($this->updated_at);
     }
 }

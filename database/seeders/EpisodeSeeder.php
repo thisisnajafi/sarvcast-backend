@@ -15,7 +15,7 @@ class EpisodeSeeder extends Seeder
     public function run(): void
     {
         $stories = Story::all();
-        $narrators = Person::where('role', 'narrator')->get();
+        $narrators = Person::whereJsonContains('roles', 'narrator')->get();
 
         foreach ($stories as $story) {
             // Create 3-5 episodes for each story

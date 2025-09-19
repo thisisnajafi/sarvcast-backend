@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
-            $table->enum('type', ['monthly', 'quarterly', 'yearly', 'family']);
+            $table->enum('type', ['1month', '3months', '6months', '1year']);
             $table->enum('status', ['active', 'expired', 'cancelled', 'pending', 'trial'])->default('pending');
-            $table->timestamp('start_date');
-            $table->timestamp('end_date');
+            $table->timestamp('start_date')->nullable();
+            $table->timestamp('end_date')->nullable();
             $table->decimal('price', 10, 2);
             $table->string('currency', 3)->default('IRR');
             $table->boolean('auto_renew')->default(true);

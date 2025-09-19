@@ -36,7 +36,7 @@ class AnalyticsController extends Controller
             'active_users_today' => User::whereDate('last_login_at', today())->count(),
             'active_users_this_week' => User::where('last_login_at', '>=', now()->subWeek())->count(),
             'avg_listening_time' => $this->calculateAvgListeningTime(),
-            'plays_today' => PlayHistory::whereDate('created_at', today())->count(),
+            'plays_today' => PlayHistory::whereDate('played_at', today())->count(),
             'monthly_subscriptions' => Subscription::where('plan_id', 'monthly')->where('status', 'active')->count(),
             'yearly_subscriptions' => Subscription::where('plan_id', 'yearly')->where('status', 'active')->count(),
             'cancellation_rate' => $this->calculateCancellationRate(),
@@ -161,8 +161,8 @@ class AnalyticsController extends Controller
      */
     private function calculateAvgListeningTime()
     {
-        $avgTime = PlayHistory::select(DB::raw('AVG(listened_duration) as avg_time'))
-            ->where('created_at', '>=', now()->subMonth())
+        $avgTime = PlayHistory::select(DB::raw('AVG(duration_played) as avg_time'))
+            ->where('played_at', '>=', now()->subMonth())
             ->first();
         
         return $avgTime ? round($avgTime->avg_time / 60, 1) : 0; // Convert to minutes

@@ -39,7 +39,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('achievement_id')->constrained()->onDelete('cascade');
-            $table->timestamp('unlocked_at');
+            $table->timestamp('unlocked_at')->nullable();
             $table->json('progress_data')->nullable(); // Progress data when unlocked
             $table->boolean('is_notified')->default(false); // Whether user was notified
             $table->json('metadata')->nullable(); // Additional unlock data
@@ -77,7 +77,7 @@ return new class extends Migration
             $table->unsignedBigInteger('source_id')->nullable();
             $table->text('description');
             $table->json('metadata')->nullable(); // Additional transaction data
-            $table->timestamp('transacted_at');
+            $table->timestamp('transacted_at')->nullable();
             
             $table->index(['user_id', 'transacted_at']);
             $table->index(['transaction_type', 'transacted_at']);
@@ -112,7 +112,7 @@ return new class extends Migration
             $table->decimal('score', 15, 2); // Score for ranking
             $table->json('score_data')->nullable(); // Detailed score breakdown
             $table->date('period_date'); // Date for the period
-            $table->timestamp('updated_at');
+            $table->timestamp('updated_at')->nullable();
             
             $table->unique(['leaderboard_id', 'user_id', 'period_date']);
             $table->index(['leaderboard_id', 'rank', 'period_date']);
@@ -169,7 +169,7 @@ return new class extends Migration
             $table->string('status'); // active, completed, failed, expired
             $table->json('progress'); // Progress towards objectives
             $table->json('completed_objectives')->nullable(); // Completed objectives
-            $table->timestamp('started_at');
+            $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->json('rewards_claimed')->nullable(); // Rewards claimed
             $table->json('metadata')->nullable(); // Additional participation data
@@ -206,7 +206,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('badge_id')->constrained()->onDelete('cascade');
-            $table->timestamp('earned_at');
+            $table->timestamp('earned_at')->nullable();
             $table->boolean('is_displayed')->default(true); // Whether to display on profile
             $table->json('metadata')->nullable(); // Additional badge data
             
@@ -235,9 +235,9 @@ return new class extends Migration
             $table->date('metric_date');
             $table->integer('metric_value')->default(0);
             $table->json('metric_data')->nullable(); // Additional metric data
-            $table->timestamp('calculated_at');
+            $table->timestamp('calculated_at')->nullable();
             
-            $table->unique(['metric_type', 'target_type', 'target_id', 'metric_date']);
+            $table->unique(['metric_type', 'target_type', 'target_id', 'metric_date'], 'gamification_analytics_unique');
             $table->index(['metric_type', 'metric_date']);
             $table->index(['target_type', 'target_id']);
             $table->index(['metric_date', 'metric_value']);

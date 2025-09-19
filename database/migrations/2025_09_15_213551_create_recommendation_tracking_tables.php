@@ -19,11 +19,11 @@ return new class extends Migration
             $table->string('preference_value'); // ID or value
             $table->decimal('weight', 5, 2)->default(1.00); // Preference weight
             $table->integer('interaction_count')->default(1); // Number of interactions
-            $table->timestamp('last_updated');
+            $table->timestamp('last_updated')->nullable();
             
-            $table->unique(['user_id', 'preference_type', 'preference_value']);
-            $table->index(['user_id', 'preference_type']);
-            $table->index(['preference_type', 'preference_value']);
+            $table->unique(['user_id', 'preference_type', 'preference_value'], 'user_pref_unique');
+            $table->index(['user_id', 'preference_type'], 'user_pref_type_idx');
+            $table->index(['preference_type', 'preference_value'], 'pref_type_value_idx');
         });
 
         // Recommendation sessions table
@@ -33,10 +33,10 @@ return new class extends Migration
             $table->string('session_type'); // personalized, trending, similar, etc.
             $table->json('recommendations'); // Array of recommended story IDs
             $table->json('metadata')->nullable(); // Additional session data
-            $table->timestamp('created_at');
+            $table->timestamp('created_at')->nullable();
             
-            $table->index(['user_id', 'created_at']);
-            $table->index(['session_type', 'created_at']);
+            $table->index(['user_id', 'created_at'], 'rec_sessions_user_idx');
+            $table->index(['session_type', 'created_at'], 'rec_sessions_type_idx');
         });
 
         // Recommendation interactions table
@@ -48,12 +48,12 @@ return new class extends Migration
             $table->string('recommendation_type'); // collaborative, content_based, etc.
             $table->foreignId('session_id')->nullable()->constrained('recommendation_sessions')->onDelete('set null');
             $table->json('context')->nullable(); // Additional context data
-            $table->timestamp('interacted_at');
+            $table->timestamp('interacted_at')->nullable();
             
-            $table->index(['user_id', 'interacted_at']);
-            $table->index(['story_id', 'interacted_at']);
-            $table->index(['interaction_type', 'interacted_at']);
-            $table->index(['recommendation_type', 'interacted_at']);
+            $table->index(['user_id', 'interacted_at'], 'rec_interactions_user_idx');
+            $table->index(['story_id', 'interacted_at'], 'rec_interactions_story_idx');
+            $table->index(['interaction_type', 'interacted_at'], 'rec_interactions_type_idx');
+            $table->index(['recommendation_type', 'interacted_at'], 'rec_interactions_rec_type_idx');
         });
 
         // User similarity matrix table
@@ -63,11 +63,11 @@ return new class extends Migration
             $table->foreignId('similar_user_id')->constrained('users')->onDelete('cascade');
             $table->decimal('similarity_score', 5, 4); // Similarity score (0-1)
             $table->integer('common_items'); // Number of common items
-            $table->timestamp('calculated_at');
+            $table->timestamp('calculated_at')->nullable();
             
             $table->unique(['user_id', 'similar_user_id']);
-            $table->index(['user_id', 'similarity_score']);
-            $table->index(['similar_user_id', 'similarity_score']);
+            $table->index(['user_id', 'similarity_score'], 'user_sim_user_idx');
+            $table->index(['similar_user_id', 'similarity_score'], 'user_sim_similar_idx');
         });
 
         // Content similarity matrix table
@@ -77,12 +77,12 @@ return new class extends Migration
             $table->foreignId('similar_story_id')->constrained('stories')->onDelete('cascade');
             $table->decimal('similarity_score', 5, 4); // Similarity score (0-1)
             $table->string('similarity_type'); // category, director, narrator, content, etc.
-            $table->timestamp('calculated_at');
+            $table->timestamp('calculated_at')->nullable();
             
             $table->unique(['story_id', 'similar_story_id']);
-            $table->index(['story_id', 'similarity_score']);
-            $table->index(['similar_story_id', 'similarity_score']);
-            $table->index(['similarity_type', 'similarity_score']);
+            $table->index(['story_id', 'similarity_score'], 'content_sim_story_idx');
+            $table->index(['similar_story_id', 'similarity_score'], 'content_sim_similar_idx');
+            $table->index(['similarity_type', 'similarity_score'], 'content_sim_type_idx');
         });
 
         // Recommendation feedback table
@@ -94,11 +94,11 @@ return new class extends Migration
             $table->string('feedback_type'); // positive, negative, neutral
             $table->text('feedback_text')->nullable(); // Optional feedback text
             $table->json('metadata')->nullable(); // Additional feedback data
-            $table->timestamp('feedback_at');
+            $table->timestamp('feedback_at')->nullable();
             
-            $table->index(['user_id', 'feedback_at']);
-            $table->index(['story_id', 'feedback_at']);
-            $table->index(['recommendation_type', 'feedback_type']);
+            $table->index(['user_id', 'feedback_at'], 'rec_feedback_user_idx');
+            $table->index(['story_id', 'feedback_at'], 'rec_feedback_story_idx');
+            $table->index(['recommendation_type', 'feedback_type'], 'rec_feedback_type_idx');
         });
 
         // Recommendation performance metrics table
@@ -109,11 +109,11 @@ return new class extends Migration
             $table->decimal('metric_value', 10, 4); // Metric value
             $table->date('metric_date'); // Date for the metric
             $table->json('metadata')->nullable(); // Additional metric data
-            $table->timestamp('calculated_at');
+            $table->timestamp('calculated_at')->nullable();
             
-            $table->unique(['metric_type', 'recommendation_type', 'metric_date']);
-            $table->index(['metric_type', 'metric_date']);
-            $table->index(['recommendation_type', 'metric_date']);
+            $table->unique(['metric_type', 'recommendation_type', 'metric_date'], 'rec_metrics_unique');
+            $table->index(['metric_type', 'metric_date'], 'rec_metrics_type_idx');
+            $table->index(['recommendation_type', 'metric_date'], 'rec_metrics_rec_type_idx');
         });
 
         // User recommendation history table
@@ -127,12 +127,12 @@ return new class extends Migration
             $table->boolean('clicked')->default(false); // Whether user clicked
             $table->boolean('played')->default(false); // Whether user played
             $table->boolean('favorited')->default(false); // Whether user favorited
-            $table->timestamp('recommended_at');
+            $table->timestamp('recommended_at')->nullable();
             
-            $table->index(['user_id', 'recommended_at']);
-            $table->index(['story_id', 'recommended_at']);
-            $table->index(['recommendation_type', 'recommended_at']);
-            $table->index(['clicked', 'recommended_at']);
+            $table->index(['user_id', 'recommended_at'], 'user_rec_hist_user_idx');
+            $table->index(['story_id', 'recommended_at'], 'user_rec_hist_story_idx');
+            $table->index(['recommendation_type', 'recommended_at'], 'user_rec_hist_type_idx');
+            $table->index(['clicked', 'recommended_at'], 'user_rec_hist_clicked_idx');
         });
     }
 

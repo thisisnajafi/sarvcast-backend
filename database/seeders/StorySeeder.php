@@ -15,9 +15,9 @@ class StorySeeder extends Seeder
     public function run(): void
     {
         $categories = Category::all();
-        $directors = Person::where('role', 'director')->get();
-        $authors = Person::where('role', 'author')->get();
-        $writers = Person::where('role', 'writer')->get();
+        $directors = Person::whereJsonContains('roles', 'director')->get();
+        $authors = Person::whereJsonContains('roles', 'author')->get();
+        $writers = Person::whereJsonContains('roles', 'writer')->get();
 
         $stories = [
             [

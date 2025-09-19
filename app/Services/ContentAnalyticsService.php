@@ -512,7 +512,7 @@ class ContentAnalyticsService
     public function getCreatorMetrics($dateFrom, $dateTo): array
     {
         // Director performance
-        $directorPerformance = Person::where('role', 'director')
+        $directorPerformance = Person::whereJsonContains('roles', 'director')
             ->withCount(['stories', 'episodes'])
             ->get()
             ->map(function($director) use ($dateFrom, $dateTo) {
@@ -540,7 +540,7 @@ class ContentAnalyticsService
             ->sortByDesc('plays');
 
         // Narrator performance
-        $narratorPerformance = Person::where('role', 'narrator')
+        $narratorPerformance = Person::whereJsonContains('roles', 'narrator')
             ->withCount(['stories', 'episodes'])
             ->get()
             ->map(function($narrator) use ($dateFrom, $dateTo) {

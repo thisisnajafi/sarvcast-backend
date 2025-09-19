@@ -53,4 +53,68 @@ class Category extends Model
     {
         return $query->orderBy('sort_order');
     }
+
+    /**
+     * Get Jalali formatted created_at date
+     */
+    public function getJalaliCreatedAtAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatForDisplay($this->created_at, 'Y/m/d');
+    }
+
+    /**
+     * Get Jalali formatted created_at date with Persian month
+     */
+    public function getJalaliCreatedAtWithMonthAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonth($this->created_at);
+    }
+
+    /**
+     * Get Jalali formatted created_at date with Persian month and time
+     */
+    public function getJalaliCreatedAtWithMonthAndTimeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonthAndTime($this->created_at);
+    }
+
+    /**
+     * Get Jalali formatted updated_at date
+     */
+    public function getJalaliUpdatedAtAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatForDisplay($this->updated_at, 'Y/m/d');
+    }
+
+    /**
+     * Get Jalali formatted updated_at date with Persian month
+     */
+    public function getJalaliUpdatedAtWithMonthAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonth($this->updated_at);
+    }
+
+    /**
+     * Get Jalali formatted updated_at date with Persian month and time
+     */
+    public function getJalaliUpdatedAtWithMonthAndTimeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonthAndTime($this->updated_at);
+    }
+
+    /**
+     * Get Jalali relative time for created_at
+     */
+    public function getJalaliCreatedAtRelativeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::getRelativeTime($this->created_at);
+    }
+
+    /**
+     * Get Jalali relative time for updated_at
+     */
+    public function getJalaliUpdatedAtRelativeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::getRelativeTime($this->updated_at);
+    }
 }

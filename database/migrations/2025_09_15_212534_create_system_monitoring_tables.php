@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('value', 10, 4); // metric value
             $table->string('unit')->nullable(); // unit of measurement
             $table->json('metadata')->nullable(); // additional data
-            $table->timestamp('recorded_at');
+            $table->timestamp('recorded_at')->nullable();
             
             $table->index(['metric_type', 'recorded_at']);
             $table->index(['metric_name', 'recorded_at']);
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->string('user_id')->nullable();
             $table->json('request_data')->nullable(); // request payload
             $table->json('response_data')->nullable(); // response payload
-            $table->timestamp('requested_at');
+            $table->timestamp('requested_at')->nullable();
             
             $table->index(['endpoint', 'requested_at']);
             $table->index(['status_code', 'requested_at']);
@@ -62,7 +62,7 @@ return new class extends Migration
             $table->json('context')->nullable(); // additional context
             $table->boolean('resolved')->default(false);
             $table->timestamp('resolved_at')->nullable();
-            $table->timestamp('occurred_at');
+            $table->timestamp('occurred_at')->nullable();
             
             $table->index(['level', 'occurred_at']);
             $table->index(['type', 'occurred_at']);
@@ -84,7 +84,7 @@ return new class extends Migration
             $table->boolean('resolved')->default(false);
             $table->timestamp('resolved_at')->nullable();
             $table->string('resolved_by')->nullable();
-            $table->timestamp('triggered_at');
+            $table->timestamp('triggered_at')->nullable();
             
             $table->index(['severity', 'triggered_at']);
             $table->index(['acknowledged', 'triggered_at']);
@@ -103,7 +103,7 @@ return new class extends Migration
             $table->integer('status_code')->nullable(); // HTTP status code
             $table->text('error_message')->nullable(); // error details
             $table->json('metadata')->nullable(); // additional data
-            $table->timestamp('checked_at');
+            $table->timestamp('checked_at')->nullable();
             
             $table->index(['service_name', 'checked_at']);
             $table->index(['is_up', 'checked_at']);
@@ -122,7 +122,7 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // additional data
             $table->boolean('blocked')->default(false);
             $table->timestamp('blocked_at')->nullable();
-            $table->timestamp('occurred_at');
+            $table->timestamp('occurred_at')->nullable();
             
             $table->index(['event_type', 'occurred_at']);
             $table->index(['severity', 'occurred_at']);
@@ -139,7 +139,7 @@ return new class extends Migration
             $table->integer('rows_affected')->nullable();
             $table->string('connection_name')->nullable();
             $table->json('bindings')->nullable(); // query bindings
-            $table->timestamp('executed_at');
+            $table->timestamp('executed_at')->nullable();
             
             $table->index(['execution_time', 'executed_at']);
             $table->index('executed_at');
@@ -153,7 +153,7 @@ return new class extends Migration
             $table->decimal('value', 10, 4); // benchmark value
             $table->string('unit'); // unit of measurement
             $table->json('metadata')->nullable(); // additional data
-            $table->timestamp('measured_at');
+            $table->timestamp('measured_at')->nullable();
             
             $table->index(['benchmark_name', 'measured_at']);
             $table->index(['component', 'measured_at']);

@@ -25,7 +25,11 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/',
+            'phone_number' => [
+                'required',
+                'string',
+                'regex:/^0[0-9]{10}$/'
+            ],
             'password' => 'required|string',
         ]);
 
@@ -58,9 +62,8 @@ class AuthController extends Controller
         // Update last login
         $user->update(['last_login_at' => now()]);
 
-        // Create token and store in session
-        $token = $user->createToken('admin-web-token')->plainTextToken;
-        session(['admin_token' => $token]);
+        // Login the user using web guard
+        Auth::guard('web')->login($user);
 
         return redirect()->route('admin.dashboard')
             ->with('success', 'ورود با موفقیت انجام شد');
@@ -71,19 +74,12 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $token = session('admin_token');
-        
-        if ($token) {
-            // Revoke token
-            $user = $request->user();
-            if ($user) {
-                $user->tokens()->where('name', 'admin-web-token')->delete();
-            }
-        }
+        // Logout the user
+        Auth::guard('web')->logout();
 
         // Clear session
-        session()->forget('admin_token');
-        session()->flush();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('admin.auth.login')
             ->with('success', 'خروج با موفقیت انجام شد');

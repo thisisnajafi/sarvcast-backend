@@ -125,6 +125,12 @@ docker-compose -f docker-compose.production.yml up -d mysql redis
 sleep 30
 docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan migrate --force
 
+# Run specific migrations for new features
+log "Running migrations for new features..."
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan migrate --path=database/migrations/2025_09_15_234038_create_image_timelines_table.php --force
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan migrate --path=database/migrations/2025_09_15_234833_create_story_comments_table.php --force
+docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan migrate --path=database/migrations/2025_09_16_000325_add_use_image_timeline_to_episodes_table.php --force
+
 # Seed database
 log "Seeding database..."
 docker-compose -f docker-compose.production.yml exec -T php-fpm php artisan db:seed --force
@@ -149,6 +155,29 @@ if curl -f http://localhost/health > /dev/null 2>&1; then
     success "Application is healthy"
 else
     error "Health check failed"
+fi
+
+# Test new features
+log "Testing new features..."
+log "Testing Image Timeline endpoints..."
+if curl -f -H "Accept: application/json" http://localhost/api/v1/episodes/1/image-timeline > /dev/null 2>&1; then
+    success "Image Timeline API is accessible"
+else
+    warning "Image Timeline API test failed (may be expected if no data)"
+fi
+
+log "Testing Story Comments endpoints..."
+if curl -f -H "Accept: application/json" http://localhost/api/v1/stories/1/comments > /dev/null 2>&1; then
+    success "Story Comments API is accessible"
+else
+    warning "Story Comments API test failed (may be expected if no data)"
+fi
+
+log "Testing Admin Timeline interface..."
+if curl -f http://localhost/admin/timeline > /dev/null 2>&1; then
+    success "Admin Timeline interface is accessible"
+else
+    warning "Admin Timeline interface test failed"
 fi
 
 # Setup monitoring
@@ -229,10 +258,14 @@ echo "   • SSL: Enabled"
 echo "   • Monitoring: Enabled"
 echo "   • Backup: Configured"
 echo "   • Logs: /var/log/sarvcast/"
+echo "   • New Features: Image Timeline, Story Comments"
+echo "   • Authentication: Persian Phone Numbers"
+echo "   • Premium Access: Enabled"
 echo ""
 echo "🔗 Access URLs:"
 echo "   • Application: https://$DOMAIN"
 echo "   • Admin Panel: https://$DOMAIN/admin"
+echo "   • Admin Timeline: https://$DOMAIN/admin/timeline"
 echo "   • API: https://$DOMAIN/api/v1"
 echo "   • Monitoring: http://$DOMAIN:3000 (Grafana)"
 echo "   • Metrics: http://$DOMAIN:9090 (Prometheus)"
@@ -240,9 +273,15 @@ echo ""
 echo "📝 Next Steps:"
 echo "   1. Update .env file with production values"
 echo "   2. Configure DNS to point to this server"
-echo "   3. Test all functionality"
+echo "   3. Test all functionality including new features:"
+echo "      - Image Timeline management"
+echo "      - Story Comments system"
+echo "      - Persian phone authentication"
+echo "      - Premium content access"
 echo "   4. Setup monitoring alerts"
 echo "   5. Configure backup verification"
+echo "   6. Test admin timeline interface"
+echo "   7. Verify mobile app integration"
 echo ""
 echo "📚 Documentation:"
 echo "   • Logs: tail -f $LOG_FILE"

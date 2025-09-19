@@ -7,6 +7,12 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">{{ $episode->title }}</h1>
         <div class="flex space-x-4 space-x-reverse">
+            <a href="{{ route('admin.episodes.voice-actors.index', $episode) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-200 flex items-center">
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                </svg>
+                مدیریت صداپیشگان
+            </a>
             <a href="{{ route('admin.episodes.edit', $episode) }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
                 ویرایش
             </a>
@@ -90,6 +96,55 @@
                     </div>
                 </div>
             @endif
+
+            <!-- Voice Actors -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">صداپیشگان</h3>
+                    <a href="{{ route('admin.episodes.voice-actors.index', $episode) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        مدیریت صداپیشگان →
+                    </a>
+                </div>
+                @if($episode->voiceActors->count() > 0)
+                    <div class="space-y-3">
+                        @foreach($episode->voiceActors as $voiceActor)
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                        <img src="{{ $voiceActor->person->image_url ?: '/images/default-avatar.png' }}" 
+                                             alt="{{ $voiceActor->person->name }}" 
+                                             class="w-10 h-10 rounded-full object-cover"
+                                             onerror="this.src='/images/default-avatar.png'">
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">{{ $voiceActor->person->name }}</div>
+                                        <div class="text-xs text-gray-500">{{ $voiceActor->role }}</div>
+                                    </div>
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-xs text-gray-500">{{ gmdate('i:s', $voiceActor->start_time) }} - {{ gmdate('i:s', $voiceActor->end_time) }}</div>
+                                    @if($voiceActor->is_primary)
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">اصلی</span>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-8">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        <p class="text-sm text-gray-500 mb-4">هیچ صداپیشه‌ای برای این اپیزود تعریف نشده است</p>
+                        <a href="{{ route('admin.episodes.voice-actors.create', $episode) }}" class="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors duration-200">
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            افزودن صداپیشه
+                        </a>
+                    </div>
+                @endif
+            </div>
 
             <!-- Play History -->
             <div class="bg-white rounded-lg shadow-sm p-6">

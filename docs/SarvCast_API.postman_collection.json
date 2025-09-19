@@ -1,0 +1,418 @@
+{
+    "info": {
+        "name": "SarvCast API",
+        "description": "Complete API collection for SarvCast platform",
+        "version": "1.0.0",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{access_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "https://sarvcast.com/api/v1",
+            "type": "string"
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"John Doe\",\n    \"phone\": \"+989123456789\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"email\": \"john@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/register",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "register"]
+                        }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"phone\": \"+989123456789\",\n    \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "logout"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Stories",
+            "item": [
+                {
+                    "name": "Get Stories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/stories?page=1&per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["stories"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Story Details",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/stories/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["stories", "1"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Episodes",
+            "item": [
+                {
+                    "name": "Get Episodes",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/episodes?story_id=1",
+                            "host": ["{{base_url}}"],
+                            "path": ["episodes"],
+                            "query": [
+                                {
+                                    "key": "story_id",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Play Episode",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/episodes/1/play",
+                            "host": ["{{base_url}}"],
+                            "path": ["episodes", "1", "play"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "User",
+            "item": [
+                {
+                    "name": "Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/user",
+                            "host": ["{{base_url}}"],
+                            "path": ["user"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"John Smith\",\n    \"email\": \"johnsmith@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/user",
+                            "host": ["{{base_url}}"],
+                            "path": ["user"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Favorites",
+            "item": [
+                {
+                    "name": "Toggle Favorite",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"story_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/favorites/toggle",
+                            "host": ["{{base_url}}"],
+                            "path": ["favorites", "toggle"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Favorites",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/favorites",
+                            "host": ["{{base_url}}"],
+                            "path": ["favorites"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Search",
+            "item": [
+                {
+                    "name": "Global Search",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/search?q=magic&type=stories",
+                            "host": ["{{base_url}}"],
+                            "path": ["search"],
+                            "query": [
+                                {
+                                    "key": "q",
+                                    "value": "magic"
+                                },
+                                {
+                                    "key": "type",
+                                    "value": "stories"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Health Check",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/health",
+                    "host": ["{{base_url}}"],
+                    "path": ["health"]
+                }
+            }
+        },
+        {
+            "name": "Image Timeline",
+            "item": [
+                {
+                    "name": "Get Episode Timeline",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/episodes/1/image-timeline",
+                            "host": ["{{base_url}}"],
+                            "path": ["episodes", "1", "image-timeline"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Timeline",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"image_timeline\": [\n        {\n            \"start_time\": 0,\n            \"end_time\": 10,\n            \"image_url\": \"https://cdn.sarvcast.com/images/episode_1_scene_1.jpg\"\n        },\n        {\n            \"start_time\": 11,\n            \"end_time\": 20,\n            \"image_url\": \"https://cdn.sarvcast.com/images/episode_1_scene_2.jpg\"\n        }\n    ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/episodes/1/image-timeline",
+                            "host": ["{{base_url}}"],
+                            "path": ["episodes", "1", "image-timeline"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Image for Time",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/episodes/1/image-for-time?time=15",
+                            "host": ["{{base_url}}"],
+                            "path": ["episodes", "1", "image-for-time"],
+                            "query": [
+                                {
+                                    "key": "time",
+                                    "value": "15"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Story Comments",
+            "item": [
+                {
+                    "name": "Get Story Comments",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/stories/1/comments?page=1&per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["stories", "1", "comments"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Add Comment",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"comment\": \"داستان بسیار زیبا و آموزنده بود\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/stories/1/comments",
+                            "host": ["{{base_url}}"],
+                            "path": ["stories", "1", "comments"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get My Comments",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/comments/my-comments?page=1&per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["comments", "my-comments"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Comment",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/comments/1",
+                            "host": ["{{base_url}}"],
+                            "path": ["comments", "1"]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -323,23 +323,23 @@ class SocialController extends Controller
     }
 
     /**
-     * Like comment
+     * Like comment (DISABLED)
      */
-    public function likeComment(Request $request, int $commentId): JsonResponse
-    {
-        try {
-            $userId = auth()->id();
-            $result = $this->socialService->likeComment($userId, $commentId);
+    // public function likeComment(Request $request, int $commentId): JsonResponse
+    // {
+    //     try {
+    //         $userId = auth()->id();
+    //         $result = $this->socialService->likeComment($userId, $commentId);
 
-            return response()->json($result, $result['success'] ? 200 : 400);
+    //         return response()->json($result, $result['success'] ? 200 : 400);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در لایک کردن نظر: ' . $e->getMessage()
-            ], 500);
-        }
-    }
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'خطا در لایک کردن نظر: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
     /**
      * Get user's social statistics

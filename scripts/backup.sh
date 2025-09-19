@@ -50,7 +50,7 @@ BACKUP_PATH="$BACKUP_DIR/$BACKUP_NAME"
 mkdir -p $BACKUP_PATH
 
 log "Creating database backup..."
-# Database backup
+# Database backup (includes new tables: image_timelines, story_comments)
 docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T mysql mysqldump \
     -u sarvcast_user \
     -p$DB_PASSWORD \

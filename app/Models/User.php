@@ -20,6 +20,7 @@ class User extends Authenticatable
     protected $fillable = [
         'email',
         'phone_number',
+        'password',
         'first_name',
         'last_name',
         'profile_image_url',
@@ -31,7 +32,6 @@ class User extends Authenticatable
         'timezone',
         'preferences',
         'last_login_at',
-        'password',
         'registration_source',
         'referral_code',
         'referred_by',
@@ -296,5 +296,69 @@ class User extends Authenticatable
     public function scopeChildren($query)
     {
         return $query->where('role', 'child');
+    }
+
+    /**
+     * Get Jalali formatted created_at date
+     */
+    public function getJalaliCreatedAtAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatForDisplay($this->created_at, 'Y/m/d');
+    }
+
+    /**
+     * Get Jalali formatted created_at date with Persian month
+     */
+    public function getJalaliCreatedAtWithMonthAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonth($this->created_at);
+    }
+
+    /**
+     * Get Jalali formatted created_at date with Persian month and time
+     */
+    public function getJalaliCreatedAtWithMonthAndTimeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::formatWithPersianMonthAndTime($this->created_at);
+    }
+
+    /**
+     * Get Jalali formatted last_login_at date
+     */
+    public function getJalaliLastLoginAtAttribute()
+    {
+        return $this->last_login_at ? \App\Helpers\JalaliHelper::formatForDisplay($this->last_login_at, 'Y/m/d H:i') : null;
+    }
+
+    /**
+     * Get Jalali formatted last_login_at date with Persian month
+     */
+    public function getJalaliLastLoginAtWithMonthAttribute()
+    {
+        return $this->last_login_at ? \App\Helpers\JalaliHelper::formatWithPersianMonth($this->last_login_at) : null;
+    }
+
+    /**
+     * Get Jalali formatted last_login_at date with Persian month and time
+     */
+    public function getJalaliLastLoginAtWithMonthAndTimeAttribute()
+    {
+        return $this->last_login_at ? \App\Helpers\JalaliHelper::formatWithPersianMonthAndTime($this->last_login_at) : null;
+    }
+
+    /**
+     * Get Jalali relative time for created_at
+     */
+    public function getJalaliCreatedAtRelativeAttribute()
+    {
+        return \App\Helpers\JalaliHelper::getRelativeTime($this->created_at);
+    }
+
+    /**
+     * Get Jalali relative time for last_login_at
+     */
+    public function getJalaliLastLoginAtRelativeAttribute()
+    {
+        return $this->last_login_at ? \App\Helpers\JalaliHelper::getRelativeTime($this->last_login_at) : null;
     }
 }

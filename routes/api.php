@@ -16,6 +16,9 @@ use App\Http\Controllers\Api\RecommendationController;
 use App\Http\Controllers\Api\ContentPersonalizationController;
 use App\Http\Controllers\Api\SocialController;
 use App\Http\Controllers\Api\GamificationController;
+use App\Http\Controllers\Api\ImageTimelineController;
+use App\Http\Controllers\Api\EpisodeVoiceActorController;
+use App\Http\Controllers\Api\StoryCommentController;
 use App\Http\Controllers\Admin\PersonController;
 
 /*
@@ -62,12 +65,12 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('people/{person}', [PersonController::class, 'show'])->middleware('cache.api:1800'); // 30 minutes
     Route::get('people/{person}/statistics', [PersonController::class, 'statistics'])->middleware('cache.api:300'); // 5 minutes
     
-    // File upload routes
-    Route::post('upload/image', [FileUploadController::class, 'uploadImage']);
-    Route::post('upload/audio', [FileUploadController::class, 'uploadAudio']);
-    Route::post('upload/document', [FileUploadController::class, 'uploadDocument']);
-    Route::post('upload/multiple', [FileUploadController::class, 'uploadMultiple']);
-    Route::get('upload/config', [FileUploadController::class, 'getUploadConfig']);
+    // File upload routes (DISABLED - Admin only)
+    // Route::post('upload/image', [FileUploadController::class, 'uploadImage']);
+    // Route::post('upload/audio', [FileUploadController::class, 'uploadAudio']);
+    // Route::post('upload/document', [FileUploadController::class, 'uploadDocument']);
+    // Route::post('upload/multiple', [FileUploadController::class, 'uploadMultiple']);
+    // Route::get('upload/config', [FileUploadController::class, 'getUploadConfig']);
     
     // Health check routes
     Route::get('health', [HealthController::class, 'health']);
@@ -135,15 +138,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::put('read-all', [NotificationController::class, 'markAllAsRead']);
     });
 
-    // File upload routes
-    Route::prefix('files')->group(function () {
-        Route::post('upload/image', [FileUploadController::class, 'uploadImage']);
-        Route::post('upload/audio', [FileUploadController::class, 'uploadAudio']);
-        Route::post('upload/file', [FileUploadController::class, 'uploadFile']);
-        Route::delete('delete', [FileUploadController::class, 'deleteFile']);
-        Route::get('info', [FileUploadController::class, 'getFileInfo']);
-        Route::get('config', [FileUploadController::class, 'getStorageConfig']);
-    });
+    // File upload routes (DISABLED - Admin only)
+    // Route::prefix('files')->group(function () {
+    //     Route::post('upload/image', [FileUploadController::class, 'uploadImage']);
+    //     Route::post('upload/audio', [FileUploadController::class, 'uploadAudio']);
+    //     Route::post('upload/file', [FileUploadController::class, 'uploadFile']);
+    //     Route::delete('delete', [FileUploadController::class, 'deleteFile']);
+    //     Route::get('info', [FileUploadController::class, 'getFileInfo']);
+    //     Route::get('config', [FileUploadController::class, 'getStorageConfig']);
+    // });
 
     // Mobile-specific routes
     Route::prefix('mobile')->group(function () {
@@ -178,38 +181,38 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('device/token', [\App\Http\Controllers\Api\MobileController::class, 'updateFcmToken']);
         Route::delete('device/unregister', [\App\Http\Controllers\Api\MobileController::class, 'unregisterDevice']);
         
-        // File upload routes
-        Route::post('upload/image', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadImage']);
-        Route::post('upload/audio', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadAudio']);
-        Route::post('upload/document', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadDocument']);
-        Route::post('upload/multiple', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadMultiple']);
-        Route::delete('upload/delete', [\App\Http\Controllers\Api\FileUploadController::class, 'deleteFile']);
-        Route::get('upload/info', [\App\Http\Controllers\Api\FileUploadController::class, 'getFileInfo']);
-        Route::post('upload/cleanup', [\App\Http\Controllers\Api\FileUploadController::class, 'cleanupTempFiles']);
-        Route::get('upload/config', [\App\Http\Controllers\Api\FileUploadController::class, 'getUploadConfig']);
+        // File upload routes (DISABLED - Admin only)
+        // Route::post('upload/image', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadImage']);
+        // Route::post('upload/audio', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadAudio']);
+        // Route::post('upload/document', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadDocument']);
+        // Route::post('upload/multiple', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadMultiple']);
+        // Route::delete('upload/delete', [\App\Http\Controllers\Api\FileUploadController::class, 'deleteFile']);
+        // Route::get('upload/info', [\App\Http\Controllers\Api\FileUploadController::class, 'getFileInfo']);
+        // Route::post('upload/cleanup', [\App\Http\Controllers\Api\FileUploadController::class, 'cleanupTempFiles']);
+        // Route::get('upload/config', [\App\Http\Controllers\Api\FileUploadController::class, 'getUploadConfig']);
         
-        // Audio processing routes
-        Route::post('audio/process', [\App\Http\Controllers\Api\AudioProcessingController::class, 'processAudio']);
-        Route::post('audio/extract-metadata', [\App\Http\Controllers\Api\AudioProcessingController::class, 'extractMetadata']);
-        Route::post('audio/convert', [\App\Http\Controllers\Api\AudioProcessingController::class, 'convertFormat']);
-        Route::post('audio/normalize', [\App\Http\Controllers\Api\AudioProcessingController::class, 'normalizeAudio']);
-        Route::post('audio/trim', [\App\Http\Controllers\Api\AudioProcessingController::class, 'trimAudio']);
-        Route::post('audio/validate', [\App\Http\Controllers\Api\AudioProcessingController::class, 'validateAudio']);
-        Route::get('audio/stats', [\App\Http\Controllers\Api\AudioProcessingController::class, 'getStats']);
-        Route::post('audio/cleanup', [\App\Http\Controllers\Api\AudioProcessingController::class, 'cleanup']);
+        // Audio processing routes (MOVED TO ADMIN ONLY)
+        // Route::post('audio/process', [\App\Http\Controllers\Api\AudioProcessingController::class, 'processAudio']);
+        // Route::post('audio/extract-metadata', [\App\Http\Controllers\Api\AudioProcessingController::class, 'extractMetadata']);
+        // Route::post('audio/convert', [\App\Http\Controllers\Api\AudioProcessingController::class, 'convertFormat']);
+        // Route::post('audio/normalize', [\App\Http\Controllers\Api\AudioProcessingController::class, 'normalizeAudio']);
+        // Route::post('audio/trim', [\App\Http\Controllers\Api\AudioProcessingController::class, 'trimAudio']);
+        // Route::post('audio/validate', [\App\Http\Controllers\Api\AudioProcessingController::class, 'validateAudio']);
+        // Route::get('audio/stats', [\App\Http\Controllers\Api\AudioProcessingController::class, 'getStats']);
+        // Route::post('audio/cleanup', [\App\Http\Controllers\Api\AudioProcessingController::class, 'cleanup']);
         
-        // Image processing routes
-        Route::post('image/process', [\App\Http\Controllers\Api\ImageProcessingController::class, 'processImage']);
-        Route::post('image/resize', [\App\Http\Controllers\Api\ImageProcessingController::class, 'resizeImage']);
-        Route::post('image/crop', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cropImage']);
-        Route::post('image/watermark', [\App\Http\Controllers\Api\ImageProcessingController::class, 'addWatermark']);
-        Route::post('image/optimize', [\App\Http\Controllers\Api\ImageProcessingController::class, 'optimizeImage']);
-        Route::post('image/thumbnail', [\App\Http\Controllers\Api\ImageProcessingController::class, 'generateThumbnail']);
-        Route::post('image/multiple-sizes', [\App\Http\Controllers\Api\ImageProcessingController::class, 'generateMultipleSizes']);
-        Route::get('image/info', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getImageInfo']);
-        Route::post('image/validate', [\App\Http\Controllers\Api\ImageProcessingController::class, 'validateImage']);
-        Route::get('image/stats', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getStats']);
-        Route::post('image/cleanup', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cleanup']);
+        // Image processing routes (MOVED TO ADMIN ONLY)
+        // Route::post('image/process', [\App\Http\Controllers\Api\ImageProcessingController::class, 'processImage']);
+        // Route::post('image/resize', [\App\Http\Controllers\Api\ImageProcessingController::class, 'resizeImage']);
+        // Route::post('image/crop', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cropImage']);
+        // Route::post('image/watermark', [\App\Http\Controllers\Api\ImageProcessingController::class, 'addWatermark']);
+        // Route::post('image/optimize', [\App\Http\Controllers\Api\ImageProcessingController::class, 'optimizeImage']);
+        // Route::post('image/thumbnail', [\App\Http\Controllers\Api\ImageProcessingController::class, 'generateThumbnail']);
+        // Route::post('image/multiple-sizes', [\App\Http\Controllers\Api\ImageProcessingController::class, 'generateMultipleSizes']);
+        // Route::get('image/info', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getImageInfo']);
+        // Route::post('image/validate', [\App\Http\Controllers\Api\ImageProcessingController::class, 'validateImage']);
+        // Route::get('image/stats', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getStats']);
+        // Route::post('image/cleanup', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cleanup']);
         
         // Favorites routes
         Route::get('favorites', [\App\Http\Controllers\Api\FavoriteController::class, 'index']);
@@ -347,45 +350,61 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('playlists', [SocialController::class, 'createPlaylist']);
         Route::post('playlists/{playlistId}/add', [SocialController::class, 'addToPlaylist']);
         Route::post('comments', [SocialController::class, 'addComment']);
-        Route::post('comments/{commentId}/like', [SocialController::class, 'likeComment']);
+        // Route::post('comments/{commentId}/like', [SocialController::class, 'likeComment']); // DISABLED
         Route::get('stats/{userId}', [SocialController::class, 'getUserSocialStats']);
         Route::get('trending', [SocialController::class, 'getTrendingContent']);
         Route::get('follow-status/{userId}', [SocialController::class, 'checkFollowStatus']);
     });
     
-    // Gamification routes
-    Route::prefix('gamification')->middleware('auth:sanctum')->group(function () {
-        Route::get('profile', [GamificationController::class, 'getUserProfile']);
-        Route::post('award-points', [GamificationController::class, 'awardPoints']);
-        Route::get('leaderboard/{slug}', [GamificationController::class, 'getLeaderboard']);
-        Route::post('leaderboard/{slug}/update', [GamificationController::class, 'updateLeaderboard']);
-        Route::post('streak', [GamificationController::class, 'updateStreak']);
-        Route::get('challenges', [GamificationController::class, 'getAvailableChallenges']);
-        Route::post('challenges/{challengeId}/join', [GamificationController::class, 'joinChallenge']);
-        Route::get('achievements', [GamificationController::class, 'getUserAchievements']);
-        Route::get('badges', [GamificationController::class, 'getUserBadges']);
-        Route::get('streaks', [GamificationController::class, 'getUserStreaks']);
-        Route::get('all-achievements', [GamificationController::class, 'getAllAchievements']);
-        Route::get('all-badges', [GamificationController::class, 'getAllBadges']);
+    // Gamification routes (DISABLED)
+    // Route::prefix('gamification')->middleware('auth:sanctum')->group(function () {
+    //     Route::get('profile', [GamificationController::class, 'getUserProfile']);
+    //     Route::post('award-points', [GamificationController::class, 'awardPoints']);
+    //     Route::get('leaderboard/{slug}', [GamificationController::class, 'getLeaderboard']);
+    //     Route::post('leaderboard/{slug}/update', [GamificationController::class, 'updateLeaderboard']);
+    //     Route::post('streak', [GamificationController::class, 'updateStreak']);
+    //     Route::get('challenges', [GamificationController::class, 'getAvailableChallenges']);
+    //     Route::post('challenges/{challengeId}/join', [GamificationController::class, 'joinChallenge']);
+    //     Route::get('achievements', [GamificationController::class, 'getUserAchievements']);
+    //     Route::get('badges', [GamificationController::class, 'getUserBadges']);
+    //     Route::get('streaks', [GamificationController::class, 'getUserStreaks']);
+    //     Route::get('all-achievements', [GamificationController::class, 'getAllAchievements']);
+    //     Route::get('all-badges', [GamificationController::class, 'getAllBadges']);
+    // });
+    
+    // Voice Actor routes
+    Route::prefix('episodes')->middleware('auth:sanctum')->group(function () {
+        Route::get('{episodeId}/voice-actors', [EpisodeVoiceActorController::class, 'getVoiceActors']);
+        Route::post('{episodeId}/voice-actors', [EpisodeVoiceActorController::class, 'addVoiceActor']);
+        Route::put('{episodeId}/voice-actors/{voiceActorId}', [EpisodeVoiceActorController::class, 'updateVoiceActor']);
+        Route::delete('{episodeId}/voice-actors/{voiceActorId}', [EpisodeVoiceActorController::class, 'deleteVoiceActor']);
+        Route::get('{episodeId}/voice-actor-for-time', [EpisodeVoiceActorController::class, 'getVoiceActorForTime']);
+        Route::get('{episodeId}/voice-actors-at-time', [EpisodeVoiceActorController::class, 'getVoiceActorsAtTime']);
+        Route::get('{episodeId}/voice-actors-by-role', [EpisodeVoiceActorController::class, 'getVoiceActorsByRole']);
+        Route::get('{episodeId}/voice-actor-statistics', [EpisodeVoiceActorController::class, 'getVoiceActorStatistics']);
+    });
+
+    // Enhanced Image Timeline routes (User read-only access)
+    Route::prefix('episodes')->middleware('auth:sanctum')->group(function () {
+        Route::get('{episodeId}/image-timeline', [ImageTimelineController::class, 'getTimeline']);
+        Route::get('{episodeId}/image-timeline-with-voice-actors', [ImageTimelineController::class, 'getTimelineWithVoiceActors']);
+        Route::get('{episodeId}/image-timeline-for-voice-actor', [ImageTimelineController::class, 'getTimelineForVoiceActor']);
+        Route::get('{episodeId}/key-frames', [ImageTimelineController::class, 'getKeyFrames']);
+        Route::get('{episodeId}/timeline-by-transition-type', [ImageTimelineController::class, 'getTimelineByTransitionType']);
+        Route::get('{episodeId}/image-for-time', [ImageTimelineController::class, 'getImageForTime']);
+        Route::get('{episodeId}/timeline-statistics', [ImageTimelineController::class, 'getStatistics']);
+    });
+    
+    // Story Comments routes
+    Route::prefix('stories')->middleware('auth:sanctum')->group(function () {
+        Route::get('{storyId}/comments', [StoryCommentController::class, 'getComments']);
+        Route::post('{storyId}/comments', [StoryCommentController::class, 'addComment']);
+        Route::get('{storyId}/comments/statistics', [StoryCommentController::class, 'getCommentStatistics']);
+    });
+    
+    Route::prefix('comments')->middleware('auth:sanctum')->group(function () {
+        Route::get('my-comments', [StoryCommentController::class, 'getUserComments']);
+        Route::delete('{commentId}', [StoryCommentController::class, 'deleteComment']);
     });
 });
 
-// Admin routes
-Route::prefix('v1/admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
-    
-    Route::get('dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'stats']);
-    
-    Route::apiResource('stories', \App\Http\Controllers\Admin\StoryController::class);
-    Route::apiResource('episodes', \App\Http\Controllers\Admin\EpisodeController::class);
-    Route::apiResource('categories', \App\Http\Controllers\Admin\CategoryController::class);
-    Route::apiResource('users', \App\Http\Controllers\Admin\UserController::class);
-    
-    Route::get('subscriptions', [\App\Http\Controllers\Admin\SubscriptionController::class, 'index']);
-    Route::get('analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index']);
-    
-    // Admin In-App Notifications routes
-    Route::post('notifications/create', [\App\Http\Controllers\Api\InAppNotificationController::class, 'create']);
-    Route::post('notifications/send-multiple', [\App\Http\Controllers\Api\InAppNotificationController::class, 'sendToMultiple']);
-    Route::get('notifications/statistics', [\App\Http\Controllers\Api\InAppNotificationController::class, 'statistics']);
-    Route::post('notifications/cleanup-expired', [\App\Http\Controllers\Api\InAppNotificationController::class, 'cleanupExpired']);
-});

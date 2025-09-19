@@ -69,7 +69,7 @@
                         شماره تلفن
                     </label>
                     <input 
-                        type="tel" 
+                        type="string" 
                         id="phone_number" 
                         name="phone_number" 
                         value="{{ old('phone_number') }}"
@@ -124,16 +124,14 @@
         document.getElementById('phone_number').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             
-            if (value.startsWith('0')) {
-                value = value.substring(1);
+            // Allow 11-digit Iranian phone numbers starting with 0
+            if (value.length > 11) {
+                value = value.substring(0, 11);
             }
             
-            if (value.length > 0 && !value.startsWith('9')) {
-                value = '9' + value;
-            }
-            
-            if (value.length > 10) {
-                value = value.substring(0, 10);
+            // Ensure it starts with 0 for Iranian numbers
+            if (value.length > 0 && !value.startsWith('0')) {
+                value = '0' + value;
             }
             
             e.target.value = value;

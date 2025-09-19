@@ -141,7 +141,7 @@ class EpisodeController extends Controller
         
         // Get filter options
         $stories = Story::where('status', 'published')->get();
-        $narrators = Person::where('role', 'narrator')->get();
+        $narrators = Person::whereJsonContains('roles', 'narrator')->get();
         
         // Get statistics
         $stats = [

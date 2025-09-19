@@ -9,11 +9,16 @@ https://api.sarvcast.com/v1
 ```
 
 ## Authentication
-SarvCast uses Laravel Sanctum for API authentication. Include the Bearer token in the Authorization header:
+SarvCast uses Laravel Sanctum for API authentication with Persian phone numbers as unique identifiers. Include the Bearer token in the Authorization header:
 
 ```
 Authorization: Bearer {token}
 ```
+
+### Phone Number Format
+- Persian phone numbers are used as unique identifiers
+- Format: +989123456789 (Iran country code + 9 + 9-digit number)
+- Phone numbers are validated and normalized during registration
 
 ## Response Format
 All API responses follow a consistent format:
@@ -3233,6 +3238,586 @@ GET /episodes/{id}
         "narrator": {
             "id": 1,
             "name": "مریم کریمی"
+        }
+    }
+}
+```
+
+#### Get Episode with Image Timeline
+```http
+GET /episodes/{id}?include_timeline=true
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "episode": {
+            "id": 1,
+            "title": "قسمت 1: شروع ماجرا",
+            "episode_number": 1,
+            "description": "قسمت اول از داستان سفیدبرفی و هفت کوتوله",
+            "duration": 25,
+            "is_free": true,
+            "play_count": 450,
+            "audio_url": "https://cdn.sarvcast.com/episodes/episode_1.mp3",
+            "use_image_timeline": true,
+            "created_at": "2024-01-01T00:00:00.000000Z"
+        },
+        "image_timeline": [
+            {
+                "id": 1,
+                "start_time": 0,
+                "end_time": 10,
+                "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_1.jpg",
+                "image_order": 1
+            },
+            {
+                "id": 2,
+                "start_time": 11,
+                "end_time": 20,
+                "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_2.jpg",
+                "image_order": 2
+            }
+        ]
+    }
+}
+```
+
+### Voice Actor Management
+
+#### Get Episode Voice Actors
+```http
+GET /episodes/{episodeId}/voice-actors
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "صداپیشگان قسمت دریافت شد",
+    "data": {
+        "episode_id": 1,
+        "voice_actors": [
+            {
+                "id": 1,
+                "person": {
+                    "id": 5,
+                    "name": "احمد رضایی",
+                    "image_url": "https://example.com/images/ahmad.jpg",
+                    "bio": "صداپیشه با تجربه"
+                },
+                "role": "narrator",
+                "character_name": null,
+                "start_time": 0,
+                "end_time": 120,
+                "voice_description": "صدای گرم و دوستانه",
+                "is_primary": true,
+                "duration": 120,
+                "start_time_formatted": "00:00",
+                "end_time_formatted": "02:00"
+            }
+        ],
+        "total_duration": 300,
+        "has_multiple_voice_actors": true,
+        "voice_actor_count": 2
+    }
+}
+```
+
+#### Add Voice Actor to Episode
+```http
+POST /episodes/{episodeId}/voice-actors
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+    "person_id": 5,
+    "role": "narrator",
+    "character_name": null,
+    "start_time": 0,
+    "end_time": 120,
+    "voice_description": "صدای گرم و دوستانه",
+    "is_primary": true
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "صداپیشه با موفقیت اضافه شد",
+    "data": {
+        "id": 1,
+        "person": {
+            "id": 5,
+            "name": "احمد رضایی",
+            "image_url": "https://example.com/images/ahmad.jpg",
+            "bio": "صداپیشه با تجربه"
+        },
+        "role": "narrator",
+        "character_name": null,
+        "start_time": 0,
+        "end_time": 120,
+        "voice_description": "صدای گرم و دوستانه",
+        "is_primary": true,
+        "duration": 120
+    }
+}
+```
+
+#### Update Voice Actor
+```http
+PUT /episodes/{episodeId}/voice-actors/{voiceActorId}
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:** Same as Add Voice Actor
+
+#### Delete Voice Actor
+```http
+DELETE /episodes/{episodeId}/voice-actors/{voiceActorId}
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "صداپیشه با موفقیت حذف شد"
+}
+```
+
+#### Get Voice Actor for Specific Time
+```http
+GET /episodes/{episodeId}/voice-actor-for-time?time=60
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "صداپیشه برای زمان مشخص شده دریافت شد",
+    "data": {
+        "id": 1,
+        "person": {
+            "id": 5,
+            "name": "احمد رضایی",
+            "image_url": "https://example.com/images/ahmad.jpg"
+        },
+        "role": "narrator",
+        "character_name": null,
+        "start_time": 0,
+        "end_time": 120,
+        "voice_description": "صدای گرم و دوستانه",
+        "is_primary": true,
+        "duration": 120
+    }
+}
+```
+
+#### Get All Voice Actors at Specific Time
+```http
+GET /episodes/{episodeId}/voice-actors-at-time?time=60
+```
+
+#### Get Voice Actors by Role
+```http
+GET /episodes/{episodeId}/voice-actors-by-role?role=narrator
+```
+
+#### Get Voice Actor Statistics
+```http
+GET /episodes/{episodeId}/voice-actor-statistics
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "آمار صداپیشگان قسمت دریافت شد",
+    "data": {
+        "total_voice_actors": 2,
+        "total_duration": 300,
+        "roles": {
+            "narrator": {
+                "count": 1,
+                "total_duration": 120,
+                "voice_actors": [...]
+            },
+            "character": {
+                "count": 1,
+                "total_duration": 180,
+                "voice_actors": [...]
+            }
+        },
+        "primary_voice_actor": {...},
+        "voice_actor_timeline": [...]
+    }
+}
+```
+
+### Enhanced Image Timeline Management
+
+#### Get Image Timeline for Episode
+```http
+GET /episodes/{episodeId}/image-timeline?include_voice_actors=true
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "تایم‌لاین تصاویر دریافت شد",
+    "data": {
+        "episode_id": 1,
+        "image_timeline": [
+            {
+                "id": 1,
+                "start_time": 0,
+                "end_time": 45,
+                "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_1.jpg",
+                "image_order": 1,
+                "scene_description": "شروع داستان در جنگل",
+                "transition_type": "fade",
+                "is_key_frame": true,
+                "voice_actor": {
+                    "id": 1,
+                    "person": {
+                        "id": 5,
+                        "name": "احمد رضایی"
+                    },
+                    "role": "narrator",
+                    "character_name": null
+                },
+                "start_time_formatted": "00:00",
+                "end_time_formatted": "00:45",
+                "duration": 45
+            }
+        ]
+    }
+}
+```
+
+#### Get Timeline with Voice Actor Information
+```http
+GET /episodes/{episodeId}/image-timeline-with-voice-actors
+```
+
+#### Get Timeline for Specific Voice Actor
+```http
+GET /episodes/{episodeId}/image-timeline-for-voice-actor?voice_actor_id=1
+```
+
+#### Get Key Frames
+```http
+GET /episodes/{episodeId}/key-frames
+```
+
+#### Get Timeline by Transition Type
+```http
+GET /episodes/{episodeId}/timeline-by-transition-type?transition_type=fade
+```
+
+#### Create/Update Image Timeline
+```http
+POST /episodes/{episodeId}/image-timeline
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+    "image_timeline": [
+        {
+            "start_time": 0,
+            "end_time": 45,
+            "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_1.jpg",
+            "voice_actor_id": 1,
+            "scene_description": "شروع داستان در جنگل",
+            "transition_type": "fade",
+            "is_key_frame": true
+        },
+        {
+            "start_time": 46,
+            "end_time": 90,
+            "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_2.jpg",
+            "voice_actor_id": 2,
+            "scene_description": "ملاقات با شاهزاده",
+            "transition_type": "slide",
+            "is_key_frame": false
+        }
+    ]
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "تایم‌لاین تصاویر با موفقیت ذخیره شد",
+    "data": {
+        "episode_id": 1,
+        "timeline_count": 2
+    }
+}
+```
+
+#### Delete Image Timeline
+```http
+DELETE /episodes/{episodeId}/image-timeline
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "تایم‌لاین تصاویر با موفقیت حذف شد"
+}
+```
+
+#### Get Image for Specific Time
+```http
+GET /episodes/{episodeId}/image-for-time?time=15
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "تصویر برای زمان مشخص شده یافت شد",
+    "data": {
+        "episode_id": 1,
+        "time": 15,
+        "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_2.jpg"
+    }
+}
+```
+
+### Story Comments
+
+#### Get Story Comments
+```http
+GET /stories/{storyId}/comments
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `per_page`: Items per page (default: 20, max: 100)
+- `include_pending`: Include pending comments (default: false)
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "نظرات داستان دریافت شد",
+    "data": {
+        "story_id": 1,
+        "comments": [
+            {
+                "id": 1,
+                "comment": "داستان بسیار زیبا و آموزنده بود",
+                "is_approved": true,
+                "is_visible": true,
+                "created_at": "2024-01-01T00:00:00.000000Z",
+                "time_since_created": "2 ساعت پیش",
+                "user": {
+                    "id": 1,
+                    "name": "علی احمدی",
+                    "avatar": "https://cdn.sarvcast.com/avatars/user_1.jpg"
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "per_page": 20,
+            "total": 1,
+            "last_page": 1,
+            "has_more": false
+        }
+    }
+}
+```
+
+#### Add Comment to Story
+```http
+POST /stories/{storyId}/comments
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+    "comment": "داستان بسیار زیبا و آموزنده بود"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "نظر شما با موفقیت ارسال شد و در انتظار تایید است",
+    "data": {
+        "comment": {
+            "id": 1,
+            "comment": "داستان بسیار زیبا و آموزنده بود",
+            "is_approved": false,
+            "is_visible": true,
+            "created_at": "2024-01-01T00:00:00.000000Z",
+            "time_since_created": "همین الان",
+            "user": {
+                "id": 1,
+                "name": "علی احمدی",
+                "avatar": "https://cdn.sarvcast.com/avatars/user_1.jpg"
+            }
+        }
+    }
+}
+```
+
+#### Get User's Comments
+```http
+GET /comments/my-comments
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `per_page`: Items per page (default: 20, max: 100)
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "نظرات کاربر دریافت شد",
+    "data": {
+        "comments": [
+            {
+                "id": 1,
+                "comment": "داستان بسیار زیبا و آموزنده بود",
+                "is_approved": true,
+                "is_visible": true,
+                "created_at": "2024-01-01T00:00:00.000000Z",
+                "time_since_created": "2 ساعت پیش",
+                "story": {
+                    "id": 1,
+                    "title": "سفیدبرفی و هفت کوتوله",
+                    "image_url": "https://cdn.sarvcast.com/stories/story_1.jpg"
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "per_page": 20,
+            "total": 1,
+            "last_page": 1,
+            "has_more": false
+        }
+    }
+}
+```
+
+#### Delete User's Comment
+```http
+DELETE /comments/{commentId}
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "نظر با موفقیت حذف شد"
+}
+```
+
+#### Get Comment Statistics
+```http
+GET /stories/{storyId}/comments/statistics
+```
+
+**Headers:**
+```
+Authorization: Bearer {token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "آمار نظرات داستان دریافت شد",
+    "data": {
+        "story_id": 1,
+        "statistics": {
+            "total_comments": 25,
+            "approved_comments": 20,
+            "pending_comments": 5,
+            "recent_comments": 3
         }
     }
 }

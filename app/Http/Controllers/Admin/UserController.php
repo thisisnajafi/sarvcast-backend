@@ -149,7 +149,7 @@ class UserController extends Controller
                 }])->orderBy('total_payments', $direction);
                 break;
             case 'total_play_time':
-                $query->withSum('playHistories', 'duration')->orderBy('play_histories_sum_duration', $direction);
+                $query->withSum('playHistories', 'duration_played')->orderBy('play_histories_sum_duration_played', $direction);
                 break;
             default:
                 $query->orderBy('created_at', $direction);
@@ -178,7 +178,7 @@ class UserController extends Controller
             })->count(),
             'total_revenue' => Payment::where('status', 'completed')->sum('amount'),
             'avg_payment' => Payment::where('status', 'completed')->avg('amount'),
-            'total_play_time' => PlayHistory::sum('duration'),
+            'total_play_time' => PlayHistory::sum('duration_played'),
             'total_ratings' => Rating::count(),
             'total_favorites' => Favorite::count()
         ];
@@ -566,7 +566,7 @@ class UserController extends Controller
             'total_revenue' => Payment::where('status', 'completed')->sum('amount'),
             'avg_payment_amount' => round(Payment::where('status', 'completed')->avg('amount'), 2),
             'total_payments' => Payment::where('status', 'completed')->count(),
-            'total_play_time' => PlayHistory::sum('duration'),
+            'total_play_time' => PlayHistory::sum('duration_played'),
             'total_ratings' => Rating::count(),
             'total_favorites' => Favorite::count(),
             'users_by_status' => User::selectRaw('status, COUNT(*) as count')
@@ -591,8 +591,8 @@ class UserController extends Controller
             ->orderBy('total_payments', 'desc')
             ->limit(10)
             ->get(),
-            'most_active_users' => User::withSum('playHistories', 'duration')
-                ->orderBy('play_histories_sum_duration', 'desc')
+            'most_active_users' => User::withSum('playHistories', 'duration_played')
+                ->orderBy('play_histories_sum_duration_played', 'desc')
                 ->limit(10)
                 ->get()
         ];
@@ -636,7 +636,7 @@ class UserController extends Controller
                 ->limit(20)
                 ->get(),
             'stats' => [
-                'total_play_time' => $user->playHistories()->sum('duration'),
+                'total_play_time' => $user->playHistories()->sum('duration_played'),
                 'total_episodes_played' => $user->playHistories()->distinct('episode_id')->count(),
                 'total_stories_played' => $user->playHistories()->join('episodes', 'play_histories.episode_id', '=', 'episodes.id')
                     ->distinct('episodes.story_id')->count(),
@@ -731,7 +731,7 @@ class UserController extends Controller
                 'subscriptions' => $user->subscriptions,
                 'payments' => $user->payments,
                 'stats' => [
-                    'total_play_time' => $user->playHistories()->sum('duration'),
+                    'total_play_time' => $user->playHistories()->sum('duration_played'),
                     'total_favorites' => $user->favorites()->count(),
                     'total_ratings' => $user->ratings()->count(),
                     'total_payments' => $user->payments()->where('status', 'completed')->count(),

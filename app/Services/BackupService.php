@@ -2,503 +2,592 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 use Carbon\Carbon;
+use ZipArchive;
 
 class BackupService
 {
     /**
-     * Create database backup
-     */
-    public function createDatabaseBackup(): array
-    {
-        try {
-            $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
-            $backupFileName = "database_backup_{$timestamp}.sql";
-            $backupPath = "backups/database/{$backupFileName}";
-            
-            // Get database configuration
-            $config = config('database.connections.mysql');
-            $host = $config['host'];
-            $port = $config['port'];
-            $database = $config['database'];
-            $username = $config['username'];
-            $password = $config['password'];
-            
-            // Create mysqldump command
-            $command = "mysqldump -h {$host} -P {$port} -u {$username} -p{$password} {$database}";
-            
-            // Execute backup command
-            $result = Process::run($command);
-            
-            if ($result->successful()) {
-                // Store backup file
-                Storage::put($backupPath, $result->output());
-                
-                $backupInfo = [
-                    'type' => 'database',
-                    'filename' => $backupFileName,
-                    'path' => $backupPath,
-                    'size' => Storage::size($backupPath),
-                    'created_at' => now(),
-                    'status' => 'success',
-                ];
-                
-                // Log backup creation
-                Log::info('Database backup created successfully', $backupInfo);
-                
-                return $backupInfo;
-            } else {
-                throw new \Exception('Database backup failed: ' . $result->errorOutput());
-            }
-        } catch (\Exception $e) {
-            Log::error('Database backup failed', [
-                'error' => $e->getMessage(),
-                'timestamp' => now(),
-            ]);
-            
-            return [
-                'type' => 'database',
-                'status' => 'failed',
-                'error' => $e->getMessage(),
-                'created_at' => now(),
-            ];
-        }
-    }
-
-    /**
-     * Create file storage backup
-     */
-    public function createFileBackup(): array
-    {
-        try {
-            $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
-            $backupFileName = "files_backup_{$timestamp}.zip";
-            $backupPath = "backups/files/{$backupFileName}";
-            
-            // Get storage directories to backup
-            $directories = [
-                'public',
-                'app/public',
-            ];
-            
-            $tempDir = storage_path('app/temp_backup');
-            if (!is_dir($tempDir)) {
-                mkdir($tempDir, 0755, true);
-            }
-            
-            // Copy files to temp directory
-            foreach ($directories as $dir) {
-                $sourcePath = storage_path($dir);
-                if (is_dir($sourcePath)) {
-                    $destPath = $tempDir . '/' . basename($dir);
-                    $this->copyDirectory($sourcePath, $destPath);
-                }
-            }
-            
-            // Create zip archive
-            $zipPath = $tempDir . '/' . $backupFileName;
-            $this->createZipArchive($tempDir, $zipPath, $directories);
-            
-            // Store backup file
-            Storage::put($backupPath, file_get_contents($zipPath));
-            
-            // Clean up temp directory
-            $this->deleteDirectory($tempDir);
-            
-            $backupInfo = [
-                'type' => 'files',
-                'filename' => $backupFileName,
-                'path' => $backupPath,
-                'size' => Storage::size($backupPath),
-                'created_at' => now(),
-                'status' => 'success',
-            ];
-            
-            Log::info('File backup created successfully', $backupInfo);
-            
-            return $backupInfo;
-        } catch (\Exception $e) {
-            Log::error('File backup failed', [
-                'error' => $e->getMessage(),
-                'timestamp' => now(),
-            ]);
-            
-            return [
-                'type' => 'files',
-                'status' => 'failed',
-                'error' => $e->getMessage(),
-                'created_at' => now(),
-            ];
-        }
-    }
-
-    /**
-     * Create configuration backup
-     */
-    public function createConfigBackup(): array
-    {
-        try {
-            $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
-            $backupFileName = "config_backup_{$timestamp}.zip";
-            $backupPath = "backups/config/{$backupFileName}";
-            
-            $tempDir = storage_path('app/temp_config_backup');
-            if (!is_dir($tempDir)) {
-                mkdir($tempDir, 0755, true);
-            }
-            
-            // Copy configuration files
-            $configFiles = [
-                '.env',
-                'config/app.php',
-                'config/database.php',
-                'config/mail.php',
-                'config/cache.php',
-                'config/session.php',
-                'config/filesystems.php',
-                'config/payment.php',
-                'config/sms.php',
-                'config/notification.php',
-            ];
-            
-            foreach ($configFiles as $file) {
-                $sourcePath = base_path($file);
-                if (file_exists($sourcePath)) {
-                    $destPath = $tempDir . '/' . basename($file);
-                    copy($sourcePath, $destPath);
-                }
-            }
-            
-            // Create zip archive
-            $zipPath = $tempDir . '/' . $backupFileName;
-            $this->createZipArchive($tempDir, $zipPath, array_map('basename', $configFiles));
-            
-            // Store backup file
-            Storage::put($backupPath, file_get_contents($zipPath));
-            
-            // Clean up temp directory
-            $this->deleteDirectory($tempDir);
-            
-            $backupInfo = [
-                'type' => 'config',
-                'filename' => $backupFileName,
-                'path' => $backupPath,
-                'size' => Storage::size($backupPath),
-                'created_at' => now(),
-                'status' => 'success',
-            ];
-            
-            Log::info('Configuration backup created successfully', $backupInfo);
-            
-            return $backupInfo;
-        } catch (\Exception $e) {
-            Log::error('Configuration backup failed', [
-                'error' => $e->getMessage(),
-                'timestamp' => now(),
-            ]);
-            
-            return [
-                'type' => 'config',
-                'status' => 'failed',
-                'error' => $e->getMessage(),
-                'created_at' => now(),
-            ];
-        }
-    }
-
-    /**
-     * Create full system backup
+     * Create a complete backup of the system
      */
     public function createFullBackup(): array
     {
-        $results = [];
+        $backupId = 'backup_' . now()->format('Y_m_d_H_i_s');
+        $backupPath = "backups/{$backupId}";
         
-        // Create database backup
-        $results['database'] = $this->createDatabaseBackup();
+        try {
+            // Create backup directory
+            Storage::makeDirectory($backupPath);
+            
+            // Backup database
+            $dbBackup = $this->backupDatabase($backupPath);
+            
+            // Backup new feature data
+            $timelineBackup = $this->backupImageTimelines($backupPath);
+            $commentsBackup = $this->backupStoryComments($backupPath);
+            $performanceBackup = $this->backupPerformanceMetrics($backupPath);
+            
+            // Backup configuration files
+            $configBackup = $this->backupConfiguration($backupPath);
+            
+            // Create backup manifest
+            $manifest = $this->createBackupManifest($backupPath, [
+                'database' => $dbBackup,
+                'image_timelines' => $timelineBackup,
+                'story_comments' => $commentsBackup,
+                'performance_metrics' => $performanceBackup,
+                'configuration' => $configBackup
+            ]);
+            
+            // Create compressed archive
+            $archivePath = $this->createCompressedArchive($backupPath, $backupId);
+            
+            Log::info("Full backup created successfully: {$backupId}");
+            
+            return [
+                'success' => true,
+                'backup_id' => $backupId,
+                'backup_path' => $archivePath,
+                'size' => Storage::size($archivePath),
+                'created_at' => now(),
+                'manifest' => $manifest
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error("Backup failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'backup_id' => $backupId
+            ];
+        }
+    }
+    
+    /**
+     * Create incremental backup for new features
+     */
+    public function createIncrementalBackup(Carbon $since): array
+    {
+        $backupId = 'incremental_' . now()->format('Y_m_d_H_i_s');
+        $backupPath = "backups/{$backupId}";
         
-        // Create file backup
-        $results['files'] = $this->createFileBackup();
+        try {
+            Storage::makeDirectory($backupPath);
+            
+            $changes = [];
+            
+            // Backup new image timelines
+            $timelineChanges = $this->backupImageTimelinesSince($backupPath, $since);
+            if ($timelineChanges['count'] > 0) {
+                $changes['image_timelines'] = $timelineChanges;
+            }
+            
+            // Backup new story comments
+            $commentChanges = $this->backupStoryCommentsSince($backupPath, $since);
+            if ($commentChanges['count'] > 0) {
+                $changes['story_comments'] = $commentChanges;
+            }
+            
+            // Backup new performance metrics
+            $performanceChanges = $this->backupPerformanceMetricsSince($backupPath, $since);
+            if ($performanceChanges['count'] > 0) {
+                $changes['performance_metrics'] = $performanceChanges;
+            }
+            
+            if (empty($changes)) {
+                return [
+                    'success' => true,
+                    'backup_id' => $backupId,
+                    'message' => 'No changes to backup',
+                    'changes_count' => 0
+                ];
+            }
+            
+            // Create manifest
+            $manifest = $this->createBackupManifest($backupPath, $changes);
+            
+            // Create compressed archive
+            $archivePath = $this->createCompressedArchive($backupPath, $backupId);
+            
+            Log::info("Incremental backup created: {$backupId}");
+            
+            return [
+                'success' => true,
+                'backup_id' => $backupId,
+                'backup_path' => $archivePath,
+                'size' => Storage::size($archivePath),
+                'created_at' => now(),
+                'changes' => $changes,
+                'manifest' => $manifest
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error("Incremental backup failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'backup_id' => $backupId
+            ];
+        }
+    }
+    
+    /**
+     * Backup image timelines
+     */
+    private function backupImageTimelines(string $backupPath): array
+    {
+        $timelines = DB::table('image_timelines')
+            ->join('episodes', 'image_timelines.episode_id', '=', 'episodes.id')
+            ->select('image_timelines.*', 'episodes.title as episode_title')
+            ->get();
         
-        // Create config backup
-        $results['config'] = $this->createConfigBackup();
-        
-        // Check if all backups were successful
-        $allSuccessful = collect($results)->every(function ($result) {
-            return $result['status'] === 'success';
-        });
-        
-        $overallStatus = $allSuccessful ? 'success' : 'partial';
-        
-        Log::info('Full system backup completed', [
-            'status' => $overallStatus,
-            'results' => $results,
-        ]);
+        $filePath = "{$backupPath}/image_timelines.json";
+        Storage::put($filePath, json_encode($timelines, JSON_PRETTY_PRINT));
         
         return [
-            'status' => $overallStatus,
-            'timestamp' => now(),
-            'results' => $results,
+            'file' => $filePath,
+            'count' => $timelines->count(),
+            'size' => Storage::size($filePath)
         ];
     }
-
+    
+    /**
+     * Backup image timelines since date
+     */
+    private function backupImageTimelinesSince(string $backupPath, Carbon $since): array
+    {
+        $timelines = DB::table('image_timelines')
+            ->join('episodes', 'image_timelines.episode_id', '=', 'episodes.id')
+            ->select('image_timelines.*', 'episodes.title as episode_title')
+            ->where('image_timelines.created_at', '>=', $since)
+            ->orWhere('image_timelines.updated_at', '>=', $since)
+            ->get();
+        
+        if ($timelines->isEmpty()) {
+            return ['count' => 0];
+        }
+        
+        $filePath = "{$backupPath}/image_timelines_incremental.json";
+        Storage::put($filePath, json_encode($timelines, JSON_PRETTY_PRINT));
+        
+        return [
+            'file' => $filePath,
+            'count' => $timelines->count(),
+            'size' => Storage::size($filePath)
+        ];
+    }
+    
+    /**
+     * Backup story comments
+     */
+    private function backupStoryComments(string $backupPath): array
+    {
+        $comments = DB::table('story_comments')
+            ->join('stories', 'story_comments.story_id', '=', 'stories.id')
+            ->join('users', 'story_comments.user_id', '=', 'users.id')
+            ->select(
+                'story_comments.*',
+                'stories.title as story_title',
+                'users.first_name',
+                'users.last_name',
+                'users.phone_number'
+            )
+            ->get();
+        
+        $filePath = "{$backupPath}/story_comments.json";
+        Storage::put($filePath, json_encode($comments, JSON_PRETTY_PRINT));
+        
+        return [
+            'file' => $filePath,
+            'count' => $comments->count(),
+            'size' => Storage::size($filePath)
+        ];
+    }
+    
+    /**
+     * Backup story comments since date
+     */
+    private function backupStoryCommentsSince(string $backupPath, Carbon $since): array
+    {
+        $comments = DB::table('story_comments')
+            ->join('stories', 'story_comments.story_id', '=', 'stories.id')
+            ->join('users', 'story_comments.user_id', '=', 'users.id')
+            ->select(
+                'story_comments.*',
+                'stories.title as story_title',
+                'users.first_name',
+                'users.last_name',
+                'users.phone_number'
+            )
+            ->where('story_comments.created_at', '>=', $since)
+            ->orWhere('story_comments.updated_at', '>=', $since)
+            ->get();
+        
+        if ($comments->isEmpty()) {
+            return ['count' => 0];
+        }
+        
+        $filePath = "{$backupPath}/story_comments_incremental.json";
+        Storage::put($filePath, json_encode($comments, JSON_PRETTY_PRINT));
+        
+        return [
+            'file' => $filePath,
+            'count' => $comments->count(),
+            'size' => Storage::size($filePath)
+        ];
+    }
+    
+    /**
+     * Backup performance metrics
+     */
+    private function backupPerformanceMetrics(string $backupPath): array
+    {
+        $metrics = DB::table('performance_metrics')
+            ->where('created_at', '>=', now()->subDays(30)) // Last 30 days
+            ->get();
+        
+        $filePath = "{$backupPath}/performance_metrics.json";
+        Storage::put($filePath, json_encode($metrics, JSON_PRETTY_PRINT));
+        
+        return [
+            'file' => $filePath,
+            'count' => $metrics->count(),
+            'size' => Storage::size($filePath)
+        ];
+    }
+    
+    /**
+     * Backup performance metrics since date
+     */
+    private function backupPerformanceMetricsSince(string $backupPath, Carbon $since): array
+    {
+        $metrics = DB::table('performance_metrics')
+            ->where('created_at', '>=', $since)
+            ->get();
+        
+        if ($metrics->isEmpty()) {
+            return ['count' => 0];
+        }
+        
+        $filePath = "{$backupPath}/performance_metrics_incremental.json";
+        Storage::put($filePath, json_encode($metrics, JSON_PRETTY_PRINT));
+        
+        return [
+            'file' => $filePath,
+            'count' => $metrics->count(),
+            'size' => Storage::size($filePath)
+        ];
+    }
+    
+    /**
+     * Backup database
+     */
+    private function backupDatabase(string $backupPath): array
+    {
+        $dbName = config('database.connections.mysql.database');
+        $username = config('database.connections.mysql.username');
+        $password = config('database.connections.mysql.password');
+        $host = config('database.connections.mysql.host');
+        
+        $fileName = "{$backupPath}/database.sql";
+        $command = "mysqldump -h {$host} -u {$username} -p{$password} {$dbName} > " . storage_path("app/{$fileName}");
+        
+        exec($command, $output, $returnCode);
+        
+        if ($returnCode !== 0) {
+            throw new \Exception("Database backup failed with return code: {$returnCode}");
+        }
+        
+        return [
+            'file' => $fileName,
+            'size' => Storage::size($fileName)
+        ];
+    }
+    
+    /**
+     * Backup configuration files
+     */
+    private function backupConfiguration(string $backupPath): array
+    {
+        $configFiles = [
+            '.env',
+            'config/app.php',
+            'config/database.php',
+            'config/cache.php',
+            'config/queue.php'
+        ];
+        
+        $backedUpFiles = [];
+        
+        foreach ($configFiles as $file) {
+            if (file_exists(base_path($file))) {
+                $content = file_get_contents(base_path($file));
+                $fileName = "{$backupPath}/config/" . basename($file);
+                Storage::put($fileName, $content);
+                $backedUpFiles[] = $fileName;
+            }
+        }
+        
+        return [
+            'files' => $backedUpFiles,
+            'count' => count($backedUpFiles)
+        ];
+    }
+    
+    /**
+     * Create backup manifest
+     */
+    private function createBackupManifest(string $backupPath, array $components): array
+    {
+        $manifest = [
+            'backup_id' => basename($backupPath),
+            'created_at' => now()->toISOString(),
+            'version' => '1.0',
+            'components' => $components,
+            'total_size' => 0
+        ];
+        
+        // Calculate total size
+        foreach ($components as $component) {
+            if (isset($component['size'])) {
+                $manifest['total_size'] += $component['size'];
+            } elseif (isset($component['files'])) {
+                foreach ($component['files'] as $file) {
+                    $manifest['total_size'] += Storage::size($file);
+                }
+            }
+        }
+        
+        $manifestPath = "{$backupPath}/manifest.json";
+        Storage::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT));
+        
+        return $manifest;
+    }
+    
+    /**
+     * Create compressed archive
+     */
+    private function createCompressedArchive(string $backupPath, string $backupId): string
+    {
+        $zipPath = "backups/{$backupId}.zip";
+        $zip = new ZipArchive();
+        
+        if ($zip->open(storage_path("app/{$zipPath}"), ZipArchive::CREATE) !== TRUE) {
+            throw new \Exception("Cannot create zip archive: {$zipPath}");
+        }
+        
+        $this->addDirectoryToZip($zip, storage_path("app/{$backupPath}"), $backupId);
+        $zip->close();
+        
+        // Remove uncompressed directory
+        Storage::deleteDirectory($backupPath);
+        
+        return $zipPath;
+    }
+    
+    /**
+     * Add directory to zip archive
+     */
+    private function addDirectoryToZip(ZipArchive $zip, string $dir, string $baseName): void
+    {
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir),
+            \RecursiveIteratorIterator::LEAVES_ONLY
+        );
+        
+        foreach ($files as $file) {
+            if (!$file->isDir()) {
+                $filePath = $file->getRealPath();
+                $relativePath = $baseName . '/' . substr($filePath, strlen($dir) + 1);
+                $zip->addFile($filePath, $relativePath);
+            }
+        }
+    }
+    
+    /**
+     * Restore from backup
+     */
+    public function restoreFromBackup(string $backupId): array
+    {
+        try {
+            $backupPath = "backups/{$backupId}.zip";
+            
+            if (!Storage::exists($backupPath)) {
+                throw new \Exception("Backup file not found: {$backupPath}");
+            }
+            
+            // Extract backup
+            $extractPath = "backups/restore_{$backupId}";
+            $this->extractBackup($backupPath, $extractPath);
+            
+            // Read manifest
+            $manifestPath = "{$extractPath}/manifest.json";
+            $manifest = json_decode(Storage::get($manifestPath), true);
+            
+            // Restore components
+            $restored = [];
+            
+            if (isset($manifest['components']['image_timelines'])) {
+                $restored['image_timelines'] = $this->restoreImageTimelines($extractPath);
+            }
+            
+            if (isset($manifest['components']['story_comments'])) {
+                $restored['story_comments'] = $this->restoreStoryComments($extractPath);
+            }
+            
+            if (isset($manifest['components']['performance_metrics'])) {
+                $restored['performance_metrics'] = $this->restorePerformanceMetrics($extractPath);
+            }
+            
+            // Clean up
+            Storage::deleteDirectory($extractPath);
+            
+            Log::info("Backup restored successfully: {$backupId}");
+            
+            return [
+                'success' => true,
+                'backup_id' => $backupId,
+                'restored_at' => now(),
+                'restored_components' => $restored
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error("Restore failed: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'backup_id' => $backupId
+            ];
+        }
+    }
+    
+    /**
+     * Extract backup archive
+     */
+    private function extractBackup(string $backupPath, string $extractPath): void
+    {
+        $zip = new ZipArchive();
+        
+        if ($zip->open(storage_path("app/{$backupPath}")) !== TRUE) {
+            throw new \Exception("Cannot open backup archive: {$backupPath}");
+        }
+        
+        $zip->extractTo(storage_path("app/{$extractPath}"));
+        $zip->close();
+    }
+    
+    /**
+     * Restore image timelines
+     */
+    private function restoreImageTimelines(string $extractPath): array
+    {
+        $filePath = "{$extractPath}/image_timelines.json";
+        $data = json_decode(Storage::get($filePath), true);
+        
+        $restored = 0;
+        foreach ($data as $timeline) {
+            DB::table('image_timelines')->updateOrInsert(
+                ['id' => $timeline['id']],
+                $timeline
+            );
+            $restored++;
+        }
+        
+        return ['restored_count' => $restored];
+    }
+    
+    /**
+     * Restore story comments
+     */
+    private function restoreStoryComments(string $extractPath): array
+    {
+        $filePath = "{$extractPath}/story_comments.json";
+        $data = json_decode(Storage::get($filePath), true);
+        
+        $restored = 0;
+        foreach ($data as $comment) {
+            DB::table('story_comments')->updateOrInsert(
+                ['id' => $comment['id']],
+                $comment
+            );
+            $restored++;
+        }
+        
+        return ['restored_count' => $restored];
+    }
+    
+    /**
+     * Restore performance metrics
+     */
+    private function restorePerformanceMetrics(string $extractPath): array
+    {
+        $filePath = "{$extractPath}/performance_metrics.json";
+        $data = json_decode(Storage::get($filePath), true);
+        
+        $restored = 0;
+        foreach ($data as $metric) {
+            DB::table('performance_metrics')->updateOrInsert(
+                ['id' => $metric['id']],
+                $metric
+            );
+            $restored++;
+        }
+        
+        return ['restored_count' => $restored];
+    }
+    
     /**
      * List available backups
      */
-    public function listBackups(string $type = null): array
+    public function listBackups(): array
     {
-        $backups = [];
+        $backups = Storage::files('backups');
+        $backupList = [];
         
-        $types = $type ? [$type] : ['database', 'files', 'config'];
-        
-        foreach ($types as $backupType) {
-            $files = Storage::files("backups/{$backupType}");
-            
-            foreach ($files as $file) {
-                $backups[] = [
-                    'type' => $backupType,
-                    'filename' => basename($file),
-                    'path' => $file,
-                    'size' => Storage::size($file),
-                    'created_at' => Carbon::createFromTimestamp(Storage::lastModified($file)),
+        foreach ($backups as $backup) {
+            if (str_ends_with($backup, '.zip')) {
+                $backupList[] = [
+                    'file' => $backup,
+                    'size' => Storage::size($backup),
+                    'created_at' => Storage::lastModified($backup),
+                    'backup_id' => basename($backup, '.zip')
                 ];
             }
         }
         
         // Sort by creation date (newest first)
-        usort($backups, function ($a, $b) {
-            return $b['created_at'] <=> $a['created_at'];
+        usort($backupList, function($a, $b) {
+            return $b['created_at'] - $a['created_at'];
         });
         
-        return $backups;
+        return $backupList;
     }
-
+    
     /**
      * Delete old backups
      */
-    public function cleanupOldBackups(int $keepDays = 30): array
+    public function cleanupOldBackups(int $daysToKeep = 30): array
     {
-        $deletedBackups = [];
-        $cutoffDate = Carbon::now()->subDays($keepDays);
+        $cutoffDate = now()->subDays($daysToKeep)->timestamp;
+        $deleted = [];
         
-        $backupTypes = ['database', 'files', 'config'];
+        $backups = $this->listBackups();
         
-        foreach ($backupTypes as $type) {
-            $files = Storage::files("backups/{$type}");
-            
-            foreach ($files as $file) {
-                $lastModified = Carbon::createFromTimestamp(Storage::lastModified($file));
-                
-                if ($lastModified->lt($cutoffDate)) {
-                    Storage::delete($file);
-                    $deletedBackups[] = [
-                        'type' => $type,
-                        'filename' => basename($file),
-                        'deleted_at' => now(),
-                    ];
-                }
+        foreach ($backups as $backup) {
+            if ($backup['created_at'] < $cutoffDate) {
+                Storage::delete($backup['file']);
+                $deleted[] = $backup['backup_id'];
             }
         }
         
-        Log::info('Old backups cleaned up', [
-            'deleted_count' => count($deletedBackups),
-            'keep_days' => $keepDays,
-        ]);
-        
-        return $deletedBackups;
-    }
-
-    /**
-     * Restore from backup
-     */
-    public function restoreFromBackup(string $backupPath, string $type): array
-    {
-        try {
-            if (!Storage::exists($backupPath)) {
-                throw new \Exception('Backup file not found');
-            }
-            
-            switch ($type) {
-                case 'database':
-                    return $this->restoreDatabaseBackup($backupPath);
-                case 'files':
-                    return $this->restoreFileBackup($backupPath);
-                case 'config':
-                    return $this->restoreConfigBackup($backupPath);
-                default:
-                    throw new \Exception('Invalid backup type');
-            }
-        } catch (\Exception $e) {
-            Log::error('Backup restore failed', [
-                'backup_path' => $backupPath,
-                'type' => $type,
-                'error' => $e->getMessage(),
-            ]);
-            
-            return [
-                'status' => 'failed',
-                'error' => $e->getMessage(),
-                'restored_at' => now(),
-            ];
-        }
-    }
-
-    /**
-     * Restore database backup
-     */
-    private function restoreDatabaseBackup(string $backupPath): array
-    {
-        $config = config('database.connections.mysql');
-        $host = $config['host'];
-        $port = $config['port'];
-        $database = $config['database'];
-        $username = $config['username'];
-        $password = $config['password'];
-        
-        $backupContent = Storage::get($backupPath);
-        
-        // Create temporary file
-        $tempFile = storage_path('app/temp_restore.sql');
-        file_put_contents($tempFile, $backupContent);
-        
-        // Execute restore command
-        $command = "mysql -h {$host} -P {$port} -u {$username} -p{$password} {$database} < {$tempFile}";
-        $result = Process::run($command);
-        
-        // Clean up temp file
-        unlink($tempFile);
-        
-        if ($result->successful()) {
-            return [
-                'status' => 'success',
-                'restored_at' => now(),
-            ];
-        } else {
-            throw new \Exception('Database restore failed: ' . $result->errorOutput());
-        }
-    }
-
-    /**
-     * Restore file backup
-     */
-    private function restoreFileBackup(string $backupPath): array
-    {
-        $backupContent = Storage::get($backupPath);
-        
-        // Create temporary file
-        $tempFile = storage_path('app/temp_restore.zip');
-        file_put_contents($tempFile, $backupContent);
-        
-        // Extract zip file
-        $zip = new \ZipArchive();
-        if ($zip->open($tempFile) === TRUE) {
-            $zip->extractTo(storage_path('app/'));
-            $zip->close();
-        } else {
-            throw new \Exception('Failed to extract backup file');
-        }
-        
-        // Clean up temp file
-        unlink($tempFile);
+        Log::info("Cleaned up " . count($deleted) . " old backups");
         
         return [
-            'status' => 'success',
-            'restored_at' => now(),
+            'deleted_count' => count($deleted),
+            'deleted_backups' => $deleted
         ];
-    }
-
-    /**
-     * Restore config backup
-     */
-    private function restoreConfigBackup(string $backupPath): array
-    {
-        $backupContent = Storage::get($backupPath);
-        
-        // Create temporary file
-        $tempFile = storage_path('app/temp_config_restore.zip');
-        file_put_contents($tempFile, $backupContent);
-        
-        // Extract zip file
-        $zip = new \ZipArchive();
-        if ($zip->open($tempFile) === TRUE) {
-            $zip->extractTo(base_path());
-            $zip->close();
-        } else {
-            throw new \Exception('Failed to extract config backup file');
-        }
-        
-        // Clean up temp file
-        unlink($tempFile);
-        
-        return [
-            'status' => 'success',
-            'restored_at' => now(),
-        ];
-    }
-
-    /**
-     * Copy directory recursively
-     */
-    private function copyDirectory(string $source, string $destination): void
-    {
-        if (!is_dir($destination)) {
-            mkdir($destination, 0755, true);
-        }
-        
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST
-        );
-        
-        foreach ($iterator as $item) {
-            if ($item->isDir()) {
-                mkdir($destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
-            } else {
-                copy($item, $destination . DIRECTORY_SEPARATOR . $iterator->getSubPathName());
-            }
-        }
-    }
-
-    /**
-     * Create zip archive
-     */
-    private function createZipArchive(string $sourceDir, string $zipPath, array $files): void
-    {
-        $zip = new \ZipArchive();
-        
-        if ($zip->open($zipPath, \ZipArchive::CREATE) !== TRUE) {
-            throw new \Exception('Cannot create zip file');
-        }
-        
-        foreach ($files as $file) {
-            $filePath = $sourceDir . '/' . $file;
-            if (file_exists($filePath)) {
-                $zip->addFile($filePath, $file);
-            }
-        }
-        
-        $zip->close();
-    }
-
-    /**
-     * Delete directory recursively
-     */
-    private function deleteDirectory(string $dir): void
-    {
-        if (!is_dir($dir)) {
-            return;
-        }
-        
-        $files = array_diff(scandir($dir), ['.', '..']);
-        
-        foreach ($files as $file) {
-            $path = $dir . DIRECTORY_SEPARATOR . $file;
-            is_dir($path) ? $this->deleteDirectory($path) : unlink($path);
-        }
-        
-        rmdir($dir);
     }
 }

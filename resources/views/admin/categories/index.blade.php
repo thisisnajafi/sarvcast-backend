@@ -80,16 +80,16 @@
                                 <div class="text-sm text-gray-900 max-w-xs truncate">{{ $category->description }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ $category->stories->count() }}
+                                {{ $category->story_count ?? 0 }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                                    {{ $category->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                    {{ $category->status === 'active' ? 'فعال' : 'غیرفعال' }}
+                                    {{ $category->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                    {{ $category->is_active ? 'فعال' : 'غیرفعال' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ $category->created_at->format('Y/m/d') }}
+                                @jalali($category->created_at, 'Y/m/d')
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <div class="flex space-x-2 space-x-reverse">

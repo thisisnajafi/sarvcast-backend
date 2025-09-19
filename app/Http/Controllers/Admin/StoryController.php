@@ -139,8 +139,8 @@ class StoryController extends Controller
         
         // Get filter options
         $categories = Category::where('is_active', true)->get();
-        $directors = Person::where('role', 'director')->get();
-        $narrators = Person::where('role', 'narrator')->get();
+        $directors = Person::whereJsonContains('roles', 'director')->get();
+        $narrators = Person::whereJsonContains('roles', 'narrator')->get();
         
         // Get statistics
         $stats = [
