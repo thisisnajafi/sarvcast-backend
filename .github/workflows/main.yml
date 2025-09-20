@@ -32,7 +32,7 @@ jobs:
       with:
         server: ftp.sarvcast.ir
         username: my@sarvcast.ir
-        password: prof48017421@#
+        password: Prof48017421@#
         local-dir: ./
         server-dir: /
         exclude: |

@@ -7,14 +7,19 @@ REM 3. Send Telegram notification
 
 setlocal enabledelayedexpansion
 
-REM Configuration - Set these environment variables or modify here
+REM Configuration - Pre-configured with SarvCast credentials
 set "FTP_SERVER=%FTP_SERVER%"
+if "%FTP_SERVER%"=="" set "FTP_SERVER=ftp.sarvcast.ir"
 set "FTP_USERNAME=%FTP_USERNAME%"
+if "%FTP_USERNAME%"=="" set "FTP_USERNAME=my@sarvcast.ir"
 set "FTP_PASSWORD=%FTP_PASSWORD%"
+if "%FTP_PASSWORD%"=="" set "FTP_PASSWORD=prof48017421@#"
 set "FTP_DIRECTORY=%FTP_DIRECTORY%"
-if "%FTP_DIRECTORY%"=="" set "FTP_DIRECTORY=/public_html"
+if "%FTP_DIRECTORY%"=="" set "FTP_DIRECTORY=/"
 set "TELEGRAM_BOT_TOKEN=%TELEGRAM_BOT_TOKEN%"
+if "%TELEGRAM_BOT_TOKEN%"=="" set "TELEGRAM_BOT_TOKEN=7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc"
 set "TELEGRAM_CHAT_ID=%TELEGRAM_CHAT_ID%"
+if "%TELEGRAM_CHAT_ID%"=="" set "TELEGRAM_CHAT_ID=-1002796302613_97"
 
 REM Colors (Windows 10+)
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
