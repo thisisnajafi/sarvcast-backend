@@ -27,6 +27,57 @@ jobs:
       run: |
         composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
         
+    - name: Create server setup script
+      run: |
+        # Create server setup script for cache clearing
+        cat > server-setup.sh << 'EOF'
+        #!/bin/bash
+        echo "🧹 Clearing AWS cache and setting up SarvCast..."
+        
+        # Navigate to application directory
+        cd /home/sarvca/public_html/my
+        
+        # Clear Composer cache completely
+        echo "📦 Clearing Composer cache..."
+        composer clear-cache 2>/dev/null || true
+        composer global clear-cache 2>/dev/null || true
+        
+        # Remove old vendor folder
+        echo "🗑️ Removing old vendor folder..."
+        rm -rf vendor/
+        
+        # Clear Laravel caches
+        echo "🧹 Clearing Laravel caches..."
+        php artisan config:clear 2>/dev/null || true
+        php artisan route:clear 2>/dev/null || true
+        php artisan view:clear 2>/dev/null || true
+        php artisan cache:clear 2>/dev/null || true
+        
+        # Install fresh dependencies
+        echo "📦 Installing fresh dependencies..."
+        composer install --no-dev --optimize-autoloader --no-interaction
+        
+        # Regenerate optimized caches
+        echo "⚡ Regenerating optimized caches..."
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+        
+        # Set proper permissions
+        echo "🔐 Setting file permissions..."
+        chmod -R 755 storage bootstrap/cache
+        chown -R www-data:www-data storage bootstrap/cache
+        
+        # Create storage symlink
+        echo "📁 Creating storage symlink..."
+        php artisan storage:link
+        
+        echo "✅ Server setup complete! AWS cache cleared."
+        echo "🌐 Application should now work at: https://my.sarvcast.ir/public/"
+        EOF
+        
+        chmod +x server-setup.sh
+        
     - name: Create deployment package (excluding vendor)
       run: |
         # Create deployment directory
@@ -51,6 +102,9 @@ jobs:
           --exclude='Thumbs.db' \
           . deployment/
           
+        # Copy server setup script to deployment
+        cp server-setup.sh deployment/
+          
     - name: Deploy to FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -65,27 +119,35 @@ jobs:
         
     - name: Prepare Server Instructions
       run: |
-        echo "📋 After FTP upload completes, run these commands on your server:"
+        echo "📋 After FTP upload completes, you have two options:"
         echo ""
-        echo "🔧 Essential Server Setup Commands:"
+        echo "🚀 OPTION 1: Automated Setup (Recommended)"
+        echo "1. SSH into your server or use cPanel Terminal"
+        echo "2. Navigate to your application directory"
+        echo "3. Run: ./server-setup.sh"
+        echo "   This script will automatically:"
+        echo "   • Clear Composer cache"
+        echo "   • Remove old vendor folder"
+        echo "   • Install fresh dependencies"
+        echo "   • Clear and regenerate Laravel caches"
+        echo "   • Set proper permissions"
+        echo ""
+        echo "🔧 OPTION 2: Manual Setup"
         echo "1. Navigate to your application directory"
-        echo "2. Run: composer install --no-dev --optimize-autoloader --no-interaction"
-        echo "3. Run: php artisan config:clear"
-        echo "4. Run: php artisan route:clear"
-        echo "5. Run: php artisan view:clear"
-        echo "6. Run: php artisan cache:clear"
-        echo "7. Run: php artisan config:cache"
-        echo "8. Run: php artisan route:cache"
-        echo "9. Run: php artisan view:cache"
+        echo "2. Run: composer clear-cache"
+        echo "3. Run: rm -rf vendor/"
+        echo "4. Run: composer install --no-dev --optimize-autoloader --no-interaction"
+        echo "5. Run: php artisan config:clear"
+        echo "6. Run: php artisan route:clear"
+        echo "7. Run: php artisan view:clear"
+        echo "8. Run: php artisan cache:clear"
+        echo "9. Run: php artisan config:cache"
+        echo "10. Run: php artisan route:cache"
+        echo "11. Run: php artisan view:cache"
+        echo "12. Run: chmod -R 755 storage bootstrap/cache"
+        echo "13. Run: php artisan storage:link"
         echo ""
-        echo "🔐 Set Proper Permissions:"
-        echo "chmod -R 755 storage bootstrap/cache"
-        echo "chown -R www-data:www-data storage bootstrap/cache"
-        echo ""
-        echo "📁 Create Storage Symlink (if needed):"
-        echo "php artisan storage:link"
-        echo ""
-        echo "✅ This will ensure your application works properly on the server."
+        echo "✅ The automated script (server-setup.sh) is uploaded with your files!"
           
     - name: Notify Telegram
       env:
@@ -113,9 +175,9 @@ jobs:
         • AWS/Docker dependencies removed
 
         *Next Steps:*
-        • Run \`composer install --no-dev\` on server
-        • Clear and cache Laravel configurations
-        • Set proper file permissions
+        • Run \`./server-setup.sh\` on server (automated)
+        • Or follow manual setup instructions
+        • AWS cache will be cleared automatically
 
         🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" \
           -d "parse_mode=Markdown" \
