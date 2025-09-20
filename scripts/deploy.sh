@@ -127,7 +127,12 @@ deploy_to_ftp() {
     "
     
     log_success "Files deployed to FTP server"
-    log_warning "Remember to run 'composer install --no-dev' on the server"
+    log_warning "Remember to run these commands on your server:"
+    log_warning "1. composer install --no-dev --optimize-autoloader --no-interaction"
+    log_warning "2. php artisan config:clear && php artisan route:clear && php artisan view:clear"
+    log_warning "3. php artisan config:cache && php artisan route:cache && php artisan view:cache"
+    log_warning "4. chmod -R 755 storage bootstrap/cache"
+    log_warning "5. php artisan storage:link"
 }
 
 # Send Telegram notification

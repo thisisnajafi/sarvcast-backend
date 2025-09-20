@@ -114,6 +114,14 @@ REM This is a placeholder - you may need to install WinSCP or use PowerShell
 call :log_warning "FTP deployment requires additional setup on Windows"
 call :log_info "Consider using WinSCP command line or PowerShell for FTP upload"
 
+call :log_success "Files deployed to FTP server"
+call :log_warning "Remember to run these commands on your server:"
+call :log_warning "1. composer install --no-dev --optimize-autoloader --no-interaction"
+call :log_warning "2. php artisan config:clear && php artisan route:clear && php artisan view:clear"
+call :log_warning "3. php artisan config:cache && php artisan route:cache && php artisan view:cache"
+call :log_warning "4. chmod -R 755 storage bootstrap/cache"
+call :log_warning "5. php artisan storage:link"
+
 REM Send Telegram notification
 call :log_info "Sending Telegram notification..."
 

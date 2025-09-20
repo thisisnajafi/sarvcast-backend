@@ -66,14 +66,26 @@ jobs:
     - name: Prepare Server Instructions
       run: |
         echo "📋 After FTP upload completes, run these commands on your server:"
-        echo "1. SSH into your server or use cPanel File Manager"
-        echo "2. Navigate to your application directory"
-        echo "3. Run: composer install --no-dev --optimize-autoloader --no-interaction"
-        echo "4. Run: php artisan config:cache"
-        echo "5. Run: php artisan route:cache"
-        echo "6. Run: php artisan view:cache"
         echo ""
-        echo "This will install Composer dependencies and optimize your application."
+        echo "🔧 Essential Server Setup Commands:"
+        echo "1. Navigate to your application directory"
+        echo "2. Run: composer install --no-dev --optimize-autoloader --no-interaction"
+        echo "3. Run: php artisan config:clear"
+        echo "4. Run: php artisan route:clear"
+        echo "5. Run: php artisan view:clear"
+        echo "6. Run: php artisan cache:clear"
+        echo "7. Run: php artisan config:cache"
+        echo "8. Run: php artisan route:cache"
+        echo "9. Run: php artisan view:cache"
+        echo ""
+        echo "🔐 Set Proper Permissions:"
+        echo "chmod -R 755 storage bootstrap/cache"
+        echo "chown -R www-data:www-data storage bootstrap/cache"
+        echo ""
+        echo "📁 Create Storage Symlink (if needed):"
+        echo "php artisan storage:link"
+        echo ""
+        echo "✅ This will ensure your application works properly on the server."
           
     - name: Notify Telegram
       env:
@@ -98,7 +110,12 @@ jobs:
         *Deployment Details:*
         • Application files uploaded to FTP server
         • Vendor folder excluded for faster upload
-        • Next: Run Composer install on server
+        • AWS/Docker dependencies removed
+
+        *Next Steps:*
+        • Run \`composer install --no-dev\` on server
+        • Clear and cache Laravel configurations
+        • Set proper file permissions
 
         🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" \
           -d "parse_mode=Markdown" \
