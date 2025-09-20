@@ -1,17 +1,14 @@
-name: Deploy to Production
+name: LGBTinder Backend
 
 on:
   push:
-    branches: [ main, production ]
-  workflow_dispatch:
-
-env:
-  PHP_VERSION: '8.2'
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -84,8 +81,27 @@ jobs:
           echo "🔍 Testing database connection..."
           php artisan tinker --execute="echo 'Database connection: ' . (DB::connection()->getPdo() ? 'OK' : 'FAILED') . PHP_EOL;"
 
+      - name: Test Broadcasting Configuration
+        env:
+          BROADCAST_DRIVER: log
+          PUSHER_APP_KEY: dummy_key
+          PUSHER_APP_SECRET: dummy_secret
+          PUSHER_APP_ID: dummy_id
+          PUSHER_APP_CLUSTER: mt1
+        run: |
+          echo "🔍 Testing broadcasting configuration..."
+          php artisan test:broadcasting
+          
+      - name: Test Broadcasting Safety
+        env:
+          BROADCAST_DRIVER: pusher
+          PUSHER_APP_KEY: 
+          PUSHER_APP_SECRET: 
+          PUSHER_APP_ID: 
+        run: |
+          echo "🔍 Testing broadcasting safety with missing env vars..."
+          php artisan test:broadcasting
 
-        
       - name: Pre-deployment Cache Clear
         run: |
           echo "🧹 Clearing pre-deployment caches..."
@@ -95,81 +111,37 @@ jobs:
           echo "✅ Pre-deployment caches cleared"
 
 
-
-
       - name: 📂 Sync files
         uses: SamKirkland/FTP-Deploy-Action@4.0.0
         with:
-          server: ftp.sarvcast.ir
+          server: 2997021731.cloudylink.com
           username: my@sarvcast.ir
           password: Prof48017421@#
-          local-dir: ./deployment/
           server-dir: /
           exclude: |
             .env
             .env.*
-      - name: Prepare Server Instructions
-        run: |
-          echo "📋 After FTP upload completes, run these commands on your server:"
-          echo ""
-          echo "🔧 Essential Server Setup Commands:"
-          echo "1. Navigate to your application directory"
-          echo "2. Run: composer install --no-dev --optimize-autoloader --no-interaction"
-          echo "3. Run: php artisan config:clear"
-          echo "4. Run: php artisan route:clear"
-          echo "5. Run: php artisan view:clear"
-          echo "6. Run: php artisan cache:clear"
-          echo ""
-           echo "🚫 To disable all caching, add to .env:"
-           echo "DISABLE_ALL_CACHING=true"
-           echo ""
-           echo "💳 Zarinpal merchant ID is hardcoded in the application"
-           echo "✅ This will ensure your application works properly on the server."
-
       - name: Verify deployment
         run: |
           echo "✅ Deployment verification..."
           echo "📋 Deployment completed successfully!"
           echo ""
-          echo "🎉 Your SarvCast application has been deployed!"
+          echo "🎉 Your LGBTinder application has been deployed and optimized!"
           echo ""
           echo "🔧 What was done:"
-          echo "  ✅ Files deployed via FTP (vendor excluded)"
-          echo "  ✅ Caches cleared before deployment"
-          echo "  ✅ Ready for server setup"
-
+          echo "  ✅ Files deployed via FTP"
+          echo "  ✅ Permissions set correctly"
 
       - name: Notify Telegram
         env:
           TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
-          TELEGRAM_CHAT_ID: -1002796302613_97
+          TELEGRAM_CHAT_ID: -1002275828844
           GITHUB_ACTOR: ${{ github.actor }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-            -d "chat_id=$TELEGRAM_CHAT_ID" \
-            -d "text=🚀 *SarvCast Deployment Successful*
-
-          *Branch:* \`${{ github.ref_name }}\`
-          *Commit:* \`${{ github.sha }}\`
-          *Author:* ${{ github.actor }}
-
-          *Changes:*
-          ${{ github.event.head_commit.message }}
-
-          *Status:* ✅ Deployed to production
-
-          *Deployment Details:*
-          • Application files uploaded to FTP server
-          • Vendor folder excluded for faster upload
-          • AWS/Docker dependencies removed
-
-          *Next Steps:*
-          • Run \`./server-setup.sh\` on server (automated)
-          • Or follow manual setup instructions
-          • AWS cache will be cleared automatically
-
-          🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" \
-            -d "parse_mode=Markdown" \
-            -d "disable_web_page_preview=true"
-            
+          FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
+          MESSAGE=$(echo -e "😎 <b>LGBTinder Admin Dashboard</b> 😎\n\n👌 <b>Status:</b> Deployment Complete\n\n👤 <b>User:</b> ${GITHUB_ACTOR}\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
+          curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
+            -d chat_id=${TELEGRAM_CHAT_ID} \
+            -d text="${MESSAGE}" \
+            -d parse_mode="HTML"
