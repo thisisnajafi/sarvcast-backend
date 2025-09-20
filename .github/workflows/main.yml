@@ -64,14 +64,14 @@ jobs:
       #     sed -i 's/DB_USERNAME=.*/DB_USERNAME=h273779_lgb/' .env
       #     sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=iWY]RgUhnqiu/' .env
 
-      # - name: Generate key
-      #   env:
-      #     BROADCAST_DRIVER: log
-      #     PUSHER_APP_KEY: dummy_key
-      #     PUSHER_APP_SECRET: dummy_secret
-      #     PUSHER_APP_ID: dummy_id
-      #     PUSHER_APP_CLUSTER: mt1
-      #   run: php artisan key:generate --force
+      - name: Generate key
+        env:
+          BROADCAST_DRIVER: log
+          PUSHER_APP_KEY: dummy_key
+          PUSHER_APP_SECRET: dummy_secret
+          PUSHER_APP_ID: dummy_id
+          PUSHER_APP_CLUSTER: mt1
+        run: php artisan key:generate --force
 
       - name: Directory Permissions
         run: chmod -R 777 storage bootstrap/cache
