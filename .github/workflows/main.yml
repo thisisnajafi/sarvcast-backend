@@ -96,26 +96,46 @@ jobs:
 
 
 
+
       - name: 📂 Sync files
         uses: SamKirkland/FTP-Deploy-Action@4.0.0
         with:
           server: ftp.sarvcast.ir
           username: my@sarvcast.ir
           password: Prof48017421@#
+          local-dir: ./deployment/
           server-dir: /
           exclude: |
             .env
             .env.*
+      - name: Prepare Server Instructions
+        run: |
+          echo "📋 After FTP upload completes, run these commands on your server:"
+          echo ""
+          echo "🔧 Essential Server Setup Commands:"
+          echo "1. Navigate to your application directory"
+          echo "2. Run: composer install --no-dev --optimize-autoloader --no-interaction"
+          echo "3. Run: php artisan config:clear"
+          echo "4. Run: php artisan route:clear"
+          echo "5. Run: php artisan view:clear"
+          echo "6. Run: php artisan cache:clear"
+          echo ""
+          echo "🚫 To disable all caching, add to .env:"
+          echo "DISABLE_ALL_CACHING=true"
+          echo ""
+          echo "✅ This will ensure your application works properly on the server."
+
       - name: Verify deployment
         run: |
           echo "✅ Deployment verification..."
           echo "📋 Deployment completed successfully!"
           echo ""
-          echo "🎉 Your LGBTinder application has been deployed and optimized!"
+          echo "🎉 Your SarvCast application has been deployed!"
           echo ""
           echo "🔧 What was done:"
-          echo "  ✅ Files deployed via FTP"
-          echo "  ✅ Permissions set correctly"
+          echo "  ✅ Files deployed via FTP (vendor excluded)"
+          echo "  ✅ Caches cleared before deployment"
+          echo "  ✅ Ready for server setup"
 
 
       - name: Notify Telegram
