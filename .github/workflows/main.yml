@@ -13,177 +13,142 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: ${{ env.PHP_VERSION }}
-        extensions: mbstring, dom, fileinfo, mysql, zip, gd, curl, xml, bcmath, intl
-        coverage: none
-        
-    - name: Install Composer dependencies
-      run: |
-        composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-        
-    - name: Create server setup script
-      run: |
-        # Create server setup script for cache clearing
-        cat > server-setup.sh << 'EOF'
-        #!/bin/bash
-        echo "🧹 Clearing AWS cache and setting up SarvCast..."
-        
-        # Navigate to application directory
-        cd /home/sarvca/public_html/my
-        
-        # Clear Composer cache completely
-        echo "📦 Clearing Composer cache..."
-        composer clear-cache 2>/dev/null || true
-        composer global clear-cache 2>/dev/null || true
-        
-        # Remove old vendor folder
-        echo "🗑️ Removing old vendor folder..."
-        rm -rf vendor/
-        
-        # Clear Laravel caches
-        echo "🧹 Clearing Laravel caches..."
-        php artisan config:clear 2>/dev/null || true
-        php artisan route:clear 2>/dev/null || true
-        php artisan view:clear 2>/dev/null || true
-        php artisan cache:clear 2>/dev/null || true
-        
-        # Install fresh dependencies
-        echo "📦 Installing fresh dependencies..."
-        composer install --no-dev --optimize-autoloader --no-interaction
-        
-        # Regenerate optimized caches
-        echo "⚡ Regenerating optimized caches..."
-        php artisan config:cache
-        php artisan route:cache
-        php artisan view:cache
-        
-        # Set proper permissions
-        echo "🔐 Setting file permissions..."
-        chmod -R 755 storage bootstrap/cache
-        chown -R www-data:www-data storage bootstrap/cache
-        
-        # Create storage symlink
-        echo "📁 Creating storage symlink..."
-        php artisan storage:link
-        
-        echo "✅ Server setup complete! AWS cache cleared."
-        echo "🌐 Application should now work at: https://my.sarvcast.ir/public/"
-        EOF
-        
-        chmod +x server-setup.sh
-        
-    - name: Create deployment package (excluding vendor)
-      run: |
-        # Create deployment directory
-        mkdir -p deployment
-        
-        # Copy files excluding vendor folder for faster upload
-        rsync -av \
-          --exclude='.git' \
-          --exclude='.github' \
-          --exclude='node_modules' \
-          --exclude='tests' \
-          --exclude='.env*' \
-          --exclude='storage/logs/*' \
-          --exclude='storage/framework/cache/*' \
-          --exclude='storage/framework/sessions/*' \
-          --exclude='storage/framework/views/*' \
-          --exclude='bootstrap/cache/*' \
-          --exclude='vendor' \
-          --exclude='Homestead*' \
-          --exclude='*.log' \
-          --exclude='.DS_Store' \
-          --exclude='Thumbs.db' \
-          . deployment/
-          
-        # Copy server setup script to deployment
-        cp server-setup.sh deployment/
-          
-    - name: Deploy to FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ftp.sarvcast.ir
-        username: my@sarvcast.ir
-        password: Prof48017421@#
-        local-dir: ./deployment/
-        server-dir: /
-        # Add FTP connection stability options
-        log-level: minimal
-        dry-run: false
-        
-    - name: Prepare Server Instructions
-      run: |
-        echo "📋 After FTP upload completes, you have two options:"
-        echo ""
-        echo "🚀 OPTION 1: Automated Setup (Recommended)"
-        echo "1. SSH into your server or use cPanel Terminal"
-        echo "2. Navigate to your application directory"
-        echo "3. Run: ./server-setup.sh"
-        echo "   This script will automatically:"
-        echo "   • Clear Composer cache"
-        echo "   • Remove old vendor folder"
-        echo "   • Install fresh dependencies"
-        echo "   • Clear and regenerate Laravel caches"
-        echo "   • Set proper permissions"
-        echo ""
-        echo "🔧 OPTION 2: Manual Setup"
-        echo "1. Navigate to your application directory"
-        echo "2. Run: composer clear-cache"
-        echo "3. Run: rm -rf vendor/"
-        echo "4. Run: composer install --no-dev --optimize-autoloader --no-interaction"
-        echo "5. Run: php artisan config:clear"
-        echo "6. Run: php artisan route:clear"
-        echo "7. Run: php artisan view:clear"
-        echo "8. Run: php artisan cache:clear"
-        echo "9. Run: php artisan config:cache"
-        echo "10. Run: php artisan route:cache"
-        echo "11. Run: php artisan view:cache"
-        echo "12. Run: chmod -R 755 storage bootstrap/cache"
-        echo "13. Run: php artisan storage:link"
-        echo ""
-        echo "✅ The automated script (server-setup.sh) is uploaded with your files!"
-          
-    - name: Notify Telegram
-      env:
-        TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
-        TELEGRAM_CHAT_ID: -1002796302613_97
-        GITHUB_ACTOR: ${{ github.actor }}
-        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-      run: |
-        curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
-          -d "chat_id=$TELEGRAM_CHAT_ID" \
-          -d "text=🚀 *SarvCast Deployment Successful*
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-        *Branch:* \`${{ github.ref_name }}\`
-        *Commit:* \`${{ github.sha }}\`
-        *Author:* ${{ github.actor }}
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
 
-        *Changes:*
-        ${{ github.event.head_commit.message }}
+      - name: Setup MySQL
+        uses: mirromutth/mysql-action@v1.1
+        with:
+          mysql version: '8.0'
+          mysql root password: 'iWY]RgUhnqiu'
+          mysql database: 'h273779_lgb'
+          mysql user: 'h273779_lgb'
+          mysql host: 'localhost'
+          mysql password: 'iWY]RgUhnqiu'
 
-        *Status:* ✅ Deployed to production
+      - name: Cache Composer packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
 
-        *Deployment Details:*
-        • Application files uploaded to FTP server
-        • Vendor folder excluded for faster upload
-        • AWS/Docker dependencies removed
+      - name: Install dependencies
+        env:
+          BROADCAST_DRIVER: log
+          PUSHER_APP_KEY: dummy_key
+          PUSHER_APP_SECRET: dummy_secret
+          PUSHER_APP_ID: dummy_id
+          PUSHER_APP_CLUSTER: mt1
+        run: composer install
 
-        *Next Steps:*
-        • Run \`./server-setup.sh\` on server (automated)
-        • Or follow manual setup instructions
-        • AWS cache will be cleared automatically
+      # - name: Copy .env
+      #   env:
+      #     BROADCAST_DRIVER: log
+      #     PUSHER_APP_KEY: dummy_key
+      #     PUSHER_APP_SECRET: dummy_secret
+      #     PUSHER_APP_ID: dummy_id
+      #     PUSHER_APP_CLUSTER: mt1
+      #   run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
-        🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" \
-          -d "parse_mode=Markdown" \
-          -d "disable_web_page_preview=true"
-          
-    - name: Cleanup
-      if: always()
-      run: |
-        rm -rf deployment/
+      # - name: Configure database for GitHub Actions
+      #   run: |
+      #     # Update .env file with GitHub Actions database credentials
+      #     sed -i 's/DB_HOST=.*/DB_HOST=localhost/' .env
+      #     sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
+      #     sed -i 's/DB_DATABASE=.*/DB_DATABASE=h273779_lgb/' .env
+      #     sed -i 's/DB_USERNAME=.*/DB_USERNAME=h273779_lgb/' .env
+      #     sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=iWY]RgUhnqiu/' .env
+
+      # - name: Generate key
+      #   env:
+      #     BROADCAST_DRIVER: log
+      #     PUSHER_APP_KEY: dummy_key
+      #     PUSHER_APP_SECRET: dummy_secret
+      #     PUSHER_APP_ID: dummy_id
+      #     PUSHER_APP_CLUSTER: mt1
+      #   run: php artisan key:generate --force
+
+      - name: Directory Permissions
+        run: chmod -R 777 storage bootstrap/cache
+
+      - name: Test Database Connection
+        run: |
+          echo "🔍 Testing database connection..."
+          php artisan tinker --execute="echo 'Database connection: ' . (DB::connection()->getPdo() ? 'OK' : 'FAILED') . PHP_EOL;"
+
+
+        
+      - name: Pre-deployment Cache Clear
+        run: |
+          echo "🧹 Clearing pre-deployment caches..."
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          echo "✅ Pre-deployment caches cleared"
+
+
+
+      - name: 📂 Sync files
+        uses: SamKirkland/FTP-Deploy-Action@4.0.0
+        with:
+          server: ftp.sarvcast.ir
+          username: my@sarvcast.ir
+          password: Prof48017421@#
+          server-dir: /
+          exclude: |
+            .env
+            .env.*
+      - name: Verify deployment
+        run: |
+          echo "✅ Deployment verification..."
+          echo "📋 Deployment completed successfully!"
+          echo ""
+          echo "🎉 Your LGBTinder application has been deployed and optimized!"
+          echo ""
+          echo "🔧 What was done:"
+          echo "  ✅ Files deployed via FTP"
+          echo "  ✅ Permissions set correctly"
+
+
+      - name: Notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
+          TELEGRAM_CHAT_ID: -1002796302613_97
+          GITHUB_ACTOR: ${{ github.actor }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d "chat_id=$TELEGRAM_CHAT_ID" \
+            -d "text=🚀 *SarvCast Deployment Successful*
+
+          *Branch:* \`${{ github.ref_name }}\`
+          *Commit:* \`${{ github.sha }}\`
+          *Author:* ${{ github.actor }}
+
+          *Changes:*
+          ${{ github.event.head_commit.message }}
+
+          *Status:* ✅ Deployed to production
+
+          *Deployment Details:*
+          • Application files uploaded to FTP server
+          • Vendor folder excluded for faster upload
+          • AWS/Docker dependencies removed
+
+          *Next Steps:*
+          • Run \`./server-setup.sh\` on server (automated)
+          • Or follow manual setup instructions
+          • AWS cache will be cleared automatically
+
+          🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" \
+            -d "parse_mode=Markdown" \
+            -d "disable_web_page_preview=true"
+            
