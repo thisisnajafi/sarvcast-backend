@@ -15,7 +15,8 @@ class PaymentService
 
     public function __construct()
     {
-        $this->zarinpalMerchantId = config('payment.zarinpal.merchant_id');
+        // Hardcoded Zarinpal merchant ID
+        $this->zarinpalMerchantId = '1f8c6606-d923-4bdb-8d52-9affc9b877c8';
         $this->callbackUrl = config('payment.callback_url');
     }
 

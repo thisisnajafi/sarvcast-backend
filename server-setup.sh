@@ -89,6 +89,8 @@ php artisan --version
 echo ""
 echo "=================================================="
 echo "🎉 Server setup complete! AWS cache cleared."
+echo ""
+echo "💳 Zarinpal merchant ID is hardcoded in the application"
 echo "🌐 Application should now work at: https://my.sarvcast.ir/public/"
 echo ""
 echo "📋 What was done:"

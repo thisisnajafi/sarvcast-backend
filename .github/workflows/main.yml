@@ -120,10 +120,11 @@ jobs:
           echo "5. Run: php artisan view:clear"
           echo "6. Run: php artisan cache:clear"
           echo ""
-          echo "🚫 To disable all caching, add to .env:"
-          echo "DISABLE_ALL_CACHING=true"
-          echo ""
-          echo "✅ This will ensure your application works properly on the server."
+           echo "🚫 To disable all caching, add to .env:"
+           echo "DISABLE_ALL_CACHING=true"
+           echo ""
+           echo "💳 Zarinpal merchant ID is hardcoded in the application"
+           echo "✅ This will ensure your application works properly on the server."
 
       - name: Verify deployment
         run: |

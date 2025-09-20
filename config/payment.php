@@ -11,14 +11,12 @@ return [
     */
 
     'zarinpal' => [
-        'merchant_id' => env('ZARINPAL_MERCHANT_ID'),
-        'sandbox' => env('ZARINPAL_SANDBOX', false),
-        'api_url' => env('ZARINPAL_SANDBOX', false) 
-            ? 'https://sandbox.zarinpal.com/pg/rest/WebGate/' 
-            : 'https://api.zarinpal.com/pg/v4/payment/',
+        'merchant_id' => '1f8c6606-d923-4bdb-8d52-9affc9b877c8', // Hardcoded merchant ID
+        'sandbox' => false, // Production mode
+        'api_url' => 'https://api.zarinpal.com/pg/v4/payment/',
     ],
 
-    'callback_url' => env('PAYMENT_CALLBACK_URL', env('APP_URL') . '/payment/callback'),
+    'callback_url' => env('PAYMENT_CALLBACK_URL', env('APP_URL') . '/payment/zarinpal/callback'),
 
     'success_url' => env('PAYMENT_SUCCESS_URL', env('APP_URL') . '/payment/success'),
     'failure_url' => env('PAYMENT_FAILURE_URL', env('APP_URL') . '/payment/failure'),

@@ -405,7 +405,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
             });
           },
           onNavigationRequest: (NavigationRequest request) {
-            // Handle Zarinpal callback
+            // Handle Zarinpal callback (NOT webhook - user is redirected back)
             if (request.url.contains('callback') || request.url.contains('return')) {
               final uri = Uri.parse(request.url);
               final authority = uri.queryParameters['Authority'];
