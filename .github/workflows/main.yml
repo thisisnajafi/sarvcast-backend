@@ -115,7 +115,7 @@ jobs:
       - name: Notify Telegram
         env:
           TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
-          TELEGRAM_CHAT_ID: -1002275828844
+          TELEGRAM_CHAT_ID: -1002796302613_97
           GITHUB_ACTOR: ${{ github.actor }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
