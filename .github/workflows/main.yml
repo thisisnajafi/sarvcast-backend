@@ -27,30 +27,53 @@ jobs:
       run: |
         composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
         
+    - name: Create deployment package (excluding vendor)
+      run: |
+        # Create deployment directory
+        mkdir -p deployment
+        
+        # Copy files excluding vendor folder for faster upload
+        rsync -av \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='node_modules' \
+          --exclude='tests' \
+          --exclude='.env*' \
+          --exclude='storage/logs/*' \
+          --exclude='storage/framework/cache/*' \
+          --exclude='storage/framework/sessions/*' \
+          --exclude='storage/framework/views/*' \
+          --exclude='bootstrap/cache/*' \
+          --exclude='vendor' \
+          --exclude='Homestead*' \
+          --exclude='*.log' \
+          --exclude='.DS_Store' \
+          --exclude='Thumbs.db' \
+          . deployment/
+          
     - name: Deploy to FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ftp.sarvcast.ir
         username: my@sarvcast.ir
         password: Prof48017421@#
-        local-dir: ./
+        local-dir: ./deployment/
         server-dir: /
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          **/.env*
-          **/tests/**
-          **/.github/**
-          **/storage/logs/**
-          **/storage/framework/cache/**
-          **/storage/framework/sessions/**
-          **/storage/framework/views/**
-          **/bootstrap/cache/**
-          **/Homestead*/**
-          **/*.log
-          **/.DS_Store
-          **/Thumbs.db
+        # Add FTP connection stability options
+        log-level: minimal
+        dry-run: false
+        
+    - name: Prepare Server Instructions
+      run: |
+        echo "📋 After FTP upload completes, run these commands on your server:"
+        echo "1. SSH into your server or use cPanel File Manager"
+        echo "2. Navigate to your application directory"
+        echo "3. Run: composer install --no-dev --optimize-autoloader --no-interaction"
+        echo "4. Run: php artisan config:cache"
+        echo "5. Run: php artisan route:cache"
+        echo "6. Run: php artisan view:cache"
+        echo ""
+        echo "This will install Composer dependencies and optimize your application."
           
     - name: Notify Telegram
       env:
@@ -73,10 +96,15 @@ jobs:
         *Status:* ✅ Deployed to production
 
         *Deployment Details:*
-        • Composer dependencies installed
-        • Files uploaded to FTP server
-        • Application ready for use
+        • Application files uploaded to FTP server
+        • Vendor folder excluded for faster upload
+        • Next: Run Composer install on server
 
         🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" \
           -d "parse_mode=Markdown" \
           -d "disable_web_page_preview=true"
+          
+    - name: Cleanup
+      if: always()
+      run: |
+        rm -rf deployment/
