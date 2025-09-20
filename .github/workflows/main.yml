@@ -27,59 +27,56 @@ jobs:
       run: |
         composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
         
-    - name: Create deployment package
-      run: |
-        # Create deployment directory
-        mkdir -p deployment
-        
-        # Copy production files only
-        rsync -av \
-          --exclude='.git' \
-          --exclude='.github' \
-          --exclude='node_modules' \
-          --exclude='tests' \
-          --exclude='.env*' \
-          --exclude='storage/logs/*' \
-          --exclude='storage/framework/cache/*' \
-          --exclude='storage/framework/sessions/*' \
-          --exclude='storage/framework/views/*' \
-          --exclude='bootstrap/cache/*' \
-          --exclude='vendor' \
-          --exclude='Homestead*' \
-          --exclude='*.log' \
-          --exclude='.DS_Store' \
-          --exclude='Thumbs.db' \
-          . deployment/
-          
     - name: Deploy to FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./deployment/
-        server-dir: ${{ secrets.FTP_DIRECTORY }}
-        
-    - name: Send Telegram notification
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_CHAT_ID }}
-        token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        message: |
-          🚀 **SarvCast Deployment Successful**
+        server: ftp.sarvcast.ir
+        username: my@sarvcast.ir
+        password: prof48017421@#
+        local-dir: ./
+        server-dir: /
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/.env*
+          **/tests/**
+          **/.github/**
+          **/storage/logs/**
+          **/storage/framework/cache/**
+          **/storage/framework/sessions/**
+          **/storage/framework/views/**
+          **/bootstrap/cache/**
+          **/Homestead*/**
+          **/*.log
+          **/.DS_Store
+          **/Thumbs.db
           
-          **Branch:** `${{ github.ref_name }}`
-          **Commit:** `${{ github.sha }}`
-          **Author:** ${{ github.actor }}
-          
-          **Changes:**
-          ${{ github.event.head_commit.message }}
-          
-          **Status:** ✅ Deployed to production
-          
-          🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          
-    - name: Cleanup
-      if: always()
+    - name: Notify Telegram
+      env:
+        TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
+        TELEGRAM_CHAT_ID: -1002796302613_97
+        GITHUB_ACTOR: ${{ github.actor }}
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
       run: |
-        rm -rf deployment/
+        curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+          -d "chat_id=$TELEGRAM_CHAT_ID" \
+          -d "text=🚀 *SarvCast Deployment Successful*
+
+        *Branch:* \`${{ github.ref_name }}\`
+        *Commit:* \`${{ github.sha }}\`
+        *Author:* ${{ github.actor }}
+
+        *Changes:*
+        ${{ github.event.head_commit.message }}
+
+        *Status:* ✅ Deployed to production
+
+        *Deployment Details:*
+        • Composer dependencies installed
+        • Files uploaded to FTP server
+        • Application ready for use
+
+        🔗 [View Commit](https://github.com/${{ github.repository }}/commit/${{ github.sha }})" \
+          -d "parse_mode=Markdown" \
+          -d "disable_web_page_preview=true"
