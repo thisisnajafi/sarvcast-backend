@@ -18,33 +18,17 @@ class Subscription extends Model
         'status',
         'start_date',
         'end_date',
-        'monthly_price',
-        'yearly_price',
-        'trial_days',
-        'auto_renew',
-        'cancellation_reason',
-        'cancelled_at',
-        'renewal_count',
-        'total_revenue',
-        'avg_monthly_revenue',
-        'subscription_metadata',
         'price',
         'currency',
         'auto_renew',
         'payment_method',
-        'transaction_id'
+        'transaction_id',
     ];
 
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
-        'cancelled_at' => 'datetime',
         'price' => 'decimal:2',
-        'monthly_price' => 'decimal:2',
-        'yearly_price' => 'decimal:2',
-        'total_revenue' => 'decimal:2',
-        'avg_monthly_revenue' => 'decimal:2',
-        'subscription_metadata' => 'array',
         'auto_renew' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
@@ -137,10 +121,10 @@ class Subscription extends Model
     public function getPlanNameAttribute(): string
     {
         $plans = [
-            'monthly' => 'اشتراک ماهانه',
-            'quarterly' => 'اشتراک سه‌ماهه',
-            'yearly' => 'اشتراک سالانه',
-            'family' => 'اشتراک خانوادگی'
+            '1month' => 'اشتراک یک ماهه',
+            '3months' => 'اشتراک سه ماهه',
+            '6months' => 'اشتراک شش ماهه',
+            '1year' => 'اشتراک یک ساله'
         ];
 
         return $plans[$this->type] ?? $this->type;
@@ -200,10 +184,10 @@ class Subscription extends Model
     public function getTypeTextAttribute(): string
     {
         $types = [
-            'monthly' => 'ماهانه',
-            'quarterly' => 'سه‌ماهه',
-            'yearly' => 'سالانه',
-            'family' => 'خانوادگی'
+            '1month' => 'یک ماهه',
+            '3months' => 'سه ماهه',
+            '6months' => 'شش ماهه',
+            '1year' => 'یک ساله'
         ];
 
         return $types[$this->type] ?? $this->type;

@@ -171,17 +171,19 @@
             <h2 class="text-lg font-semibold text-gray-900 mb-4">مدیریت تصاویر بر اساس زمان</h2>
             
             <div class="space-y-4">
-                <!-- Add Image Timeline Button -->
-                <div class="flex justify-between items-center">
-                    <p class="text-sm text-gray-600">تصاویر را بر اساس زمان‌بندی صداپیشه‌ها اضافه کنید</p>
-                    <button type="button" id="add-image-timeline" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                        افزودن تصویر
-                    </button>
-                </div>
-
                 <!-- Image Timeline List -->
                 <div id="image-timeline-list" class="space-y-4">
                     <!-- Image timelines will be added here dynamically -->
+                </div>
+
+                <!-- Add Image Timeline Button - MOVED TO BOTTOM -->
+                <div class="flex justify-center pt-4 border-t border-gray-200">
+                    <button type="button" id="add-image-timeline" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 space-x-reverse">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span>افزودن تصویر در زمان فعلی</span>
+                    </button>
                 </div>
 
                 <!-- Hidden inputs for image timeline data -->
@@ -233,13 +235,20 @@
         </div>
 
         <!-- Actions -->
-        <div class="flex justify-end space-x-4 space-x-reverse">
-            <a href="{{ route('admin.episodes.index') }}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                انصراف
-            </a>
-            <button type="submit" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-                ایجاد اپیزود
-            </button>
+        <div class="flex justify-between items-center">
+            <div class="flex space-x-2 space-x-reverse">
+                <button type="button" onclick="clearFormData()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm">
+                    پاک کردن داده‌های ذخیره شده
+                </button>
+            </div>
+            <div class="flex space-x-4 space-x-reverse">
+                <a href="{{ route('admin.episodes.index') }}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    انصراف
+                </a>
+                <button type="submit" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                    ایجاد اپیزود
+                </button>
+            </div>
         </div>
     </form>
 </div>
@@ -381,5 +390,359 @@ function updateImageFileName(input) {
 }
 </script>
 
+<script src="{{ asset('js/form-state-manager.js') }}"></script>
 <script src="{{ asset('js/admin-episode-management.js') }}"></script>
+
+<script>
+// Enhanced form handling with state persistence
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize form state management
+    if (window.episodeFormManager) {
+        console.log('Episode form state management initialized');
+    }
+    
+    // Handle form submission with better error handling
+    const form = document.getElementById('episode-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Show loading state
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.textContent = 'در حال ایجاد...';
+            submitButton.disabled = true;
+            
+            // Re-enable button after 10 seconds (in case of timeout)
+            setTimeout(() => {
+                submitButton.textContent = originalText;
+                submitButton.disabled = false;
+            }, 10000);
+        });
+    }
+    
+    // Add auto-save indicator
+    addAutoSaveIndicator();
+});
+
+function addAutoSaveIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'auto-save-indicator';
+    indicator.className = 'fixed bottom-4 left-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 transition-opacity duration-300';
+    indicator.textContent = '✓ ذخیره خودکار';
+    document.body.appendChild(indicator);
+    
+    // Show indicator when form is saved
+    const form = document.getElementById('episode-form');
+    if (form) {
+        form.addEventListener('input', () => {
+            indicator.style.opacity = '1';
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+            }, 2000);
+        });
+    }
+}
+
+// Enhanced voice actor management with persistence
+function addVoiceActorRow(data = {}) {
+    const voiceActorsList = document.getElementById('voice-actors-list');
+    if (!voiceActorsList) return;
+    
+    const row = document.createElement('div');
+    row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+    row.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">صداپیشه</label>
+                <select name="voice_actor_${voiceActorCounter}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="">انتخاب صداپیشه</option>
+                    ${availableVoiceActors.map(actor => 
+                        `<option value="${actor.id}" ${data.narrator_id == actor.id ? 'selected' : ''}>${actor.name}</option>`
+                    ).join('')}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="button" onclick="removeVoiceActorRow(this)" class="w-full px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                    حذف
+                </button>
+            </div>
+        </div>
+    `;
+    
+    voiceActorsList.appendChild(row);
+    voiceActorCounter++;
+    updateVoiceActorsData();
+}
+
+// Enhanced image timeline management with persistence and auto-linking
+function addImageTimelineRow(data = {}) {
+    const imageTimelineList = document.getElementById('image-timeline-list');
+    if (!imageTimelineList) return;
+    
+    // Get the last image's end time to set as start time for new image
+    const existingRows = imageTimelineList.querySelectorAll('.bg-gray-50');
+    let suggestedStartTime = '';
+    
+    if (existingRows.length > 0) {
+        const lastRow = existingRows[existingRows.length - 1];
+        const lastEndTimeInput = lastRow.querySelector('input[name^="timeline_end_"]');
+        if (lastEndTimeInput && lastEndTimeInput.value) {
+            suggestedStartTime = lastEndTimeInput.value;
+        }
+    }
+    
+    const row = document.createElement('div');
+    row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+    row.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
+                <input type="file" name="timeline_image_${imageTimelineCounter}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="previewImage(this)">
+                <div class="mt-2 image-preview-container" style="display: none;">
+                    <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">شروع (ثانیه)</label>
+                <input type="number" name="timeline_start_${imageTimelineCounter}" value="${data.start_time || suggestedStartTime}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0" onchange="updatePreviousImageEndTime(this)">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">پایان (ثانیه)</label>
+                <input type="number" name="timeline_end_${imageTimelineCounter}" value="${data.end_time || ''}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
+            </div>
+            <div class="flex items-end">
+                <button type="button" onclick="removeImageTimelineRow(this)" class="w-full px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                    حذف
+                </button>
+            </div>
+        </div>
+    `;
+    
+    imageTimelineList.appendChild(row);
+    imageTimelineCounter++;
+    updateImageTimelineData();
+}
+
+// Preview image function
+function previewImage(input) {
+    const file = input.files[0];
+    const previewContainer = input.parentElement.querySelector('.image-preview-container');
+    const previewImg = previewContainer.querySelector('img');
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            previewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        previewContainer.style.display = 'none';
+    }
+}
+
+// Update previous image's end time when current image's start time changes
+function updatePreviousImageEndTime(currentStartTimeInput) {
+    const imageTimelineList = document.getElementById('image-timeline-list');
+    if (!imageTimelineList) return;
+    
+    const currentRow = currentStartTimeInput.closest('.bg-gray-50');
+    const allRows = Array.from(imageTimelineList.querySelectorAll('.bg-gray-50'));
+    const currentIndex = allRows.indexOf(currentRow);
+    
+    // If this is not the first image, update the previous image's end time
+    if (currentIndex > 0) {
+        const previousRow = allRows[currentIndex - 1];
+        const previousEndTimeInput = previousRow.querySelector('input[name^="timeline_end_"]');
+        
+        if (previousEndTimeInput && currentStartTimeInput.value) {
+            previousEndTimeInput.value = currentStartTimeInput.value;
+            updateImageTimelineData();
+        }
+    }
+}
+
+// Update voice actors data for form submission
+function updateVoiceActorsData() {
+    const voiceActorsData = [];
+    const voiceActorsList = document.getElementById('voice-actors-list');
+    
+    voiceActorsList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
+        const narratorSelect = row.querySelector('select[name^="voice_actor_"]');
+        
+        if (narratorSelect && narratorSelect.value) {
+            voiceActorsData.push({
+                narrator_id: narratorSelect.value
+            });
+        }
+    });
+    
+    const hiddenInput = document.getElementById('voice-actors-data');
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(voiceActorsData);
+    }
+}
+
+// Update image timeline data for form submission
+function updateImageTimelineData() {
+    const imageTimelineData = [];
+    const imageTimelineList = document.getElementById('image-timeline-list');
+    
+    imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
+        const imageInput = row.querySelector('input[type="file"]');
+        const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
+        const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
+        
+        if (imageInput && startTimeInput && endTimeInput) {
+            imageTimelineData.push({
+                image_file: imageInput.files[0] ? imageInput.files[0].name : '',
+                start_time: startTimeInput.value,
+                end_time: endTimeInput.value
+            });
+        }
+    });
+    
+    const hiddenInput = document.getElementById('image-timeline-data');
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(imageTimelineData);
+    }
+}
+
+// Remove voice actor row
+function removeVoiceActorRow(button) {
+    button.closest('.bg-gray-50').remove();
+    updateVoiceActorsData();
+}
+
+// Remove image timeline row
+function removeImageTimelineRow(button) {
+    button.closest('.bg-gray-50').remove();
+    updateImageTimelineData();
+}
+
+// Initialize voice actor management
+function initializeVoiceActorManagement() {
+    const addButton = document.getElementById('add-voice-actor');
+    if (addButton) {
+        addButton.addEventListener('click', () => {
+            addVoiceActorRow();
+        });
+    }
+}
+
+// Initialize image timeline management
+function initializeImageTimelineManagement() {
+    const addButton = document.getElementById('add-image-timeline');
+    if (addButton) {
+        addButton.addEventListener('click', () => {
+            addImageTimelineAtCurrentTime();
+        });
+    }
+}
+
+// Add image timeline at current audio time
+function addImageTimelineAtCurrentTime() {
+    const audioPlayer = document.getElementById('audio-player');
+    const durationField = document.getElementById('duration');
+    
+    if (!audioPlayer || !durationField.value) {
+        alert('لطفاً ابتدا فایل صوتی را آپلود کنید');
+        return;
+    }
+    
+    const currentTime = audioPlayer.currentTime || 0;
+    const audioDuration = parseFloat(durationField.value);
+    
+    if (currentTime >= audioDuration) {
+        alert('زمان فعلی نمی‌تواند بیشتر یا مساوی مدت زمان کل فایل صوتی باشد');
+        return;
+    }
+    
+    // Get the last image timeline
+    const imageTimelineList = document.getElementById('image-timeline-list');
+    const existingRows = imageTimelineList.querySelectorAll('.bg-gray-50');
+    
+    if (existingRows.length > 0) {
+        // Update the last image's end time to current audio time
+        const lastRow = existingRows[existingRows.length - 1];
+        const lastEndTimeInput = lastRow.querySelector('input[name^="timeline_end_"]');
+        if (lastEndTimeInput) {
+            lastEndTimeInput.value = currentTime.toFixed(1);
+        }
+    }
+    
+    // Create new image timeline with current time as start and audio duration as end
+    addImageTimelineRow({
+        start_time: currentTime.toFixed(1),
+        end_time: audioDuration.toFixed(1)
+    });
+}
+
+// Initialize first image timeline automatically when audio is loaded
+function initializeFirstImageTimeline() {
+    const imageTimelineList = document.getElementById('image-timeline-list');
+    const durationField = document.getElementById('duration');
+    
+    if (imageTimelineList && imageTimelineList.children.length === 0 && durationField.value) {
+        // Create first image with start time 0 and end time = audio duration
+        addImageTimelineRow({
+            start_time: 0,
+            end_time: durationField.value
+        });
+    }
+}
+
+// Clear form data function
+function clearFormData() {
+    if (confirm('آیا از پاک کردن تمام داده‌های ذخیره شده اطمینان دارید؟')) {
+        // Clear localStorage data
+        if (window.episodeFormManager) {
+            window.episodeFormManager.clearData();
+        }
+        
+        // Clear file data
+        localStorage.removeItem('episode_audio_file');
+        localStorage.removeItem('episode_cover_image_file');
+        
+        // Reset form
+        const form = document.getElementById('episode-form');
+        if (form) {
+            form.reset();
+        }
+        
+        // Clear dynamic elements
+        const voiceActorsList = document.getElementById('voice-actors-list');
+        if (voiceActorsList) {
+            voiceActorsList.innerHTML = '';
+        }
+        
+        const imageTimelineList = document.getElementById('image-timeline-list');
+        if (imageTimelineList) {
+            imageTimelineList.innerHTML = '';
+        }
+        
+        // Reset counters
+        voiceActorCounter = 0;
+        imageTimelineCounter = 0;
+        
+        // Clear file name displays
+        const audioFileName = document.getElementById('audio-file-name');
+        if (audioFileName) {
+            audioFileName.textContent = '';
+        }
+        
+        const imageFileName = document.getElementById('image-file-name');
+        if (imageFileName) {
+            imageFileName.textContent = '';
+        }
+        
+        // Hide audio player
+        const audioPlayerSection = document.getElementById('audio-player-section');
+        if (audioPlayerSection) {
+            audioPlayerSection.classList.add('hidden');
+        }
+        
+        showNotification('داده‌های فرم پاک شد', 'success');
+    }
+}
+</script>
 @endsection

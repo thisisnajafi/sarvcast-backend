@@ -190,7 +190,6 @@ class StoryController extends Controller
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'age_group' => 'required|string',
-            'duration' => 'required|integer|min:1',
             'director_id' => 'nullable|exists:people,id',
             'writer_id' => 'nullable|exists:people,id',
             'author_id' => 'nullable|exists:people,id',
@@ -229,7 +228,7 @@ class StoryController extends Controller
      */
     public function show(Story $story)
     {
-        $story->load(['category', 'director', 'writer', 'author', 'narrator', 'episodes', 'people']);
+        $story->load(['category', 'director', 'writer', 'author', 'narrator', 'episodes.narrator', 'people']);
         
         return view('admin.stories.show', compact('story'));
     }
@@ -265,7 +264,6 @@ class StoryController extends Controller
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
             'age_group' => 'required|string',
-            'duration' => 'required|integer|min:1',
             'director_id' => 'nullable|exists:people,id',
             'writer_id' => 'nullable|exists:people,id',
             'author_id' => 'nullable|exists:people,id',

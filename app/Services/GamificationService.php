@@ -21,10 +21,19 @@ use Illuminate\Support\Facades\Log;
 class GamificationService
 {
     /**
+     * Gamification system disabled flag
+     */
+    private bool $disabled = true;
+
+    /**
      * Award points to user
      */
     public function awardPoints(int $userId, int $points, string $sourceType, int $sourceId = null, string $description = '', array $metadata = []): array
     {
+        if ($this->disabled) {
+            return ['success' => false, 'message' => 'Gamification system is disabled'];
+        }
+        
         try {
             DB::beginTransaction();
 
@@ -111,6 +120,10 @@ class GamificationService
      */
     public function unlockAchievement(int $userId, Achievement $achievement): bool
     {
+        if ($this->disabled) {
+            return false;
+        }
+        
         try {
             // Check if already unlocked
             $existing = UserAchievement::where('user_id', $userId)
@@ -158,6 +171,10 @@ class GamificationService
      */
     public function updateStreak(int $userId, string $streakType, bool $increment = true): array
     {
+        if ($this->disabled) {
+            return ['success' => false, 'message' => 'Gamification system is disabled'];
+        }
+        
         try {
             $streak = UserStreak::firstOrCreate([
                 'user_id' => $userId,
@@ -234,6 +251,10 @@ class GamificationService
      */
     public function getLeaderboard(string $slug, int $limit = 50): array
     {
+        if ($this->disabled) {
+            return ['success' => false, 'message' => 'Gamification system is disabled'];
+        }
+        
         return Cache::remember("leaderboard_{$slug}_{$limit}", 1800, function() use ($slug, $limit) {
             $leaderboard = Leaderboard::where('slug', $slug)
                 ->where('is_active', true)

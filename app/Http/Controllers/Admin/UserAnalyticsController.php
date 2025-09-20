@@ -9,6 +9,48 @@ use Carbon\Carbon;
 
 class UserAnalyticsController extends Controller
 {
+    /**
+     * Display the user analytics dashboard
+     */
+    public function index(Request $request)
+    {
+        $dateRange = $request->get('date_range', '30');
+        $startDate = Carbon::now()->subDays($dateRange);
+
+        // Get basic user statistics
+        $userStats = [
+            'total_users' => User::count(),
+            'active_users' => User::where('is_active', true)->count(),
+            'new_users' => User::where('created_at', '>=', $startDate)->count(),
+            'verified_users' => User::where('email_verified_at', '!=', null)->count(),
+        ];
+
+        // Get registration trends for the selected period
+        $registrationTrends = User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', $startDate)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        // Get user status distribution
+        $statusDistribution = User::selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->get();
+
+        // Get user role distribution
+        $roleDistribution = User::selectRaw('role, COUNT(*) as count')
+            ->groupBy('role')
+            ->get();
+
+        return view('admin.user-analytics.index', compact(
+            'userStats', 
+            'registrationTrends', 
+            'statusDistribution', 
+            'roleDistribution', 
+            'dateRange'
+        ));
+    }
+
     public function overview(Request $request)
     {
         $dateRange = $request->get('date_range', '30');

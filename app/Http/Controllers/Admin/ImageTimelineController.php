@@ -159,7 +159,7 @@ class ImageTimelineController extends Controller
     /**
      * Validate timeline data without saving
      */
-    public function validate(Request $request): JsonResponse
+    public function validateTimeline(Request $request): JsonResponse
     {
         try {
             $request->validate([

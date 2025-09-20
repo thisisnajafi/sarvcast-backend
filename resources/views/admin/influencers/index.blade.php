@@ -86,34 +86,12 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">وضعیت</label>
                 <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    <option value="">همه وضعیت‌ها</option>
-                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>در انتظار</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>فعال</option>
-                    <option value="suspended" {{ request('status') == 'suspended' ? 'selected' : '' }}>معلق</option>
-                    <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>منقضی</option>
-                </select>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">پلتفرم</label>
-                <select name="platform" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    <option value="">همه پلتفرم‌ها</option>
-                    <option value="instagram" {{ request('platform') == 'instagram' ? 'selected' : '' }}>اینستاگرام</option>
-                    <option value="youtube" {{ request('platform') == 'youtube' ? 'selected' : '' }}>یوتیوب</option>
-                    <option value="tiktok" {{ request('platform') == 'tiktok' ? 'selected' : '' }}>تیک‌تاک</option>
-                    <option value="twitter" {{ request('platform') == 'twitter' ? 'selected' : '' }}>توییتر</option>
-                    <option value="facebook" {{ request('platform') == 'facebook' ? 'selected' : '' }}>فیس‌بوک</option>
-                    <option value="linkedin" {{ request('platform') == 'linkedin' ? 'selected' : '' }}>لینکدین</option>
-                    <option value="other" {{ request('platform') == 'other' ? 'selected' : '' }}>سایر</option>
-                </select>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">تأیید شده</label>
-                <select name="is_verified" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                     <option value="">همه</option>
-                    <option value="1" {{ request('is_verified') == '1' ? 'selected' : '' }}>تأیید شده</option>
-                    <option value="0" {{ request('is_verified') == '0' ? 'selected' : '' }}>تأیید نشده</option>
+                    <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>پیش‌نویس</option>
+                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>فعال</option>
+                    <option value="paused" {{ request('status') == 'paused' ? 'selected' : '' }}>متوقف</option>
+                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>تکمیل شده</option>
+                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>لغو شده</option>
                 </select>
             </div>
             
@@ -229,7 +207,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            @if($influencer->is_verified)
+                            @if($influencer->affiliatePartner->is_verified)
                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                     تأیید شده
                                 </span>
@@ -243,7 +221,7 @@
                             <div class="flex space-x-2 space-x-reverse">
                                 <a href="{{ route('admin.influencers.show', $influencer) }}" class="text-blue-600 hover:text-blue-900">مشاهده</a>
                                 <a href="{{ route('admin.influencers.edit', $influencer) }}" class="text-indigo-600 hover:text-indigo-900">ویرایش</a>
-                                @if(!$influencer->is_verified)
+                                @if(!$influencer->affiliatePartner->is_verified)
                                     <form method="POST" action="{{ route('admin.influencers.verify', $influencer) }}" class="inline">
                                         @csrf
                                         <button type="submit" class="text-green-600 hover:text-green-900">تأیید</button>

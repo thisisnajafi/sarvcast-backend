@@ -162,4 +162,6 @@
         @endif
     </div>
 </div>
+
+<script src="{{ asset('js/admin/person-manager.js') }}"></script>
 @endsection

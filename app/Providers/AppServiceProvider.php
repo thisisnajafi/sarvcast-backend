@@ -6,6 +6,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
 use Carbon\Carbon;
 use App\Helpers\JalaliHelper;
+use App\Models\Episode;
+use App\Observers\EpisodeObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
         
         // Set default timezone to Tehran
         date_default_timezone_set('Asia/Tehran');
+
+        // Register observers
+        Episode::observe(EpisodeObserver::class);
 
         // Register Blade directives for Jalali dates
         Blade::directive('jalali', function ($expression) {

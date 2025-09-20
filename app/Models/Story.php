@@ -509,4 +509,135 @@ class Story extends Model
     {
         return \App\Helpers\JalaliHelper::getRelativeTime($this->updated_at);
     }
+
+    /**
+     * Get the total duration of all published episodes in seconds
+     */
+    public function getTotalDurationAttribute(): int
+    {
+        return $this->episodes()
+            ->where('status', 'published')
+            ->sum('duration') ?? 0;
+    }
+
+    /**
+     * Get the total number of episodes
+     */
+    public function getTotalEpisodesCountAttribute(): int
+    {
+        return $this->episodes()->count();
+    }
+
+    /**
+     * Get the number of published episodes
+     */
+    public function getPublishedEpisodesCountAttribute(): int
+    {
+        return $this->episodes()->where('status', 'published')->count();
+    }
+
+    /**
+     * Get the number of free episodes
+     */
+    public function getFreeEpisodesCountAttribute(): int
+    {
+        return $this->episodes()
+            ->where('status', 'published')
+            ->where('is_premium', false)
+            ->count();
+    }
+
+    /**
+     * Get the number of premium episodes
+     */
+    public function getPremiumEpisodesCountAttribute(): int
+    {
+        return $this->episodes()
+            ->where('status', 'published')
+            ->where('is_premium', true)
+            ->count();
+    }
+
+    /**
+     * Get the number of draft episodes
+     */
+    public function getDraftEpisodesCountAttribute(): int
+    {
+        return $this->episodes()->where('status', 'draft')->count();
+    }
+
+    /**
+     * Get the number of pending episodes
+     */
+    public function getPendingEpisodesCountAttribute(): int
+    {
+        return $this->episodes()->where('status', 'pending')->count();
+    }
+
+    /**
+     * Get formatted duration string
+     */
+    public function getFormattedDurationAttribute(): string
+    {
+        $totalSeconds = $this->total_duration;
+        
+        if ($totalSeconds == 0) {
+            return '0:00';
+        }
+        
+        $minutes = floor($totalSeconds / 60);
+        $seconds = $totalSeconds % 60;
+        
+        return sprintf('%d:%02d', $minutes, $seconds);
+    }
+
+    /**
+     * Check if story has any episodes
+     */
+    public function hasEpisodes(): bool
+    {
+        return $this->episodes()->exists();
+    }
+
+    /**
+     * Check if story has published episodes
+     */
+    public function hasPublishedEpisodes(): bool
+    {
+        return $this->episodes()->where('status', 'published')->exists();
+    }
+
+    /**
+     * Get the first published episode
+     */
+    public function getFirstEpisodeAttribute(): ?Episode
+    {
+        return $this->episodes()
+            ->where('status', 'published')
+            ->orderBy('episode_number')
+            ->first();
+    }
+
+    /**
+     * Get the last published episode
+     */
+    public function getLastEpisodeAttribute(): ?Episode
+    {
+        return $this->episodes()
+            ->where('status', 'published')
+            ->orderBy('episode_number', 'desc')
+            ->first();
+    }
+
+    /**
+     * Update story statistics based on episodes
+     */
+    public function updateStatistics(): void
+    {
+        $this->update([
+            'duration' => $this->total_duration,
+            'total_episodes' => $this->total_episodes_count,
+            'free_episodes' => $this->free_episodes_count,
+        ]);
+    }
 }

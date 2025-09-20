@@ -128,7 +128,7 @@ class TelegramNotificationService
         
         $message .= "📊 <b>آمار اینفلوئنسر:</b>\n";
         $message .= "• تعداد کل کمیسیون‌ها: " . $influencer->commissions()->count() . "\n";
-        $message .= "• مجموع کمیسیون‌ها: " . number_format($influencer->commissions()->sum('amount')) . " تومان\n";
+        $message .= "• مجموع کمیسیون‌ها: " . number_format($influencer->commissions()->sum('commission_amount')) . " تومان\n";
         
         return $this->sendMessage($message);
     }

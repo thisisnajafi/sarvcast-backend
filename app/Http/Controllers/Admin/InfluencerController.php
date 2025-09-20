@@ -19,29 +19,24 @@ class InfluencerController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = InfluencerCampaign::with('user');
+        $query = InfluencerCampaign::with('affiliatePartner');
 
         // Apply filters
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('platform')) {
-            $query->where('platform', $request->platform);
-        }
-
-        if ($request->filled('is_verified')) {
-            $query->where('is_verified', $request->boolean('is_verified'));
-        }
+        // Filter by verification status - REMOVED (column doesn't exist)
+        // if ($request->filled('is_verified')) {
+        //     $query->where('is_verified', $request->boolean('is_verified'));
+        // }
 
         if ($request->filled('search')) {
-            $query->whereHas('user', function($q) use ($request) {
-                $q->where('first_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('last_name', 'like', '%' . $request->search . '%')
+            $query->whereHas('affiliatePartner', function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
                   ->orWhere('email', 'like', '%' . $request->search . '%')
-                  ->orWhere('phone_number', 'like', '%' . $request->search . '%');
-            })->orWhere('platform_username', 'like', '%' . $request->search . '%')
-              ->orWhere('campaign_name', 'like', '%' . $request->search . '%');
+                  ->orWhere('social_media_handle', 'like', '%' . $request->search . '%');
+            })->orWhere('campaign_name', 'like', '%' . $request->search . '%');
         }
 
         // Apply sorting
@@ -50,21 +45,19 @@ class InfluencerController extends Controller
 
         switch ($sortBy) {
             case 'name':
-                $query->join('users', 'influencer_campaigns.user_id', '=', 'users.id')
-                      ->orderBy('users.first_name', $sortDirection)
-                      ->orderBy('users.last_name', $sortDirection);
-                break;
-            case 'platform':
-                $query->orderBy('platform', $sortDirection);
+                $query->join('affiliate_partners', 'influencer_campaigns.affiliate_partner_id', '=', 'affiliate_partners.id')
+                      ->orderBy('affiliate_partners.name', $sortDirection);
                 break;
             case 'followers':
-                $query->orderBy('follower_count', $sortDirection);
+                $query->join('affiliate_partners', 'influencer_campaigns.affiliate_partner_id', '=', 'affiliate_partners.id')
+                      ->orderBy('affiliate_partners.follower_count', $sortDirection);
                 break;
             case 'status':
                 $query->orderBy('status', $sortDirection);
                 break;
             case 'verified':
-                $query->orderBy('is_verified', $sortDirection);
+                // $query->orderBy('is_verified', $sortDirection); // REMOVED - column doesn't exist
+                $query->orderBy('status', $sortDirection); // Use status instead
                 break;
             default:
                 $query->orderBy('created_at', $sortDirection);
@@ -78,13 +71,15 @@ class InfluencerController extends Controller
         // Get statistics
         $stats = [
             'total' => InfluencerCampaign::count(),
-            'verified' => InfluencerCampaign::where('is_verified', true)->count(),
             'pending' => InfluencerCampaign::where('status', 'pending')->count(),
             'active' => InfluencerCampaign::where('status', 'active')->count(),
             'suspended' => InfluencerCampaign::where('status', 'suspended')->count(),
-            'expired' => InfluencerCampaign::where('expires_at', '<', now())->count(),
-            'total_followers' => InfluencerCampaign::sum('follower_count'),
-            'total_engagement' => InfluencerCampaign::sum('engagement_rate'),
+            'expired' => InfluencerCampaign::where('end_date', '<', now())->count(),
+            'verified' => InfluencerCampaign::join('affiliate_partners', 'influencer_campaigns.affiliate_partner_id', '=', 'affiliate_partners.id')
+                ->where('affiliate_partners.is_verified', true)
+                ->count(),
+            'total_followers' => InfluencerCampaign::join('affiliate_partners', 'influencer_campaigns.affiliate_partner_id', '=', 'affiliate_partners.id')
+                ->sum('affiliate_partners.follower_count'),
         ];
 
         return view('admin.influencers.index', compact('influencers', 'stats'));
@@ -105,20 +100,22 @@ class InfluencerController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'affiliate_partner_id' => 'required|exists:affiliate_partners,id',
             'campaign_name' => 'required|string|max:255',
-            'platform' => 'required|string|in:instagram,youtube,tiktok,twitter,facebook,linkedin,other',
-            'platform_username' => 'required|string|max:255',
-            'platform_url' => 'nullable|url|max:500',
-            'follower_count' => 'required|integer|min:0',
-            'engagement_rate' => 'required|numeric|min:0|max:100',
-            'content_type' => 'required|string|in:story,post,video,live,reel,other',
-            'target_audience' => 'required|string|max:500',
+            'campaign_description' => 'required|string',
+            'campaign_type' => 'required|string|in:story_review,educational_content,cultural_preservation,brand_partnership',
+            'content_type' => 'required|string|in:post,story,reel,video,live',
+            'required_posts' => 'required|integer|min:1',
+            'required_stories' => 'required|integer|min:0',
+            'compensation_per_post' => 'required|numeric|min:0',
             'commission_rate' => 'required|numeric|min:0|max:100',
-            'status' => 'required|string|in:pending,active,suspended,expired',
-            'verification_documents' => 'nullable|array',
-            'verification_documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'expires_at' => 'nullable|date|after:now',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'status' => 'required|string|in:draft,active,paused,completed,cancelled',
+            'content_guidelines' => 'nullable|array',
+            'hashtags' => 'nullable|array',
+            'target_audience' => 'nullable|array',
+            'requires_approval' => 'boolean',
         ]);
 
         try {
@@ -175,20 +172,22 @@ class InfluencerController extends Controller
     public function update(Request $request, InfluencerCampaign $influencer): RedirectResponse
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'affiliate_partner_id' => 'required|exists:affiliate_partners,id',
             'campaign_name' => 'required|string|max:255',
-            'platform' => 'required|string|in:instagram,youtube,tiktok,twitter,facebook,linkedin,other',
-            'platform_username' => 'required|string|max:255',
-            'platform_url' => 'nullable|url|max:500',
-            'follower_count' => 'required|integer|min:0',
-            'engagement_rate' => 'required|numeric|min:0|max:100',
-            'content_type' => 'required|string|in:story,post,video,live,reel,other',
-            'target_audience' => 'required|string|max:500',
+            'campaign_description' => 'required|string',
+            'campaign_type' => 'required|string|in:story_review,educational_content,cultural_preservation,brand_partnership',
+            'content_type' => 'required|string|in:post,story,reel,video,live',
+            'required_posts' => 'required|integer|min:1',
+            'required_stories' => 'required|integer|min:0',
+            'compensation_per_post' => 'required|numeric|min:0',
             'commission_rate' => 'required|numeric|min:0|max:100',
-            'status' => 'required|string|in:pending,active,suspended,expired',
-            'verification_documents' => 'nullable|array',
-            'verification_documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'expires_at' => 'nullable|date|after:now',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'status' => 'required|string|in:draft,active,paused,completed,cancelled',
+            'content_guidelines' => 'nullable|array',
+            'hashtags' => 'nullable|array',
+            'target_audience' => 'nullable|array',
+            'requires_approval' => 'boolean',
         ]);
 
         try {
@@ -253,26 +252,30 @@ class InfluencerController extends Controller
     }
 
     /**
-     * Verify an influencer campaign
+     * Verify an influencer campaign - DISABLED (column doesn't exist)
      */
     public function verify(InfluencerCampaign $influencer): RedirectResponse
     {
-        try {
-            $influencer->update([
-                'is_verified' => true,
-                'verified_at' => now(),
-                'status' => 'active'
-            ]);
-
-            return redirect()->back()
-                           ->with('success', 'کمپین اینفلوئنسر با موفقیت تأیید شد.');
-
-        } catch (\Exception $e) {
-            Log::error('Error verifying influencer campaign: ' . $e->getMessage());
-            
-            return redirect()->back()
-                           ->with('error', 'خطا در تأیید کمپین اینفلوئنسر. لطفاً دوباره تلاش کنید.');
-        }
+        // DISABLED - is_verified column doesn't exist in influencer_campaigns table
+        return redirect()->back()->with('error', 'قابلیت تأیید در حال حاضر غیرفعال است.');
+        
+        // Original code commented out:
+        // try {
+        //     $influencer->update([
+        //         'is_verified' => true,
+        //         'verified_at' => now(),
+        //         'status' => 'active'
+        //     ]);
+        //
+        //     return redirect()->back()
+        //                    ->with('success', 'کمپین اینفلوئنسر با موفقیت تأیید شد.');
+        //
+        // } catch (\Exception $e) {
+        //     Log::error('Error verifying influencer campaign: ' . $e->getMessage());
+        //     
+        //     return redirect()->back()
+        //                    ->with('error', 'خطا در تأیید کمپین اینفلوئنسر. لطفاً دوباره تلاش کنید.');
+        // }
     }
 
     /**
@@ -331,12 +334,14 @@ class InfluencerController extends Controller
 
             switch ($request->action) {
                 case 'verify':
-                    $influencers->update([
-                        'is_verified' => true,
-                        'verified_at' => now(),
-                        'status' => 'active'
-                    ]);
-                    $message = 'کمپین‌های اینفلوئنسر انتخاب شده با موفقیت تأیید شدند.';
+                    // DISABLED - is_verified column doesn't exist
+                    // $influencers->update([
+                    //     'is_verified' => true,
+                    //     'verified_at' => now(),
+                    //     'status' => 'active'
+                    // ]);
+                    $influencers->update(['status' => 'active']); // Only update status
+                    $message = 'کمپین‌های اینفلوئنسر انتخاب شده فعال شدند.';
                     break;
 
                 case 'suspend':
@@ -393,16 +398,12 @@ class InfluencerController extends Controller
     {
         $stats = [
             'total' => InfluencerCampaign::count(),
-            'verified' => InfluencerCampaign::where('is_verified', true)->count(),
             'pending' => InfluencerCampaign::where('status', 'pending')->count(),
             'active' => InfluencerCampaign::where('status', 'active')->count(),
             'suspended' => InfluencerCampaign::where('status', 'suspended')->count(),
-            'expired' => InfluencerCampaign::where('expires_at', '<', now())->count(),
-            'total_followers' => InfluencerCampaign::sum('follower_count'),
-            'total_engagement' => InfluencerCampaign::sum('engagement_rate'),
-            'by_platform' => InfluencerCampaign::selectRaw('platform, COUNT(*) as count')
-                                               ->groupBy('platform')
-                                               ->get(),
+            'expired' => InfluencerCampaign::where('end_date', '<', now())->count(),
+            'total_followers' => InfluencerCampaign::join('affiliate_partners', 'influencer_campaigns.affiliate_partner_id', '=', 'affiliate_partners.id')
+                ->sum('affiliate_partners.follower_count'),
             'by_status' => InfluencerCampaign::selectRaw('status, COUNT(*) as count')
                                             ->groupBy('status')
                                             ->get(),

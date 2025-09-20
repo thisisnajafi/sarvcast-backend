@@ -22,6 +22,7 @@ class AuthController extends Controller
 
     /**
      * Send SMS verification code for registration/login
+     * Detects if user is new or existing and returns appropriate response
      */
     public function sendVerificationCode(Request $request)
     {
@@ -47,6 +48,10 @@ class AuthController extends Controller
             ], 429);
         }
 
+        // Check if user exists
+        $user = User::where('phone_number', $phoneNumber)->first();
+        $isNewUser = !$user;
+
         // Send OTP code
         $result = $this->smsService->sendOtp($phoneNumber, 'login');
 
@@ -55,7 +60,9 @@ class AuthController extends Controller
                 'success' => true,
                 'message' => 'کد تایید به شماره شما ارسال شد',
                 'data' => [
-                    'expires_in' => 300 // 5 minutes
+                    'is_new_user' => $isNewUser,
+                    'expires_in' => 300, // 5 minutes
+                    'next_step' => $isNewUser ? 'registration' : 'login'
                 ]
             ]);
         } else {
@@ -72,10 +79,10 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/|unique:users',
+            'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
-            'verification_code' => 'required|string|size:6',
+            'verification_code' => 'required|string|size:4',
             'role' => 'required|in:parent,child',
             'parent_id' => 'nullable|exists:users,id',
         ]);
@@ -99,6 +106,15 @@ class AuthController extends Controller
                 'success' => false,
                 'message' => 'کد تایید نامعتبر یا منقضی شده است'
             ], 400);
+        }
+
+        // Check if user already exists
+        $existingUser = User::where('phone_number', $phoneNumber)->first();
+        if ($existingUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'کاربری با این شماره تلفن قبلاً ثبت شده است'
+            ], 409);
         }
 
         // Create user
@@ -138,7 +154,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/',
-            'verification_code' => 'required|string|size:6',
+            'verification_code' => 'required|string|size:4',
         ]);
 
         if ($validator->fails()) {

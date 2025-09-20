@@ -27,6 +27,8 @@ use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\InfluencerController;
 use App\Http\Controllers\Api\SchoolController;
 use App\Http\Controllers\Api\CorporateController;
+use App\Http\Controllers\Api\VersionController;
+use App\Http\Controllers\Api\UserSearchController;
 use App\Http\Controllers\Admin\PersonController;
 
 /*
@@ -86,6 +88,23 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('health/report', [HealthController::class, 'report']);
     Route::get('health/errors', [HealthController::class, 'errorRates']);
     Route::get('health/performance', [HealthController::class, 'apiPerformance']);
+    
+    // Version management routes
+    Route::prefix('version')->group(function () {
+        Route::post('check', [VersionController::class, 'checkForUpdates']);
+        Route::post('updates', [VersionController::class, 'getAllUpdates']);
+        Route::get('latest', [VersionController::class, 'getLatestVersion']);
+        Route::post('compatibility', [VersionController::class, 'checkCompatibility']);
+        Route::post('usage', [VersionController::class, 'reportUsage']);
+        Route::get('config', [VersionController::class, 'getAppConfig']);
+    });
+    
+    // User search routes
+    Route::prefix('users')->group(function () {
+        Route::post('search', [UserSearchController::class, 'searchUsers']);
+        Route::get('details', [UserSearchController::class, 'getUserDetails']);
+        Route::get('teachers/available', [UserSearchController::class, 'getAvailableTeachers']);
+    });
 });
 
 // Protected routes
@@ -413,6 +432,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::prefix('comments')->middleware('auth:sanctum')->group(function () {
         Route::get('my-comments', [StoryCommentController::class, 'getUserComments']);
         Route::delete('{commentId}', [StoryCommentController::class, 'deleteComment']);
+        Route::post('{commentId}/like', [StoryCommentController::class, 'toggleLike']);
+        Route::get('{commentId}/replies', [StoryCommentController::class, 'getReplies']);
     });
 
     // Coin System routes
@@ -746,16 +767,16 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\ReferralController::class, 'apiStatistics']);
         });
 
-        // Gamification System API
-        Route::prefix('gamification')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\GamificationController::class, 'apiIndex']);
-            Route::post('/', [\App\Http\Controllers\Admin\GamificationController::class, 'apiStore']);
-            Route::get('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'apiShow']);
-            Route::put('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'apiUpdate']);
-            Route::delete('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\GamificationController::class, 'apiBulkAction']);
-            Route::get('/statistics/data', [\App\Http\Controllers\Admin\GamificationController::class, 'apiStatistics']);
-        });
+        // Gamification System API - DISABLED
+        // Route::prefix('gamification')->group(function () {
+        //     Route::get('/', [\App\Http\Controllers\Admin\GamificationController::class, 'apiIndex']);
+        //     Route::post('/', [\App\Http\Controllers\Admin\GamificationController::class, 'apiStore']);
+        //     Route::get('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'apiShow']);
+        //     Route::put('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'apiUpdate']);
+        //     Route::delete('/{gamification}', [\App\Http\Controllers\Admin\GamificationController::class, 'apiDestroy']);
+        //     Route::post('/bulk-action', [\App\Http\Controllers\Admin\GamificationController::class, 'apiBulkAction']);
+        //     Route::get('/statistics/data', [\App\Http\Controllers\Admin\GamificationController::class, 'apiStatistics']);
+        // });
 
         // Content Moderation API
         Route::prefix('content-moderation')->group(function () {

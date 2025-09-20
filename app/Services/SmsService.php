@@ -5,51 +5,80 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Melipayamak\MelipayamakApi;
 
 class SmsService
 {
     private string $apiToken;
-    private string $baseUrl = 'https://rest.payamak-panel.com/api/SendSMS/SendSMS';
+    private string $username;
+    private string $baseUrl = 'http://api.payamak-panel.com/post/send.asmx?wsdl';
 
     public function __construct()
     {
-        $this->apiToken = config('services.melipayamk.token', '77c431b7-aec5-4313-b744-d2f16bf760ab');
+        $this->apiToken = config('melipayamak.password', 'Prof48017421@#');
+        $this->username = config('melipayamak.username', '09136708883');
     }
 
     /**
      * Send SMS using Melipayamk service
+     * Based on: https://github.com/Melipayamak/melipayamak-php
      */
     public function sendSms(string $to, string $message): array
     {
         try {
-            $response = Http::timeout(30)->asForm()->post($this->baseUrl, [
-                'username' => $this->apiToken,
-                'password' => $this->apiToken,
-                'to' => $this->formatPhoneNumber($to),
-                'from' => config('services.melipayamk.sender', '50004001414000'),
+            // Use Melipayamak library exactly as documented
+            $username = $this->username;
+            $password = $this->apiToken;
+            $api = new MelipayamakApi($username, $password);
+            $sms = $api->sms();
+            
+            $from = config('services.melipayamk.sender', '50002710008883');
+            
+            // Prepare sending data for logging
+            $sendingData = [
+                'username' => $username,
+                'password' => $password,
+                'to' => $to,
+                'from' => $from,
                 'text' => $message,
                 'isFlash' => false
-            ]);
-
-            $result = $response->json();
-
+            ];
+            
+            // Send SMS exactly as documented
+            $response = $sms->send($to, $from, $message);
+            $json = json_decode($response);
+            
+            // Log the response
             Log::info('SMS sent via Melipayamk', [
-                'to' => $to,
-                'message' => $message,
-                'response' => $result
+                'melipayamak_username' => $this->username,
+                'sending_data' => $sendingData,
+                'response' => $json,
+                'raw_response' => $response,
+                'message_id' => $json->Value ?? null
             ]);
 
             return [
-                'success' => $response->successful() && isset($result['RetStatus']) && $result['RetStatus'] == 1,
-                'response' => $result,
-                'message_id' => $result['StrRetStatus'] ?? $result['Value'] ?? null
+                'success' => isset($json->RetStatus) && $json->RetStatus == 1,
+                'response' => $json,
+                'message_id' => $json->Value ?? $json->StrRetStatus ?? null
             ];
 
         } catch (\Exception $e) {
-            Log::error('SMS sending failed', [
+            // Prepare sending data for error logging
+            $sendingData = [
+                'username' => $this->username,
+                'password' => $this->apiToken,
                 'to' => $to,
-                'message' => $message,
-                'error' => $e->getMessage()
+                'from' => config('services.melipayamk.sender', '50002710008883'),
+                'text' => $message,
+                'isFlash' => false
+            ];
+            
+            Log::error('SMS sending failed', [
+                'melipayamak_username' => $this->username,
+                'sending_data' => $sendingData,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return [
@@ -117,11 +146,11 @@ class SmsService
     }
 
     /**
-     * Generate 6-digit OTP code
+     * Generate 4-digit OTP code
      */
     private function generateOtpCode(): string
     {
-        return str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        return str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
     }
 
     /**

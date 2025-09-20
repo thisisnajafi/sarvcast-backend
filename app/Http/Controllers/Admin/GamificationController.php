@@ -15,10 +15,19 @@ use Illuminate\Support\Facades\Validator;
 class GamificationController extends Controller
 {
     /**
+     * Gamification system disabled flag
+     */
+    private bool $disabled = true;
+
+    /**
      * Display a listing of gamification elements.
      */
     public function index(Request $request)
     {
+        if ($this->disabled) {
+            return redirect()->route('admin.dashboard')->with('error', 'سیستم گیمیفیکیشن غیرفعال است.');
+        }
+        
         $query = Gamification::with(['story', 'episode']);
 
         // Search functionality
@@ -68,8 +77,8 @@ class GamificationController extends Controller
             'rewards' => Gamification::where('type', 'reward')->count(),
         ];
 
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
 
         return view('admin.gamification.index', compact('gamifications', 'stats', 'stories', 'episodes'));
     }
@@ -79,8 +88,8 @@ class GamificationController extends Controller
      */
     public function create()
     {
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.gamification.create', compact('stories', 'episodes'));
     }
 
@@ -176,8 +185,8 @@ class GamificationController extends Controller
      */
     public function edit(Gamification $gamification)
     {
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.gamification.edit', compact('gamification', 'stories', 'episodes'));
     }
 

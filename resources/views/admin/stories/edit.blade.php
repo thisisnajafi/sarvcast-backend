@@ -213,39 +213,52 @@
                 </div>
             </div>
 
-            <!-- Story Details -->
+            <!-- Story Statistics (Read-only) -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <!-- Duration -->
                 <div>
-                    <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">مدت زمان (دقیقه)</label>
-                    <input type="number" name="duration" id="duration" value="{{ old('duration', $story->duration) }}" min="1" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror"
-                           placeholder="مدت زمان کل داستان">
-                    @error('duration')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
+                    <label class="block text-sm font-medium text-gray-700 mb-2">مدت زمان کل (محاسبه شده)</label>
+                    <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {{ $story->formatted_duration }}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">مدت زمان بر اساس مجموع اپیزودهای منتشر شده محاسبه می‌شود (فرمت: دقیقه:ثانیه)</p>
                 </div>
 
                 <!-- Total Episodes -->
                 <div>
-                    <label for="total_episodes" class="block text-sm font-medium text-gray-700 mb-2">تعداد اپیزودها</label>
-                    <input type="number" name="total_episodes" id="total_episodes" value="{{ old('total_episodes', $story->total_episodes) }}" min="1" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('total_episodes') border-red-500 @enderror"
-                           placeholder="تعداد کل اپیزودها">
-                    @error('total_episodes')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
+                    <label class="block text-sm font-medium text-gray-700 mb-2">تعداد کل اپیزودها (محاسبه شده)</label>
+                    <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {{ $story->total_episodes_count }}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">تعداد کل اپیزودها به صورت خودکار محاسبه می‌شود</p>
                 </div>
 
                 <!-- Free Episodes -->
                 <div>
-                    <label for="free_episodes" class="block text-sm font-medium text-gray-700 mb-2">اپیزودهای رایگان</label>
-                    <input type="number" name="free_episodes" id="free_episodes" value="{{ old('free_episodes', $story->free_episodes) }}" min="0" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('free_episodes') border-red-500 @enderror"
-                           placeholder="تعداد اپیزودهای رایگان">
-                    @error('free_episodes')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
+                    <label class="block text-sm font-medium text-gray-700 mb-2">اپیزودهای رایگان (محاسبه شده)</label>
+                    <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {{ $story->free_episodes_count }}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">تعداد اپیزودهای رایگان منتشر شده</p>
+                </div>
+            </div>
+
+            <!-- Additional Statistics -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">اپیزودهای پولی (محاسبه شده)</label>
+                    <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {{ $story->premium_episodes_count }}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">تعداد اپیزودهای پولی منتشر شده</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">اپیزودهای منتشر شده</label>
+                    <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                        {{ $story->published_episodes_count }}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">تعداد اپیزودهای منتشر شده</p>
                 </div>
             </div>
 
@@ -325,29 +338,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-calculate free episodes based on total episodes
-    const totalEpisodesInput = document.getElementById('total_episodes');
-    const freeEpisodesInput = document.getElementById('free_episodes');
-    
-    totalEpisodesInput.addEventListener('input', function() {
-        const total = parseInt(this.value) || 0;
-        const currentFree = parseInt(freeEpisodesInput.value) || 0;
-        
-        if (currentFree > total) {
-            freeEpisodesInput.value = Math.min(currentFree, total);
-        }
-    });
-    
-    // Validate free episodes
-    freeEpisodesInput.addEventListener('input', function() {
-        const total = parseInt(totalEpisodesInput.value) || 0;
-        const free = parseInt(this.value) || 0;
-        
-        if (free > total) {
-            this.value = total;
-        }
-    });
-    
     // Preview image uploads
     function previewImage(input, previewId) {
         if (input.files && input.files[0]) {

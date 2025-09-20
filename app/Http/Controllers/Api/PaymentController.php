@@ -50,10 +50,10 @@ class PaymentController extends Controller
             'subscription_id' => $subscription->id,
             'amount' => $subscription->amount,
             'currency' => 'IRR',
-            'gateway' => 'zarinpal',
+            'payment_method' => 'zarinpal',
             'status' => 'pending',
             'transaction_id' => $this->generateTransactionId(),
-            'description' => 'پرداخت اشتراک ' . $subscription->plan_id
+            'description' => 'پرداخت اشتراک ' . $subscription->type
         ]);
 
         // Initiate payment with ZarinPal
@@ -62,10 +62,11 @@ class PaymentController extends Controller
         if ($result['success']) {
             return response()->json([
                 'success' => true,
-                'message' => 'Payment initiated successfully',
+                'message' => 'درخواست پرداخت با موفقیت ایجاد شد',
                 'data' => [
                     'payment' => $payment->fresh(),
-                    'payment_url' => $result['payment_url']
+                    'payment_url' => $result['payment_url'],
+                    'authority' => $result['authority']
                 ]
             ]);
         } else {
@@ -83,40 +84,56 @@ class PaymentController extends Controller
     public function verify(Request $request)
     {
         $request->validate([
-            'transaction_id' => 'required|string'
+            'authority' => 'required|string',
+            'status' => 'required|string'
         ]);
 
-        $payment = Payment::where('transaction_id', $request->transaction_id)
-            ->where('gateway', 'zarinpal')
+        $payment = Payment::where('transaction_id', $request->authority)
+            ->where('payment_method', 'zarinpal')
+            ->where('status', 'pending')
             ->first();
 
         if (!$payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment not found'
+                'message' => 'پرداخت یافت نشد'
             ], 404);
         }
 
-        // Verify payment with gateway
-        $verificationResult = $this->verifyWithGateway($payment, $request->payment_method);
+        if ($request->status !== 'OK') {
+            $payment->update(['status' => 'failed']);
+            return response()->json([
+                'success' => false,
+                'message' => 'پرداخت توسط کاربر لغو شد'
+            ], 400);
+        }
+
+        // Verify payment with ZarinPal
+        $verificationResult = $this->paymentService->verifyZarinPalPayment(
+            $request->authority,
+            $payment->amount
+        );
 
         if ($verificationResult['success']) {
             // Update payment status
             $payment->update([
                 'status' => 'completed',
                 'paid_at' => now(),
-                'gateway_transaction_id' => $verificationResult['gateway_transaction_id']
+                'gateway_response' => json_encode($verificationResult)
             ]);
 
             // Activate subscription
-            $payment->subscription->update([
-                'status' => 'active',
-                'start_date' => now()
-            ]);
+            if ($payment->subscription) {
+                $payment->subscription->update([
+                    'status' => 'active',
+                    'start_date' => now(),
+                    'end_date' => now()->addDays($this->getSubscriptionDays($payment->subscription->type))
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment verified successfully',
+                'message' => 'پرداخت با موفقیت انجام شد',
                 'data' => [
                     'payment' => $payment->fresh(),
                     'subscription' => $payment->subscription->fresh()
@@ -124,15 +141,34 @@ class PaymentController extends Controller
             ]);
         } else {
             $payment->update(['status' => 'failed']);
-
             return response()->json([
                 'success' => false,
-                'message' => 'Payment verification failed',
-                'data' => [
-                    'payment' => $payment->fresh()
-                ]
+                'message' => $verificationResult['message']
             ], 400);
         }
+    }
+
+    /**
+     * Get subscription days based on type
+     */
+    private function getSubscriptionDays(string $type): int
+    {
+        $days = [
+            '1month' => 30,
+            '3months' => 90,
+            '6months' => 180,
+            '1year' => 365,
+        ];
+
+        return $days[$type] ?? 30;
+    }
+
+    /**
+     * Generate unique transaction ID
+     */
+    private function generateTransactionId(): string
+    {
+        return 'PAY_' . time() . '_' . rand(1000, 9999);
     }
 
     /**
@@ -162,14 +198,6 @@ class PaymentController extends Controller
     }
 
     /**
-     * Generate transaction ID
-     */
-    private function generateTransactionId()
-    {
-        return 'TXN_' . time() . '_' . rand(1000, 9999);
-    }
-
-    /**
      * Generate payment URL
      */
     private function generatePaymentUrl(Payment $payment, string $method)
@@ -191,7 +219,7 @@ class PaymentController extends Controller
         // For now, simulate successful verification
         return [
             'success' => true,
-            'gateway_transaction_id' => 'GW_' . time() . '_' . rand(1000, 9999)
+            'transaction_id' => 'GW_' . time() . '_' . rand(1000, 9999)
         ];
     }
 }

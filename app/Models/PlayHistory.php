@@ -11,6 +11,11 @@ class PlayHistory extends Model
 {
     use HasFactory;
 
+    /**
+     * Disable automatic timestamps since we use played_at
+     */
+    public $timestamps = false;
+
     protected $fillable = [
         'user_id',
         'episode_id',

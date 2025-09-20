@@ -26,8 +26,8 @@ class CouponController extends Controller
         }
 
         // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->is_active);
         }
 
         // Date range filter
@@ -68,7 +68,7 @@ class CouponController extends Controller
             'description' => 'nullable|string|max:500',
             'usage_limit' => 'nullable|integer|min:1',
             'expires_at' => 'nullable|date|after:now',
-            'status' => 'required|in:active,inactive',
+            'is_active' => 'required|boolean',
         ]);
 
         $coupon = CouponCode::create([
@@ -78,7 +78,7 @@ class CouponController extends Controller
             'description' => $request->description,
             'usage_limit' => $request->usage_limit,
             'expires_at' => $request->expires_at,
-            'status' => $request->status,
+            'is_active' => $request->is_active,
         ]);
 
         return redirect()->route('admin.coupons.index')
@@ -104,7 +104,7 @@ class CouponController extends Controller
             'description' => 'nullable|string|max:500',
             'usage_limit' => 'nullable|integer|min:1',
             'expires_at' => 'nullable|date|after:now',
-            'status' => 'required|in:active,inactive',
+            'is_active' => 'required|boolean',
         ]);
 
         $coupon->update([
@@ -114,7 +114,7 @@ class CouponController extends Controller
             'description' => $request->description,
             'usage_limit' => $request->usage_limit,
             'expires_at' => $request->expires_at,
-            'status' => $request->status,
+            'is_active' => $request->is_active,
         ]);
 
         return redirect()->route('admin.coupons.index')
@@ -146,12 +146,12 @@ class CouponController extends Controller
                 break;
 
             case 'activate':
-                $coupons->update(['status' => 'active']);
+                $coupons->update(['is_active' => true]);
                 $message = 'کدهای تخفیف انتخاب شده با موفقیت فعال شدند.';
                 break;
 
             case 'deactivate':
-                $coupons->update(['status' => 'inactive']);
+                $coupons->update(['is_active' => false]);
                 $message = 'کدهای تخفیف انتخاب شده با موفقیت غیرفعال شدند.';
                 break;
         }
@@ -174,8 +174,8 @@ class CouponController extends Controller
             $query->where('type', $request->type);
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->is_active);
         }
 
         $coupons = $query->orderBy('created_at', 'desc')->get();
@@ -188,8 +188,8 @@ class CouponController extends Controller
     {
         $stats = [
             'total_coupons' => CouponCode::count(),
-            'active_coupons' => CouponCode::where('status', 'active')->count(),
-            'inactive_coupons' => CouponCode::where('status', 'inactive')->count(),
+            'active_coupons' => CouponCode::where('is_active', true)->count(),
+            'inactive_coupons' => CouponCode::where('is_active', false)->count(),
             'expired_coupons' => CouponCode::where('expires_at', '<', now())->count(),
             'percentage_coupons' => CouponCode::where('type', 'percentage')->count(),
             'fixed_amount_coupons' => CouponCode::where('type', 'fixed_amount')->count(),

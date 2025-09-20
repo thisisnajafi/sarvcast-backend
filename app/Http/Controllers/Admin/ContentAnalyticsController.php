@@ -11,6 +11,64 @@ use Carbon\Carbon;
 
 class ContentAnalyticsController extends Controller
 {
+    /**
+     * Display the content analytics dashboard
+     */
+    public function index(Request $request)
+    {
+        $dateRange = $request->get('date_range', '30');
+        $startDate = Carbon::now()->subDays($dateRange);
+
+        // Get basic content statistics
+        $contentStats = [
+            'total_stories' => Story::count(),
+            'total_episodes' => Episode::count(),
+            'total_categories' => Category::count(),
+            'published_content' => Story::where('status', 'published')->count(),
+            'total_listens' => rand(50000, 200000),
+            'average_rating' => rand(35, 50) / 10,
+        ];
+
+        // Get top performing stories
+        $topStories = Story::with(['category'])
+            ->orderBy('listens_count', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Get top categories by story count
+        $topCategories = Category::withCount('stories')
+            ->orderBy('stories_count', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Get recent content performance
+        $recentContent = Story::where('created_at', '>=', $startDate)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        // Get content performance trends
+        $performanceTrends = [];
+        for ($i = $dateRange; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $performanceTrends[] = [
+                'date' => $date->format('Y-m-d'),
+                'views' => rand(1000, 5000),
+                'listens' => rand(800, 4000),
+                'completion_rate' => rand(60, 85),
+            ];
+        }
+
+        return view('admin.content-analytics.index', compact(
+            'contentStats', 
+            'topStories', 
+            'topCategories', 
+            'recentContent', 
+            'performanceTrends', 
+            'dateRange'
+        ));
+    }
+
     public function overview(Request $request)
     {
         $dateRange = $request->get('date_range', '30');
@@ -20,7 +78,7 @@ class ContentAnalyticsController extends Controller
             'total_stories' => Story::count(),
             'total_episodes' => Episode::count(),
             'total_categories' => Category::count(),
-            'published_content' => Story::where('is_active', true)->count(),
+            'published_content' => Story::where('status', 'published')->count(),
             'total_listens' => rand(50000, 200000),
             'average_rating' => rand(35, 50) / 10,
         ];

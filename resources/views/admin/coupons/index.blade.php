@@ -21,8 +21,8 @@
         'searchPlaceholder' => 'جستجو بر اساس کد یا توضیحات...',
         'statusFilter' => true,
         'statusOptions' => [
-            'active' => 'فعال',
-            'inactive' => 'غیرفعال'
+            1 => 'فعال',
+            0 => 'غیرفعال'
         ],
         'categoryFilter' => true,
         'categoryOptions' => [
@@ -127,12 +127,12 @@
                 }
                 return '<span class="text-sm font-medium text-gray-900">' . $value . '</span>';
             }],
-            ['title' => 'وضعیت', 'key' => 'status', 'render' => function($item) {
+            ['title' => 'وضعیت', 'key' => 'is_active', 'render' => function($item) {
                 $statuses = [
-                    'active' => ['label' => 'فعال', 'class' => 'bg-green-100 text-green-800'],
-                    'inactive' => ['label' => 'غیرفعال', 'class' => 'bg-red-100 text-red-800']
+                    1 => ['label' => 'فعال', 'class' => 'bg-green-100 text-green-800'],
+                    0 => ['label' => 'غیرفعال', 'class' => 'bg-red-100 text-red-800']
                 ];
-                $status = $statuses[$item->status] ?? ['label' => $item->status, 'class' => 'bg-gray-100 text-gray-800'];
+                $status = $statuses[$item->is_active] ?? ['label' => $item->is_active ? 'فعال' : 'غیرفعال', 'class' => 'bg-gray-100 text-gray-800'];
                 return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $status['class'] . '">' . $status['label'] . '</span>';
             }],
             ['title' => 'محدودیت استفاده', 'key' => 'usage_limit', 'render' => function($item) {

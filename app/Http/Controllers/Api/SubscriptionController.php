@@ -164,12 +164,14 @@ class SubscriptionController extends Controller
     public function create(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'type' => 'required|string|in:monthly,quarterly,yearly,family',
+            'plan_slug' => 'required|string|in:1month,3months,6months,1year',
+            'coupon_code' => 'nullable|string|max:50',
             'payment_method' => 'nullable|string|max:50',
             'auto_renew' => 'nullable|boolean'
         ], [
-            'type.required' => 'نوع اشتراک الزامی است',
-            'type.in' => 'نوع اشتراک نامعتبر است',
+            'plan_slug.required' => 'نوع اشتراک الزامی است',
+            'plan_slug.in' => 'نوع اشتراک نامعتبر است',
+            'coupon_code.max' => 'کد کوپن نمی‌تواند بیشتر از 50 کاراکتر باشد',
             'payment_method.max' => 'روش پرداخت نمی‌تواند بیشتر از 50 کاراکتر باشد'
         ]);
 
@@ -183,29 +185,97 @@ class SubscriptionController extends Controller
 
         try {
             $user = $request->user();
-            $type = $request->input('type');
-            $options = [
-                'payment_method' => $request->input('payment_method'),
-                'auto_renew' => $request->input('auto_renew', true),
-                'status' => 'pending'
-            ];
+            $planSlug = $request->input('plan_slug');
+            $couponCode = $request->input('coupon_code');
+            
+            // Get plan details
+            $plan = $this->subscriptionService->getPlan($planSlug);
+            if (!$plan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'پلن اشتراک یافت نشد'
+                ], 404);
+            }
 
-            $subscription = $this->subscriptionService->createSubscription($user->id, $type, $options);
+            // Calculate final amount
+            $amount = $plan->final_price;
+            
+            // Apply coupon if provided
+            if ($couponCode) {
+                $couponValidation = app(\App\Services\CouponService::class)->validateCouponCode(
+                    $couponCode,
+                    $user,
+                    $amount
+                );
+                
+                if ($couponValidation['success']) {
+                    $amount = $couponValidation['data']['final_amount'];
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $couponValidation['message']
+                    ], 400);
+                }
+            }
+
+            // Create subscription
+            $subscription = Subscription::create([
+                'user_id' => $user->id,
+                'type' => $planSlug,
+                'amount' => $amount,
+                'currency' => 'IRR',
+                'status' => 'pending',
+                'start_date' => null,
+                'end_date' => null,
+                'auto_renew' => $request->input('auto_renew', true),
+            ]);
+
+            // Create payment record
+            $payment = \App\Models\Payment::create([
+                'user_id' => $user->id,
+                'subscription_id' => $subscription->id,
+                'amount' => $amount,
+                'currency' => 'IRR',
+                'payment_method' => 'zarinpal',
+                'status' => 'pending',
+                'transaction_id' => $this->generateTransactionId(),
+                'description' => 'پرداخت اشتراک ' . $plan->name
+            ]);
 
             return response()->json([
                 'success' => true,
+                'message' => 'اشتراک با موفقیت ایجاد شد',
                 'data' => [
-                    'subscription' => $subscription->summary,
-                    'payment_required' => true,
-                    'next_step' => 'payment'
-                ],
-                'message' => 'اشتراک ایجاد شد. لطفاً پرداخت را تکمیل کنید'
+                    'subscription' => [
+                        'id' => $subscription->id,
+                        'user_id' => $subscription->user_id,
+                        'type' => $subscription->type,
+                        'amount' => $subscription->amount,
+                        'currency' => $subscription->currency,
+                        'status' => $subscription->status,
+                        'start_date' => $subscription->start_date,
+                        'end_date' => $subscription->end_date,
+                        'created_at' => $subscription->created_at
+                    ],
+                    'payment' => [
+                        'id' => $payment->id,
+                        'user_id' => $payment->user_id,
+                        'subscription_id' => $payment->subscription_id,
+                        'amount' => $payment->amount,
+                        'currency' => $payment->currency,
+                        'payment_method' => $payment->payment_method,
+                        'status' => $payment->status,
+                        'transaction_id' => $payment->transaction_id,
+                        'description' => $payment->description,
+                        'created_at' => $payment->created_at
+                    ]
+                ]
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to create subscription', [
                 'user_id' => $request->user()->id,
-                'type' => $request->input('type'),
+                'plan_slug' => $request->input('plan_slug'),
                 'error' => $e->getMessage()
             ]);
 
@@ -214,6 +284,14 @@ class SubscriptionController extends Controller
                 'message' => 'خطا در ایجاد اشتراک: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Generate unique transaction ID
+     */
+    private function generateTransactionId(): string
+    {
+        return 'SUB_' . time() . '_' . rand(1000, 9999);
     }
 
     /**

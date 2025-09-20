@@ -297,7 +297,7 @@
                             <div class="text-sm font-medium text-gray-900">{{ $story->title }}</div>
                             <div class="text-sm text-gray-500">{{ $story->subtitle }}</div>
                             <div class="text-xs text-gray-400 mt-1">
-                                {{ $story->total_episodes }} قسمت • {{ gmdate('H:i:s', $story->duration) }}
+                                {{ $story->total_episodes_count }} قسمت • {{ $story->formatted_duration }}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -430,50 +430,5 @@
     </div>
 </div>
 
-<script>
-function selectAll(checkbox) {
-    const checkboxes = document.querySelectorAll('.story-checkbox');
-    checkboxes.forEach(cb => cb.checked = checkbox.checked);
-}
-
-function confirmBulkAction() {
-    const action = document.querySelector('select[name="action"]').value;
-    const checkedBoxes = document.querySelectorAll('.story-checkbox:checked');
-    
-    if (!action) {
-        alert('لطفاً عملیات را انتخاب کنید');
-        return false;
-    }
-    
-    if (checkedBoxes.length === 0) {
-        alert('لطفاً حداقل یک داستان را انتخاب کنید');
-        return false;
-    }
-    
-    const actionText = {
-        'publish': 'انتشار',
-        'unpublish': 'لغو انتشار',
-        'change_status': 'تغییر وضعیت',
-        'change_category': 'تغییر دسته‌بندی',
-        'delete': 'حذف'
-    };
-    
-    return confirm(`آیا مطمئن هستید که می‌خواهید عملیات "${actionText[action]}" را روی ${checkedBoxes.length} داستان انجام دهید؟`);
-}
-
-// Show/hide additional select fields based on action
-document.querySelector('select[name="action"]').addEventListener('change', function() {
-    const statusSelect = document.querySelector('select[name="status"]');
-    const categorySelect = document.querySelector('select[name="category_id"]');
-    
-    statusSelect.style.display = 'none';
-    categorySelect.style.display = 'none';
-    
-    if (this.value === 'change_status') {
-        statusSelect.style.display = 'block';
-    } else if (this.value === 'change_category') {
-        categorySelect.style.display = 'block';
-    }
-});
-</script>
+<script src="{{ asset('js/admin/story-manager.js') }}"></script>
 @endsection

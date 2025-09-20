@@ -19,7 +19,7 @@ class Payment extends Model
         'status',
         'payment_method',
         'payment_gateway',
-        'gateway_transaction_id',
+        'transaction_id',
         'gateway_fee',
         'net_amount',
         'exchange_rate',

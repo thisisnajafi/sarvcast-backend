@@ -282,13 +282,20 @@
             </div>
 
             <!-- Submit Button -->
-            <div class="flex justify-end space-x-4 space-x-reverse">
-                <a href="{{ route('admin.stories.index') }}" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition duration-200">
-                    انصراف
-                </a>
-                <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
-                    ایجاد داستان
-                </button>
+            <div class="flex justify-between items-center">
+                <div class="flex space-x-2 space-x-reverse">
+                    <button type="button" onclick="clearStoryFormData()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm">
+                        پاک کردن داده‌های ذخیره شده
+                    </button>
+                </div>
+                <div class="flex space-x-4 space-x-reverse">
+                    <a href="{{ route('admin.stories.index') }}" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition duration-200">
+                        انصراف
+                    </a>
+                    <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-200">
+                        ایجاد داستان
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -344,6 +351,289 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('image').addEventListener('change', function() {
         previewImage(this, 'image_preview');
     });
+<script src="{{ asset('js/form-state-manager.js') }}"></script>
+
+<script>
+// Enhanced form handling with state persistence for Story creation
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize form state management
+    if (window.storyFormManager) {
+        console.log('Story form state management initialized');
+    }
+    
+    // Handle form submission with better error handling
+    const form = document.querySelector('form[action*="stories"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Show loading state
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.textContent = 'در حال ایجاد...';
+            submitButton.disabled = true;
+            
+            // Re-enable button after 10 seconds (in case of timeout)
+            setTimeout(() => {
+                submitButton.textContent = originalText;
+                submitButton.disabled = false;
+            }, 10000);
+        });
+    }
+    
+    // Add auto-save indicator
+    addAutoSaveIndicator();
+    
+    // Enhanced image preview with persistence
+    enhanceImagePreview();
 });
+
+function addAutoSaveIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'auto-save-indicator';
+    indicator.className = 'fixed bottom-4 left-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 transition-opacity duration-300';
+    indicator.textContent = '✓ ذخیره خودکار';
+    document.body.appendChild(indicator);
+    
+    // Show indicator when form is saved
+    const form = document.querySelector('form[action*="stories"]');
+    if (form) {
+        form.addEventListener('input', () => {
+            indicator.style.opacity = '1';
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+            }, 2000);
+        });
+    }
+}
+
+function enhanceImagePreview() {
+    // Enhanced image preview with better error handling
+    function previewImage(input, previewId) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('حجم فایل نمی‌تواند بیشتر از 5 مگابایت باشد', 'error');
+                input.value = '';
+                return;
+            }
+            
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+            if (!allowedTypes.includes(file.type)) {
+                showNotification('فرمت فایل باید JPG، PNG یا WebP باشد', 'error');
+                input.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let preview = document.getElementById(previewId);
+                if (!preview) {
+                    preview = document.createElement('img');
+                    preview.id = previewId;
+                    preview.className = 'mt-2 w-32 h-32 object-cover rounded-lg border';
+                    input.parentNode.appendChild(preview);
+                }
+                preview.src = e.target.result;
+                
+                // Save file info for restoration
+                saveImageFileInfo(input.id, file);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    // Attach enhanced preview to image inputs
+    document.getElementById('cover_image').addEventListener('change', function() {
+        previewImage(this, 'cover_preview');
+    });
+    
+    document.getElementById('image').addEventListener('change', function() {
+        previewImage(this, 'image_preview');
+    });
+}
+
+function saveImageFileInfo(inputId, file) {
+    const fileData = {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+    };
+
+    try {
+        localStorage.setItem(`story_${inputId}_file`, JSON.stringify(fileData));
+    } catch (error) {
+        console.warn('Could not save image file data:', error);
+    }
+}
+
+// Enhanced validation for story form
+function validateStoryForm() {
+    const form = document.querySelector('form[action*="stories"]');
+    if (!form) return false;
+    
+    let isValid = true;
+    const errors = [];
+    
+    // Required field validation
+    const requiredFields = ['title', 'description', 'category_id', 'age_group'];
+    requiredFields.forEach(fieldName => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (field && !field.value.trim()) {
+            errors.push(`${fieldName} الزامی است`);
+            isValid = false;
+        }
+    });
+    
+    // Number validation
+    const totalEpisodes = parseInt(document.getElementById('total_episodes').value) || 0;
+    const freeEpisodes = parseInt(document.getElementById('free_episodes').value) || 0;
+    
+    if (freeEpisodes > totalEpisodes) {
+        errors.push('تعداد اپیزودهای رایگان نمی‌تواند بیشتر از کل اپیزودها باشد');
+        isValid = false;
+    }
+    
+    // Show errors if any
+    if (!isValid) {
+        showNotification(errors.join('، '), 'error');
+    }
+    
+    return isValid;
+}
+
+// Add form validation before submission
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action*="stories"]');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!validateStoryForm()) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+});
+
+// Enhanced tag input with suggestions
+function enhanceTagInput() {
+    const tagInput = document.getElementById('tags');
+    if (!tagInput) return;
+    
+    const commonTags = [
+        'ماجراجویی', 'دوستی', 'خانواده', 'عشق', 'کمدی', 'درام', 'ترسناک',
+        'علمی تخیلی', 'فانتزی', 'تاریخی', 'آموزشی', 'اخلاقی', 'اجتماعی'
+    ];
+    
+    // Create tag suggestions container
+    const suggestionsContainer = document.createElement('div');
+    suggestionsContainer.id = 'tag-suggestions';
+    suggestionsContainer.className = 'hidden absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto';
+    tagInput.parentNode.style.position = 'relative';
+    tagInput.parentNode.appendChild(suggestionsContainer);
+    
+    // Show suggestions on focus
+    tagInput.addEventListener('focus', function() {
+        showTagSuggestions();
+    });
+    
+    // Hide suggestions on blur
+    tagInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            suggestionsContainer.classList.add('hidden');
+        }, 200);
+    });
+    
+    function showTagSuggestions() {
+        const currentTags = tagInput.value.split(',').map(tag => tag.trim());
+        const availableTags = commonTags.filter(tag => 
+            !currentTags.includes(tag) && 
+            tag.includes(tagInput.value.toLowerCase())
+        );
+        
+        if (availableTags.length > 0) {
+            suggestionsContainer.innerHTML = availableTags.map(tag => 
+                `<div class="px-3 py-2 hover:bg-gray-100 cursor-pointer" onclick="addTag('${tag}')">${tag}</div>`
+            ).join('');
+            suggestionsContainer.classList.remove('hidden');
+        } else {
+            suggestionsContainer.classList.add('hidden');
+        }
+    }
+    
+    // Update suggestions as user types
+    tagInput.addEventListener('input', showTagSuggestions);
+}
+
+function addTag(tag) {
+    const tagInput = document.getElementById('tags');
+    const currentTags = tagInput.value.split(',').map(t => t.trim()).filter(t => t);
+    
+    if (!currentTags.includes(tag)) {
+        currentTags.push(tag);
+        tagInput.value = currentTags.join(', ');
+    }
+    
+    document.getElementById('tag-suggestions').classList.add('hidden');
+    tagInput.focus();
+}
+
+// Initialize enhanced features
+document.addEventListener('DOMContentLoaded', function() {
+    enhanceTagInput();
+});
+
+// Clear story form data function
+function clearStoryFormData() {
+    if (confirm('آیا از پاک کردن تمام داده‌های ذخیره شده اطمینان دارید؟')) {
+        // Clear localStorage data
+        if (window.storyFormManager) {
+            window.storyFormManager.clearData();
+        }
+        
+        // Clear file data
+        localStorage.removeItem('story_cover_image_file');
+        localStorage.removeItem('story_image_file');
+        
+        // Reset form
+        const form = document.querySelector('form[action*="stories"]');
+        if (form) {
+            form.reset();
+        }
+        
+        // Clear image previews
+        const coverPreview = document.getElementById('cover_preview');
+        if (coverPreview) {
+            coverPreview.remove();
+        }
+        
+        const imagePreview = document.getElementById('image_preview');
+        if (imagePreview) {
+            imagePreview.remove();
+        }
+        
+        showNotification('داده‌های فرم پاک شد', 'success');
+    }
+}
+
+// Notification system
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 ${
+        type === 'error' ? 'bg-red-500 text-white' : 
+        type === 'success' ? 'bg-green-500 text-white' : 
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
 </script>
 @endsection

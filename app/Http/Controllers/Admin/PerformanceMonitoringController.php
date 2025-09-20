@@ -66,9 +66,9 @@ class PerformanceMonitoringController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        // Filter by metric type
-        if ($request->filled('metric_type')) {
-            $query->where('metric_type', $request->metric_type);
+        // Filter by feature
+        if ($request->filled('feature')) {
+            $query->where('feature', $request->feature);
         }
 
         $metrics = $query->orderBy('created_at', 'desc')->paginate(50);
@@ -76,9 +76,9 @@ class PerformanceMonitoringController extends Controller
         // Get statistics
         $stats = [
             'total_metrics' => PerformanceMetric::count(),
-            'avg_response_time' => PerformanceMetric::where('metric_type', 'response_time')->avg('value'),
-            'avg_memory_usage' => PerformanceMetric::where('metric_type', 'memory_usage')->avg('value'),
-            'avg_cpu_usage' => PerformanceMetric::where('metric_type', 'cpu_usage')->avg('value'),
+            'avg_response_time' => PerformanceMetric::avg('response_time'),
+            'avg_memory_usage' => PerformanceMetric::avg('memory_usage'),
+            'avg_database_queries' => PerformanceMetric::avg('database_queries'),
             'total_alerts' => SystemAlert::count(),
             'critical_alerts' => SystemAlert::where('severity', 'critical')->count(),
             'warning_alerts' => SystemAlert::where('severity', 'warning')->count(),
@@ -320,14 +320,21 @@ class PerformanceMonitoringController extends Controller
     private function getPerformanceTrends()
     {
         $trends = [];
-        $metrics = ['response_time', 'memory_usage', 'cpu_usage', 'disk_usage'];
         
-        foreach ($metrics as $metric) {
-            $trends[$metric] = PerformanceMetric::where('metric_type', $metric)
-                ->where('created_at', '>=', now()->subHours(24))
-                ->orderBy('created_at', 'asc')
-                ->get(['value', 'created_at']);
-        }
+        // Get response time trends
+        $trends['response_time'] = PerformanceMetric::where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at', 'asc')
+            ->get(['response_time as value', 'created_at']);
+            
+        // Get memory usage trends
+        $trends['memory_usage'] = PerformanceMetric::where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at', 'asc')
+            ->get(['memory_usage as value', 'created_at']);
+            
+        // Get database queries trends
+        $trends['database_queries'] = PerformanceMetric::where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at', 'asc')
+            ->get(['database_queries as value', 'created_at']);
         
         return $trends;
     }
@@ -380,14 +387,21 @@ class PerformanceMonitoringController extends Controller
         $dateTo = $request->date_to ? Carbon::parse($request->date_to) : now();
 
         $chartData = [];
-        $metrics = ['response_time', 'memory_usage', 'cpu_usage', 'disk_usage'];
 
-        foreach ($metrics as $metric) {
-            $chartData[$metric] = PerformanceMetric::where('metric_type', $metric)
-                ->whereBetween('created_at', [$dateFrom, $dateTo])
-                ->orderBy('created_at', 'asc')
-                ->get(['value', 'created_at']);
-        }
+        // Get response time chart data
+        $chartData['response_time'] = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->orderBy('created_at', 'asc')
+            ->get(['response_time as value', 'created_at']);
+
+        // Get memory usage chart data
+        $chartData['memory_usage'] = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->orderBy('created_at', 'asc')
+            ->get(['memory_usage as value', 'created_at']);
+
+        // Get database queries chart data
+        $chartData['database_queries'] = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+            ->orderBy('created_at', 'asc')
+            ->get(['database_queries as value', 'created_at']);
 
         return $chartData;
     }
@@ -516,9 +530,9 @@ class PerformanceMonitoringController extends Controller
             $query->where('severity', $request->severity);
         }
 
-        // Filter by metric type
-        if ($request->filled('metric_type')) {
-            $query->where('metric_type', $request->metric_type);
+        // Filter by feature
+        if ($request->filled('feature')) {
+            $query->where('feature', $request->feature);
         }
 
         // Filter by date range

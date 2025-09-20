@@ -226,4 +226,31 @@ class RoleController extends Controller
 
         return view('admin.roles.statistics', compact('stats', 'dailyStats'));
     }
+
+    /**
+     * Assign role to user
+     */
+    public function assign(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'role_id' => 'required|exists:roles,id'
+        ]);
+
+        try {
+            $user = \App\Models\User::findOrFail($request->user_id);
+            $role = Role::findOrFail($request->role_id);
+
+            // Assign role to user
+            $user->role_id = $role->id;
+            $user->save();
+
+            return redirect()->back()
+                ->with('success', "نقش '{$role->display_name}' با موفقیت به کاربر '{$user->name}' اختصاص داده شد.");
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'خطا در اختصاص نقش: ' . $e->getMessage());
+        }
+    }
 }

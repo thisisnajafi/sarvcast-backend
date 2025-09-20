@@ -125,5 +125,7 @@
         @endif
     </div>
 </div>
+
+<script src="{{ asset('js/admin/category-manager.js') }}"></script>
 @endsection
 

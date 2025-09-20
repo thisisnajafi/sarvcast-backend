@@ -10,6 +10,11 @@ use Illuminate\Http\JsonResponse;
 class GamificationController extends Controller
 {
     protected $gamificationService;
+    
+    /**
+     * Gamification system disabled flag
+     */
+    private bool $disabled = true;
 
     public function __construct(GamificationService $gamificationService)
     {
@@ -21,6 +26,13 @@ class GamificationController extends Controller
      */
     public function getUserProfile(): JsonResponse
     {
+        if ($this->disabled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'سیستم گیمیفیکیشن غیرفعال است'
+            ], 403);
+        }
+        
         try {
             $userId = auth()->id();
             $profile = $this->gamificationService->getUserProfile($userId);

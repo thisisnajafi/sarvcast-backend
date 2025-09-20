@@ -51,7 +51,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">درگاه پرداخت:</span>
-                                <span class="font-medium">{{ $payment->gateway === 'zarinpal' ? 'زرین‌پال' : 'پی‌ایر' }}</span>
+                                <span class="font-medium">{{ $payment->payment_method === 'zarinpal' ? 'زرین‌پال' : 'پی‌ایر' }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">تاریخ پرداخت:</span>

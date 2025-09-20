@@ -43,14 +43,14 @@ class AudioManagementController extends Controller
             'total_size' => AudioFile::sum('file_size'),
         ];
 
-        $episodes = Episode::where('is_active', true)->get();
+        $episodes = Episode::where('status', 'published')->get();
 
         return view('admin.audio-management.index', compact('audioFiles', 'stats', 'episodes'));
     }
 
     public function upload()
     {
-        $episodes = Episode::where('is_active', true)->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.audio-management.upload', compact('episodes'));
     }
 
@@ -121,7 +121,7 @@ class AudioManagementController extends Controller
 
     public function edit(AudioFile $audioFile)
     {
-        $episodes = Episode::where('is_active', true)->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.audio-management.edit', compact('audioFile', 'episodes'));
     }
 

@@ -94,8 +94,8 @@ jobs:
       - name: 📂 Sync files
         uses: SamKirkland/FTP-Deploy-Action@4.0.0
         with:
-          server: ftp.abolfazlnajafi.com
-          username: sarvcast-api@api.sarvcast.ir
+          server: ftp.sarvcast.ir
+          username: my@sarvcast.ir
           password: Prof48017421@#
           server-dir: /
           exclude: |

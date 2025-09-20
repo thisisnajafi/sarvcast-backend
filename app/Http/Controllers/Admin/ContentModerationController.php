@@ -84,8 +84,8 @@ class ContentModerationController extends Controller
         ];
 
         $moderators = User::where('role', 'admin')->orWhere('role', 'moderator')->get();
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
 
         return view('admin.content-moderation.index', compact('moderations', 'stats', 'moderators', 'stories', 'episodes'));
     }
@@ -96,8 +96,8 @@ class ContentModerationController extends Controller
     public function create()
     {
         $users = User::where('is_active', true)->get();
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.content-moderation.create', compact('users', 'stories', 'episodes'));
     }
 
@@ -191,8 +191,8 @@ class ContentModerationController extends Controller
     public function edit(ContentModeration $contentModeration)
     {
         $users = User::where('is_active', true)->get();
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.content-moderation.edit', compact('contentModeration', 'users', 'stories', 'episodes'));
     }
 
@@ -839,8 +839,8 @@ class ContentModerationController extends Controller
                         case 'reject':
                             $moderation->update([
                                 'status' => 'rejected',
-                                'moderator_id' => auth()->id(),
-                                'moderated_at' => now(),
+                'moderator_id' => auth()->id(),
+                'moderated_at' => now(),
                             ]);
                             break;
 

@@ -82,7 +82,7 @@ class SchoolController extends Controller
             'pending' => SchoolPartnership::where('status', 'pending')->count(),
             'active' => SchoolPartnership::where('status', 'active')->count(),
             'suspended' => SchoolPartnership::where('status', 'suspended')->count(),
-            'expired' => SchoolPartnership::where('expires_at', '<', now())->count(),
+            'expired' => SchoolPartnership::where('partnership_end_date', '<', now())->count(),
             'total_students' => SchoolPartnership::sum('student_count'),
             'total_teachers' => SchoolPartnership::sum('teacher_count'),
         ];
@@ -127,7 +127,7 @@ class SchoolController extends Controller
             'status' => 'required|string|in:pending,active,suspended,expired',
             'verification_documents' => 'nullable|array',
             'verification_documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'expires_at' => 'nullable|date|after:now',
+            'partnership_end_date' => 'nullable|date|after:now',
         ]);
 
         try {
@@ -206,7 +206,7 @@ class SchoolController extends Controller
             'status' => 'required|string|in:pending,active,suspended,expired',
             'verification_documents' => 'nullable|array',
             'verification_documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'expires_at' => 'nullable|date|after:now',
+            'partnership_end_date' => 'nullable|date|after:now',
         ]);
 
         try {
@@ -415,7 +415,7 @@ class SchoolController extends Controller
             'pending' => SchoolPartnership::where('status', 'pending')->count(),
             'active' => SchoolPartnership::where('status', 'active')->count(),
             'suspended' => SchoolPartnership::where('status', 'suspended')->count(),
-            'expired' => SchoolPartnership::where('expires_at', '<', now())->count(),
+            'expired' => SchoolPartnership::where('partnership_end_date', '<', now())->count(),
             'total_students' => SchoolPartnership::sum('student_count'),
             'total_teachers' => SchoolPartnership::sum('teacher_count'),
             'by_school_type' => SchoolPartnership::selectRaw('school_type, COUNT(*) as count')
@@ -427,5 +427,140 @@ class SchoolController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Assign a teacher to a school partnership
+     */
+    public function assignTeacher(Request $request, SchoolPartnership $schoolPartnership): RedirectResponse
+    {
+        $validator = \Validator::make($request->all(), [
+            'teacher_id' => 'required|integer|exists:teacher_accounts,id',
+            'assignment_notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $teacherId = $request->input('teacher_id');
+            $assignmentNotes = $request->input('assignment_notes');
+
+            // Check if teacher is available
+            $teacher = \App\Models\TeacherAccount::where('id', $teacherId)
+                ->where('status', 'verified')
+                ->where('is_verified', true)
+                ->first();
+
+            if (!$teacher) {
+                return redirect()->back()
+                    ->with('error', 'معلم انتخاب شده در دسترس نیست یا تأیید نشده است');
+            }
+
+            // Assign teacher to school partnership
+            $schoolPartnership->update([
+                'assigned_teacher_id' => $teacherId,
+                'teacher_assigned_at' => now(),
+                'teacher_assignment_notes' => $assignmentNotes,
+            ]);
+
+            Log::info('Teacher assigned to school partnership', [
+                'school_partnership_id' => $schoolPartnership->id,
+                'teacher_id' => $teacherId,
+                'assigned_by' => auth()->id(),
+            ]);
+
+            return redirect()->back()
+                ->with('success', 'معلم با موفقیت به مدرسه اختصاص داده شد');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to assign teacher to school partnership', [
+                'school_partnership_id' => $schoolPartnership->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'خطا در اختصاص معلم: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove teacher assignment from school partnership
+     */
+    public function removeTeacherAssignment(SchoolPartnership $schoolPartnership): RedirectResponse
+    {
+        try {
+            $teacherId = $schoolPartnership->assigned_teacher_id;
+
+            $schoolPartnership->update([
+                'assigned_teacher_id' => null,
+                'teacher_assigned_at' => null,
+                'teacher_assignment_notes' => null,
+            ]);
+
+            Log::info('Teacher assignment removed from school partnership', [
+                'school_partnership_id' => $schoolPartnership->id,
+                'teacher_id' => $teacherId,
+                'removed_by' => auth()->id(),
+            ]);
+
+            return redirect()->back()
+                ->with('success', 'اختصاص معلم با موفقیت حذف شد');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to remove teacher assignment', [
+                'school_partnership_id' => $schoolPartnership->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'خطا در حذف اختصاص معلم: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get teacher assignment details for a school partnership
+     */
+    public function getTeacherAssignment(SchoolPartnership $schoolPartnership): \Illuminate\Http\JsonResponse
+    {
+        $schoolPartnership->load(['assignedTeacher.user']);
+
+        if (!$schoolPartnership->assignedTeacher) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ معلمی به این مدرسه اختصاص داده نشده است',
+            ], 404);
+        }
+
+        $teacher = $schoolPartnership->assignedTeacher;
+        $user = $teacher->user;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'teacher' => [
+                    'id' => $teacher->id,
+                    'name' => $user->first_name . ' ' . $user->last_name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'institution_name' => $teacher->institution_name,
+                    'institution_type' => $teacher->institution_type,
+                    'teaching_subject' => $teacher->teaching_subject,
+                    'years_of_experience' => $teacher->years_of_experience,
+                    'discount_rate' => $teacher->discount_rate,
+                    'commission_rate' => $teacher->commission_rate,
+                    'coupon_code' => $teacher->coupon_code,
+                    'status' => $teacher->status,
+                    'is_verified' => $teacher->is_verified,
+                ],
+                'assignment' => [
+                    'assigned_at' => $schoolPartnership->teacher_assigned_at?->format('Y/m/d H:i'),
+                    'notes' => $schoolPartnership->teacher_assignment_notes,
+                ],
+            ],
+        ]);
     }
 }

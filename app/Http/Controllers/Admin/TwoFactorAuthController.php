@@ -59,7 +59,7 @@ class TwoFactorAuthController extends Controller
     public function verify(Request $request): RedirectResponse
     {
         $request->validate([
-            'code' => 'required|string|size:6'
+            'code' => 'required|string|size:4'
         ]);
 
         $user = Auth::user();

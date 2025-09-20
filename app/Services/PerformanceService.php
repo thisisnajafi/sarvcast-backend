@@ -131,7 +131,7 @@ class PerformanceService
             $indexes = [
                 'stories' => ['status', 'category_id', 'is_premium', 'created_at'],
                 'episodes' => ['status', 'story_id', 'is_free', 'created_at'],
-                'play_histories' => ['user_id', 'episode_id', 'created_at'],
+                'play_histories' => ['user_id', 'episode_id', 'played_at'],
                 'favorites' => ['user_id', 'story_id', 'episode_id'],
                 'ratings' => ['user_id', 'story_id', 'episode_id'],
                 'notifications' => ['user_id', 'read_at', 'created_at'],

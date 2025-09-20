@@ -144,19 +144,19 @@ class NotificationController extends Controller
                         'recipient_id' => $user->id,
                     ]));
                 }
-            } else {
+                } else {
                 // Create single notification
                 Notification::create($notificationData);
-            }
+                }
 
             // Send immediate notifications if not scheduled
             if (!$request->scheduled_at) {
                 $this->sendNotifications($notificationData);
-            }
+        }
 
             DB::commit();
 
-            return redirect()->route('admin.notifications.index')
+        return redirect()->route('admin.notifications.index')
                 ->with('success', 'اعلان با موفقیت ایجاد شد.');
 
         } catch (\Exception $e) {
@@ -236,7 +236,7 @@ class NotificationController extends Controller
                 'status' => $request->status,
             ]);
 
-            return redirect()->route('admin.notifications.index')
+        return redirect()->route('admin.notifications.index')
                 ->with('success', 'اعلان با موفقیت به‌روزرسانی شد.');
 
         } catch (\Exception $e) {
@@ -252,7 +252,7 @@ class NotificationController extends Controller
     public function destroy(Notification $notification)
     {
         try {
-            $notification->delete();
+        $notification->delete();
             return redirect()->route('admin.notifications.index')
                 ->with('success', 'اعلان با موفقیت حذف شد.');
         } catch (\Exception $e) {
@@ -599,8 +599,8 @@ class NotificationController extends Controller
             DB::beginTransaction();
 
             $notification->update([
-                'title' => $request->title,
-                'message' => $request->message,
+                        'title' => $request->title,
+                        'message' => $request->message,
                 'type' => $request->type,
                 'priority' => $request->priority,
                 'recipient_id' => $request->recipient_id,
@@ -680,16 +680,16 @@ class NotificationController extends Controller
 
                         case 'mark_read':
                             $notification->update(['is_read' => true, 'read_at' => now()]);
-                            break;
+                    break;
 
                         case 'mark_unread':
                             $notification->update(['is_read' => false, 'read_at' => null]);
-                            break;
+                    break;
 
                         case 'delete':
                             $notification->delete();
-                            break;
-                    }
+                    break;
+            }
 
                     $successCount++;
 
@@ -715,10 +715,10 @@ class NotificationController extends Controller
             $message = "عملیات {$actionLabels[$action]} روی {$successCount} اعلان انجام شد";
             if ($failureCount > 0) {
                 $message .= " و {$failureCount} اعلان ناموفق بود";
-            }
+        }
 
-            return response()->json([
-                'success' => true,
+        return response()->json([
+            'success' => true,
                 'message' => $message,
                 'success_count' => $successCount,
                 'failure_count' => $failureCount

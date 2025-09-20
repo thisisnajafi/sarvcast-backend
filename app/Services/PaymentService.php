@@ -44,8 +44,8 @@ class PaymentService
                 
                 if ($result['data']['code'] == 100) {
                     $payment->update([
-                        'gateway_transaction_id' => $result['data']['authority'],
-                        'gateway' => 'zarinpal',
+                        'transaction_id' => $result['data']['authority'],
+                        'payment_method' => 'zarinpal',
                         'status' => 'pending'
                     ]);
 
@@ -57,7 +57,7 @@ class PaymentService
                 } else {
                     return [
                         'success' => false,
-                        'message' => 'خطا در ایجاد درخواست پرداخت: ' . $result['errors']['message'] ?? 'خطای نامشخص'
+                        'message' => 'خطا در ایجاد درخواست پرداخت: ' . ($result['errors']['message'] ?? 'خطای نامشخص')
                     ];
                 }
             } else {
@@ -102,7 +102,7 @@ class PaymentService
                 } else {
                     return [
                         'success' => false,
-                        'message' => 'پرداخت ناموفق: ' . $result['errors']['message'] ?? 'خطای نامشخص'
+                        'message' => 'پرداخت ناموفق: ' . ($result['errors']['message'] ?? 'خطای نامشخص')
                     ];
                 }
             } else {
@@ -130,8 +130,8 @@ class PaymentService
         $status = $data['Status'] ?? null;
         
         if ($status === 'OK' && $authority) {
-            $payment = Payment::where('gateway_transaction_id', $authority)
-                ->where('gateway', 'zarinpal')
+            $payment = Payment::where('transaction_id', $authority)
+                ->where('payment_method', 'zarinpal')
                 ->where('status', 'pending')
                 ->first();
             
@@ -142,7 +142,7 @@ class PaymentService
                     $payment->update([
                         'status' => 'completed',
                         'paid_at' => now(),
-                        'gateway_ref_id' => $verification['ref_id']
+                        'gateway_response' => json_encode($verification),
                     ]);
                     
                     // Activate subscription
@@ -186,11 +186,11 @@ class PaymentService
             'id' => $payment->id,
             'amount' => $payment->amount,
             'status' => $payment->status,
-            'gateway' => $payment->gateway,
+            'payment_method' => $payment->payment_method,
             'created_at' => $payment->created_at,
             'paid_at' => $payment->paid_at,
-            'gateway_transaction_id' => $payment->gateway_transaction_id,
-            'gateway_ref_id' => $payment->gateway_ref_id
+            'transaction_id' => $payment->transaction_id,
+            'gateway_response' => $payment->gateway_response
         ];
     }
 

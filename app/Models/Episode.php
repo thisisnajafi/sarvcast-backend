@@ -11,6 +11,7 @@ class Episode extends Model
 
     protected $fillable = [
         'story_id',
+        'narrator_id',
         'title',
         'description',
         'audio_url',
@@ -45,6 +46,11 @@ class Episode extends Model
     public function story()
     {
         return $this->belongsTo(Story::class);
+    }
+
+    public function narrator()
+    {
+        return $this->belongsTo(Person::class, 'narrator_id');
     }
 
     public function people()

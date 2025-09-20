@@ -82,7 +82,7 @@ class CorporateController extends Controller
             'pending' => CorporateSponsorship::where('status', 'pending')->count(),
             'active' => CorporateSponsorship::where('status', 'active')->count(),
             'suspended' => CorporateSponsorship::where('status', 'suspended')->count(),
-            'expired' => CorporateSponsorship::where('expires_at', '<', now())->count(),
+            'expired' => CorporateSponsorship::where('sponsorship_end_date', '<', now())->count(),
             'total_amount' => CorporateSponsorship::sum('sponsorship_amount'),
             'average_amount' => CorporateSponsorship::avg('sponsorship_amount'),
         ];
@@ -131,7 +131,7 @@ class CorporateController extends Controller
             'status' => 'required|string|in:pending,active,suspended,expired',
             'verification_documents' => 'nullable|array',
             'verification_documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'expires_at' => 'nullable|date|after:now',
+            'sponsorship_end_date' => 'nullable|date|after:now',
         ]);
 
         try {
@@ -214,7 +214,7 @@ class CorporateController extends Controller
             'status' => 'required|string|in:pending,active,suspended,expired',
             'verification_documents' => 'nullable|array',
             'verification_documents.*' => 'file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'expires_at' => 'nullable|date|after:now',
+            'sponsorship_end_date' => 'nullable|date|after:now',
         ]);
 
         try {
@@ -423,7 +423,7 @@ class CorporateController extends Controller
             'pending' => CorporateSponsorship::where('status', 'pending')->count(),
             'active' => CorporateSponsorship::where('status', 'active')->count(),
             'suspended' => CorporateSponsorship::where('status', 'suspended')->count(),
-            'expired' => CorporateSponsorship::where('expires_at', '<', now())->count(),
+            'expired' => CorporateSponsorship::where('sponsorship_end_date', '<', now())->count(),
             'total_amount' => CorporateSponsorship::sum('sponsorship_amount'),
             'average_amount' => CorporateSponsorship::avg('sponsorship_amount'),
             'by_company_type' => CorporateSponsorship::selectRaw('company_type, COUNT(*) as count')

@@ -173,4 +173,6 @@
         @endif
     </div>
 </div>
+
+<script src="{{ asset('js/admin/episode-manager.js') }}"></script>
 @endsection

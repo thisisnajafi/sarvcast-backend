@@ -295,15 +295,21 @@ class EpisodeController extends Controller
             // Handle voice actors data
             if ($request->filled('voice_actors_data')) {
                 $voiceActorsData = json_decode($request->voice_actors_data, true);
+                
+                // Set narrator_id from first voice actor if not already set
+                if (empty($data['narrator_id']) && !empty($voiceActorsData)) {
+                    $episode->update(['narrator_id' => $voiceActorsData[0]['narrator_id']]);
+                }
+                
                 foreach ($voiceActorsData as $voiceActorData) {
                     $episode->voiceActors()->create([
-                        'person_id' => $voiceActorData['person_id'],
-                        'role' => $voiceActorData['role'],
-                        'character_name' => $voiceActorData['character_name'],
-                        'voice_description' => $voiceActorData['voice_description'],
+                        'person_id' => $voiceActorData['narrator_id'], // Frontend sends narrator_id
+                        'role' => 'narrator', // Default role for voice actors
+                        'character_name' => null, // Not used for simple voice actors
+                        'voice_description' => null, // Not used for simple voice actors
                         'start_time' => 0, // Default to 0 since timing is not managed here
                         'end_time' => $episode->duration, // Default to full episode duration
-                        'is_primary' => $voiceActorData['is_primary'] ?? false,
+                        'is_primary' => true, // All voice actors are primary in this simplified version
                     ]);
                 }
                 

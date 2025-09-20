@@ -292,16 +292,16 @@ class ContentAnalyticsService
         $popularByAgeGroup = $this->getPopularByAgeGroup($dateFrom, $dateTo, $contentType, $categoryId);
 
         // Popular by time of day
-        $popularByTime = PlayHistory::whereBetween('created_at', [$dateFrom, $dateTo])
+        $popularByTime = PlayHistory::whereBetween('played_at', [$dateFrom, $dateTo])
             ->when($contentType === 'story', function($q) {
                 $q->join('episodes', 'play_histories.episode_id', '=', 'episodes.id')
                   ->join('stories', 'episodes.story_id', '=', 'stories.id')
-                  ->selectRaw('stories.id, stories.title, HOUR(play_histories.created_at) as hour, COUNT(*) as plays')
+                  ->selectRaw('stories.id, stories.title, HOUR(play_histories.played_at) as hour, COUNT(*) as plays')
                   ->groupBy('stories.id', 'stories.title', 'hour');
             })
             ->when($contentType === 'episode', function($q) {
                 $q->join('episodes', 'play_histories.episode_id', '=', 'episodes.id')
-                  ->selectRaw('episodes.id, episodes.title, HOUR(play_histories.created_at) as hour, COUNT(*) as plays')
+                  ->selectRaw('episodes.id, episodes.title, HOUR(play_histories.played_at) as hour, COUNT(*) as plays')
                   ->groupBy('episodes.id', 'episodes.title', 'hour');
             })
             ->when($categoryId, function($q) use ($categoryId) {

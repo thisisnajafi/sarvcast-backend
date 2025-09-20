@@ -77,8 +77,8 @@ class TimelineManagementController extends Controller
             'event_timelines' => Timeline::where('type', 'event')->count(),
         ];
 
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
 
         return view('admin.timeline-management.index', compact('timelines', 'stats', 'stories', 'episodes'));
     }
@@ -88,8 +88,8 @@ class TimelineManagementController extends Controller
      */
     public function create()
     {
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.timeline-management.create', compact('stories', 'episodes'));
     }
 
@@ -183,8 +183,8 @@ class TimelineManagementController extends Controller
      */
     public function edit(Timeline $timeline)
     {
-        $stories = Story::where('is_active', true)->get();
-        $episodes = Episode::where('is_active', true)->get();
+        $stories = Story::where('status', 'published')->get();
+        $episodes = Episode::where('status', 'published')->get();
         return view('admin.timeline-management.edit', compact('timeline', 'stories', 'episodes'));
     }
 

@@ -64,6 +64,38 @@
                     <span class="font-medium dark:text-gray-300">داشبورد</span>
                 </a>
                 
+                <!-- Dashboard Section -->
+                <div class="mt-6 mb-2">
+                    <h3 class="px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">داشبوردهای تخصصی</h3>
+                </div>
+                
+                <a href="{{ route('admin.dashboards.stories') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:text-blue-700 transition-all duration-200 {{ request()->routeIs('admin.dashboards.stories*') ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-l-2 border-blue-500' : '' }}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.dashboards.stories*') ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium">داشبورد داستان‌ها</span>
+                </a>
+                
+                <a href="{{ route('admin.dashboards.partners') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 hover:text-green-700 transition-all duration-200 {{ request()->routeIs('admin.dashboards.partners*') ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-l-2 border-green-500' : '' }}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.dashboards.partners*') ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium">داشبورد شرکا</span>
+                </a>
+                
+                <a href="{{ route('admin.dashboards.sales') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-yellow-100 hover:text-yellow-700 transition-all duration-200 {{ request()->routeIs('admin.dashboards.sales*') ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-700 border-l-2 border-yellow-500' : '' }}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.dashboards.sales*') ? 'bg-yellow-500 text-white' : 'bg-gray-100 text-gray-600' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium">داشبورد فروش</span>
+                </a>
+                
                 <a href="{{ route('admin.stories.index') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 hover:text-green-700 transition-all duration-200 {{ request()->routeIs('admin.stories.*') ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-l-2 border-green-500' : '' }}">
                     <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.stories.*') ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600' }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,15 +323,15 @@
                     <span class="font-medium">سیستم ارجاع</span>
                 </a>
                 
-                <!-- Gamification -->
-                <a href="{{ route('admin.gamification.index') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-pink-50 hover:to-pink-100 hover:text-pink-700 transition-all duration-200 {{ request()->routeIs('admin.gamification.*') ? 'bg-gradient-to-r from-pink-50 to-pink-100 text-pink-700 border-l-2 border-pink-500' : '' }}">
+                <!-- Gamification - DISABLED -->
+                {{-- <a href="{{ route('admin.gamification.index') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-pink-50 hover:to-pink-100 hover:text-pink-700 transition-all duration-200 {{ request()->routeIs('admin.gamification.*') ? 'bg-gradient-to-r from-pink-50 to-pink-100 text-pink-700 border-l-2 border-pink-500' : '' }}">
                     <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.gamification.*') ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-600' }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
                         </svg>
                     </div>
                     <span class="font-medium">بازی‌سازی</span>
-                </a>
+                </a> --}}
 
                 <!-- Content Management Section -->
                 <div class="mt-6 mb-2">
@@ -314,6 +346,16 @@
                         </svg>
                     </div>
                     <span class="font-medium">مدیریت محتوا</span>
+                </a>
+                
+                <!-- Comments Management -->
+                <a href="{{ route('admin.comments.index') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-indigo-100 hover:text-indigo-700 transition-all duration-200 {{ request()->routeIs('admin.comments.*') ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700 border-l-2 border-indigo-500' : '' }}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.comments.*') ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium">مدیریت نظرات</span>
                 </a>
                 
                 <!-- Audio Management -->
@@ -405,6 +447,16 @@
                 <div class="mt-6 mb-2">
                     <h3 class="px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">مدیریت سیستم</h3>
                 </div>
+                
+                <!-- Version Management -->
+                <a href="{{ route('admin.versions.index') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:text-blue-700 transition-all duration-200 {{ request()->routeIs('admin.versions.*') ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-l-2 border-blue-500' : '' }}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.versions.*') ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium">مدیریت نسخه‌ها</span>
+                </a>
                 
                 <!-- Backup and Recovery -->
                 <a href="{{ route('admin.backup.index') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:text-gray-700 transition-all duration-200 {{ request()->routeIs('admin.backup.*') ? 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border-l-2 border-gray-500' : '' }}">

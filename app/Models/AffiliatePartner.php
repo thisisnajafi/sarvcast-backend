@@ -42,6 +42,14 @@ class AffiliatePartner extends Model
     }
 
     /**
+     * Get the influencer campaigns for this affiliate partner
+     */
+    public function influencerCampaigns(): HasMany
+    {
+        return $this->hasMany(InfluencerCampaign::class, 'affiliate_partner_id');
+    }
+
+    /**
      * Verify the affiliate partner
      */
     public function verify(): void

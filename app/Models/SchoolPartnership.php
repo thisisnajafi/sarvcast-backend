@@ -13,6 +13,7 @@ class SchoolPartnership extends Model
 
     protected $fillable = [
         'affiliate_partner_id',
+        'assigned_teacher_id',
         'school_name',
         'school_type',
         'school_level',
@@ -33,6 +34,8 @@ class SchoolPartnership extends Model
         'verification_documents',
         'is_verified',
         'verified_at',
+        'teacher_assigned_at',
+        'teacher_assignment_notes',
         'notes',
     ];
 
@@ -40,6 +43,7 @@ class SchoolPartnership extends Model
         'verification_documents' => 'array',
         'is_verified' => 'boolean',
         'verified_at' => 'datetime',
+        'teacher_assigned_at' => 'datetime',
         'partnership_start_date' => 'date',
         'partnership_end_date' => 'date',
         'discount_rate' => 'decimal:2',
@@ -53,6 +57,14 @@ class SchoolPartnership extends Model
     public function affiliatePartner(): BelongsTo
     {
         return $this->belongsTo(AffiliatePartner::class, 'affiliate_partner_id');
+    }
+
+    /**
+     * Get the assigned teacher for this school partnership
+     */
+    public function assignedTeacher(): BelongsTo
+    {
+        return $this->belongsTo(TeacherAccount::class, 'assigned_teacher_id');
     }
 
     /**

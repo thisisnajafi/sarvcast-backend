@@ -23,6 +23,11 @@ class TeacherAccount extends Model
         'student_count',
         'max_student_licenses',
         'discount_rate',
+        'commission_rate',
+        'coupon_code',
+        'coupon_usage_count',
+        'total_commission_earned',
+        'commission_settings',
         'status',
         'verification_documents',
         'is_verified',
@@ -32,11 +37,15 @@ class TeacherAccount extends Model
 
     protected $casts = [
         'verification_documents' => 'array',
+        'commission_settings' => 'array',
         'is_verified' => 'boolean',
         'verified_at' => 'datetime',
         'expires_at' => 'datetime',
         'certification_date' => 'date',
         'discount_rate' => 'decimal:2',
+        'commission_rate' => 'decimal:2',
+        'total_commission_earned' => 'decimal:2',
+        'coupon_usage_count' => 'integer',
     ];
 
     /**
@@ -215,5 +224,121 @@ class TeacherAccount extends Model
             'priority_support' => 'پشتیبانی اولویت',
             'professional_development' => 'دسترسی رایگان به کارگاه‌ها',
         ];
+    }
+
+    /**
+     * Generate a unique coupon code for the teacher
+     */
+    public function generateCouponCode(): string
+    {
+        if (!$this->coupon_code) {
+            $prefix = 'TCH';
+            $teacherId = str_pad($this->id, 4, '0', STR_PAD_LEFT);
+            $random = strtoupper(substr(md5(uniqid()), 0, 3));
+            
+            $this->coupon_code = $prefix . $teacherId . $random;
+            $this->save();
+        }
+        
+        return $this->coupon_code;
+    }
+
+    /**
+     * Get the coupon code (generate if not exists)
+     */
+    public function getCouponCodeAttribute($value): string
+    {
+        if (!$value) {
+            return $this->generateCouponCode();
+        }
+        return $value;
+    }
+
+    /**
+     * Calculate commission for a given amount
+     */
+    public function calculateCommission(float $amount): float
+    {
+        return ($amount * $this->commission_rate) / 100;
+    }
+
+    /**
+     * Add commission to total earned
+     */
+    public function addCommission(float $amount): void
+    {
+        $this->increment('total_commission_earned', $amount);
+    }
+
+    /**
+     * Increment coupon usage count
+     */
+    public function incrementCouponUsage(): void
+    {
+        $this->increment('coupon_usage_count');
+    }
+
+    /**
+     * Get commission statistics
+     */
+    public function getCommissionStats(): array
+    {
+        return [
+            'commission_rate' => $this->commission_rate,
+            'total_earned' => $this->total_commission_earned,
+            'coupon_usage_count' => $this->coupon_usage_count,
+            'coupon_code' => $this->coupon_code,
+            'average_per_usage' => $this->coupon_usage_count > 0 
+                ? $this->total_commission_earned / $this->coupon_usage_count 
+                : 0,
+        ];
+    }
+
+    /**
+     * Check if teacher is eligible for commission
+     */
+    public function isEligibleForCommission(): bool
+    {
+        return $this->is_verified && 
+               $this->status === 'verified' && 
+               $this->commission_rate > 0;
+    }
+
+    /**
+     * Get assigned school partnerships
+     */
+    public function assignedSchoolPartnerships(): HasMany
+    {
+        return $this->hasMany(SchoolPartnership::class, 'assigned_teacher_id');
+    }
+
+    /**
+     * Get commission settings with defaults
+     */
+    public function getCommissionSettingsAttribute($value): array
+    {
+        $defaults = [
+            'min_commission_amount' => 1000, // Minimum commission in IRR
+            'max_commission_amount' => 100000, // Maximum commission in IRR
+            'commission_payment_method' => 'bank_transfer',
+            'commission_payment_frequency' => 'monthly',
+            'auto_payment_enabled' => false,
+            'commission_threshold' => 50000, // Minimum amount before payment
+        ];
+
+        if ($value) {
+            return array_merge($defaults, json_decode($value, true));
+        }
+
+        return $defaults;
+    }
+
+    /**
+     * Set commission settings
+     */
+    public function setCommissionSettings(array $settings): void
+    {
+        $this->commission_settings = $settings;
+        $this->save();
     }
 }

@@ -37,8 +37,8 @@ class AnalyticsController extends Controller
             'active_users_this_week' => User::where('last_login_at', '>=', now()->subWeek())->count(),
             'avg_listening_time' => $this->calculateAvgListeningTime(),
             'plays_today' => PlayHistory::whereDate('played_at', today())->count(),
-            'monthly_subscriptions' => Subscription::where('plan_id', 'monthly')->where('status', 'active')->count(),
-            'yearly_subscriptions' => Subscription::where('plan_id', 'yearly')->where('status', 'active')->count(),
+            'monthly_subscriptions' => Subscription::where('type', '1month')->where('status', 'active')->count(),
+            'yearly_subscriptions' => Subscription::where('type', '1year')->where('status', 'active')->count(),
             'cancellation_rate' => $this->calculateCancellationRate(),
             'avg_revenue_per_user' => $this->calculateAvgRevenuePerUser(),
         ];
