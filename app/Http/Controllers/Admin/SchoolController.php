@@ -95,8 +95,7 @@ class SchoolController extends Controller
      */
     public function create(): View
     {
-        $users = User::where('role', 'parent')->get();
-        return view('admin.schools.create', compact('users'));
+        return view('admin.schools.create');
     }
 
     /**
@@ -174,8 +173,8 @@ class SchoolController extends Controller
      */
     public function edit(SchoolPartnership $school): View
     {
-        $users = User::where('role', 'parent')->get();
-        return view('admin.schools.edit', compact('school', 'users'));
+        $school->load('user');
+        return view('admin.schools.edit', compact('school'));
     }
 
     /**

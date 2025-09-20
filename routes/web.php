@@ -42,7 +42,7 @@ Route::prefix('admin/2fa')->name('admin.2fa.')->middleware(['auth:web', 'admin']
 });
 
 // Admin Dashboard Route
-Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard')->middleware(['auth:web', 'admin']);
+Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard')->middleware(['auth:web', 'admin', '2fa']);
 
 // Admin Routes
 Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])->group(function () {
@@ -119,6 +119,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     
     // Users
     Route::resource('users', UserController::class);
+    Route::get('users/search', [UserController::class, 'search'])->name('users.search');
     Route::post('users/{user}/suspend', [UserController::class, 'suspend'])->name('users.suspend');
     Route::post('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
     Route::post('users/bulk-action', [UserController::class, 'bulkAction'])->name('users.bulk-action');

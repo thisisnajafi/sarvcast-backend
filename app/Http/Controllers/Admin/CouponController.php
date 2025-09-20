@@ -73,12 +73,14 @@ class CouponController extends Controller
 
         $coupon = CouponCode::create([
             'code' => strtoupper($request->code),
+            'name' => $request->code, // Use code as name if not provided
             'type' => $request->type,
-            'value' => $request->value,
+            'discount_value' => $request->value,
             'description' => $request->description,
             'usage_limit' => $request->usage_limit,
             'expires_at' => $request->expires_at,
             'is_active' => $request->is_active,
+            'created_by' => auth()->id(), // Set the current admin as creator
         ]);
 
         return redirect()->route('admin.coupons.index')
@@ -109,8 +111,9 @@ class CouponController extends Controller
 
         $coupon->update([
             'code' => strtoupper($request->code),
+            'name' => $request->code, // Use code as name if not provided
             'type' => $request->type,
-            'value' => $request->value,
+            'discount_value' => $request->value,
             'description' => $request->description,
             'usage_limit' => $request->usage_limit,
             'expires_at' => $request->expires_at,

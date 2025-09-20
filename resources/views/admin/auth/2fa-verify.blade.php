@@ -14,8 +14,8 @@
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
                 تایید دو مرحله‌ای
             </h2>
-            <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-                کد تایید به شماره {{ $user->phone_number }} ارسال شد
+            <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400" id="status-message">
+                برای ادامه، ابتدا کد تایید را ارسال کنید
             </p>
         </div>
 
@@ -31,7 +31,25 @@
             </div>
         @endif
 
-        <form class="mt-8 space-y-6" action="{{ route('admin.2fa.verify') }}" method="POST">
+        <!-- Send Code Button (Initially Visible) -->
+        <div id="send-code-section" class="mt-8">
+            <div class="text-center">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    کد تایید به شماره {{ $user->phone_number }} ارسال خواهد شد
+                </p>
+                <button type="button" onclick="sendCode()" id="send-code-btn" 
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-200">
+                    <span id="send-code-text">ارسال کد تایید</span>
+                    <svg id="send-code-spinner" class="hidden animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Verification Form (Initially Hidden) -->
+        <form id="verification-form" class="mt-8 space-y-6 hidden" action="{{ route('admin.2fa.verify') }}" method="POST">
             @csrf
             
             <div>
@@ -74,8 +92,38 @@
 </div>
 
 <script>
+let codeSent = false;
+
 function sendCode() {
-    // Create a form to send the code request
+    if (codeSent) {
+        // Resend code
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route("admin.2fa.send-code") }}';
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfToken);
+        document.body.appendChild(form);
+        form.submit();
+        return;
+    }
+
+    // First time sending code
+    const sendBtn = document.getElementById('send-code-btn');
+    const sendText = document.getElementById('send-code-text');
+    const spinner = document.getElementById('send-code-spinner');
+    const statusMessage = document.getElementById('status-message');
+    
+    // Show loading state
+    sendBtn.disabled = true;
+    sendText.textContent = 'در حال ارسال...';
+    spinner.classList.remove('hidden');
+    
+    // Create form to send the code request
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ route("admin.2fa.send-code") }}';
@@ -107,8 +155,22 @@ function skip2FA() {
     }
 }
 
-// Auto-focus on code input
-document.getElementById('code').focus();
+// Check if code was already sent (from session)
+@if(session('success'))
+    codeSent = true;
+    document.getElementById('send-code-section').classList.add('hidden');
+    document.getElementById('verification-form').classList.remove('hidden');
+    document.getElementById('status-message').textContent = 'کد تایید به شماره {{ $user->phone_number }} ارسال شد';
+    document.getElementById('code').focus();
+@endif
+
+// Auto-focus on code input when form is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const codeInput = document.getElementById('code');
+    if (codeInput && !codeInput.closest('form').classList.contains('hidden')) {
+        codeInput.focus();
+    }
+});
 
 // Auto-submit when 4 digits are entered
 document.getElementById('code').addEventListener('input', function(e) {
@@ -124,7 +186,7 @@ document.getElementById('code').addEventListener('input', function(e) {
 });
 
 // Prevent form submission if code is not 4 digits
-document.querySelector('form').addEventListener('submit', function(e) {
+document.getElementById('verification-form').addEventListener('submit', function(e) {
     const code = document.getElementById('code').value;
     if (code.length !== 4) {
         e.preventDefault();

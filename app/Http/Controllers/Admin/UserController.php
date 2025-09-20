@@ -26,6 +26,34 @@ class UserController extends Controller
         $this->notificationService = $notificationService;
     }
     /**
+     * Search users for admin forms - based on mobile phone number
+     */
+    public function search(Request $request)
+    {
+        $query = $request->get('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json(['users' => []]);
+        }
+
+        // Search primarily by phone number, with fallback to name for display
+        $users = User::where(function($q) use ($query) {
+                $q->where('phone_number', 'LIKE', "%{$query}%")
+                  ->orWhere('first_name', 'LIKE', "%{$query}%")
+                  ->orWhere('last_name', 'LIKE', "%{$query}%")
+                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
+            })
+            ->select('id', 'first_name', 'last_name', 'email', 'phone_number', 'status')
+            ->where('status', 'active')
+            ->orderByRaw("CASE WHEN phone_number LIKE ? THEN 1 ELSE 2 END", ["%{$query}%"])
+            ->orderBy('first_name', 'asc')
+            ->limit(20)
+            ->get();
+
+        return response()->json(['users' => $users]);
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -202,12 +230,12 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|unique:users',
-            'phone_number' => 'nullable|string|unique:users',
+            'email' => 'nullable|email|unique:users',
+            'phone_number' => 'required|string|unique:users',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:parent,child,admin',
+            'role' => 'required|in:parent,child,admin,basic',
             'parent_id' => 'nullable|exists:users,id',
             'status' => 'required|in:active,inactive,suspended,pending',
             'language' => 'nullable|string|max:10',

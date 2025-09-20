@@ -52,4 +52,24 @@ class Role extends Model
     {
         $this->permissions()->sync($permissions);
     }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Update 2FA requirements when roles are attached
+        static::created(function ($role) {
+            if (in_array($role->name, ['admin', 'super_admin'])) {
+                // Enable 2FA for users who get admin roles
+                $role->users()->update(['requires_2fa' => true]);
+            }
+        });
+
+        // Update 2FA requirements when roles are attached/detached
+        static::saved(function ($role) {
+            if (in_array($role->name, ['admin', 'super_admin'])) {
+                $role->users()->update(['requires_2fa' => true]);
+            }
+        });
+    }
 }

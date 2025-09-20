@@ -95,8 +95,7 @@ class CorporateController extends Controller
      */
     public function create(): View
     {
-        $users = User::whereIn('role', ['business', 'corporate'])->get();
-        return view('admin.corporate.create', compact('users'));
+        return view('admin.corporate.create');
     }
 
     /**
@@ -178,8 +177,8 @@ class CorporateController extends Controller
      */
     public function edit(CorporateSponsorship $corporate): View
     {
-        $users = User::whereIn('role', ['business', 'corporate'])->get();
-        return view('admin.corporate.edit', compact('corporate', 'users'));
+        $corporate->load('user');
+        return view('admin.corporate.edit', compact('corporate'));
     }
 
     /**

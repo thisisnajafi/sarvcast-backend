@@ -639,4 +639,143 @@ class StoryController extends Controller
                 ->with('error', 'خطا در انتشار داستان: ' . $e->getMessage());
         }
     }
+
+    // API Methods for Postman Collection
+    public function apiIndex(Request $request)
+    {
+        $stories = Story::with(['category', 'episodes'])
+            ->when($request->search, function ($query, $search) {
+                $query->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+            })
+            ->when($request->category_id, function ($query, $categoryId) {
+                $query->where('category_id', $categoryId);
+            })
+            ->when($request->status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->per_page ?? 15);
+
+        return response()->json([
+            'success' => true,
+            'data' => $stories
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'category_id' => 'required|exists:categories,id',
+            'cover_image_url' => 'nullable|url|max:500',
+            'status' => 'required|in:draft,published,archived',
+            'is_premium' => 'boolean',
+            'age_rating' => 'required|in:all,3+,7+,12+,16+,18+',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
+        ]);
+
+        $story = Story::create($request->all());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Story created successfully',
+            'data' => $story->load('category')
+        ], 201);
+    }
+
+    public function apiShow(Story $story)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $story->load(['category', 'episodes'])
+        ]);
+    }
+
+    public function apiUpdate(Request $request, Story $story)
+    {
+        $request->validate([
+            'title' => 'sometimes|required|string|max:255',
+            'description' => 'sometimes|required|string',
+            'category_id' => 'sometimes|required|exists:categories,id',
+            'cover_image_url' => 'nullable|url|max:500',
+            'status' => 'sometimes|required|in:draft,published,archived',
+            'is_premium' => 'boolean',
+            'age_rating' => 'sometimes|required|in:all,3+,7+,12+,16+,18+',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
+        ]);
+
+        $story->update($request->all());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Story updated successfully',
+            'data' => $story->load('category')
+        ]);
+    }
+
+    public function apiDestroy(Story $story)
+    {
+        $story->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Story deleted successfully'
+        ]);
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:delete,publish,archive',
+            'story_ids' => 'required|array',
+            'story_ids.*' => 'exists:stories,id'
+        ]);
+
+        $stories = Story::whereIn('id', $request->story_ids);
+
+        switch ($request->action) {
+            case 'delete':
+                $stories->delete();
+                $message = 'Stories deleted successfully';
+                break;
+            case 'publish':
+                $stories->update(['status' => 'published', 'published_at' => now()]);
+                $message = 'Stories published successfully';
+                break;
+            case 'archive':
+                $stories->update(['status' => 'archived']);
+                $message = 'Stories archived successfully';
+                break;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_stories' => Story::count(),
+            'published_stories' => Story::where('status', 'published')->count(),
+            'draft_stories' => Story::where('status', 'draft')->count(),
+            'archived_stories' => Story::where('status', 'archived')->count(),
+            'premium_stories' => Story::where('is_premium', true)->count(),
+            'free_stories' => Story::where('is_premium', false)->count(),
+            'stories_by_category' => Story::with('category')
+                ->selectRaw('category_id, count(*) as count')
+                ->groupBy('category_id')
+                ->get()
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
 }

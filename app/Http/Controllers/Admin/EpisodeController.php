@@ -875,4 +875,149 @@ class EpisodeController extends Controller
             ], 500);
         }
     }
+
+    // API Methods for Postman Collection
+    public function apiIndex(Request $request)
+    {
+        $episodes = Episode::with(['story', 'voiceActors'])
+            ->when($request->search, function ($query, $search) {
+                $query->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+            })
+            ->when($request->story_id, function ($query, $storyId) {
+                $query->where('story_id', $storyId);
+            })
+            ->when($request->status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->orderBy('episode_number', 'asc')
+            ->paginate($request->per_page ?? 15);
+
+        return response()->json([
+            'success' => true,
+            'data' => $episodes
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $request->validate([
+            'story_id' => 'required|exists:stories,id',
+            'title' => 'required|string|max:200',
+            'description' => 'nullable|string|max:2000',
+            'episode_number' => 'required|integer|min:1',
+            'duration' => 'required|integer|min:1',
+            'audio_file_url' => 'nullable|url|max:500',
+            'status' => 'required|in:draft,published,archived',
+            'is_premium' => 'boolean',
+            'age_rating' => 'required|in:all,3+,7+,12+,16+,18+',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
+        ]);
+
+        $episode = Episode::create($request->all());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Episode created successfully',
+            'data' => $episode->load('story')
+        ], 201);
+    }
+
+    public function apiShow(Episode $episode)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $episode->load(['story', 'voiceActors'])
+        ]);
+    }
+
+    public function apiUpdate(Request $request, Episode $episode)
+    {
+        $request->validate([
+            'story_id' => 'sometimes|required|exists:stories,id',
+            'title' => 'sometimes|required|string|max:200',
+            'description' => 'nullable|string|max:2000',
+            'episode_number' => 'sometimes|required|integer|min:1',
+            'duration' => 'sometimes|required|integer|min:1',
+            'audio_file_url' => 'nullable|url|max:500',
+            'status' => 'sometimes|required|in:draft,published,archived',
+            'is_premium' => 'boolean',
+            'age_rating' => 'sometimes|required|in:all,3+,7+,12+,16+,18+',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
+        ]);
+
+        $episode->update($request->all());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Episode updated successfully',
+            'data' => $episode->load('story')
+        ]);
+    }
+
+    public function apiDestroy(Episode $episode)
+    {
+        $episode->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Episode deleted successfully'
+        ]);
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:delete,publish,archive',
+            'episode_ids' => 'required|array',
+            'episode_ids.*' => 'exists:episodes,id'
+        ]);
+
+        $episodes = Episode::whereIn('id', $request->episode_ids);
+
+        switch ($request->action) {
+            case 'delete':
+                $episodes->delete();
+                $message = 'Episodes deleted successfully';
+                break;
+            case 'publish':
+                $episodes->update(['status' => 'published', 'published_at' => now()]);
+                $message = 'Episodes published successfully';
+                break;
+            case 'archive':
+                $episodes->update(['status' => 'archived']);
+                $message = 'Episodes archived successfully';
+                break;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_episodes' => Episode::count(),
+            'published_episodes' => Episode::where('status', 'published')->count(),
+            'draft_episodes' => Episode::where('status', 'draft')->count(),
+            'archived_episodes' => Episode::where('status', 'archived')->count(),
+            'premium_episodes' => Episode::where('is_premium', true)->count(),
+            'free_episodes' => Episode::where('is_premium', false)->count(),
+            'total_duration' => Episode::sum('duration'),
+            'average_duration' => Episode::avg('duration'),
+            'episodes_by_story' => Episode::with('story')
+                ->selectRaw('story_id, count(*) as count')
+                ->groupBy('story_id')
+                ->get()
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats
+        ]);
+    }
 }

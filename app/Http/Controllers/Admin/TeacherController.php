@@ -91,8 +91,7 @@ class TeacherController extends Controller
      */
     public function create(): View
     {
-        $users = User::where('role', 'parent')->get();
-        return view('admin.teachers.create', compact('users'));
+        return view('admin.teachers.create');
     }
 
     /**
@@ -162,8 +161,8 @@ class TeacherController extends Controller
      */
     public function edit(TeacherAccount $teacher): View
     {
-        $users = User::where('role', 'parent')->get();
-        return view('admin.teachers.edit', compact('teacher', 'users'));
+        $teacher->load('user');
+        return view('admin.teachers.edit', compact('teacher'));
     }
 
     /**

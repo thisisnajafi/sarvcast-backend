@@ -864,6 +864,28 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
             Route::post('/{notification}/send', [\App\Http\Controllers\Admin\NotificationController::class, 'apiSend']);
         });
 
+        // Story Management API
+        Route::prefix('stories')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\StoryController::class, 'apiIndex']);
+            Route::post('/', [\App\Http\Controllers\Admin\StoryController::class, 'apiStore']);
+            Route::get('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiShow']);
+            Route::put('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdate']);
+            Route::delete('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiDestroy']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryController::class, 'apiBulkAction']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\StoryController::class, 'apiStatistics']);
+        });
+
+        // Episode Management API
+        Route::prefix('episodes')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiIndex']);
+            Route::post('/', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiStore']);
+            Route::get('/{episode}', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiShow']);
+            Route::put('/{episode}', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiUpdate']);
+            Route::delete('/{episode}', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiDestroy']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiBulkAction']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiStatistics']);
+        });
+
         // Dashboard API
         Route::get('/dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'apiStats']);
         Route::get('/dashboard/charts', [\App\Http\Controllers\Admin\DashboardController::class, 'apiCharts']);

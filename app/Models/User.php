@@ -364,7 +364,7 @@ class User extends Authenticatable
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'user_role');
+        return $this->belongsToMany(Role::class, 'user_role')->using(UserRole::class);
     }
 
     public function permissions()
@@ -436,7 +436,21 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->hasAnyRole(['super_admin', 'admin']);
+        return $this->hasAnyRole(['super_admin', 'admin']) || in_array($this->role, ['admin', 'super_admin']);
+    }
+
+    /**
+     * Update 2FA requirement based on current roles
+     */
+    public function update2FARequirement(): void
+    {
+        $isAdmin = $this->isAdmin();
+        
+        if ($isAdmin && !$this->requires_2fa) {
+            $this->update(['requires_2fa' => true]);
+        } elseif (!$isAdmin && $this->requires_2fa) {
+            $this->update(['requires_2fa' => false]);
+        }
     }
 
     protected static function boot()
@@ -448,19 +462,32 @@ class User extends Authenticatable
                 $user->status = 'active';
             }
             if (empty($user->role)) {
-                $user->role = 'parent';
-            }
-            if (empty($user->language)) {
-                $user->language = 'fa';
+                $user->role = 'basic';
             }
             if (empty($user->timezone)) {
                 $user->timezone = 'Asia/Tehran';
+            }
+            
+            // Enable 2FA for admin users
+            if (in_array($user->role, ['admin', 'super_admin'])) {
+                $user->requires_2fa = true;
             }
         });
 
         static::created(function ($user) {
             // Fire new user registration event
             event(new NewUserRegistrationEvent($user));
+        });
+
+        // Update 2FA requirement when role changes
+        static::updating(function ($user) {
+            if ($user->isDirty('role')) {
+                if (in_array($user->role, ['admin', 'super_admin'])) {
+                    $user->requires_2fa = true;
+                } else {
+                    $user->requires_2fa = false;
+                }
+            }
         });
     }
 }

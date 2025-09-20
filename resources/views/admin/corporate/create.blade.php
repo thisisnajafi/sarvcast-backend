@@ -17,14 +17,7 @@
             <!-- User Selection -->
             <div>
                 <label for="user_id" class="block text-sm font-medium text-gray-700 mb-2">کاربر *</label>
-                <select name="user_id" id="user_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent @error('user_id') border-red-500 @enderror">
-                    <option value="">انتخاب کاربر</option>
-                    @foreach($users as $user)
-                        <option value="{{ $user->id }}" {{ old('user_id') == $user->id ? 'selected' : '' }}>
-                            {{ $user->first_name }} {{ $user->last_name }} - {{ $user->email }}
-                        </option>
-                    @endforeach
-                </select>
+                <div id="corporate-user-search" data-user-search='{"placeholder": "جستجو بر اساس شماره موبایل...", "apiEndpoint": "/admin/users/search"}'></div>
                 @error('user_id')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -309,4 +302,8 @@
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script src="{{ asset('js/admin/user-search-manager.js') }}"></script>
+@endpush
 @endsection

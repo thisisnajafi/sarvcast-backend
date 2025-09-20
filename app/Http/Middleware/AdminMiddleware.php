@@ -61,9 +61,9 @@ class AdminMiddleware
             'admin.coins.store',
             'admin.coins.update',
             'admin.coins.destroy',
-            'admin.coupons.store',
-            'admin.coupons.update',
-            'admin.coupons.destroy',
+            // 'admin.coupons.store',     // Removed - allow regular admins to create coupons
+            // 'admin.coupons.update',    // Removed - allow regular admins to update coupons
+            // 'admin.coupons.destroy',   // Removed - allow regular admins to delete coupons
             'admin.roles.store',
             'admin.roles.update',
             'admin.roles.destroy',

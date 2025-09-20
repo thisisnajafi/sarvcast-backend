@@ -90,8 +90,7 @@ class InfluencerController extends Controller
      */
     public function create(): View
     {
-        $users = User::where('role', 'parent')->get();
-        return view('admin.influencers.create', compact('users'));
+        return view('admin.influencers.create');
     }
 
     /**
@@ -162,8 +161,8 @@ class InfluencerController extends Controller
      */
     public function edit(InfluencerCampaign $influencer): View
     {
-        $users = User::where('role', 'parent')->get();
-        return view('admin.influencers.edit', compact('influencer', 'users'));
+        $influencer->load('user');
+        return view('admin.influencers.edit', compact('influencer'));
     }
 
     /**

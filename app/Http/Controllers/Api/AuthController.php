@@ -27,7 +27,7 @@ class AuthController extends Controller
     public function sendVerificationCode(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/',
+            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
         ]);
 
         if ($validator->fails()) {
@@ -79,11 +79,11 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/',
+            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'verification_code' => 'required|string|size:4',
-            'role' => 'required|in:parent,child',
+            'role' => 'nullable|in:parent,child,basic',
             'parent_id' => 'nullable|exists:users,id',
         ]);
 
@@ -122,7 +122,7 @@ class AuthController extends Controller
             'phone_number' => $phoneNumber,
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
-            'role' => $request->role,
+            'role' => $request->role ?? 'basic', // Default to 'basic' if no role provided
             'parent_id' => $request->parent_id,
             'status' => 'active',
             'phone_verified_at' => now(),
@@ -153,7 +153,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/',
+            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
             'verification_code' => 'required|string|size:4',
         ]);
 
@@ -223,7 +223,7 @@ class AuthController extends Controller
     public function adminLogin(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'phone_number' => 'required|string|regex:/^(\+98|0)?9[0-9]{9}$/',
+            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
             'password' => 'required|string',
         ]);
 

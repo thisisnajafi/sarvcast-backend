@@ -34,20 +34,20 @@
                     @enderror
                 </div>
 
-                <!-- Email -->
+                <!-- Phone Number -->
                 <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">ایمیل *</label>
-                    <input type="email" name="email" id="email" value="{{ old('email') }}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('email') border-red-500 @enderror" placeholder="ایمیل را وارد کنید">
-                    @error('email')
+                    <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-2">شماره موبایل *</label>
+                    <input type="text" name="phone_number" id="phone_number" value="{{ old('phone_number') }}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('phone_number') border-red-500 @enderror" placeholder="شماره موبایل را وارد کنید">
+                    @error('phone_number')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
 
-                <!-- Phone Number -->
+                <!-- Email (Optional) -->
                 <div>
-                    <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-2">شماره تلفن</label>
-                    <input type="text" name="phone_number" id="phone_number" value="{{ old('phone_number') }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('phone_number') border-red-500 @enderror" placeholder="شماره تلفن را وارد کنید">
-                    @error('phone_number')
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">ایمیل (اختیاری)</label>
+                    <input type="email" name="email" id="email" value="{{ old('email') }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('email') border-red-500 @enderror" placeholder="ایمیل را وارد کنید">
+                    @error('email')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
@@ -81,6 +81,7 @@
                     <label for="role" class="block text-sm font-medium text-gray-700 mb-2">نقش *</label>
                     <select name="role" id="role" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('role') border-red-500 @enderror">
                         <option value="">انتخاب نقش</option>
+                        <option value="basic" {{ old('role', 'basic') == 'basic' ? 'selected' : '' }}>کاربر عادی</option>
                         <option value="parent" {{ old('role') == 'parent' ? 'selected' : '' }}>والد</option>
                         <option value="child" {{ old('role') == 'child' ? 'selected' : '' }}>کودک</option>
                         <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>مدیر</option>
