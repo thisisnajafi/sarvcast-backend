@@ -84,7 +84,7 @@ create_deployment_package() {
     rm -rf deployment
     mkdir -p deployment
     
-    # Copy production files only
+    # Copy production files only (excluding vendor)
     rsync -av \
         --exclude='.git' \
         --exclude='.github' \
@@ -96,6 +96,7 @@ create_deployment_package() {
         --exclude='storage/framework/sessions/*' \
         --exclude='storage/framework/views/*' \
         --exclude='bootstrap/cache/*' \
+        --exclude='vendor' \
         --exclude='Homestead*' \
         --exclude='*.log' \
         --exclude='.DS_Store' \
@@ -103,7 +104,7 @@ create_deployment_package() {
         --exclude='deployment' \
         . deployment/
     
-    log_success "Deployment package created"
+    log_success "Deployment package created (vendor excluded for faster upload)"
 }
 
 # Deploy to FTP
@@ -126,6 +127,7 @@ deploy_to_ftp() {
     "
     
     log_success "Files deployed to FTP server"
+    log_warning "Remember to run 'composer install --no-dev' on the server"
 }
 
 # Send Telegram notification

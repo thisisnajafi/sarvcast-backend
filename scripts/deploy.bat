@@ -85,13 +85,13 @@ call :log_info "Creating deployment package..."
 if exist "deployment" rmdir /s /q "deployment"
 mkdir "deployment"
 
-REM Copy files (simplified for Windows)
+REM Copy files (simplified for Windows, excluding vendor)
 xcopy /E /I /Y /EXCLUDE:deploy_exclude.txt . deployment\
 if %errorlevel% neq 0 (
     call :log_warning "Some files may not have been copied"
 )
 
-call :log_success "Deployment package created"
+call :log_success "Deployment package created (vendor excluded for faster upload)"
 
 REM Deploy to FTP
 call :log_info "Deploying to FTP server..."

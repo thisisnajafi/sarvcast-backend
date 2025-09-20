@@ -17,3 +17,4 @@ Homestead.yaml
 .DS_Store
 Thumbs.db
 deployment
+vendor
