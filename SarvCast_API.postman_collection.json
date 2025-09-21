@@ -18,7 +18,7 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://127.0.0.1:8000/api/v1",
+      "value": "https://my.sarvcast.ir/api/v1",
       "type": "string"
     },
     {

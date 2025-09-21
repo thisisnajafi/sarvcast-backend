@@ -13,13 +13,13 @@ This Postman collection contains all the API endpoints for the SarvCast audio st
 
 ### 2. Configure Environment Variables
 The collection uses these variables:
-- `base_url`: API base URL (default: `http://127.0.0.1:8000/api/v1`)
+- `base_url`: API base URL (default: `https://my.sarvcast.ir/api/v1`)
 - `auth_token`: Bearer token for authenticated requests
 
 To set up:
 1. Create a new environment in Postman
 2. Add these variables:
-   - `base_url`: `http://127.0.0.1:8000/api/v1` (or your server URL)
+   - `base_url`: `https://my.sarvcast.ir/api/v1` (or your server URL)
    - `auth_token`: Leave empty initially
 3. Select this environment for your requests
 

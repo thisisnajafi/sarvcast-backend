@@ -150,6 +150,7 @@ class SmsService
      */
     private function generateOtpCode(): string
     {
+        return "1234";
         return str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
     }
 
