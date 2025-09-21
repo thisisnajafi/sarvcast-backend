@@ -43,7 +43,7 @@ class UserController extends Controller
                   ->orWhere('last_name', 'LIKE', "%{$query}%")
                   ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
             })
-            ->select('id', 'first_name', 'last_name', 'email', 'phone_number', 'status')
+            ->select('id', 'first_name', 'last_name', 'phone_number', 'status')
             ->where('status', 'active')
             ->orderByRaw("CASE WHEN phone_number LIKE ? THEN 1 ELSE 2 END", ["%{$query}%"])
             ->orderBy('first_name', 'asc')
@@ -143,7 +143,6 @@ class UserController extends Controller
             $query->where(function($q) use ($request) {
                 $q->where('first_name', 'like', '%' . $request->search . '%')
                   ->orWhere('last_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
                   ->orWhere('phone_number', 'like', '%' . $request->search . '%')
                   ->orWhere('id', 'like', '%' . $request->search . '%');
             });
@@ -156,9 +155,6 @@ class UserController extends Controller
         switch ($sort) {
             case 'name':
                 $query->orderBy('first_name', $direction)->orderBy('last_name', $direction);
-                break;
-            case 'email':
-                $query->orderBy('email', $direction);
                 break;
             case 'phone_number':
                 $query->orderBy('phone_number', $direction);
@@ -230,7 +226,6 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'email' => 'nullable|email|unique:users',
             'phone_number' => 'required|string|unique:users',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
@@ -286,7 +281,6 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'email' => 'required|email|unique:users,email,' . $user->id,
             'phone_number' => 'nullable|string|unique:users,phone_number,' . $user->id,
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
@@ -524,7 +518,6 @@ class UserController extends Controller
             $query->where(function($q) use ($request) {
                 $q->where('first_name', 'like', '%' . $request->search . '%')
                   ->orWhere('last_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
                   ->orWhere('phone_number', 'like', '%' . $request->search . '%');
             });
         }
@@ -533,7 +526,7 @@ class UserController extends Controller
 
         $csvData = [];
         $csvData[] = [
-            'ID', 'نام', 'نام خانوادگی', 'ایمیل', 'شماره تلفن', 'نقش', 'وضعیت',
+            'ID', 'نام', 'نام خانوادگی', 'شماره تلفن', 'نقش', 'وضعیت',
             'زبان', 'منطقه زمانی', 'اشتراک فعال', 'تاریخ عضویت', 'آخرین ورود'
         ];
 
@@ -542,7 +535,6 @@ class UserController extends Controller
                 $user->id,
                 $user->first_name,
                 $user->last_name,
-                $user->email,
                 $user->phone_number,
                 $user->role,
                 $user->status,
@@ -822,7 +814,6 @@ class UserController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('phone_number', 'like', "%{$search}%");
             });
         }
@@ -867,7 +858,6 @@ class UserController extends Controller
     public function apiStore(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|unique:users',
             'phone_number' => 'nullable|string|unique:users',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
@@ -904,7 +894,6 @@ class UserController extends Controller
     public function apiUpdate(Request $request, User $user)
     {
         $request->validate([
-            'email' => 'required|email|unique:users,email,' . $user->id,
             'phone_number' => 'nullable|string|unique:users,phone_number,' . $user->id,
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',

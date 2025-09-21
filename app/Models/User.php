@@ -20,7 +20,6 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'email',
         'phone_number',
         'password',
         'first_name',
@@ -29,7 +28,6 @@ class User extends Authenticatable
         'role',
         'status',
         'requires_2fa',
-        'email_verified_at',
         'phone_verified_at',
         'parent_id',
         'timezone',
@@ -72,7 +70,6 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'requires_2fa' => 'boolean',
             'last_login_at' => 'datetime',

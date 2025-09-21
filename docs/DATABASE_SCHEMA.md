@@ -6,14 +6,12 @@
 ```sql
 CREATE TABLE users (
     id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(255) UNIQUE NOT NULL,
     phone_number VARCHAR(20) UNIQUE NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     profile_image_url VARCHAR(500) NULL,
     role ENUM('parent', 'child', 'admin') DEFAULT 'parent',
     status ENUM('active', 'inactive', 'suspended', 'pending') DEFAULT 'pending',
-    email_verified_at TIMESTAMP NULL,
     phone_verified_at TIMESTAMP NULL,
     parent_id BIGINT UNSIGNED NULL,
     language VARCHAR(10) DEFAULT 'fa',
@@ -24,7 +22,6 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_email (email),
     INDEX idx_phone (phone_number),
     INDEX idx_parent (parent_id),
     INDEX idx_status (status)

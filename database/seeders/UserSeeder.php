@@ -15,7 +15,6 @@ class UserSeeder extends Seeder
     {
         // Create admin user
         User::create([
-            'email' => 'admin@sarvcast.com',
             'phone_number' => '09123456789',
             'first_name' => 'مدیر',
             'last_name' => 'سیستم',
@@ -23,7 +22,6 @@ class UserSeeder extends Seeder
             'status' => 'active',
             'password' => Hash::make('admin123'),
             'phone_verified_at' => now(),
-            'email_verified_at' => now(),
             'preferences' => [
                 'language' => 'fa',
                 'notifications' => [
@@ -37,7 +35,6 @@ class UserSeeder extends Seeder
         // Create sample parent users
         $parents = [
             [
-                'email' => 'parent1@sarvcast.com',
                 'phone_number' => '09123456790',
                 'first_name' => 'علی',
                 'last_name' => 'احمدی',
@@ -45,7 +42,6 @@ class UserSeeder extends Seeder
                 'status' => 'active',
                 'password' => Hash::make('password123'),
                 'phone_verified_at' => now(),
-                'email_verified_at' => now(),
                 'preferences' => [
                     'language' => 'fa',
                     'notifications' => [
@@ -61,7 +57,6 @@ class UserSeeder extends Seeder
                 ],
             ],
             [
-                'email' => 'parent2@sarvcast.com',
                 'phone_number' => '09123456791',
                 'first_name' => 'فاطمه',
                 'last_name' => 'محمدی',
@@ -69,7 +64,6 @@ class UserSeeder extends Seeder
                 'status' => 'active',
                 'password' => Hash::make('password123'),
                 'phone_verified_at' => now(),
-                'email_verified_at' => now(),
                 'preferences' => [
                     'language' => 'fa',
                     'notifications' => [
@@ -85,7 +79,6 @@ class UserSeeder extends Seeder
                 ],
             ],
             [
-                'email' => 'parent3@sarvcast.com',
                 'phone_number' => '09123456792',
                 'first_name' => 'حسن',
                 'last_name' => 'کریمی',
@@ -93,7 +86,6 @@ class UserSeeder extends Seeder
                 'status' => 'active',
                 'password' => Hash::make('password123'),
                 'phone_verified_at' => now(),
-                'email_verified_at' => now(),
                 'preferences' => [
                     'language' => 'fa',
                     'notifications' => [
@@ -117,7 +109,6 @@ class UserSeeder extends Seeder
         // Create sample child users
         $children = [
             [
-                'email' => 'child1@sarvcast.com',
                 'phone_number' => null,
                 'first_name' => 'سارا',
                 'last_name' => 'احمدی',
@@ -125,8 +116,7 @@ class UserSeeder extends Seeder
                 'status' => 'active',
                 'password' => null,
                 'phone_verified_at' => null,
-                'email_verified_at' => now(),
-                'parent_id' => User::where('email', 'parent1@sarvcast.com')->first()->id,
+                'parent_id' => User::where('phone_number', '09123456790')->first()->id,
                 'preferences' => [
                     'language' => 'fa',
                     'favorite_categories' => [1, 2, 3], // Category IDs
@@ -137,7 +127,6 @@ class UserSeeder extends Seeder
                 ],
             ],
             [
-                'email' => 'child2@sarvcast.com',
                 'phone_number' => null,
                 'first_name' => 'محمد',
                 'last_name' => 'احمدی',
@@ -145,8 +134,7 @@ class UserSeeder extends Seeder
                 'status' => 'active',
                 'password' => null,
                 'phone_verified_at' => null,
-                'email_verified_at' => now(),
-                'parent_id' => User::where('email', 'parent1@sarvcast.com')->first()->id,
+                'parent_id' => User::where('phone_number', '09123456790')->first()->id,
                 'preferences' => [
                     'language' => 'fa',
                     'favorite_categories' => [4, 5, 6], // Category IDs
@@ -157,7 +145,6 @@ class UserSeeder extends Seeder
                 ],
             ],
             [
-                'email' => 'child3@sarvcast.com',
                 'phone_number' => null,
                 'first_name' => 'زهرا',
                 'last_name' => 'محمدی',
@@ -165,8 +152,7 @@ class UserSeeder extends Seeder
                 'status' => 'active',
                 'password' => null,
                 'phone_verified_at' => null,
-                'email_verified_at' => now(),
-                'parent_id' => User::where('email', 'parent2@sarvcast.com')->first()->id,
+                'parent_id' => User::where('phone_number', '09123456791')->first()->id,
                 'preferences' => [
                     'language' => 'fa',
                     'favorite_categories' => [1, 7, 8], // Category IDs
