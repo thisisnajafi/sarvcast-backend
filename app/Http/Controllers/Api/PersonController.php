@@ -370,60 +370,41 @@ class PersonController extends Controller
     }
 
     /**
-     * Search people
+     * Get stories by a specific person
      */
-    public function search(Request $request): JsonResponse
+    public function stories(Person $person, Request $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'query' => 'required|string|min:2|max:100',
-                'role' => 'nullable|string|in:voice_actor,director,writer,producer,author,narrator',
-                'limit' => 'nullable|integer|min:1|max:50'
-            ], [
-                'query.required' => 'عبارت جستجو الزامی است',
-                'query.min' => 'عبارت جستجو باید حداقل 2 کاراکتر باشد',
-                'query.max' => 'عبارت جستجو نمی‌تواند بیش از 100 کاراکتر باشد',
-                'role.in' => 'نقش نامعتبر است',
-                'limit.max' => 'حداکثر 50 نتیجه قابل نمایش است'
-            ]);
+            $query = $person->stories()->with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+                ->published();
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'خطا در اعتبارسنجی داده‌ها',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $query = Person::query();
-            $searchTerm = $request->query;
-
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'like', "%{$searchTerm}%")
-                  ->orWhere('bio', 'like', "%{$searchTerm}%");
-            });
-
-            if ($request->has('role')) {
-                $query->whereJsonContains('roles', $request->role);
-            }
-
-            $limit = $request->get('limit', 20);
-            $people = $query->limit($limit)->get();
+            // Apply pagination
+            $perPage = min($request->get('per_page', 20), 100);
+            $stories = $query->paginate($perPage);
 
             return response()->json([
                 'success' => true,
-                'data' => $people
+                'message' => 'Stories retrieved successfully',
+                'data' => [
+                    'stories' => $stories->items(),
+                    'pagination' => [
+                        'current_page' => $stories->currentPage(),
+                        'last_page' => $stories->lastPage(),
+                        'per_page' => $stories->perPage(),
+                        'total' => $stories->total(),
+                    ]
+                ]
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Error searching people', [
+            Log::error('Error fetching person stories', [
                 'error' => $e->getMessage(),
-                'request' => $request->all()
+                'person_id' => $person->id
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در جستجوی افراد'
+                'message' => 'خطا در دریافت داستان‌های فرد'
             ], 500);
         }
     }

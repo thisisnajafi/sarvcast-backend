@@ -49,6 +49,10 @@ To set up:
 - `GET /stories` - Get all stories (paginated)
 - `GET /stories/{id}` - Get story details
 - `GET /stories/{id}/episodes` - Get story episodes
+- `GET /stories/featured` - Get featured stories for home page
+- `GET /stories/popular` - Get popular stories by play count and ratings
+- `GET /stories/recent` - Get recently added stories
+- `GET /stories/recommendations` - Get personalized recommendations
 - `POST /stories/{id}/favorite` - Add to favorites
 - `POST /stories/{id}/rating` - Rate story
 

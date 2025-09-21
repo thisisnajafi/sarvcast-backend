@@ -196,36 +196,113 @@ class StoryController extends Controller
     }
 
     /**
-     * Rate a story
+     * Get featured stories for the home page
      */
-    public function rate(Story $story, Request $request)
+    public function featured(Request $request)
     {
-        $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
-            'review' => 'nullable|string|max:1000'
-        ]);
-
-        $user = Auth::user();
-
-        // Update or create rating
-        Rating::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'story_id' => $story->id
-            ],
-            [
-                'rating' => $request->rating,
-                'review' => $request->review
-            ]
-        );
-
-        // Update story average rating
-        $avgRating = Rating::where('story_id', $story->id)->avg('rating');
-        $story->update(['rating' => round($avgRating, 2)]);
+        $limit = $request->get('limit', 10);
+        
+        $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+            ->published()
+            ->where('is_featured', true)
+            ->orderBy('featured_order', 'asc')
+            ->limit($limit)
+            ->get();
 
         return response()->json([
             'success' => true,
-            'message' => 'Story rated successfully'
+            'message' => 'Featured stories retrieved successfully',
+            'data' => $stories
+        ]);
+    }
+
+    /**
+     * Get popular stories based on play count and ratings
+     */
+    public function popular(Request $request)
+    {
+        $limit = $request->get('limit', 10);
+        $period = $request->get('period', 'all'); // daily, weekly, monthly, all
+        
+        $query = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+            ->published();
+
+        // Apply time period filter
+        if ($period !== 'all') {
+            $days = match($period) {
+                'daily' => 1,
+                'weekly' => 7,
+                'monthly' => 30,
+                default => 1
+            };
+            $query->where('created_at', '>=', now()->subDays($days));
+        }
+
+        $stories = $query->orderBy('play_count', 'desc')
+            ->orderBy('rating', 'desc')
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Popular stories retrieved successfully',
+            'data' => $stories
+        ]);
+    }
+
+    /**
+     * Get recently added stories
+     */
+    public function recent(Request $request)
+    {
+        $limit = $request->get('limit', 10);
+        
+        $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+            ->published()
+            ->latest()
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Recent stories retrieved successfully',
+            'data' => $stories
+        ]);
+    }
+
+    /**
+     * Get personalized story recommendations for the user
+     */
+    public function recommendations(Request $request)
+    {
+        $limit = $request->get('limit', 10);
+        $user = $request->user();
+
+        if (!$user) {
+            // Return popular stories for non-authenticated users
+            $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+                ->published()
+                ->orderBy('play_count', 'desc')
+                ->limit($limit)
+                ->get();
+        } else {
+            // Get personalized recommendations based on user preferences
+            $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+                ->published()
+                ->whereNotIn('id', function($query) use ($user) {
+                    $query->select('story_id')
+                        ->from('play_histories')
+                        ->where('user_id', $user->id);
+                })
+                ->orderBy('rating', 'desc')
+                ->limit($limit)
+                ->get();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Story recommendations retrieved successfully',
+            'data' => $stories
         ]);
     }
 }

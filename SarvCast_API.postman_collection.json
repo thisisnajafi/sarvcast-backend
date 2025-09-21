@@ -531,6 +531,106 @@
               ]
             }
           }
+        },
+        {
+          "name": "Get Featured Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/featured?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "featured"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Popular Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/popular?limit=10&period=week",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "popular"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "period",
+                  "value": "week"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Recent Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/recent?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "recent"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Story Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/recommendations?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "recommendations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
         }
       ]
     },
@@ -4248,6 +4348,147 @@
               "raw": "{{base_url}}/health/metrics",
               "host": ["{{base_url}}"],
               "path": ["health", "metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "People",
+      "item": [
+        {
+          "name": "Get All People",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["people"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Person Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/1",
+              "host": ["{{base_url}}"],
+              "path": ["people", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Stories by Person",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/1/stories?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["people", "1", "stories"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search People",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/search?query=علی&role=narrator&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["people", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "علی"
+                },
+                {
+                  "key": "role",
+                  "value": "narrator"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get People by Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/role/narrator",
+              "host": ["{{base_url}}"],
+              "path": ["people", "role", "narrator"]
+            }
+          }
+        },
+        {
+          "name": "Get Person Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/1/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["people", "1", "statistics"]
             }
           }
         }
