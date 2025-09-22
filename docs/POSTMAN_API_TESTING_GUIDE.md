@@ -96,7 +96,39 @@ POST /stories/1/comments
 GET /stories/1/comments?page=1&per_page=20&sort_by=latest&include_replies=true
 ```
 
-### 4. Image Timeline
+### 4. People
+**Purpose**: Browse authors, narrators, voice actors, and other content creators
+
+**Key Endpoints**:
+- `GET /people` - Get all people (paginated)
+- `GET /people/{id}` - Get person details
+- `GET /people/{id}/stories` - Get stories by person
+- `GET /people/search` - Search people by name or role
+- `GET /people/role/{role}` - Get people by specific role
+- `GET /people/{id}/statistics` - Get person statistics
+
+**People Examples**:
+```json
+// Get All People
+GET /people?page=1&per_page=20&role=narrator
+
+// Get Person Details
+GET /people/1
+
+// Get Stories by Person
+GET /people/1/stories?page=1&per_page=20
+
+// Search People
+GET /people/search?query=علی&role=narrator&limit=10
+
+// Get People by Role
+GET /people/role/narrator
+
+// Get Person Statistics
+GET /people/1/statistics
+```
+
+### 5. Image Timeline
 **Purpose**: Manage episode image timelines for visual storytelling
 
 **Key Endpoints**:
@@ -123,7 +155,7 @@ GET /episodes/1/image-timeline-with-voice-actors
 GET /episodes/1/image-timeline-for-voice-actor?voice_actor_id=1
 ```
 
-### 5. Search & Discovery
+### 6. Search & Discovery
 **Purpose**: Advanced search functionality for content discovery
 
 **Key Endpoints**:
@@ -159,7 +191,7 @@ GET /search/global?q=داستان&limit=10
 - `POST /episodes/{id}/play` - Start playing episode
 - `POST /episodes/{id}/bookmark` - Bookmark episode
 
-### 6. Recommendations & Trending
+### 7. Recommendations & Trending
 **Purpose**: Personalized content recommendations and trending content discovery
 
 **Key Endpoints**:
@@ -187,7 +219,7 @@ GET /recommendations/similar/1?type=story&limit=5
 GET /recommendations/category/1/recommendations?limit=10
 ```
 
-### 7. Offline Content
+### 8. Offline Content
 **Purpose**: Download and manage content for offline listening
 
 **Key Endpoints**:

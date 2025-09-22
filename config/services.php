@@ -32,6 +32,9 @@ return [
     'melipayamk' => [
         'token' => env('MELIPAYAMK_TOKEN', '77c431b7-aec5-4313-b744-d2f16bf760ab'),
         'sender' => env('MELIPAYAMK_SENDER', '50002710008883'),
+        'templates' => [
+            'verification' => env('MELIPAYAMK_VERIFICATION_TEMPLATE', 371085),
+        ],
     ],
 
 ];

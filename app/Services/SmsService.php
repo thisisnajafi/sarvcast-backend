@@ -89,7 +89,78 @@ class SmsService
     }
 
     /**
-     * Generate and send OTP code
+     * Send SMS using Melipayamk service with template
+     * Based on: https://github.com/Melipayamak/melipayamak-php
+     */
+    public function sendSmsWithTemplate(string $to, int $templateId, array $parameters = []): array
+    {
+        try {
+            // Use Melipayamak library exactly as documented
+            $username = $this->username;
+            $password = $this->apiToken;
+            $api = new MelipayamakApi($username, $password);
+            $sms = $api->sms();
+            
+            $from = config('services.melipayamk.sender', '50002710008883');
+            
+            // Prepare sending data for logging
+            $sendingData = [
+                'username' => $username,
+                'password' => $password,
+                'to' => $to,
+                'from' => $from,
+                'template_id' => $templateId,
+                'parameters' => $parameters,
+                'isFlash' => false
+            ];
+            
+            // Send SMS with template exactly as documented
+            $response = $sms->sendByBaseNumber($parameters, $templateId, $to);
+            $json = json_decode($response);
+            
+            // Log the response
+            Log::info('SMS sent via Melipayamk with template', [
+                'melipayamak_username' => $this->username,
+                'sending_data' => $sendingData,
+                'response' => $json,
+                'raw_response' => $response,
+                'message_id' => $json->Value ?? null
+            ]);
+
+            return [
+                'success' => isset($json->RetStatus) && $json->RetStatus == 1,
+                'response' => $json,
+                'message_id' => $json->Value ?? $json->StrRetStatus ?? null
+            ];
+
+        } catch (\Exception $e) {
+            // Prepare sending data for error logging
+            $sendingData = [
+                'username' => $this->username,
+                'password' => $this->apiToken,
+                'to' => $to,
+                'from' => config('services.melipayamk.sender', '50002710008883'),
+                'template_id' => $templateId,
+                'parameters' => $parameters,
+                'isFlash' => false
+            ];
+            
+            Log::error('SMS sending with template failed', [
+                'melipayamak_username' => $this->username,
+                'sending_data' => $sendingData,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Generate and send OTP code using Meli Payamak template
      */
     public function sendOtp(string $phoneNumber, string $purpose = 'verification'): array
     {
@@ -99,9 +170,12 @@ class SmsService
         $cacheKey = "otp_{$phoneNumber}_{$purpose}";
         Cache::put($cacheKey, $otpCode, 300); // 5 minutes
 
-        $message = $this->getOtpMessage($otpCode, $purpose);
+        // Use Meli Payamak template for verification codes
+        // Template message: "کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست"
+        $templateId = config('services.melipayamk.templates.verification', 371085);
+        $parameters = [$otpCode];
         
-        $result = $this->sendSms($phoneNumber, $message);
+        $result = $this->sendSmsWithTemplate($phoneNumber, $templateId, $parameters);
         
         if ($result['success']) {
             // Store OTP attempt in database
@@ -150,7 +224,6 @@ class SmsService
      */
     private function generateOtpCode(): string
     {
-        return "1234";
         return str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
     }
 
