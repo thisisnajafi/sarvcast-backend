@@ -82,7 +82,7 @@ class AuthController extends Controller
             'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
-            'verification_code' => 'required|string|size:4',
+            'verification_code' => 'required|string|size:6',
             'role' => 'nullable|in:parent,child,basic',
             'parent_id' => 'nullable|exists:users,id',
         ]);
@@ -154,7 +154,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
-            'verification_code' => 'required|string|size:4',
+            'verification_code' => 'required|string|size:6',
         ]);
 
         if ($validator->fails()) {
