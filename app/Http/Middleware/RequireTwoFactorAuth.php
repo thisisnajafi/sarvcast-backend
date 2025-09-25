@@ -20,7 +20,7 @@ class RequireTwoFactorAuth
         
         // Check if user is authenticated
         if (!$user) {
-            return redirect()->route('admin.login');
+            return redirect()->route('admin.auth.login');
         }
         
         // Check if 2FA is required and not completed

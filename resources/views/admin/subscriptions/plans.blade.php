@@ -139,7 +139,7 @@
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600 dark:text-gray-300">{{ $plan['name'] }}</span>
                         <div class="flex items-center">
-                            <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2 ml-3">
+                            <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-3">
                                 @php
                                     $maxSubscriptions = max(array_column($planStats, 'total_subscriptions'));
                                     $percentage = $maxSubscriptions > 0 ? ($planStats[$type]['total_subscriptions'] / $maxSubscriptions) * 100 : 0;
@@ -161,7 +161,7 @@
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600 dark:text-gray-300">{{ $plan['name'] }}</span>
                         <div class="flex items-center">
-                            <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2 ml-3">
+                            <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-3">
                                 @php
                                     $maxRevenue = max(array_column($planStats, 'total_revenue'));
                                     $percentage = $maxRevenue > 0 ? ($planStats[$type]['total_revenue'] / $maxRevenue) * 100 : 0;

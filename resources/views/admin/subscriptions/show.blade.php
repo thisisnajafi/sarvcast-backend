@@ -236,7 +236,7 @@
                 
                 <div class="space-y-4">
                     <div class="flex items-center">
-                        <div class="w-3 h-3 bg-green-500 rounded-full ml-3"></div>
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
                         <div>
                             <p class="text-sm font-medium text-gray-900 dark:text-white">اشتراک ایجاد شد</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->created_at, 'Y/m/d H:i') }}</p>
@@ -244,7 +244,7 @@
                     </div>
                     
                     <div class="flex items-center">
-                        <div class="w-3 h-3 bg-blue-500 rounded-full ml-3"></div>
+                        <div class="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
                         <div>
                             <p class="text-sm font-medium text-gray-900 dark:text-white">اشتراک فعال شد</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->start_date, 'Y/m/d H:i') }}</p>
@@ -253,7 +253,7 @@
                     
                     @if($subscription->cancelled_at)
                     <div class="flex items-center">
-                        <div class="w-3 h-3 bg-red-500 rounded-full ml-3"></div>
+                        <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
                         <div>
                             <p class="text-sm font-medium text-gray-900 dark:text-white">اشتراک لغو شد</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->cancelled_at, 'Y/m/d H:i') }}</p>
@@ -262,7 +262,7 @@
                     @endif
                     
                     <div class="flex items-center">
-                        <div class="w-3 h-3 {{ $subscription->status == 'active' ? 'bg-green-500' : 'bg-gray-400' }} rounded-full ml-3"></div>
+                        <div class="w-3 h-3 {{ $subscription->status == 'active' ? 'bg-green-500' : 'bg-gray-400' }} rounded-full mr-3"></div>
                         <div>
                             <p class="text-sm font-medium text-gray-900 dark:text-white">تاریخ پایان</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">{{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->end_date, 'Y/m/d H:i') }}</p>

@@ -14,7 +14,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل معلمان</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['total'] }}</p>
                 </div>
@@ -28,7 +28,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">تأیید شده</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['verified'] }}</p>
                 </div>
@@ -42,7 +42,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">در انتظار</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['pending'] }}</p>
                 </div>
@@ -56,7 +56,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل دانش‌آموزان</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['total_students'] }}</p>
                 </div>
@@ -179,7 +179,7 @@
                                         <span class="text-blue-600 font-medium">{{ substr($teacher->user->first_name ?? 'م', 0, 1) }}</span>
                                     </div>
                                 </div>
-                                <div class="mr-4">
+                                <div class="ml-4">
                                     <div class="text-sm font-medium text-gray-900">{{ $teacher->user->first_name }} {{ $teacher->user->last_name }}</div>
                                     <div class="text-sm text-gray-500">{{ $teacher->user->email }}</div>
                                 </div>

@@ -50,7 +50,10 @@ class UserController extends Controller
             ->limit(20)
             ->get();
 
-        return response()->json(['users' => $users]);
+        return response()->json([
+            'success' => true,
+            'users' => $users
+        ]);
     }
 
     /**

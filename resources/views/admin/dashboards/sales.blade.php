@@ -34,7 +34,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل درآمد</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['total_revenue']) }} تومان</p>
                 </div>
@@ -48,7 +48,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">درآمد ماهانه</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['monthly_revenue']) }} تومان</p>
                 </div>
@@ -62,7 +62,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">تراکنش‌های موفق</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['successful_transactions']) }}</p>
                 </div>
@@ -76,7 +76,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">میانگین ارزش تراکنش</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['avg_transaction_value']) }} تومان</p>
                 </div>
@@ -178,7 +178,7 @@
                         <h4 class="font-medium text-gray-900">{{ $customer->name }}</h4>
                         <p class="text-sm text-gray-600">{{ $customer->email }}</p>
                     </div>
-                    <div class="text-left">
+                    <div class="text-right">
                         <div class="text-sm font-medium text-gray-900">{{ number_format($customer->total_spent) }} تومان</div>
                         <div class="text-xs text-gray-500">کل خرید</div>
                     </div>
@@ -197,7 +197,7 @@
                         <h4 class="font-medium text-gray-900">{{ $transaction->user->name ?? 'کاربر ناشناس' }}</h4>
                         <p class="text-sm text-gray-600">{{ $transaction->created_at->format('Y/m/d H:i') }}</p>
                     </div>
-                    <div class="text-left">
+                    <div class="text-right">
                         <div class="text-sm font-medium text-gray-900">{{ number_format($transaction->amount) }} تومان</div>
                         <div class="text-xs text-gray-500">
                             <span class="px-2 py-1 rounded-full text-xs {{ $transaction->status == 'completed' ? 'bg-green-100 text-green-800' : ($transaction->status == 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">

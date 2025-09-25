@@ -14,7 +14,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل فایل‌ها</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['total'] }}</p>
                 </div>
@@ -28,7 +28,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">فعال</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['active'] }}</p>
                 </div>
@@ -42,7 +42,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">غیرفعال</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['inactive'] }}</p>
                 </div>
@@ -56,7 +56,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">در انتظار</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['pending'] }}</p>
                 </div>
@@ -73,7 +73,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">تصاویر</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['images'] }}</p>
                 </div>
@@ -87,7 +87,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">اسناد</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['documents'] }}</p>
                 </div>
@@ -101,7 +101,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">ویدئوها</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['videos'] }}</p>
                 </div>
@@ -115,7 +115,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">فایل‌های صوتی</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['audio'] }}</p>
                 </div>
@@ -131,7 +131,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
                 </svg>
             </div>
-            <div class="mr-4">
+            <div class="ml-4">
                 <p class="text-sm font-medium text-gray-600">حجم کل ذخیره‌سازی</p>
                 <p class="text-2xl font-semibold text-gray-900">{{ $this->formatBytes($stats['total_size']) }}</p>
             </div>
@@ -292,7 +292,7 @@
                                         </div>
                                     @endif
                                 </div>
-                                <div class="mr-4">
+                                <div class="ml-4">
                                     <div class="text-sm font-medium text-gray-900">{{ $file->title }}</div>
                                     <div class="text-sm text-gray-500">{{ $file->original_name }}</div>
                                 </div>

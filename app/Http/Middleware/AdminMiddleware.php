@@ -25,7 +25,7 @@ class AdminMiddleware
                 ], 401);
             }
             
-            return redirect()->route('login');
+            return redirect()->route('admin.auth.login');
         }
 
         $user = auth('web')->user();

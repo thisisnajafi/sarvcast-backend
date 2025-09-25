@@ -31,7 +31,7 @@
                 </span>
             </div>
         </div>
-        <div class="flex space-x-3">
+        <div class="flex space-x-3 space-x-reverse">
             <a href="{{ route('admin.episodes.show', $episode) }}" 
                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 flex items-center">
                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +146,7 @@
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white">لیست صداپیشگان</h2>
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-3 space-x-reverse">
                     <button id="bulk-action-btn" 
                             class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled>
@@ -183,7 +183,7 @@
                     <tr>
                         <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                             <div class="flex items-center justify-center">
-                                <svg class="w-8 h-8 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                                 در حال بارگذاری صداپیشگان...
@@ -212,7 +212,7 @@
                         حذف انتخاب شده‌ها
                     </button>
                 </div>
-                <div class="mt-6 flex justify-end space-x-3">
+                <div class="mt-6 flex justify-end space-x-3 space-x-reverse">
                     <button id="cancel-bulk-action" 
                             class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200">
                         انصراف
@@ -230,7 +230,7 @@
             <div class="p-6">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">تأیید حذف</h3>
                 <p class="text-gray-600 dark:text-gray-400 mb-6">آیا از حذف این صداپیشه اطمینان دارید؟</p>
-                <div class="flex justify-end space-x-3">
+                <div class="flex justify-end space-x-3 space-x-reverse">
                     <button id="cancel-delete" 
                             class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200">
                         انصراف
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tr>
                     <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                         <div class="flex items-center justify-center">
-                            <svg class="w-8 h-8 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-8 h-8 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                             </svg>
                             هیچ صداپیشه‌ای تعریف نشده است
@@ -356,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center ml-3">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-3">
                             <img src="${voiceActor.person.image_url || '/images/default-avatar.png'}" 
                                  alt="${voiceActor.person.name}" 
                                  class="w-10 h-10 rounded-full object-cover"
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center space-x-2 space-x-reverse">
                         <a href="/admin/episodes/${episodeId}/voice-actors/${voiceActor.id}/edit" 
                            class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
                             ویرایش
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ${item.character_name || item.role}
                             </div>
                         </div>
-                        <div class="w-20 text-xs text-gray-500 dark:text-gray-400 text-left">
+                        <div class="w-20 text-xs text-gray-500 dark:text-gray-400 text-right">
                             ${item.start_time_formatted} - ${item.end_time_formatted}
                         </div>
                     </div>

@@ -27,7 +27,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل درآمد</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($revenueStats['total_revenue']) }} تومان</p>
                 </div>
@@ -41,7 +41,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">درآمد اشتراک</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($revenueStats['subscription_revenue']) }} تومان</p>
                 </div>
@@ -55,7 +55,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">درآمد سکه</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($revenueStats['coin_revenue']) }} تومان</p>
                 </div>
@@ -69,7 +69,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">اشتراک‌های فعال</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($revenueStats['active_subscriptions']) }}</p>
                 </div>
@@ -146,7 +146,7 @@
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                        <div class="w-4 h-4 bg-green-500 rounded-full ml-3"></div>
+                        <div class="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
                         <span class="text-sm font-medium text-gray-700">اشتراک‌ها</span>
                     </div>
                     <div class="text-sm text-gray-600">
@@ -155,7 +155,7 @@
                 </div>
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                        <div class="w-4 h-4 bg-blue-500 rounded-full ml-3"></div>
+                        <div class="w-4 h-4 bg-blue-500 rounded-full mr-3"></div>
                         <span class="text-sm font-medium text-gray-700">سکه‌ها</span>
                     </div>
                     <div class="text-sm text-gray-600">
@@ -164,7 +164,7 @@
                 </div>
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                        <div class="w-4 h-4 bg-purple-500 rounded-full ml-3"></div>
+                        <div class="w-4 h-4 bg-purple-500 rounded-full mr-3"></div>
                         <span class="text-sm font-medium text-gray-700">سایر</span>
                     </div>
                     <div class="text-sm text-gray-600">
@@ -207,7 +207,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">تحلیل اشتراک‌ها</h3>
                     <p class="text-sm text-gray-500">آمار و روند اشتراک‌ها</p>
                 </div>
@@ -221,7 +221,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">تحلیل پرداخت‌ها</h3>
                     <p class="text-sm text-gray-500">روش‌ها و آمار پرداخت</p>
                 </div>
@@ -235,7 +235,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">صادرات گزارش</h3>
                     <p class="text-sm text-gray-500">دانلود داده‌های تحلیلی</p>
                 </div>

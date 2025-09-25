@@ -160,7 +160,8 @@ class SmsService
     }
 
     /**
-     * Generate and send OTP code using Meli Payamak template
+     * Generate and send OTP code using Melipayamak template pattern 371085
+     * Falls back to regular SMS if template fails
      */
     public function sendOtp(string $phoneNumber, string $purpose = 'verification'): array
     {
@@ -170,12 +171,23 @@ class SmsService
         $cacheKey = "otp_{$phoneNumber}_{$purpose}";
         Cache::put($cacheKey, $otpCode, 300); // 5 minutes
 
-        // Use Meli Payamak template for verification codes
-        // Template message: "کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست"
-        $templateId = config('services.melipayamk.templates.verification', 371085);
-        $parameters = [$otpCode];
+        // Try template SMS first (pattern 371085)
+        $templateResult = $this->sendOtpWithTemplate($phoneNumber, $otpCode, $purpose);
         
-        $result = $this->sendSmsWithTemplate($phoneNumber, $templateId, $parameters);
+        if ($templateResult['success']) {
+            return $templateResult;
+        }
+        
+        // Fallback to regular SMS with template pattern message
+        $otpMessage = "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد سروکست";
+        
+        Log::info('Template SMS failed, using regular SMS fallback', [
+            'phone_number' => $phoneNumber,
+            'template_error' => $templateResult['error'] ?? 'Unknown error',
+            'otp_code' => $otpCode
+        ]);
+        
+        $result = $this->sendSms($phoneNumber, $otpMessage);
         
         if ($result['success']) {
             // Store OTP attempt in database
@@ -183,6 +195,76 @@ class SmsService
         }
 
         return $result;
+    }
+
+    /**
+     * Send OTP using Melipayamak template pattern 371085
+     * Template message: "کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست"
+     */
+    private function sendOtpWithTemplate(string $phoneNumber, string $otpCode, string $purpose): array
+    {
+        try {
+            $templateId = config('services.melipayamk.templates.verification', 371085);
+            
+            // Use Melipayamak library for template SMS
+            $username = $this->username;
+            $password = $this->apiToken;
+            $api = new MelipayamakApi($username, $password);
+            $sms = $api->sms();
+            
+            // Prepare sending data for logging
+            $sendingData = [
+                'username' => $username,
+                'password' => $password,
+                'to' => $phoneNumber,
+                'template_id' => $templateId,
+                'parameters' => [$otpCode],
+                'template_message' => "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد سروکست"
+            ];
+            
+            // Send SMS with template pattern 371085
+            $response = $sms->sendByBaseNumber([$otpCode], $templateId, $phoneNumber);
+            $json = json_decode($response);
+            
+            // Log the response
+            Log::info('SMS sent via Melipayamk template pattern 371085', [
+                'melipayamak_username' => $this->username,
+                'sending_data' => $sendingData,
+                'response' => $json,
+                'raw_response' => $response,
+                'message_id' => $json->Value ?? null
+            ]);
+
+            $success = isset($json->RetStatus) && $json->RetStatus == 1;
+            
+            if ($success) {
+                // Store OTP attempt in database
+                $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
+            }
+
+            return [
+                'success' => $success,
+                'response' => $json,
+                'message_id' => $json->Value ?? $json->StrRetStatus ?? null,
+                'method' => 'template'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Template SMS sending failed', [
+                'melipayamak_username' => $this->username,
+                'phone_number' => $phoneNumber,
+                'template_id' => $templateId,
+                'otp_code' => $otpCode,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'method' => 'template'
+            ];
+        }
     }
 
     /**
@@ -220,11 +302,11 @@ class SmsService
     }
 
     /**
-     * Generate 4-digit OTP code
+     * Generate 6-digit OTP code for template pattern 371085
      */
     private function generateOtpCode(): string
     {
-        return str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
+        return str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
     }
 
     /**

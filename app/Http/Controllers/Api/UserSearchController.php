@@ -45,20 +45,20 @@ class UserSearchController extends Controller
             $q->where('first_name', 'like', "%{$query}%")
               ->orWhere('last_name', 'like', "%{$query}%")
               ->orWhere('email', 'like', "%{$query}%")
-              ->orWhere('phone', 'like', "%{$query}%")
+              ->orWhere('phone_number', 'like', "%{$query}%")
               ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
         });
 
-        // Only include verified users
-        $usersQuery->where('is_verified', true);
+        // Only include verified users (users with verified phone)
+        $usersQuery->whereNotNull('phone_verified_at');
 
         $users = $usersQuery->select([
             'id',
             'first_name',
             'last_name',
             'email',
-            'phone',
-            'avatar',
+            'phone_number',
+            'profile_image_url',
             'created_at'
         ])
         ->with(['teacherAccount' => function ($query) {
@@ -72,8 +72,8 @@ class UserSearchController extends Controller
                 'id' => $user->id,
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'email' => $user->email,
-                'phone' => $user->phone,
-                'avatar' => $user->avatar,
+                'phone' => $user->phone_number,
+                'avatar' => $user->profile_image_url,
                 'is_teacher' => $user->teacherAccount ? true : false,
                 'teacher_status' => $user->teacherAccount ? $user->teacherAccount->status : null,
                 'institution_name' => $user->teacherAccount ? $user->teacherAccount->institution_name : null,
@@ -188,6 +188,7 @@ class UserSearchController extends Controller
                 $q->where('first_name', 'like', "%{$query}%")
                   ->orWhere('last_name', 'like', "%{$query}%")
                   ->orWhere('email', 'like', "%{$query}%")
+                  ->orWhere('phone_number', 'like', "%{$query}%")
                   ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
             });
         }
@@ -207,7 +208,7 @@ class UserSearchController extends Controller
                 $query->where('teaching_subject', $teachingSubject);
             }
         }])
-        ->select(['id', 'first_name', 'last_name', 'email', 'phone', 'avatar'])
+        ->select(['id', 'first_name', 'last_name', 'email', 'phone_number', 'profile_image_url'])
         ->limit($limit)
         ->get();
 
@@ -218,8 +219,8 @@ class UserSearchController extends Controller
                 'id' => $user->id,
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'email' => $user->email,
-                'phone' => $user->phone,
-                'avatar' => $user->avatar,
+                'phone' => $user->phone_number,
+                'avatar' => $user->profile_image_url,
                 'teacher_account' => [
                     'id' => $teacherAccount->id,
                     'institution_name' => $teacherAccount->institution_name,

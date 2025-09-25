@@ -12,12 +12,14 @@ class PaymentService
 {
     protected $zarinpalMerchantId;
     protected $callbackUrl;
+    protected $sandboxMode;
 
     public function __construct()
     {
-        // Hardcoded Zarinpal merchant ID
-        $this->zarinpalMerchantId = '1f8c6606-d923-4bdb-8d52-9affc9b877c8';
-        $this->callbackUrl = config('payment.callback_url');
+        // Get Zarinpal configuration from config
+        $this->zarinpalMerchantId = config('services.zarinpal.merchant_id', '77751ff3-c1cc-411b-869d-2ac7d7b02f88');
+        $this->callbackUrl = config('services.zarinpal.callback_url', 'https://my.sarvcast.ir');
+        $this->sandboxMode = config('services.zarinpal.sandbox', false);
     }
 
     /**
@@ -26,11 +28,16 @@ class PaymentService
     public function initiateZarinPalPayment(Payment $payment): array
     {
         try {
+            // Determine API URL based on sandbox mode
+            $apiUrl = $this->sandboxMode 
+                ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json'
+                : 'https://api.zarinpal.com/pg/v4/payment/request.json';
+
             $data = [
                 'merchant_id' => $this->zarinpalMerchantId,
                 'amount' => $payment->amount,
                 'description' => $payment->description ?? 'پرداخت اشتراک سروکست',
-                'callback_url' => $this->callbackUrl . '/zarinpal/callback',
+                'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
                 'metadata' => [
                     'payment_id' => $payment->id,
                     'user_id' => $payment->user_id,
@@ -38,7 +45,15 @@ class PaymentService
                 ]
             ];
 
-            $response = Http::post('https://api.zarinpal.com/pg/v4/payment/request.json', $data);
+            Log::info('Initiating ZarinPal payment', [
+                'payment_id' => $payment->id,
+                'amount' => $payment->amount,
+                'merchant_id' => $this->zarinpalMerchantId,
+                'sandbox_mode' => $this->sandboxMode,
+                'api_url' => $apiUrl
+            ]);
+
+            $response = Http::post($apiUrl, $data);
 
             if ($response->successful()) {
                 $result = $response->json();
@@ -50,25 +65,52 @@ class PaymentService
                         'status' => 'pending'
                     ]);
 
+                    $paymentUrl = $this->sandboxMode 
+                        ? 'https://sandbox.zarinpal.com/pg/StartPay/' . $result['data']['authority']
+                        : 'https://www.zarinpal.com/pg/StartPay/' . $result['data']['authority'];
+
+                    Log::info('ZarinPal payment initiated successfully', [
+                        'payment_id' => $payment->id,
+                        'authority' => $result['data']['authority'],
+                        'payment_url' => $paymentUrl
+                    ]);
+
                     return [
                         'success' => true,
-                        'payment_url' => 'https://www.zarinpal.com/pg/StartPay/' . $result['data']['authority'],
+                        'payment_url' => $paymentUrl,
                         'authority' => $result['data']['authority']
                     ];
                 } else {
+                    Log::error('ZarinPal payment initiation failed', [
+                        'payment_id' => $payment->id,
+                        'error_code' => $result['data']['code'],
+                        'error_message' => $result['errors']['message'] ?? 'خطای نامشخص'
+                    ]);
+
                     return [
                         'success' => false,
                         'message' => 'خطا در ایجاد درخواست پرداخت: ' . ($result['errors']['message'] ?? 'خطای نامشخص')
                     ];
                 }
             } else {
+                Log::error('ZarinPal API request failed', [
+                    'payment_id' => $payment->id,
+                    'status_code' => $response->status(),
+                    'response_body' => $response->body()
+                ]);
+
                 return [
                     'success' => false,
                     'message' => 'خطا در ارتباط با درگاه پرداخت'
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('ZarinPal payment initiation failed: ' . $e->getMessage());
+            Log::error('ZarinPal payment initiation failed', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return [
                 'success' => false,
                 'message' => 'خطا در سیستم پرداخت'
@@ -83,37 +125,73 @@ class PaymentService
     public function verifyZarinPalPayment(string $authority, int $amount): array
     {
         try {
+            // Determine API URL based on sandbox mode
+            $apiUrl = $this->sandboxMode 
+                ? 'https://sandbox.zarinpal.com/pg/v4/payment/verify.json'
+                : 'https://api.zarinpal.com/pg/v4/payment/verify.json';
+
             $data = [
                 'merchant_id' => $this->zarinpalMerchantId,
                 'amount' => $amount,
                 'authority' => $authority
             ];
 
-            $response = Http::post('https://api.zarinpal.com/pg/v4/payment/verify.json', $data);
+            Log::info('Verifying ZarinPal payment', [
+                'authority' => $authority,
+                'amount' => $amount,
+                'merchant_id' => $this->zarinpalMerchantId,
+                'sandbox_mode' => $this->sandboxMode,
+                'api_url' => $apiUrl
+            ]);
+
+            $response = Http::post($apiUrl, $data);
 
             if ($response->successful()) {
                 $result = $response->json();
                 
                 if ($result['data']['code'] == 100) {
+                    Log::info('ZarinPal payment verified successfully', [
+                        'authority' => $authority,
+                        'ref_id' => $result['data']['ref_id'],
+                        'amount' => $result['data']['amount']
+                    ]);
+
                     return [
                         'success' => true,
                         'ref_id' => $result['data']['ref_id'],
                         'amount' => $result['data']['amount']
                     ];
                 } else {
+                    Log::error('ZarinPal payment verification failed', [
+                        'authority' => $authority,
+                        'error_code' => $result['data']['code'],
+                        'error_message' => $result['errors']['message'] ?? 'خطای نامشخص'
+                    ]);
+
                     return [
                         'success' => false,
                         'message' => 'پرداخت ناموفق: ' . ($result['errors']['message'] ?? 'خطای نامشخص')
                     ];
                 }
             } else {
+                Log::error('ZarinPal verification API request failed', [
+                    'authority' => $authority,
+                    'status_code' => $response->status(),
+                    'response_body' => $response->body()
+                ]);
+
                 return [
                     'success' => false,
                     'message' => 'خطا در تایید پرداخت'
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('ZarinPal payment verification failed: ' . $e->getMessage());
+            Log::error('ZarinPal payment verification failed', [
+                'authority' => $authority,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return [
                 'success' => false,
                 'message' => 'خطا در سیستم پرداخت'

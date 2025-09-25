@@ -30,7 +30,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">وضعیت</p>
                     @php
                         $statusColors = [
@@ -56,7 +56,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">نوع محتوا</p>
                     @php
                         $typeLabels = [
@@ -79,7 +79,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">شدت مشکل</p>
                     @php
                         $severityLabels = [
@@ -105,7 +105,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">شناسه محتوا</p>
                     <p class="text-lg font-semibold text-gray-900">{{ $contentModeration->content_id }}</p>
                 </div>
@@ -278,7 +278,7 @@
                 </div>
                 <div class="p-6">
                     <div class="space-y-4">
-                        <div class="flex items-start space-x-3 space-x-reverse">
+                        <div class="flex items-end space-x-3 space-x-reverse">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                                     <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,7 +293,7 @@
                         </div>
 
                         @if($contentModeration->moderated_at)
-                        <div class="flex items-start space-x-3 space-x-reverse">
+                        <div class="flex items-end space-x-3 space-x-reverse">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 {{ $contentModeration->status === 'approved' ? 'bg-green-100' : 'bg-red-100' }} rounded-full flex items-center justify-center">
                                     <svg class="w-4 h-4 {{ $contentModeration->status === 'approved' ? 'text-green-600' : 'text-red-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">

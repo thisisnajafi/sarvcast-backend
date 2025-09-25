@@ -563,6 +563,7 @@ class StoryController extends Controller
      */
     public function statistics()
     {
+        // Basic statistics
         $stats = [
             'total_stories' => Story::count(),
             'published_stories' => Story::where('status', 'published')->count(),
@@ -572,36 +573,80 @@ class StoryController extends Controller
             'free_stories' => Story::where('is_completely_free', true)->count(),
             'total_episodes' => Story::sum('total_episodes'),
             'total_duration' => Story::sum('duration'),
-            'avg_rating' => round(Story::avg('rating'), 2),
+            'avg_rating' => round(Story::avg('rating') ?? 0, 2),
             'total_plays' => Story::sum('play_count'),
-            'stories_by_category' => Story::selectRaw('categories.name, COUNT(*) as count')
-                ->join('categories', 'stories.category_id', '=', 'categories.id')
-                ->groupBy('categories.id', 'categories.name')
-                ->get(),
-            'stories_by_status' => Story::selectRaw('status, COUNT(*) as count')
-                ->groupBy('status')
-                ->get(),
-            'stories_by_age_group' => Story::selectRaw('age_group, COUNT(*) as count')
-                ->groupBy('age_group')
-                ->get(),
-            'recent_stories' => Story::with(['category', 'director'])
-                ->latest()
-                ->limit(10)
-                ->get(),
-            'top_rated_stories' => Story::with(['category', 'director'])
-                ->orderBy('rating', 'desc')
-                ->limit(10)
-                ->get(),
-            'most_played_stories' => Story::with(['category', 'director'])
-                ->orderBy('play_count', 'desc')
-                ->limit(10)
-                ->get()
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        // Stories by category
+        $storiesByCategory = Story::selectRaw('categories.name, COUNT(*) as count')
+            ->join('categories', 'stories.category_id', '=', 'categories.id')
+            ->groupBy('categories.id', 'categories.name')
+            ->orderBy('count', 'desc')
+            ->get();
+
+        // Stories by status
+        $storiesByStatus = Story::selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->get();
+
+        // Stories by age group
+        $storiesByAgeGroup = Story::selectRaw('age_group, COUNT(*) as count')
+            ->groupBy('age_group')
+            ->get();
+
+        // Recent stories
+        $recentStories = Story::with(['category', 'director'])
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        // Top rated stories
+        $topRatedStories = Story::with(['category', 'director'])
+            ->where('rating', '>', 0)
+            ->orderBy('rating', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Most played stories
+        $mostPlayedStories = Story::with(['category', 'director'])
+            ->where('play_count', '>', 0)
+            ->orderBy('play_count', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Monthly statistics for charts
+        $monthlyStats = Story::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+            ->where('created_at', '>=', now()->subMonths(12))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        // Duration statistics
+        $durationStats = [
+            'avg_duration' => round(Story::avg('duration') ?? 0, 2),
+            'min_duration' => Story::min('duration') ?? 0,
+            'max_duration' => Story::max('duration') ?? 0,
+        ];
+
+        // Premium vs Free statistics
+        $premiumStats = [
+            'premium_count' => Story::where('is_premium', true)->count(),
+            'free_count' => Story::where('is_completely_free', true)->count(),
+            'mixed_count' => Story::where('is_premium', false)->where('is_completely_free', false)->count(),
+        ];
+
+        return view('admin.stories.statistics', compact(
+            'stats',
+            'storiesByCategory',
+            'storiesByStatus',
+            'storiesByAgeGroup',
+            'recentStories',
+            'topRatedStories',
+            'mostPlayedStories',
+            'monthlyStats',
+            'durationStats',
+            'premiumStats'
+        ));
     }
 
     /**

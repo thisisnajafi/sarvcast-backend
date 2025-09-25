@@ -1,0 +1,15 @@
+# Zarinpal Payment Gateway Configuration
+# Add these variables to your .env file
+
+# Zarinpal Merchant ID (Your Production Merchant Code)
+ZARINPAL_MERCHANT_ID=77751ff3-c1cc-411b-869d-2ac7d7b02f88
+
+# Callback URL for payment verification
+ZARINPAL_CALLBACK_URL=https://my.sarvcast.ir
+
+# Sandbox Mode (set to true for testing, false for production)
+ZARINPAL_SANDBOX=false
+
+# Additional Payment Configuration
+PAYMENT_CURRENCY=IRR
+PAYMENT_DEFAULT_METHOD=zarinpal

@@ -137,7 +137,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">کل درآمد</h3>
                     <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
                         {{ number_format($revenueData['daily']->sum('revenue')) }} تومان
@@ -153,7 +153,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">اشتراک‌های فعال</h3>
                     <p class="text-2xl font-bold text-green-600 dark:text-green-400">
                         {{ $statusDistribution->where('status', 'active')->first()->count ?? 0 }}
@@ -169,7 +169,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">میانگین درآمد روزانه</h3>
                     <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                         {{ number_format($revenueData['daily']->avg('revenue')) }} تومان
@@ -185,7 +185,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">محبوب‌ترین پلن</h3>
                     <p class="text-lg font-bold text-purple-600 dark:text-purple-400">
                         {{ $planPopularity->first()->type ?? 'نامشخص' }}

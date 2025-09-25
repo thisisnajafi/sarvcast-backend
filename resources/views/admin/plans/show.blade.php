@@ -29,7 +29,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden {{ $plan->is_featured ? 'ring-2 ring-primary' : '' }}">
                 <!-- Plan Header -->
                 <div class="p-6 {{ $plan->is_featured ? 'bg-primary text-white' : 'bg-gray-50 dark:bg-gray-700' }}">
-                    <div class="flex justify-between items-start mb-4">
+                    <div class="flex justify-between items-end mb-4">
                         <div>
                             <h2 class="text-xl font-semibold {{ $plan->is_featured ? 'text-white' : 'text-gray-900 dark:text-white' }}">
                                 {{ $plan->name }}

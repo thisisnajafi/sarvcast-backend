@@ -14,7 +14,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل داستان‌ها</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['total'] }}</p>
                 </div>
@@ -28,7 +28,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">منتشر شده</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['published'] }}</p>
                 </div>
@@ -42,7 +42,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">در انتظار</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['pending'] }}</p>
                 </div>
@@ -56,7 +56,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">پریمیوم</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['premium'] }}</p>
                 </div>
@@ -70,7 +70,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل پخش‌ها</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['total_plays']) }}</p>
                 </div>
@@ -83,7 +83,7 @@
         <div class="px-6 py-4 border-b border-gray-200">
             <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium text-gray-900">داستان‌ها</h3>
-                <div class="flex space-x-3">
+                <div class="flex space-x-3 space-x-reverse">
                     <a href="{{ route('admin.stories.statistics') }}" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition duration-200">
                         آمار
                     </a>
@@ -182,12 +182,12 @@
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4 space-x-reverse">
                     <div class="flex-1">
                         <label class="block text-sm font-medium text-gray-700 mb-2">جستجو</label>
                         <input type="text" name="search" value="{{ request('search') }}" placeholder="جستجو در عنوان، زیرعنوان، توضیحات..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
                     </div>
-                    <div class="flex items-end space-x-2">
+                    <div class="flex items-end space-x-2 space-x-reverse">
                         <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
                             فیلتر
                         </button>
@@ -203,12 +203,12 @@
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <form method="POST" action="{{ route('admin.stories.bulk-action') }}" id="bulkActionForm">
                 @csrf
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-4 space-x-reverse">
                     <div class="flex items-center">
                         <input type="checkbox" id="selectAll" class="rounded border-gray-300" onchange="selectAll(this)">
                         <label for="selectAll" class="mr-2 text-sm text-gray-700">انتخاب همه</label>
                     </div>
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center space-x-2 space-x-reverse">
                         <select name="action" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent">
                             <option value="">عملیات گروهی</option>
                             <option value="publish">انتشار</option>
@@ -347,7 +347,7 @@
                             <span class="text-sm text-gray-600">{{ number_format($story->play_count) }}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-2">
+                            <div class="flex space-x-2 space-x-reverse">
                                 <a href="{{ route('admin.stories.show', $story) }}" class="text-green-600 hover:text-green-900" title="مشاهده">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -407,7 +407,7 @@
                 <div class="text-sm text-gray-700">
                     نمایش {{ $stories->firstItem() }} تا {{ $stories->lastItem() }} از {{ $stories->total() }} نتیجه
                 </div>
-                <div class="flex space-x-2">
+                <div class="flex space-x-2 space-x-reverse">
                     @if($stories->previousPageUrl())
                         <a href="{{ $stories->previousPageUrl() }}" class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">قبلی</a>
                     @endif

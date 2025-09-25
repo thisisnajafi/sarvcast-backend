@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\ContentAnalyticsController;
 use App\Http\Controllers\Admin\RevenueAnalyticsController;
 use App\Http\Controllers\Admin\SystemAnalyticsController;
 use App\Http\Controllers\PaymentCallbackController;
+use App\Http\Controllers\ErrorController;
 
 // Redirect root to admin login if not authenticated
 Route::get('/', function () {
@@ -40,9 +41,6 @@ Route::prefix('admin/2fa')->name('admin.2fa.')->middleware(['auth:web', 'admin']
     Route::post('send-code', [\App\Http\Controllers\Admin\TwoFactorAuthController::class, 'sendCode'])->name('send-code');
     Route::post('skip', [\App\Http\Controllers\Admin\TwoFactorAuthController::class, 'skip'])->name('skip');
 });
-
-// Admin Dashboard Route
-Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard')->middleware(['auth:web', 'admin', '2fa']);
 
 // Admin Routes
 Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])->group(function () {
@@ -118,8 +116,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     Route::resource('people', PersonController::class);
     
     // Users
-    Route::resource('users', UserController::class);
     Route::get('users/search', [UserController::class, 'search'])->name('users.search');
+    Route::resource('users', UserController::class);
     Route::post('users/{user}/suspend', [UserController::class, 'suspend'])->name('users.suspend');
     Route::post('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
     Route::post('users/bulk-action', [UserController::class, 'bulkAction'])->name('users.bulk-action');
@@ -342,8 +340,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::delete('{backupId}', [\App\Http\Controllers\Admin\BackupController::class, 'deleteBackup'])->name('delete');
             Route::post('cleanup', [\App\Http\Controllers\Admin\BackupController::class, 'cleanupOldBackups'])->name('cleanup');
             Route::get('stats', [\App\Http\Controllers\Admin\BackupController::class, 'getBackupStats'])->name('stats');
-            Route::post('schedule', [\App\Http\Controllers\Admin\BackupController::class, 'scheduleBackups'])->name('schedule');
-            Route::get('schedule', [\App\Http\Controllers\Admin\BackupController::class, 'getBackupSchedule'])->name('schedule');
+            Route::post('schedule', [\App\Http\Controllers\Admin\BackupController::class, 'scheduleBackups'])->name('schedule.create');
+            Route::get('schedule', [\App\Http\Controllers\Admin\BackupController::class, 'getBackupSchedule'])->name('schedule.get');
         });
         
         // Admin In-App Notifications API routes
@@ -691,6 +689,10 @@ Route::prefix('payment')->group(function () {
     Route::get('zarinpal/callback', [PaymentCallbackController::class, 'zarinpalCallback']);
     Route::get('success', [PaymentCallbackController::class, 'success'])->name('payment.success');
     Route::get('failure', [PaymentCallbackController::class, 'failure'])->name('payment.failure');
+    Route::get('retry', [PaymentCallbackController::class, 'retry'])->name('payment.retry');
+    Route::get('demo', function () {
+        return view('payment.demo');
+    })->name('payment.demo');
 });
 
 // User Coin Routes - DISABLED
@@ -722,3 +724,11 @@ Route::prefix('payment')->group(function () {
 //         return view('user.quiz.quiz-statistics');
 //     })->name('user.quiz.statistics');
 // });
+
+// Error Routes
+Route::get('/error/404', [ErrorController::class, 'notFound'])->name('error.404');
+Route::get('/error/403', [ErrorController::class, 'forbidden'])->name('error.403');
+Route::get('/error/500', [ErrorController::class, 'serverError'])->name('error.500');
+Route::get('/error/419', [ErrorController::class, 'csrfMismatch'])->name('error.419');
+Route::get('/error/429', [ErrorController::class, 'tooManyRequests'])->name('error.429');
+Route::get('/error/{statusCode}', [ErrorController::class, 'genericError'])->name('error.generic');

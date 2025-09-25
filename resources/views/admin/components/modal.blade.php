@@ -11,13 +11,13 @@
         <div class="inline-block align-bottom bg-white rounded-lg text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle {{ $size ?? 'sm:max-w-lg' }} sm:w-full">
             {{-- Modal header --}}
             <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
+                <div class="sm:flex sm:items-end">
                     @if(isset($icon))
                     <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full {{ $iconBg ?? 'bg-red-100' }} sm:mx-0 sm:h-10 sm:w-10">
                         {!! $icon !!}
                     </div>
                     @endif
-                    <div class="mt-3 text-center sm:mt-0 {{ isset($icon) ? 'sm:mr-4' : '' }} sm:text-right">
+                    <div class="mt-3 text-center sm:mt-0 {{ isset($icon) ? 'sm:ml-4' : '' }} sm:text-right">
                         <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
                             {{ $title }}
                         </h3>
@@ -40,10 +40,10 @@
                 @if(isset($actions))
                     {!! $actions !!}
                 @else
-                <button type="button" onclick="closeModal('{{ $id }}')" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeModal('{{ $id }}')" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mr-3 sm:w-auto sm:text-sm">
                     تایید
                 </button>
-                <button type="button" onclick="closeModal('{{ $id }}')" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeModal('{{ $id }}')" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:mr-3 sm:w-auto sm:text-sm">
                     انصراف
                 </button>
                 @endif

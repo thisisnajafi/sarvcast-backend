@@ -24,7 +24,7 @@
                                         {{ $voiceActor->character_name ?: $voiceActor->role }}
                                     </div>
                                 </div>
-                                <div class="w-20 text-xs text-gray-500 dark:text-gray-400 text-left">
+                                <div class="w-20 text-xs text-gray-500 dark:text-gray-400 text-right">
                                     {{ gmdate('i:s', $voiceActor->start_time) }} - {{ gmdate('i:s', $voiceActor->end_time) }}
                                 </div>
                             </div>

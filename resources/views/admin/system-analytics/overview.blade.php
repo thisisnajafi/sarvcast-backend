@@ -27,7 +27,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">آپتایم سرور</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $systemStats['server_uptime'] }}%</p>
                 </div>
@@ -41,7 +41,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">زمان پاسخ</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $systemStats['response_time'] }}ms</p>
                 </div>
@@ -55,7 +55,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">استفاده CPU</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $systemStats['cpu_usage'] }}%</p>
                 </div>
@@ -69,7 +69,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">استفاده حافظه</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $systemStats['memory_usage'] }}%</p>
                 </div>
@@ -157,23 +157,23 @@
             </div>
             <div class="space-y-3">
                 <div class="flex items-center">
-                    <div class="w-3 h-3 bg-green-500 rounded-full ml-3"></div>
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
                     <span class="text-sm text-gray-700">سرور اصلی</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-3 h-3 bg-green-500 rounded-full ml-3"></div>
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
                     <span class="text-sm text-gray-700">دیتابیس</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-3 h-3 bg-green-500 rounded-full ml-3"></div>
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
                     <span class="text-sm text-gray-700">کش</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-3 h-3 bg-yellow-500 rounded-full ml-3"></div>
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
                     <span class="text-sm text-gray-700">ایمیل</span>
                 </div>
                 <div class="flex items-center">
-                    <div class="w-3 h-3 bg-green-500 rounded-full ml-3"></div>
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
                     <span class="text-sm text-gray-700">ذخیره‌سازی</span>
                 </div>
             </div>
@@ -252,7 +252,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">تحلیل عملکرد</h3>
                     <p class="text-sm text-gray-500">آمار دقیق عملکرد سیستم</p>
                 </div>
@@ -266,7 +266,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">سلامت سیستم</h3>
                     <p class="text-sm text-gray-500">بررسی وضعیت سرویس‌ها</p>
                 </div>
@@ -280,7 +280,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">صادرات گزارش</h3>
                     <p class="text-sm text-gray-500">دانلود داده‌های تحلیلی</p>
                 </div>

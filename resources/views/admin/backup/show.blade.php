@@ -46,7 +46,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">وضعیت</p>
                     @php
                         $statusColors = [
@@ -78,7 +78,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">نوع</p>
                     @php
                         $typeLabels = [
@@ -99,7 +99,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">اندازه</p>
                     <p class="text-lg font-semibold text-gray-900">
                         @if($backup->size)
@@ -119,7 +119,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">مدت زمان</p>
                     <p class="text-lg font-semibold text-gray-900">
                         @if($backup->completed_at)
@@ -304,7 +304,7 @@
                 </div>
                 <div class="p-6">
                     <div class="space-y-4">
-                        <div class="flex items-start space-x-3 space-x-reverse">
+                        <div class="flex items-end space-x-3 space-x-reverse">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
                                     <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,7 +319,7 @@
                         </div>
 
                         @if($backup->completed_at)
-                        <div class="flex items-start space-x-3 space-x-reverse">
+                        <div class="flex items-end space-x-3 space-x-reverse">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 {{ $backup->status === 'completed' ? 'bg-green-100' : 'bg-red-100' }} rounded-full flex items-center justify-center">
                                     <svg class="w-4 h-4 {{ $backup->status === 'completed' ? 'text-green-600' : 'text-red-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,7 +335,7 @@
                         @endif
 
                         @if($backup->restored_at)
-                        <div class="flex items-start space-x-3 space-x-reverse">
+                        <div class="flex items-end space-x-3 space-x-reverse">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
                                     <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

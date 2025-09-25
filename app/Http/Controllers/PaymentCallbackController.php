@@ -56,4 +56,14 @@ class PaymentCallbackController extends Controller
     {
         return view('payment.failure');
     }
+
+    /**
+     * Show payment retry page
+     */
+    public function retry(Request $request)
+    {
+        // This would typically redirect to the payment initiation page
+        // or show a retry form. For now, we'll redirect to a generic page
+        return redirect()->route('payment.failure')->with('message', 'لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.');
+    }
 }

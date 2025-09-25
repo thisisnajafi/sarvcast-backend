@@ -40,7 +40,7 @@
             <div class="text-sm text-gray-500">
                 <span id="answered-count">0</span> سوال پاسخ داده شده
             </div>
-            <div class="flex space-x-4">
+            <div class="flex space-x-4 space-x-reverse">
                 <button id="submit-quiz" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                     ارسال پاسخ‌ها
                 </button>
@@ -76,7 +76,7 @@
                     </div>
                 </div>
                 
-                <div class="flex space-x-4">
+                <div class="flex space-x-4 space-x-reverse">
                     <button id="view-explanations" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                         مشاهده توضیحات
                     </button>

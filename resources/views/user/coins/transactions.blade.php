@@ -126,7 +126,7 @@
                 <div class="text-sm text-gray-700">
                     نمایش <span id="showing-count">0</span> از <span id="total-count">0</span> تراکنش
                 </div>
-                <div class="flex space-x-2">
+                <div class="flex space-x-2 space-x-reverse">
                     <button id="prev-page" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                         قبلی
                     </button>

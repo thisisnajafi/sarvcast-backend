@@ -31,7 +31,7 @@
                         </svg>
                     </div>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">کل کاربران</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['total_users'] ?? 0 }}</p>
                 </div>
@@ -51,7 +51,7 @@
                         </svg>
                     </div>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">اشتراک‌های فعال</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['active_subscriptions'] ?? 0 }}</p>
                 </div>
@@ -71,7 +71,7 @@
                         </svg>
                     </div>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">کل داستان‌ها</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ $stats['total_stories'] ?? 0 }}</p>
                 </div>
@@ -91,7 +91,7 @@
                         </svg>
                     </div>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">کل درآمد</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($stats['total_revenue'] ?? 0) }} تومان</p>
                 </div>

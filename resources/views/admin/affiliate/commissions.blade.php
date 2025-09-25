@@ -11,7 +11,7 @@
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">مدیریت کمیسیون‌ها</h1>
                 <p class="text-gray-600">مدیریت و پرداخت کمیسیون‌های شرکای همکاری</p>
             </div>
-            <div class="flex space-x-4">
+            <div class="flex space-x-4 space-x-reverse">
                 <button id="bulk-pay-btn" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors">
                     پرداخت دسته‌ای
                 </button>
@@ -145,7 +145,7 @@
                 <div class="text-sm text-gray-700">
                     نمایش <span id="showing-count">0</span> از <span id="total-count">0</span> کمیسیون
                 </div>
-                <div class="flex space-x-2">
+                <div class="flex space-x-2 space-x-reverse">
                     <button id="prev-page" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                         قبلی
                     </button>
@@ -190,7 +190,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">توضیحات</label>
                     <textarea id="payment-notes" class="w-full border border-gray-300 rounded-lg px-3 py-2" rows="3"></textarea>
                 </div>
-                <div class="flex space-x-4">
+                <div class="flex space-x-4 space-x-reverse">
                     <button type="submit" class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                         پرداخت
                     </button>

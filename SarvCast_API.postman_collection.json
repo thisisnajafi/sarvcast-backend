@@ -4037,7 +4037,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": 50000,\n  \"description\": \"خرید اشتراک ماهانه\",\n  \"callback_url\": \"https://yourapp.com/payment/callback\"\n}"
+              "raw": "{\n  \"subscription_id\": 1\n}"
             },
             "url": {
               "raw": "{{base_url}}/payments/initiate",
@@ -4066,7 +4066,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"authority\": \"A000000000000000000000000000000000000000\"\n}"
+              "raw": "{\n  \"authority\": \"A00000000000000000000000000000000000000000000\",\n  \"status\": \"OK\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/payments/verify",

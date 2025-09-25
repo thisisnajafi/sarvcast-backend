@@ -46,7 +46,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">کل تراکنش‌ها</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format($transactions->total()) }}</p>
                 </div>
@@ -60,7 +60,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">سکه‌های کسب شده</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format(rand(10000, 50000)) }}</p>
                 </div>
@@ -74,7 +74,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">سکه‌های خریداری شده</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format(rand(5000, 25000)) }}</p>
                 </div>
@@ -88,7 +88,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">سکه‌های هدیه</p>
                     <p class="text-2xl font-semibold text-gray-900">{{ number_format(rand(1000, 5000)) }}</p>
                 </div>
@@ -101,7 +101,7 @@
         'columns' => [
             ['title' => 'کاربر', 'key' => 'user', 'render' => function($item) {
                 return '<div class="flex items-center">
-                    <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center ml-3">
+                    <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
                         <span class="text-sm font-medium text-gray-600">' . substr($item->user->name ?? 'کاربر', 0, 1) . '</span>
                     </div>
                     <div>
@@ -187,7 +187,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">آمار و گزارش‌ها</h3>
                     <p class="text-sm text-gray-500">مشاهده آمار کامل تراکنش‌ها</p>
                 </div>
@@ -201,7 +201,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">افزودن سکه</h3>
                     <p class="text-sm text-gray-500">افزودن سکه جدید به کاربر</p>
                 </div>
@@ -215,7 +215,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
+                <div class="ml-4">
                     <h3 class="text-sm font-medium text-gray-900">صادرات گزارش</h3>
                     <p class="text-sm text-gray-500">دانلود گزارش تراکنش‌ها</p>
                 </div>

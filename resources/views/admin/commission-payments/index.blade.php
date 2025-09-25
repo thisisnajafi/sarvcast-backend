@@ -35,59 +35,59 @@
     ])
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white p-6 rounded-lg shadow">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow">
             <div class="flex items-center">
-                <div class="p-2 bg-indigo-100 rounded-lg">
-                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
-                    <p class="text-sm font-medium text-gray-600">کل شرکا</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ number_format($partners->total()) }}</p>
+                <div class="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">کل پرداخت‌ها</p>
+                    <p class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($stats['total_payments']) }}</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow">
+        <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow">
             <div class="flex items-center">
-                <div class="p-2 bg-green-100 rounded-lg">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
-                    <p class="text-sm font-medium text-gray-600">کل درآمد</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ number_format(rand(100000, 500000)) }} تومان</p>
+                <div class="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">کل مبلغ</p>
+                    <p class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($stats['total_amount']) }} تومان</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow">
+        <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow">
             <div class="flex items-center">
-                <div class="p-2 bg-blue-100 rounded-lg">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
-                    <p class="text-sm font-medium text-gray-600">پرداخت شده</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ number_format(rand(80000, 400000)) }} تومان</p>
+                <div class="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">پرداخت شده</p>
+                    <p class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($stats['paid_amount']) }} تومان</p>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow">
+        <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow">
             <div class="flex items-center">
-                <div class="p-2 bg-yellow-100 rounded-lg">
-                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
-                    <p class="text-sm font-medium text-gray-600">در انتظار</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ number_format(rand(10000, 100000)) }} تومان</p>
+                <div class="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <p class="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 truncate">در انتظار</p>
+                    <p class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format($stats['pending_amount']) }} تومان</p>
                 </div>
             </div>
         </div>
@@ -96,25 +96,31 @@
     <!-- Data Table -->
     @include('admin.components.data-table', [
         'columns' => [
-            ['title' => 'شریک', 'key' => 'user', 'render' => function($item) {
+            ['title' => 'شریک', 'key' => 'affiliatePartner', 'render' => function($item) {
                 return '<div class="flex items-center">
-                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center ml-3">
-                        <span class="text-sm font-medium text-indigo-600">' . substr($item->user->name ?? 'کاربر', 0, 1) . '</span>
+                    <div class="w-6 h-6 sm:w-8 sm:h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                        <span class="text-xs sm:text-sm font-medium text-indigo-600">' . substr($item->affiliatePartner->name ?? 'شریک', 0, 1) . '</span>
                     </div>
-                    <div>
-                        <p class="text-sm font-medium text-gray-900">' . ($item->user->name ?? 'کاربر') . '</p>
-                        <p class="text-xs text-gray-500">' . ($item->user->email ?? '') . '</p>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">' . ($item->affiliatePartner->name ?? 'شریک') . '</p>
+                        <p class="text-xs text-gray-500 truncate hidden sm:block">' . ($item->affiliatePartner->email ?? '') . '</p>
                     </div>
                 </div>';
             }],
-            ['title' => 'نرخ کمیسیون', 'key' => 'commission_rate', 'render' => function($item) {
-                return '<span class="text-sm font-medium text-gray-900">' . number_format($item->commission_rate, 1) . '%</span>';
+            ['title' => 'مبلغ', 'key' => 'amount', 'render' => function($item) {
+                return '<div class="text-left">
+                    <span class="text-xs sm:text-sm font-medium text-gray-900 dark:text-white block">' . number_format($item->amount) . '</span>
+                    <span class="text-xs text-gray-500">' . $item->currency . '</span>
+                </div>';
             }],
-            ['title' => 'کل درآمد', 'key' => 'total_earnings', 'render' => function($item) {
-                return '<span class="text-sm font-medium text-gray-900">' . number_format($item->total_earnings) . ' تومان</span>';
-            }],
-            ['title' => 'مبلغ پرداخت', 'key' => 'paid_amount', 'render' => function($item) {
-                return '<span class="text-sm font-medium text-gray-900">' . number_format($item->paid_amount) . ' تومان</span>';
+            ['title' => 'نوع پرداخت', 'key' => 'payment_type', 'render' => function($item) {
+                $types = [
+                    'commission' => ['label' => 'کمیسیون', 'class' => 'bg-blue-100 text-blue-800'],
+                    'bonus' => ['label' => 'پاداش', 'class' => 'bg-green-100 text-green-800'],
+                    'refund' => ['label' => 'بازپرداخت', 'class' => 'bg-yellow-100 text-yellow-800']
+                ];
+                $type = $types[$item->payment_type] ?? ['label' => $item->payment_type, 'class' => 'bg-gray-100 text-gray-800'];
+                return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $type['class'] . '">' . $type['label'] . '</span>';
             }],
             ['title' => 'روش پرداخت', 'key' => 'payment_method', 'render' => function($item) {
                 $methods = [
@@ -126,37 +132,35 @@
                 $method = $methods[$item->payment_method] ?? ['label' => $item->payment_method, 'class' => 'bg-gray-100 text-gray-800'];
                 return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $method['class'] . '">' . $method['label'] . '</span>';
             }],
-            ['title' => 'وضعیت پرداخت', 'key' => 'payment_status', 'render' => function($item) {
-                $statuses = [
-                    'pending' => ['label' => 'در انتظار', 'class' => 'bg-yellow-100 text-yellow-800'],
-                    'paid' => ['label' => 'پرداخت شده', 'class' => 'bg-green-100 text-green-800'],
-                    'failed' => ['label' => 'ناموفق', 'class' => 'bg-red-100 text-red-800']
-                ];
-                $status = $statuses[$item->payment_status] ?? ['label' => $item->payment_status, 'class' => 'bg-gray-100 text-gray-800'];
-                return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $status['class'] . '">' . $status['label'] . '</span>';
-            }],
             ['title' => 'وضعیت', 'key' => 'status', 'render' => function($item) {
                 $statuses = [
-                    'active' => ['label' => 'فعال', 'class' => 'bg-green-100 text-green-800'],
-                    'inactive' => ['label' => 'غیرفعال', 'class' => 'bg-red-100 text-red-800']
+                    'pending' => ['label' => 'در انتظار', 'class' => 'bg-yellow-100 text-yellow-800'],
+                    'processing' => ['label' => 'در حال پردازش', 'class' => 'bg-blue-100 text-blue-800'],
+                    'paid' => ['label' => 'پرداخت شده', 'class' => 'bg-green-100 text-green-800'],
+                    'failed' => ['label' => 'ناموفق', 'class' => 'bg-red-100 text-red-800'],
+                    'cancelled' => ['label' => 'لغو شده', 'class' => 'bg-gray-100 text-gray-800']
                 ];
                 $status = $statuses[$item->status] ?? ['label' => $item->status, 'class' => 'bg-gray-100 text-gray-800'];
                 return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $status['class'] . '">' . $status['label'] . '</span>';
             }],
+            ['title' => 'مرجع پرداخت', 'key' => 'payment_reference', 'render' => function($item) {
+                return '<span class="text-sm text-gray-900 dark:text-white">' . ($item->payment_reference ?? '-') . '</span>';
+            }],
             ['title' => 'تاریخ ایجاد', 'key' => 'created_at', 'render' => function($item) {
-                return '<div>
-                    <p class="text-sm text-gray-900">' . $item->created_at->format('Y/m/d') . '</p>
-                    <p class="text-xs text-gray-500">' . $item->created_at->format('H:i') . '</p>
+                return '<div class="text-left">
+                    <p class="text-xs sm:text-sm text-gray-900 dark:text-white">' . $item->created_at->format('Y/m/d') . '</p>
+                    <p class="text-xs text-gray-500 hidden sm:block">' . $item->created_at->format('H:i') . '</p>
                 </div>';
             }]
         ],
-        'data' => $partners->items(),
+        'data' => $commissionPayments->items(),
         'bulkActions' => true,
         'bulkActionOptions' => [
             'delete' => 'حذف',
             'mark_paid' => 'علامت‌گذاری پرداخت شده',
             'mark_pending' => 'علامت‌گذاری در انتظار',
-            'mark_failed' => 'علامت‌گذاری ناموفق'
+            'mark_failed' => 'علامت‌گذاری ناموفق',
+            'mark_processing' => 'علامت‌گذاری در حال پردازش'
         ],
         'actions' => [
             [
@@ -182,53 +186,53 @@
             ]
         ],
         'pagination' => [
-            'from' => $partners->firstItem(),
-            'to' => $partners->lastItem(),
-            'total' => $partners->total(),
-            'links' => $partners->links()->elements['links'] ?? []
+            'from' => $commissionPayments->firstItem(),
+            'to' => $commissionPayments->lastItem(),
+            'total' => $commissionPayments->total(),
+            'links' => $commissionPayments->links()->elements['links'] ?? []
         ]
     ])
 
     <!-- Quick Actions -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="{{ route('admin.commission-payments.statistics') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a href="{{ route('admin.commission-payments.statistics') }}" class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div class="flex items-center">
-                <div class="p-2 bg-indigo-100 rounded-lg">
-                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-indigo-100 rounded-lg flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
-                    <h3 class="text-sm font-medium text-gray-900">آمار و گزارش‌ها</h3>
-                    <p class="text-sm text-gray-500">مشاهده آمار کامل پرداخت‌های کمیسیون</p>
+                <div class="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white truncate">آمار و گزارش‌ها</h3>
+                    <p class="text-xs sm:text-sm text-gray-500 truncate">مشاهده آمار کامل پرداخت‌های کمیسیون</p>
                 </div>
             </div>
         </a>
 
-        <a href="{{ route('admin.commission-payments.create') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+        <a href="{{ route('admin.commission-payments.create') }}" class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
             <div class="flex items-center">
-                <div class="p-2 bg-green-100 rounded-lg">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
-                    <h3 class="text-sm font-medium text-gray-900">افزودن پرداخت کمیسیون</h3>
-                    <p class="text-sm text-gray-500">ایجاد پرداخت کمیسیون جدید</p>
+                <div class="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white truncate">افزودن پرداخت کمیسیون</h3>
+                    <p class="text-xs sm:text-sm text-gray-500 truncate">ایجاد پرداخت کمیسیون جدید</p>
                 </div>
             </div>
         </a>
 
-        <a href="{{ route('admin.commission-payments.export') }}" class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow">
+        <a href="{{ route('admin.commission-payments.export') }}" class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
             <div class="flex items-center">
-                <div class="p-2 bg-blue-100 rounded-lg">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <div class="mr-4">
-                    <h3 class="text-sm font-medium text-gray-900">صادرات گزارش</h3>
-                    <p class="text-sm text-gray-500">دانلود گزارش پرداخت‌های کمیسیون</p>
+                <div class="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <h3 class="text-sm font-medium text-gray-900 dark:text-white truncate">صادرات گزارش</h3>
+                    <p class="text-xs sm:text-sm text-gray-500 truncate">دانلود گزارش پرداخت‌های کمیسیون</p>
                 </div>
             </div>
         </a>

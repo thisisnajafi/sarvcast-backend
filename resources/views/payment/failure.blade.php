@@ -5,73 +5,189 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>پرداخت ناموفق - سروکست</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#4A90E2',
-                        success: '#6BCF7F',
-                        error: '#EF5350'
-                    },
-                    fontFamily: {
-                        'iran': ['IRANSans', 'sans-serif']
-                    }
-                }
-            }
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
         }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        
+        .sad-animation {
+            animation: sad-bounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes sad-bounce {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(0.95) rotate(-2deg); }
+        }
+        
+        .encouragement-animation {
+            animation: encouragement 3s ease-in-out infinite;
+        }
+        
+        @keyframes encouragement {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .retry-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .retry-button:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
-<body class="bg-gray-50 font-iran">
-    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-md w-full space-y-8">
-            <div class="text-center">
-                <!-- Error Icon -->
-                <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-red-100 mb-6">
-                    <svg class="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </div>
-                
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">پرداخت ناموفق!</h2>
-                <p class="text-lg text-gray-600 mb-8">متأسفانه پرداخت شما انجام نشد</p>
-                
-                @if(session('error'))
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
-                        <p class="text-red-800">{{ session('error') }}</p>
-                    </div>
-                @endif
-                
-                <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">علل احتمالی</h3>
-                    <ul class="text-right space-y-2 text-gray-600">
-                        <li>• عدم تأیید پرداخت توسط بانک</li>
-                        <li>• عدم کفایت موجودی حساب</li>
-                        <li>• انقضای کارت بانکی</li>
-                        <li>• مشکل در شبکه اینترنت</li>
-                        <li>• لغو پرداخت توسط کاربر</li>
-                    </ul>
-                </div>
-                
-                <div class="space-y-4">
-                    <a href="{{ url('/') }}" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
-                        تلاش مجدد
-                    </a>
-                    
-                    <a href="{{ url('/admin') }}" class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
-                        پنل مدیریت
-                    </a>
-                </div>
-                
-                <div class="mt-8 text-sm text-gray-500">
-                    <p>در صورت بروز مشکل، با پشتیبانی تماس بگیرید</p>
-                    <p class="mt-2">
-                        <a href="mailto:support@sarvcast.com" class="text-primary hover:underline">support@sarvcast.com</a>
-                    </p>
-                </div>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl card-shadow max-w-md w-full p-8 text-center relative overflow-hidden">
+        <!-- Sad but Encouraging Icon -->
+        <div class="sad-animation mb-6">
+            <div class="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+                <svg class="w-12 h-12 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Encouraging Message -->
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">
+            😔 متأسفیم! پرداخت انجام نشد
+        </h1>
+        
+        <p class="text-lg text-gray-600 mb-6">
+            مشکلی در پردازش پرداخت شما پیش آمده، اما نگران نباشید! می‌تونید دوباره تلاش کنید.
+        </p>
+
+        <!-- Encouragement Box -->
+        <div class="encouragement-animation bg-blue-50 rounded-2xl p-6 mb-6 border border-blue-200">
+            <div class="text-4xl mb-3">💪</div>
+            <h3 class="text-lg font-semibold text-blue-800 mb-2">نکات مهم:</h3>
+            <ul class="text-right text-blue-700 space-y-2">
+                <li class="flex items-center justify-end">
+                    <span class="mr-2">💳</span>
+                    بررسی کنید که کارت بانکی شما فعال باشد
+                </li>
+                <li class="flex items-center justify-end">
+                    <span class="mr-2">💰</span>
+                    موجودی کافی در حساب داشته باشید
+                </li>
+                <li class="flex items-center justify-end">
+                    <span class="mr-2">📱</span>
+                    اتصال اینترنت شما پایدار باشد
+                </li>
+                <li class="flex items-center justify-end">
+                    <span class="mr-2">🔄</span>
+                    می‌تونید دوباره تلاش کنید
+                </li>
+            </ul>
+        </div>
+
+        <!-- Error Details (if available) -->
+        @if(session('error'))
+        <div class="bg-red-50 rounded-2xl p-4 mb-6 border border-red-200">
+            <div class="flex items-center justify-center mb-2">
+                <span class="text-red-600 text-lg mr-2">⚠️</span>
+                <span class="text-red-800 font-semibold">پیام خطا:</span>
+            </div>
+            <p class="text-red-700 text-sm">{{ session('error') }}</p>
+        </div>
+        @endif
+
+        <!-- Action Buttons -->
+        <div class="space-y-4">
+            <button onclick="retryPayment()" class="retry-button w-full text-white font-semibold py-4 px-6 rounded-2xl shadow-lg">
+                🔄 تلاش مجدد برای پرداخت
+            </button>
+            
+            <a href="#" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
+                📞 تماس با پشتیبانی
+            </a>
+            
+            <a href="#" class="block w-full bg-green-100 hover:bg-green-200 text-green-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
+                🏠 بازگشت به خانه
+            </a>
+        </div>
+
+        <!-- Support Information -->
+        <div class="mt-8 p-4 bg-gray-50 rounded-2xl">
+            <h4 class="text-gray-800 font-semibold mb-3">🆘 نیاز به کمک دارید؟</h4>
+            <div class="text-sm text-gray-600 space-y-2">
+                <p>📧 ایمیل: support@sarvcast.ir</p>
+                <p>📱 تلگرام: @sarvcast_support</p>
+                <p>🕐 ساعات کاری: ۹ صبح تا ۶ عصر</p>
+            </div>
+        </div>
+
+        <!-- Encouraging Footer -->
+        <div class="mt-6 text-center">
+            <p class="text-sm text-gray-500 mb-2">
+                نگران نباشید، ما اینجا هستیم تا کمکتون کنیم! 🤗
+            </p>
+            <div class="mt-2">
+                <span class="text-2xl">💝🌈🎈</span>
             </div>
         </div>
     </div>
+
+    <script>
+        function retryPayment() {
+            // Add loading effect
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '⏳ در حال پردازش...';
+            button.disabled = true;
+            
+            // Simulate retry process
+            setTimeout(() => {
+                // Here you would typically redirect to payment page or retry the payment
+                // For now, we'll just show a message
+                button.innerHTML = '✅ در حال انتقال...';
+                
+                setTimeout(() => {
+                    // Redirect to payment page or retry logic
+                    window.location.href = '/payment/retry'; // You can customize this URL
+                }, 1000);
+            }, 2000);
+        }
+        
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click effect to buttons
+            const buttons = document.querySelectorAll('button, a');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    if (this.tagName === 'BUTTON') {
+                        // Create ripple effect for buttons
+                        const ripple = document.createElement('span');
+                        ripple.classList.add('ripple');
+                        this.appendChild(ripple);
+                        
+                        setTimeout(() => {
+                            ripple.remove();
+                        }, 600);
+                    }
+                });
+            });
+            
+            // Show encouraging message after 5 seconds
+            setTimeout(() => {
+                const encouragementDiv = document.querySelector('.encouragement-animation');
+                if (encouragementDiv) {
+                    encouragementDiv.style.animation = 'encouragement 1s ease-in-out';
+                }
+            }, 5000);
+        });
+    </script>
 </body>
 </html>

@@ -24,7 +24,7 @@
         <!-- Main Comment -->
         <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div class="flex items-start justify-between mb-4">
+                <div class="flex items-end justify-between mb-4">
                     <div class="flex items-center">
                         <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center ml-4">
                             <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,9 +149,9 @@
                     <div class="space-y-4">
                         @foreach($comment->replies as $reply)
                             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mr-6">
-                                <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-end justify-between mb-3">
                                     <div class="flex items-center">
-                                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center ml-3">
+                                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
                                             <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                             </svg>

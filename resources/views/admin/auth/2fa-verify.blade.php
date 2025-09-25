@@ -54,11 +54,11 @@
             
             <div>
                 <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    کد تایید ۴ رقمی
+                    کد تایید ۶ رقمی
                 </label>
-                <input id="code" name="code" type="text" required maxlength="4" 
+                <input id="code" name="code" type="text" required maxlength="6" 
                        class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm text-center text-lg tracking-widest @error('code') border-red-500 @enderror"
-                       placeholder="0000" autocomplete="off">
+                       placeholder="000000" autocomplete="off">
                 @error('code')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                 @enderror
@@ -172,12 +172,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Auto-submit when 4 digits are entered
+// Auto-submit when 6 digits are entered
 document.getElementById('code').addEventListener('input', function(e) {
     const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
     e.target.value = value;
     
-    if (value.length === 4) {
+    if (value.length === 6) {
         // Small delay to show the complete code
         setTimeout(() => {
             e.target.form.submit();
@@ -185,12 +185,12 @@ document.getElementById('code').addEventListener('input', function(e) {
     }
 });
 
-// Prevent form submission if code is not 4 digits
+// Prevent form submission if code is not 6 digits
 document.getElementById('verification-form').addEventListener('submit', function(e) {
     const code = document.getElementById('code').value;
-    if (code.length !== 4) {
+    if (code.length !== 6) {
         e.preventDefault();
-        alert('لطفاً کد ۴ رقمی را وارد کنید');
+        alert('لطفاً کد ۶ رقمی را وارد کنید');
     }
 });
 </script>

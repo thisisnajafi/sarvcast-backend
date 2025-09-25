@@ -109,7 +109,7 @@
                     <div class="space-y-3">
                         @foreach($episode->voiceActors as $voiceActor)
                             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div class="flex items-center space-x-3">
+                                <div class="flex items-center space-x-3 space-x-reverse">
                                     <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
                                         <img src="{{ $voiceActor->person->image_url ?: '/images/default-avatar.png' }}" 
                                              alt="{{ $voiceActor->person->name }}" 
@@ -121,7 +121,7 @@
                                         <div class="text-xs text-gray-500">{{ $voiceActor->role }}</div>
                                     </div>
                                 </div>
-                                <div class="text-left">
+                                <div class="text-right">
                                     <div class="text-xs text-gray-500">{{ gmdate('i:s', $voiceActor->start_time) }} - {{ gmdate('i:s', $voiceActor->end_time) }}</div>
                                     @if($voiceActor->is_primary)
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">اصلی</span>

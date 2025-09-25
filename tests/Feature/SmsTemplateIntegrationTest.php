@@ -49,7 +49,7 @@ class SmsTemplateIntegrationTest extends TestCase
         Cache::forget("otp_{$phoneNumber}_{$purpose}");
         
         // Generate OTP (this will be mocked in real implementation)
-        $otpCode = '1234';
+        $otpCode = '123456';
         Cache::put("otp_{$phoneNumber}_{$purpose}", $otpCode, 300);
         
         // Verify OTP is stored
@@ -113,16 +113,16 @@ class SmsTemplateIntegrationTest extends TestCase
     }
 
     /** @test */
-    public function it_generates_4_digit_otp()
+    public function it_generates_6_digit_otp()
     {
         // Test the OTP generation logic
-        $otpCode = str_pad(random_int(1000, 9999), 4, '0', STR_PAD_LEFT);
+        $otpCode = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
         
         $this->assertIsString($otpCode);
-        $this->assertEquals(4, strlen($otpCode));
+        $this->assertEquals(6, strlen($otpCode));
         $this->assertTrue(is_numeric($otpCode));
-        $this->assertGreaterThanOrEqual(1000, (int)$otpCode);
-        $this->assertLessThanOrEqual(9999, (int)$otpCode);
+        $this->assertGreaterThanOrEqual(100000, (int)$otpCode);
+        $this->assertLessThanOrEqual(999999, (int)$otpCode);
     }
 
     /** @test */

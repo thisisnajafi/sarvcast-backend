@@ -31,7 +31,7 @@
                 </span>
             </div>
         </div>
-        <div class="flex space-x-3">
+        <div class="flex space-x-3 space-x-reverse">
             <a href="{{ route('admin.episodes.voice-actors.index', $episode) }}" 
                class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 flex items-center">
                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +56,7 @@
                 <div class="flex-1">
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ $voiceActor->person->name }}</h3>
                     <p class="text-gray-600 dark:text-gray-400 mb-2">{{ $voiceActor->person->bio ?: 'بدون توضیحات' }}</p>
-                    <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-4 space-x-reverse">
                         <span class="px-3 py-1 text-sm font-medium rounded-full {{ $voiceActor->role === 'narrator' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : ($voiceActor->role === 'character' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200') }}">
                             {{ $voiceActor->role }}
                         </span>
@@ -72,7 +72,7 @@
                         @endif
                     </div>
                 </div>
-                <div class="text-left">
+                <div class="text-right">
                     <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">زمان</div>
                     <div class="font-mono text-lg text-gray-900 dark:text-white">
                         {{ gmdate('i:s', $voiceActor->start_time) }} - {{ gmdate('i:s', $voiceActor->end_time) }}
@@ -133,7 +133,7 @@
                 <!-- Person Info Display -->
                 <div id="person-info" class="md:col-span-2">
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-4 space-x-reverse">
                             <img id="person-image" src="{{ $voiceActor->person->image_url ?: '/images/default-avatar.png' }}" alt="" class="w-16 h-16 rounded-full object-cover">
                             <div>
                                 <h3 id="person-name" class="text-lg font-medium text-gray-900 dark:text-white">{{ $voiceActor->person->name }}</h3>
@@ -213,16 +213,16 @@
                 <div class="md:col-span-2">
                     <div class="bg-blue-50 dark:bg-blue-900 rounded-lg p-4">
                         <h4 class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">پیش‌نمایش زمان</h4>
-                        <div class="flex items-center space-x-4">
-                            <div class="flex items-center space-x-2">
+                        <div class="flex items-center space-x-4 space-x-reverse">
+                            <div class="flex items-center space-x-2 space-x-reverse">
                                 <span class="text-sm text-blue-700 dark:text-blue-300">شروع:</span>
                                 <span id="start-time-display" class="font-mono text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">{{ gmdate('i:s', $voiceActor->start_time) }}</span>
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-2 space-x-reverse">
                                 <span class="text-sm text-blue-700 dark:text-blue-300">پایان:</span>
                                 <span id="end-time-display" class="font-mono text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">{{ gmdate('i:s', $voiceActor->end_time) }}</span>
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-2 space-x-reverse">
                                 <span class="text-sm text-blue-700 dark:text-blue-300">مدت:</span>
                                 <span id="duration-display" class="font-mono text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">{{ $voiceActor->end_time - $voiceActor->start_time }} ثانیه</span>
                             </div>

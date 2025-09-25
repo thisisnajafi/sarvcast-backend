@@ -52,7 +52,7 @@
                             <div class="text-sm text-gray-900">{{ $role->permissions->count() }} مجوز</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div class="flex space-x-2">
+                            <div class="flex space-x-2 space-x-reverse">
                                 @can('roles.edit')
                                 <a href="{{ route('admin.roles.edit', $role) }}" class="text-blue-600 hover:text-blue-900">
                                     ویرایش

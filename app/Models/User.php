@@ -9,6 +9,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Events\NewUserRegistrationEvent;
 use App\UserAnalytics;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Models\TeacherAccount;
 
 class User extends Authenticatable
 {
@@ -161,6 +162,14 @@ class User extends Authenticatable
     public function activeSubscription()
     {
         return $this->hasOne(Subscription::class)->where('status', 'active');
+    }
+
+    /**
+     * Get the user's teacher account.
+     */
+    public function teacherAccount()
+    {
+        return $this->hasOne(TeacherAccount::class);
     }
 
 
