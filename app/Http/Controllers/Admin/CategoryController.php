@@ -74,7 +74,7 @@ class CategoryController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100|unique:categories',
             'description' => 'nullable|string|max:500',
-            'icon_path' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
             'color' => 'nullable|string|max:7',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
@@ -86,7 +86,16 @@ class CategoryController extends Controller
                 ->withInput();
         }
 
-        $category = Category::create($request->all());
+        $data = $request->except(['image']);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imagePath = $image->store('categories', 'public');
+            $data['icon_path'] = $imagePath;
+        }
+
+        $category = Category::create($data);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'دسته‌بندی با موفقیت ایجاد شد.');
@@ -120,7 +129,7 @@ class CategoryController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100|unique:categories,name,' . $category->id,
             'description' => 'nullable|string|max:500',
-            'icon_path' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
             'color' => 'nullable|string|max:7',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
@@ -132,7 +141,21 @@ class CategoryController extends Controller
                 ->withInput();
         }
 
-        $category->update($request->all());
+        $data = $request->except(['image']);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($category->icon_path && Storage::disk('public')->exists($category->icon_path)) {
+                Storage::disk('public')->delete($category->icon_path);
+            }
+            
+            $image = $request->file('image');
+            $imagePath = $image->store('categories', 'public');
+            $data['icon_path'] = $imagePath;
+        }
+
+        $category->update($data);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'دسته‌بندی با موفقیت به‌روزرسانی شد.');

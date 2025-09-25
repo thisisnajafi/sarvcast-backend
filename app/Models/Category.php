@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
 
 class Category extends Model
 {
@@ -116,5 +117,16 @@ class Category extends Model
     public function getJalaliUpdatedAtRelativeAttribute()
     {
         return \App\Helpers\JalaliHelper::getRelativeTime($this->updated_at);
+    }
+
+    /**
+     * Get the image URL for the category
+     */
+    public function getImageUrlAttribute()
+    {
+        if ($this->icon_path) {
+            return Storage::url($this->icon_path);
+        }
+        return null;
     }
 }
