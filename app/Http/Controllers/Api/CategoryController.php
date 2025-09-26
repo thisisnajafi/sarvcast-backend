@@ -11,15 +11,56 @@ class CategoryController extends Controller
     /**
      * Get all active categories
      */
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Category::active()->ordered()->get();
+        $query = Category::active()->ordered();
+
+        // Apply limit if specified
+        $limit = $request->get('limit', 10);
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
+
+        // Apply pagination if page is specified
+        if ($request->has('page')) {
+            $categories = $query->paginate($request->get('per_page', 20));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Categories retrieved successfully',
+                'data' => $categories->items(),
+                'pagination' => [
+                    'current_page' => $categories->currentPage(),
+                    'last_page' => $categories->lastPage(),
+                    'per_page' => $categories->perPage(),
+                    'total' => $categories->total()
+                ]
+            ]);
+        }
+
+        $categories = $query->get();
+
+        // Transform categories to match API specification
+        $transformedCategories = $categories->map(function ($category) {
+            return [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+                'description' => $category->description,
+                'color' => $category->color,
+                'status' => $category->status,
+                'order' => $category->order,
+                'story_count' => $category->story_count,
+                'icon_path' => $category->icon_path,
+                'created_at' => $category->created_at->toISOString(),
+                'updated_at' => $category->updated_at->toISOString()
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'categories' => $categories
-            ]
+            'message' => 'Categories retrieved successfully',
+            'data' => $transformedCategories
         ]);
     }
 
@@ -28,7 +69,7 @@ class CategoryController extends Controller
      */
     public function stories(Category $category, Request $request)
     {
-        $query = $category->stories()->published();
+        $query = $category->stories()->with(['category', 'narrator', 'author', 'director', 'writer', 'people'])->published();
 
         // Apply filters
         if ($request->filled('age_group')) {
@@ -55,20 +96,93 @@ class CategoryController extends Controller
                 $query->latest();
         }
 
-        $stories = $query->paginate($request->get('per_page', 20));
+        // Apply limit if specified
+        $limit = $request->get('limit', 6);
+        if ($limit > 0) {
+            $query->limit($limit);
+        }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'category' => $category,
-                'stories' => $stories->items(),
+        // Apply pagination if page is specified
+        if ($request->has('page')) {
+            $stories = $query->paginate($request->get('per_page', 20));
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Category stories retrieved successfully',
+                'data' => $stories->items(),
                 'pagination' => [
                     'current_page' => $stories->currentPage(),
                     'last_page' => $stories->lastPage(),
                     'per_page' => $stories->perPage(),
                     'total' => $stories->total()
                 ]
-            ]
+            ]);
+        }
+
+        $stories = $query->get();
+
+        // Transform stories to match API specification
+        $transformedStories = $stories->map(function ($story) {
+            return [
+                'id' => $story->id,
+                'title' => $story->title,
+                'subtitle' => $story->subtitle,
+                'description' => $story->description,
+                'category_id' => $story->category_id,
+                'age_group' => $story->age_group,
+                'duration' => $story->duration,
+                'status' => $story->status,
+                'is_premium' => $story->is_premium,
+                'is_completely_free' => $story->is_completely_free ?? true,
+                'play_count' => $story->play_count ?? 0,
+                'rating' => $story->rating ?? 0.0,
+                'rating_count' => $story->rating_count ?? 0,
+                'favorite_count' => $story->favorite_count ?? 0,
+                'episode_count' => $story->episode_count ?? 0,
+                'created_at' => $story->created_at->toISOString(),
+                'updated_at' => $story->updated_at->toISOString(),
+                'category' => $story->category ? [
+                    'id' => $story->category->id,
+                    'name' => $story->category->name,
+                    'slug' => $story->category->slug,
+                    'description' => $story->category->description,
+                    'color' => $story->category->color,
+                    'status' => $story->category->status,
+                    'order' => $story->category->order,
+                    'story_count' => $story->category->story_count,
+                    'icon_path' => $story->category->icon_path,
+                    'created_at' => $story->category->created_at->toISOString(),
+                    'updated_at' => $story->category->updated_at->toISOString()
+                ] : null,
+                'narrator' => $story->narrator ? [
+                    'id' => $story->narrator->id,
+                    'name' => $story->narrator->name,
+                    'bio' => $story->narrator->bio,
+                    'image_url' => $story->narrator->image_url ?? null,
+                    'roles' => $story->narrator->roles ?? [],
+                    'total_stories' => $story->narrator->total_stories ?? 0,
+                    'total_episodes' => $story->narrator->total_episodes ?? 0,
+                    'average_rating' => $story->narrator->average_rating ?? 0.0,
+                    'is_verified' => $story->narrator->is_verified ?? false,
+                    'last_active_at' => $story->narrator->last_active_at?->toISOString(),
+                    'created_at' => $story->narrator->created_at->toISOString()
+                ] : null,
+                'image_url' => $story->image_url ?? null,
+                'cover_image_url' => $story->cover_image_url ?? null,
+                'total_episodes' => $story->episode_count ?? 0,
+                'free_episodes' => $story->free_episode_count ?? 0,
+                'episode_ids' => $story->episodes->pluck('id')->toArray(),
+                'is_favorite' => false, // Will be set based on user authentication
+                'progress' => 0.0, // Will be set based on user progress
+                'tags' => $story->tags ?? [],
+                'language' => $story->language ?? 'fa'
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category stories retrieved successfully',
+            'data' => $transformedStories
         ]);
     }
 }

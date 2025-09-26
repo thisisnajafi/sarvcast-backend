@@ -396,7 +396,7 @@ class EpisodeController extends Controller
      */
     public function show(Episode $episode)
     {
-        $episode->load(['story', 'narrator', 'people']);
+        $episode->load(['story', 'narrator', 'people', 'imageTimelines']);
 
         return view('admin.episodes.show', compact('episode'));
     }
@@ -408,6 +408,7 @@ class EpisodeController extends Controller
     {
         $stories = Story::with('category')->orderBy('title', 'asc')->get();
         $narrators = Person::whereJsonContains('roles', 'narrator')->get();
+        $episode->load(['imageTimelines']);
 
         return view('admin.episodes.edit', compact('episode', 'stories', 'narrators'));
     }

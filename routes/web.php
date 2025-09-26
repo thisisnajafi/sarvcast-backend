@@ -133,9 +133,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     })->name('files.upload');
     
     // Timeline Management
-    Route::get('timeline', function () {
-        return view('admin.timeline.index');
-    })->name('timeline.index');
+    Route::get('timeline', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'index'])->name('timeline.index');
     
     // Audio Management
     Route::get('audio', function () {

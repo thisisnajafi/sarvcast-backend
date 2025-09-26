@@ -25,11 +25,44 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
-            <!-- Episode Image -->
-            @if($episode->image_url)
+            <!-- Episode Images -->
+            @if($episode->image_urls && count($episode->image_urls) > 0)
                 <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">تصویر اپیزود</h3>
-                    <img src="{{ $episode->image_url }}" alt="Episode Image" class="w-full h-64 object-cover rounded-lg border">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">تصاویر اپیزود</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($episode->image_urls as $index => $imageUrl)
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <img src="{{ $episode->getImageUrlFromPath($imageUrl) }}" 
+                                     alt="Episode Image {{ $index + 1 }}" 
+                                     class="w-full h-48 object-cover rounded-lg">
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            <!-- Image Timeline -->
+            @if($episode->imageTimelines && $episode->imageTimelines->count() > 0)
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">تصاویر زمان‌بندی</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        @foreach($episode->imageTimelines as $timeline)
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                @if($timeline->image_url)
+                                    <img src="{{ $timeline->getImageUrlFromPath($timeline->image_url) }}" 
+                                         alt="Timeline Image" 
+                                         class="w-full h-32 object-cover rounded-lg mb-3">
+                                @endif
+                                <div class="text-sm text-gray-600">
+                                    <p><strong>شروع:</strong> {{ $timeline->start_time }} ثانیه</p>
+                                    <p><strong>پایان:</strong> {{ $timeline->end_time }} ثانیه</p>
+                                    @if($timeline->scene_description)
+                                        <p><strong>توضیحات:</strong> {{ $timeline->scene_description }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             @endif
 

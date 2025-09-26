@@ -13,6 +13,7 @@ class Category extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'icon_path',
         'color',
@@ -126,5 +127,42 @@ class Category extends Model
     public function getImageUrlAttribute()
     {
         return $this->getImageUrlFromPath($this->icon_path);
+    }
+
+    /**
+     * Get the slug for the category (auto-generated from name if not set)
+     */
+    public function getSlugAttribute($value)
+    {
+        if ($value) {
+            return $value;
+        }
+        
+        // Generate slug from name if not set
+        return \Illuminate\Support\Str::slug($this->name);
+    }
+
+    /**
+     * Get the status field (alias for is_active)
+     */
+    public function getStatusAttribute()
+    {
+        return $this->is_active ? 'active' : 'inactive';
+    }
+
+    /**
+     * Get the order field (alias for sort_order)
+     */
+    public function getOrderAttribute()
+    {
+        return $this->sort_order;
+    }
+
+    /**
+     * Get the icon_path field (alias for icon_path)
+     */
+    public function getIconPathAttribute($value)
+    {
+        return $value ?: 'assets/icons/default-category.svg';
     }
 }

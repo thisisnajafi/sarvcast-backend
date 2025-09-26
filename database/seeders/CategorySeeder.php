@@ -16,6 +16,7 @@ class CategorySeeder extends Seeder
         $categories = [
             [
                 'name' => 'داستان‌های کلاسیک',
+                'slug' => 'classic-stories',
                 'description' => 'داستان‌های کلاسیک و قدیمی که نسل‌هاست خوانده می‌شوند',
                 'icon_path' => '/icons/classic-stories.svg',
                 'color' => '#8B5CF6',
@@ -28,6 +29,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های ماجراجویی',
+                'slug' => 'adventure-stories',
                 'description' => 'داستان‌های هیجان‌انگیز و ماجراجویانه برای کودکان',
                 'icon_path' => '/icons/adventure-stories.svg',
                 'color' => '#F59E0B',
@@ -40,6 +42,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های آموزشی',
+                'slug' => 'educational-stories',
                 'description' => 'داستان‌هایی که مفاهیم آموزشی را به کودکان می‌آموزند',
                 'icon_path' => '/icons/educational-stories.svg',
                 'color' => '#10B981',
@@ -52,6 +55,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های فانتزی',
+                'slug' => 'fantasy-stories',
                 'description' => 'داستان‌های تخیلی و فانتزی با موجودات خیالی',
                 'icon_path' => '/icons/fantasy-stories.svg',
                 'color' => '#EC4899',
@@ -64,6 +68,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های حیوانات',
+                'slug' => 'animal-stories',
                 'description' => 'داستان‌هایی که شخصیت‌های اصلی آن‌ها حیوانات هستند',
                 'icon_path' => '/icons/animal-stories.svg',
                 'color' => '#F97316',
@@ -76,6 +81,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های تاریخی',
+                'slug' => 'historical-stories',
                 'description' => 'داستان‌هایی که بر اساس وقایع تاریخی نوشته شده‌اند',
                 'icon_path' => '/icons/historical-stories.svg',
                 'color' => '#6B7280',
@@ -88,6 +94,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های علمی',
+                'slug' => 'scientific-stories',
                 'description' => 'داستان‌هایی که مفاهیم علمی را به کودکان معرفی می‌کنند',
                 'icon_path' => '/icons/scientific-stories.svg',
                 'color' => '#3B82F6',
@@ -100,6 +107,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های اخلاقی',
+                'slug' => 'moral-stories',
                 'description' => 'داستان‌هایی که ارزش‌های اخلاقی و انسانی را آموزش می‌دهند',
                 'icon_path' => '/icons/moral-stories.svg',
                 'color' => '#059669',
@@ -112,6 +120,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های طنز',
+                'slug' => 'comedy-stories',
                 'description' => 'داستان‌های خنده‌دار و طنزآمیز برای سرگرمی کودکان',
                 'icon_path' => '/icons/comedy-stories.svg',
                 'color' => '#DC2626',
@@ -124,6 +133,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های شب',
+                'slug' => 'bedtime-stories',
                 'description' => 'داستان‌های آرام و آرامش‌بخش برای زمان خواب',
                 'icon_path' => '/icons/bedtime-stories.svg',
                 'color' => '#7C3AED',
@@ -136,6 +146,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های ایرانی',
+                'slug' => 'persian-stories',
                 'description' => 'داستان‌های اصیل ایرانی و فرهنگ بومی',
                 'icon_path' => '/icons/persian-stories.svg',
                 'color' => '#B91C1C',
@@ -148,6 +159,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'name' => 'داستان‌های بین‌المللی',
+                'slug' => 'international-stories',
                 'description' => 'داستان‌های ترجمه شده از فرهنگ‌های مختلف جهان',
                 'icon_path' => '/icons/international-stories.svg',
                 'color' => '#1D4ED8',

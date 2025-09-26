@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Timeline;
+use App\Models\ImageTimeline;
 use App\Models\Story;
 use App\Models\Episode;
 use Illuminate\Http\Request;
@@ -18,36 +18,27 @@ class TimelineManagementController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Timeline::with(['story', 'episode']);
+        $query = ImageTimeline::with(['episode']);
 
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhereHas('story', function ($q) use ($search) {
-                      $q->where('title', 'like', "%{$search}%");
-                  })
+                $q->where('scene_description', 'like', "%{$search}%")
                   ->orWhereHas('episode', function ($q) use ($search) {
                       $q->where('title', 'like', "%{$search}%");
                   });
             });
         }
 
-        // Filter by type
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
+        // Filter by transition type
+        if ($request->filled('transition_type')) {
+            $query->where('transition_type', $request->transition_type);
         }
 
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by story
-        if ($request->filled('story_id')) {
-            $query->where('story_id', $request->story_id);
+        // Filter by key frame
+        if ($request->filled('is_key_frame')) {
+            $query->where('is_key_frame', $request->boolean('is_key_frame'));
         }
 
         // Filter by episode
@@ -67,14 +58,13 @@ class TimelineManagementController extends Controller
 
         // Get statistics
         $stats = [
-            'total' => Timeline::count(),
-            'active' => Timeline::where('status', 'active')->count(),
-            'inactive' => Timeline::where('status', 'inactive')->count(),
-            'draft' => Timeline::where('status', 'draft')->count(),
-            'story_timelines' => Timeline::where('type', 'story')->count(),
-            'episode_timelines' => Timeline::where('type', 'episode')->count(),
-            'character_timelines' => Timeline::where('type', 'character')->count(),
-            'event_timelines' => Timeline::where('type', 'event')->count(),
+            'total' => ImageTimeline::count(),
+            'key_frames' => ImageTimeline::where('is_key_frame', true)->count(),
+            'non_key_frames' => ImageTimeline::where('is_key_frame', false)->count(),
+            'fade_transitions' => ImageTimeline::where('transition_type', 'fade')->count(),
+            'cut_transitions' => ImageTimeline::where('transition_type', 'cut')->count(),
+            'slide_transitions' => ImageTimeline::where('transition_type', 'slide')->count(),
+            'dissolve_transitions' => ImageTimeline::where('transition_type', 'dissolve')->count(),
         ];
 
         $stories = Story::where('status', 'published')->get();
@@ -145,7 +135,7 @@ class TimelineManagementController extends Controller
                 $data['image'] = $imagePath;
             }
 
-            $timeline = Timeline::create($data);
+            $timeline = ImageTimeline::create($data);
 
             DB::commit();
 
@@ -168,7 +158,7 @@ class TimelineManagementController extends Controller
         $timeline->load(['story', 'episode', 'createdBy']);
         
         // Get related timelines
-        $relatedTimelines = Timeline::where('type', $timeline->type)
+        $relatedTimelines = ImageTimeline::where('type', $timeline->type)
             ->where('id', '!=', $timeline->id)
             ->with(['story', 'episode'])
             ->orderBy('created_at', 'desc')
@@ -317,7 +307,7 @@ class TimelineManagementController extends Controller
         try {
             DB::beginTransaction();
 
-            $timelines = Timeline::whereIn('id', $request->timeline_ids);
+            $timelines = ImageTimeline::whereIn('id', $request->timeline_ids);
 
             switch ($request->action) {
                 case 'activate':
@@ -363,22 +353,22 @@ class TimelineManagementController extends Controller
     public function statistics()
     {
         $stats = [
-            'total_timelines' => Timeline::count(),
-            'active_timelines' => Timeline::where('status', 'active')->count(),
-            'inactive_timelines' => Timeline::where('status', 'inactive')->count(),
-            'draft_timelines' => Timeline::where('status', 'draft')->count(),
-            'by_type' => Timeline::selectRaw('type, COUNT(*) as count')
+            'total_timelines' => ImageTimeline::count(),
+            'active_timelines' => ImageTimeline::where('status', 'active')->count(),
+            'inactive_timelines' => ImageTimeline::where('status', 'inactive')->count(),
+            'draft_timelines' => ImageTimeline::where('status', 'draft')->count(),
+            'by_type' => ImageTimeline::selectRaw('type, COUNT(*) as count')
                 ->groupBy('type')
                 ->get(),
-            'by_status' => Timeline::selectRaw('status, COUNT(*) as count')
+            'by_status' => ImageTimeline::selectRaw('status, COUNT(*) as count')
                 ->groupBy('status')
                 ->get(),
-            'timelines_by_month' => Timeline::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+            'timelines_by_month' => ImageTimeline::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
                 ->groupBy('month')
                 ->orderBy('month', 'desc')
                 ->limit(12)
                 ->get(),
-            'recent_timelines' => Timeline::with(['story', 'episode'])->orderBy('created_at', 'desc')->limit(10)->get(),
+            'recent_timelines' => ImageTimeline::with(['story', 'episode'])->orderBy('created_at', 'desc')->limit(10)->get(),
         ];
 
         return view('admin.timeline-management.statistics', compact('stats'));
@@ -387,7 +377,7 @@ class TimelineManagementController extends Controller
     // API Methods
     public function apiIndex(Request $request)
     {
-        $query = Timeline::with(['story', 'episode']);
+        $query = ImageTimeline::with(['story', 'episode']);
 
         // Search
         if ($request->filled('search')) {
@@ -472,7 +462,7 @@ class TimelineManagementController extends Controller
         try {
             DB::beginTransaction();
 
-            $timeline = Timeline::create([
+            $timeline = ImageTimeline::create([
                 'title' => $request->title,
                 'type' => $request->type,
                 'description' => $request->description,
@@ -633,7 +623,7 @@ class TimelineManagementController extends Controller
 
             foreach ($timelineIds as $timelineId) {
                 try {
-                    $timeline = Timeline::findOrFail($timelineId);
+                    $timeline = ImageTimeline::findOrFail($timelineId);
 
                     switch ($action) {
                         case 'activate':
@@ -708,31 +698,31 @@ class TimelineManagementController extends Controller
     public function apiStatistics()
     {
         $stats = [
-            'total_timelines' => Timeline::count(),
-            'active_timelines' => Timeline::where('status', 'active')->count(),
-            'inactive_timelines' => Timeline::where('status', 'inactive')->count(),
-            'draft_timelines' => Timeline::where('status', 'draft')->count(),
-            'timelines_by_type' => Timeline::selectRaw('type, COUNT(*) as count')
+            'total_timelines' => ImageTimeline::count(),
+            'active_timelines' => ImageTimeline::where('status', 'active')->count(),
+            'inactive_timelines' => ImageTimeline::where('status', 'inactive')->count(),
+            'draft_timelines' => ImageTimeline::where('status', 'draft')->count(),
+            'timelines_by_type' => ImageTimeline::selectRaw('type, COUNT(*) as count')
                 ->groupBy('type')
                 ->get(),
-            'timelines_by_status' => Timeline::selectRaw('status, COUNT(*) as count')
+            'timelines_by_status' => ImageTimeline::selectRaw('status, COUNT(*) as count')
                 ->groupBy('status')
                 ->get(),
-            'timelines_by_priority' => Timeline::selectRaw('priority, COUNT(*) as count')
+            'timelines_by_priority' => ImageTimeline::selectRaw('priority, COUNT(*) as count')
                 ->groupBy('priority')
                 ->get(),
-            'timelines_by_story' => Timeline::selectRaw('story_id, COUNT(*) as count')
+            'timelines_by_story' => ImageTimeline::selectRaw('story_id, COUNT(*) as count')
                 ->with('story')
                 ->groupBy('story_id')
                 ->orderBy('count', 'desc')
                 ->limit(10)
                 ->get(),
-            'timelines_by_month' => Timeline::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+            'timelines_by_month' => ImageTimeline::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
                 ->groupBy('month')
                 ->orderBy('month', 'desc')
                 ->limit(12)
                 ->get(),
-            'recent_timelines' => Timeline::with(['story', 'episode'])
+            'recent_timelines' => ImageTimeline::with(['story', 'episode'])
                 ->latest()
                 ->limit(10)
                 ->get(),
