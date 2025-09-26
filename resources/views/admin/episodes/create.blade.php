@@ -262,7 +262,7 @@
                 <a href="{{ route('admin.episodes.index') }}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
                     انصراف
                 </a>
-                <button type="submit" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                <button type="submit" id="submit-episode-btn" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
                     ایجاد اپیزود
                 </button>
             </div>
@@ -489,10 +489,33 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Episode form state management initialized');
     }
     
+    // Debug button state
+    const submitButton = document.getElementById('submit-episode-btn');
+    if (submitButton) {
+        console.log('Submit button found:', submitButton);
+        console.log('Button disabled:', submitButton.disabled);
+        console.log('Button style:', submitButton.style.cssText);
+        console.log('Button classes:', submitButton.className);
+        
+        // Force enable button if it's disabled
+        if (submitButton.disabled) {
+            console.log('Button was disabled, enabling it...');
+            submitButton.disabled = false;
+        }
+        
+        // Add click event listener for debugging
+        submitButton.addEventListener('click', function(e) {
+            console.log('Submit button clicked!');
+            console.log('Form valid:', document.getElementById('episode-form').checkValidity());
+        });
+    }
+    
     // Handle form submission with better error handling
     const form = document.getElementById('episode-form');
     if (form) {
         form.addEventListener('submit', function(e) {
+            console.log('Form submit event triggered');
+            
             // Show loading state
             const submitButton = form.querySelector('button[type="submit"]');
             const originalText = submitButton.textContent;
