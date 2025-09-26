@@ -76,18 +76,23 @@ jobs:
       - name: Directory Permissions
         run: chmod -R 777 storage bootstrap/cache
 
-      - name: Create Storage Link
+      - name: Create Public Images Directories
         run: |
-          echo "🔗 Creating storage symlink..."
-          php artisan storage:link --force
-          echo "✅ Storage symlink created successfully"
+          echo "📁 Creating public images directories..."
+          mkdir -p public/images/categories
+          mkdir -p public/images/stories
+          mkdir -p public/images/episodes
+          mkdir -p public/images/people
+          mkdir -p public/images/users
+          mkdir -p public/images/playlists
+          mkdir -p public/images/timeline
+          echo "✅ Public images directories created successfully"
 
-      - name: Set Storage Permissions
+      - name: Set Public Images Permissions
         run: |
-          echo "🔐 Setting storage permissions..."
-          chmod -R 755 storage/app/public
-          chmod -R 755 public/storage
-          echo "✅ Storage permissions set successfully"
+          echo "🔐 Setting public images permissions..."
+          chmod -R 755 public/images
+          echo "✅ Public images permissions set successfully"
 
       - name: Test Database Connection
         run: |
@@ -136,9 +141,9 @@ jobs:
           echo ""
           echo "🔧 What was done:"
           echo "  ✅ Files deployed via FTP"
-          echo "  ✅ Storage symlink created"
+          echo "  ✅ Public images directories created"
           echo "  ✅ Permissions set correctly"
-          echo "  ✅ Storage directories configured"
+          echo "  ✅ Image directories configured"
 
       - name: Notify Telegram
         env:

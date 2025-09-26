@@ -20,9 +20,9 @@ trait HasImageUrl
             return $path;
         }
 
-        // Generate full URL using the app's base URL
+        // Generate full URL using the app's base URL for public images
         $baseUrl = rtrim(config('app.url'), '/');
-        return $baseUrl . '/storage/' . ltrim($path, '/');
+        return $baseUrl . '/images/' . ltrim($path, '/');
     }
 
     /**
@@ -30,8 +30,8 @@ trait HasImageUrl
      */
     public function storeImagePath(string $fullPath): string
     {
-        // Extract relative path from full path
-        $relativePath = str_replace(storage_path('app/public/'), '', $fullPath);
+        // Extract relative path from public path
+        $relativePath = str_replace(public_path('images/'), '', $fullPath);
         return ltrim($relativePath, '/');
     }
 }

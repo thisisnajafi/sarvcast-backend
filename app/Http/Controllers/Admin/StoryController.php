@@ -208,15 +208,19 @@ class StoryController extends Controller
 
         // Handle file uploads
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('stories', 'public');
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('images/stories'), $imageName);
             // Store only the relative path
-            $validated['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
+            $validated['image_url'] = 'stories/' . $imageName;
         }
         
         if ($request->hasFile('cover_image')) {
-            $coverImagePath = $request->file('cover_image')->store('stories', 'public');
+            $coverImage = $request->file('cover_image');
+            $coverImageName = time() . '_cover_' . $coverImage->getClientOriginalName();
+            $coverImage->move(public_path('images/stories'), $coverImageName);
             // Store only the relative path
-            $validated['cover_image_url'] = str_replace(storage_path('app/public/'), '', $coverImagePath);
+            $validated['cover_image_url'] = 'stories/' . $coverImageName;
         }
 
         $story = Story::create($validated);
@@ -284,15 +288,29 @@ class StoryController extends Controller
 
         // Handle file uploads
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('stories', 'public');
+            // Delete old image if exists
+            if ($story->attributes['image_url'] && file_exists(public_path('images/' . $story->attributes['image_url']))) {
+                unlink(public_path('images/' . $story->attributes['image_url']));
+            }
+            
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('images/stories'), $imageName);
             // Store only the relative path
-            $validated['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
+            $validated['image_url'] = 'stories/' . $imageName;
         }
         
         if ($request->hasFile('cover_image')) {
-            $coverImagePath = $request->file('cover_image')->store('stories', 'public');
+            // Delete old cover image if exists
+            if ($story->attributes['cover_image_url'] && file_exists(public_path('images/' . $story->attributes['cover_image_url']))) {
+                unlink(public_path('images/' . $story->attributes['cover_image_url']));
+            }
+            
+            $coverImage = $request->file('cover_image');
+            $coverImageName = time() . '_cover_' . $coverImage->getClientOriginalName();
+            $coverImage->move(public_path('images/stories'), $coverImageName);
             // Store only the relative path
-            $validated['cover_image_url'] = str_replace(storage_path('app/public/'), '', $coverImagePath);
+            $validated['cover_image_url'] = 'stories/' . $coverImageName;
         }
 
         $story->update($validated);

@@ -260,9 +260,10 @@ class EpisodeController extends Controller
             // Handle cover image upload and processing
             if ($request->hasFile('cover_image')) {
                 $coverImage = $request->file('cover_image');
-                $imagePath = $coverImage->store('episodes/covers', 'public');
+                $imageName = time() . '_' . $coverImage->getClientOriginalName();
+                $coverImage->move(public_path('images/episodes'), $imageName);
                 // Store only the relative path
-                $data['cover_image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
+                $data['cover_image_url'] = 'episodes/' . $imageName;
 
                 // Process image if requested
                 if ($request->boolean('resize_image')) {
@@ -449,15 +450,15 @@ class EpisodeController extends Controller
         // Handle cover image upload
         if ($request->hasFile('cover_image')) {
             // Delete old cover image
-            if ($episode->cover_image_url) {
-                $oldPath = str_replace('/storage/', '', $episode->cover_image_url);
-                Storage::disk('public')->delete($oldPath);
+            if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
+                unlink(public_path('images/' . $episode->cover_image_url));
             }
 
             $coverImage = $request->file('cover_image');
-            $imagePath = $coverImage->store('episodes/covers', 'public');
+            $imageName = time() . '_' . $coverImage->getClientOriginalName();
+            $coverImage->move(public_path('images/episodes'), $imageName);
             // Store only the relative path
-            $data['cover_image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
+            $data['cover_image_url'] = 'episodes/' . $imageName;
         }
 
         $episode->update($data);

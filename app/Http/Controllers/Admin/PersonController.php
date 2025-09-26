@@ -97,9 +97,9 @@ class PersonController extends Controller
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
-            $imagePath = $image->storeAs('people', $imageName, 'public');
+            $image->move(public_path('images/people'), $imageName);
             // Store only the relative path
-            $personData['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
+            $personData['image_url'] = 'people/' . $imageName;
         }
 
         Person::create($personData);
@@ -162,16 +162,15 @@ class PersonController extends Controller
         // Handle image upload
         if ($request->hasFile('image')) {
             // Delete old image if exists
-            if ($person->image_url) {
-                $oldImagePath = str_replace('/storage/', '', $person->image_url);
-                Storage::disk('public')->delete($oldImagePath);
+            if ($person->image_url && file_exists(public_path('images/' . $person->image_url))) {
+                unlink(public_path('images/' . $person->image_url));
             }
 
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
-            $imagePath = $image->storeAs('people', $imageName, 'public');
+            $image->move(public_path('images/people'), $imageName);
             // Store only the relative path
-            $personData['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
+            $personData['image_url'] = 'people/' . $imageName;
         }
 
         $person->update($personData);

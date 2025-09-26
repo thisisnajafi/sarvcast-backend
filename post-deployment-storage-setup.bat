@@ -7,14 +7,19 @@ echo 🚀 Starting SarvCast post-deployment storage setup...
 REM Navigate to the project directory
 cd /d "E:\1 - laravel\7 - SarvCast\sarvcast"
 
-REM Create storage symlink
-echo 🔗 Creating storage symlink...
-php artisan storage:link --force
+REM Create public images directories
+echo 📁 Creating public images directories...
+if not exist "public\images\categories" mkdir "public\images\categories"
+if not exist "public\images\stories" mkdir "public\images\stories"
+if not exist "public\images\episodes" mkdir "public\images\episodes"
+if not exist "public\images\people" mkdir "public\images\people"
+if not exist "public\images\users" mkdir "public\images\users"
+if not exist "public\images\playlists" mkdir "public\images\playlists"
+if not exist "public\images\timeline" mkdir "public\images\timeline"
 
 REM Set proper permissions (Windows)
-echo 🔐 Setting storage permissions...
-icacls storage\app\public /grant Everyone:F /T
-icacls public\storage /grant Everyone:F /T
+echo 🔐 Setting public images permissions...
+icacls public\images /grant Everyone:F /T
 
 REM Clear caches
 echo 🧹 Clearing caches...
@@ -23,35 +28,26 @@ php artisan route:clear
 php artisan view:clear
 php artisan cache:clear
 
-REM Test storage access
-echo 🧪 Testing storage access...
-if exist "public\storage" (
-    echo ✅ Storage symlink exists
+REM Test public images access
+echo 🧪 Testing public images access...
+if exist "public\images" (
+    echo ✅ Public images directory exists
 ) else (
-    echo ❌ Storage symlink missing
-    pause
-    exit /b 1
-)
-
-if exist "storage\app\public" (
-    echo ✅ Storage directory exists
-) else (
-    echo ❌ Storage directory missing
+    echo ❌ Public images directory missing
     pause
     exit /b 1
 )
 
 REM Create test file
 echo 📝 Creating test file...
-echo test > storage\app\public\test.txt
+echo test > public\images\test.txt
 
 REM Check if test file is accessible
-if exist "public\storage\test.txt" (
-    echo ✅ Storage access working
-    del storage\app\public\test.txt
-    del public\storage\test.txt
+if exist "public\images\test.txt" (
+    echo ✅ Public images access working
+    del public\images\test.txt
 ) else (
-    echo ❌ Storage access not working
+    echo ❌ Public images access not working
     pause
     exit /b 1
 )
@@ -59,14 +55,14 @@ if exist "public\storage\test.txt" (
 echo 🎉 SarvCast storage setup completed successfully!
 echo.
 echo 📋 What was done:
-echo   ✅ Storage symlink created
+echo   ✅ Public images directories created
 echo   ✅ Permissions set correctly
 echo   ✅ Caches cleared
-echo   ✅ Storage access verified
+echo   ✅ Public images access verified
 echo.
 echo 🔧 Next steps:
-echo   1. Configure your web server (Apache/Nginx) to serve /storage/ directly
-echo   2. Test image uploads through the admin panel
-echo   3. Verify images are accessible via direct URLs
+echo   1. Test image uploads through the admin panel
+echo   2. Verify images are accessible via direct URLs
+echo   3. Check that images display correctly in the application
 echo.
 pause
