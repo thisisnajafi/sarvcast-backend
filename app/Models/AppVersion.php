@@ -3,242 +3,259 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class AppVersion extends Model
 {
-    /**
-     * The attributes that are mass assignable.
-     */
+    use HasFactory;
+
     protected $fillable = [
+        'platform',
         'version',
         'build_number',
-        'platform',
         'update_type',
-        'title',
-        'description',
-        'changelog',
-        'update_notes',
         'download_url',
-        'minimum_os_version',
-        'compatibility',
+        'release_notes',
+        'update_message',
         'is_active',
         'is_latest',
+        'min_supported_version_code',
+        'target_version_code',
+        'compatibility_requirements',
         'release_date',
-        'force_update_date',
-        'priority',
-        'metadata',
+        'effective_date',
+        'expiry_date',
+        'created_by',
     ];
 
-    /**
-     * The attributes that should be cast.
-     */
     protected $casts = [
-        'compatibility' => 'array',
-        'metadata' => 'array',
         'is_active' => 'boolean',
         'is_latest' => 'boolean',
+        'compatibility_requirements' => 'array',
         'release_date' => 'datetime',
-        'force_update_date' => 'datetime',
-        'priority' => 'integer',
+        'effective_date' => 'datetime',
+        'expiry_date' => 'datetime',
     ];
 
     /**
-     * Scope a query to only include active versions.
+     * Get the admin who created this version
      */
-    public function scopeActive(Builder $query): Builder
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Scope for active versions
+     */
+    public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
     /**
-     * Scope a query to only include latest versions.
+     * Scope for latest versions
      */
-    public function scopeLatest(Builder $query): Builder
+    public function scopeLatest($query)
     {
         return $query->where('is_latest', true);
     }
 
     /**
-     * Scope a query to only include versions for a specific platform.
+     * Scope for platform
      */
-    public function scopeForPlatform(Builder $query, string $platform): Builder
+    public function scopeForPlatform($query, $platform)
     {
-        return $query->where(function ($q) use ($platform) {
+        return $query->where(function($q) use ($platform) {
             $q->where('platform', $platform)
-              ->orWhere('platform', 'all');
+              ->orWhere('platform', 'both');
         });
     }
 
     /**
-     * Scope a query to only include forced updates.
+     * Scope for force updates
      */
-    public function scopeForced(Builder $query): Builder
+    public function scopeForceUpdate($query)
     {
-        return $query->where('update_type', 'forced');
+        return $query->where('update_type', 'force');
     }
 
     /**
-     * Scope a query to only include optional updates.
+     * Scope for optional updates
      */
-    public function scopeOptional(Builder $query): Builder
+    public function scopeOptionalUpdate($query)
     {
         return $query->where('update_type', 'optional');
     }
 
     /**
-     * Scope a query to only include maintenance updates.
+     * Scope for currently effective versions
      */
-    public function scopeMaintenance(Builder $query): Builder
+    public function scopeCurrentlyEffective($query)
     {
-        return $query->where('update_type', 'maintenance');
+        $now = now();
+        return $query->where(function($q) use ($now) {
+            $q->whereNull('effective_date')
+              ->orWhere('effective_date', '<=', $now);
+        })->where(function($q) use ($now) {
+            $q->whereNull('expiry_date')
+              ->orWhere('expiry_date', '>=', $now);
+        });
     }
 
     /**
-     * Get the version comparison result with another version.
+     * Get the latest version for a platform
      */
-    public function compareVersion(string $version): int
+    public static function getLatestForPlatform($platform)
     {
-        return version_compare($this->version, $version);
+        return static::active()
+            ->latest()
+            ->forPlatform($platform)
+            ->currentlyEffective()
+            ->orderBy('created_at', 'desc')
+            ->first();
     }
 
     /**
-     * Check if this version is newer than the given version.
+     * Check if an update is required for a given version
      */
-    public function isNewerThan(string $version): bool
+    public static function checkUpdateRequired($platform, $currentVersion, $currentBuildNumber = null)
     {
-        return $this->compareVersion($version) > 0;
-    }
-
-    /**
-     * Check if this version is older than the given version.
-     */
-    public function isOlderThan(string $version): bool
-    {
-        return $this->compareVersion($version) < 0;
-    }
-
-    /**
-     * Check if this version is the same as the given version.
-     */
-    public function isSameAs(string $version): bool
-    {
-        return $this->compareVersion($version) === 0;
-    }
-
-    /**
-     * Check if this update should be forced for the given version.
-     */
-    public function shouldForceUpdate(string $currentVersion): bool
-    {
-        if ($this->update_type !== 'forced') {
-            return false;
+        $latestVersion = static::getLatestForPlatform($platform);
+        
+        if (!$latestVersion) {
+            return [
+                'update_required' => false,
+                'force_update' => false,
+                'latest_version' => null,
+            ];
         }
 
-        // If force_update_date is set, check if it's time to force the update
-        if ($this->force_update_date && $this->force_update_date->isFuture()) {
-            return false;
+        // Compare versions
+        $versionComparison = version_compare($currentVersion, $latestVersion->version);
+        
+        // If current version is older
+        if ($versionComparison < 0) {
+            return [
+                'update_required' => true,
+                'force_update' => $latestVersion->update_type === 'force',
+                'latest_version' => $latestVersion,
+            ];
         }
 
-        // Force update if current version is older than this version
-        return $this->isNewerThan($currentVersion);
+        // If versions are equal, check build number if provided
+        if ($versionComparison === 0 && $currentBuildNumber && $latestVersion->build_number) {
+            if ((int)$currentBuildNumber < (int)$latestVersion->build_number) {
+                return [
+                    'update_required' => true,
+                    'force_update' => $latestVersion->update_type === 'force',
+                    'latest_version' => $latestVersion,
+                ];
+            }
+        }
+
+        return [
+            'update_required' => false,
+            'force_update' => false,
+            'latest_version' => $latestVersion,
+        ];
     }
 
     /**
-     * Get the update type label.
+     * Get version comparison result
      */
-    public function getUpdateTypeLabelAttribute(): string
+    public function compareWith($version, $buildNumber = null)
     {
-        return match ($this->update_type) {
-            'forced' => 'اجباری',
-            'optional' => 'اختیاری',
-            'maintenance' => 'تعمیرات',
-            default => 'نامشخص',
-        };
+        $versionComparison = version_compare($this->version, $version);
+        
+        if ($versionComparison !== 0) {
+            return $versionComparison;
+        }
+
+        // If versions are equal, compare build numbers
+        if ($buildNumber && $this->build_number) {
+            return (int)$this->build_number <=> (int)$buildNumber;
+        }
+
+        return 0;
     }
 
     /**
-     * Get the platform label.
+     * Check if this version is compatible with current app version
      */
-    public function getPlatformLabelAttribute(): string
+    public function isCompatibleWith($currentVersion, $currentBuildNumber = null)
     {
-        return match ($this->platform) {
-            'android' => 'اندروید',
+        if ($this->min_supported_version_code && $currentBuildNumber) {
+            return (int)$currentBuildNumber >= $this->min_supported_version_code;
+        }
+
+        return true;
+    }
+
+    /**
+     * Get formatted version string
+     */
+    public function getFormattedVersionAttribute()
+    {
+        $version = $this->version;
+        if ($this->build_number) {
+            $version .= " ({$this->build_number})";
+        }
+        return $version;
+    }
+
+    /**
+     * Get platform display name
+     */
+    public function getPlatformDisplayNameAttribute()
+    {
+        $platforms = [
+            'android' => 'Android',
             'ios' => 'iOS',
-            'web' => 'وب',
-            'all' => 'همه پلتفرم‌ها',
-            default => 'نامشخص',
-        };
+            'both' => 'Both Platforms',
+        ];
+
+        return $platforms[$this->platform] ?? $this->platform;
     }
 
     /**
-     * Get formatted release date.
+     * Get update type display name
      */
-    public function getFormattedReleaseDateAttribute(): string
+    public function getUpdateTypeDisplayNameAttribute()
     {
-        return $this->release_date ? $this->release_date->format('Y/m/d H:i') : 'نامشخص';
+        return $this->update_type === 'force' ? 'Force Update' : 'Optional Update';
     }
 
     /**
-     * Get formatted force update date.
+     * Check if this version is currently effective
      */
-    public function getFormattedForceUpdateDateAttribute(): string
+    public function isCurrentlyEffective()
     {
-        return $this->force_update_date ? $this->force_update_date->format('Y/m/d H:i') : 'نامشخص';
+        $now = now();
+        
+        $effective = !$this->effective_date || $this->effective_date <= $now;
+        $notExpired = !$this->expiry_date || $this->expiry_date >= $now;
+        
+        return $effective && $notExpired;
     }
 
     /**
-     * Get the download URL with fallback.
+     * Get status display name
      */
-    public function getDownloadUrlAttribute($value): string
-    {
-        if ($value) {
-            return $value;
-        }
-
-        // Fallback URLs based on platform
-        return match ($this->platform) {
-            'android' => 'https://play.google.com/store/apps/details?id=com.sarvcast.app',
-            'ios' => 'https://apps.apple.com/app/sarvcast/id123456789',
-            'web' => url('/'),
-            default => url('/'),
-        };
-    }
-
-    /**
-     * Get the status badge class.
-     */
-    public function getStatusBadgeClassAttribute(): string
+    public function getStatusDisplayNameAttribute()
     {
         if (!$this->is_active) {
-            return 'bg-gray-100 text-gray-800';
+            return 'Inactive';
+        }
+
+        if (!$this->isCurrentlyEffective()) {
+            return 'Not Effective';
         }
 
         if ($this->is_latest) {
-            return 'bg-green-100 text-green-800';
+            return 'Latest';
         }
 
-        return match ($this->update_type) {
-            'forced' => 'bg-red-100 text-red-800',
-            'optional' => 'bg-blue-100 text-blue-800',
-            'maintenance' => 'bg-yellow-100 text-yellow-800',
-            default => 'bg-gray-100 text-gray-800',
-        };
-    }
-
-    /**
-     * Get the status label.
-     */
-    public function getStatusLabelAttribute(): string
-    {
-        if (!$this->is_active) {
-            return 'غیرفعال';
-        }
-
-        if ($this->is_latest) {
-            return 'آخرین نسخه';
-        }
-
-        return $this->update_type_label;
+        return 'Active';
     }
 }

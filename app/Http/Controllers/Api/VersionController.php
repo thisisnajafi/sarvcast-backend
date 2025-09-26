@@ -3,18 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\VersionCheckService;
+use App\Models\AppVersion;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
 class VersionController extends Controller
 {
-    protected VersionCheckService $versionCheckService;
-
-    public function __construct(VersionCheckService $versionCheckService)
+    public function __construct()
     {
-        $this->versionCheckService = $versionCheckService;
+        // Constructor for dependency injection if needed
     }
 
     /**
@@ -23,12 +21,9 @@ class VersionController extends Controller
     public function checkForUpdates(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'platform' => 'required|string|in:android,ios,web',
+            'platform' => 'required|string|in:android,ios',
             'current_version' => 'required|string|max:20',
-            'system_info' => 'sometimes|array',
-            'system_info.os_version' => 'sometimes|string',
-            'system_info.device_model' => 'sometimes|string',
-            'system_info.app_build' => 'sometimes|string',
+            'current_build_number' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
@@ -41,30 +36,37 @@ class VersionController extends Controller
 
         $platform = $request->input('platform');
         $currentVersion = $request->input('current_version');
-        $systemInfo = $request->input('system_info', []);
+        $currentBuildNumber = $request->input('current_build_number');
 
-        $result = $this->versionCheckService->checkForUpdates($platform, $currentVersion);
+        $updateCheck = AppVersion::checkUpdateRequired($platform, $currentVersion, $currentBuildNumber);
 
-        // Add compatibility check if system info is provided
-        if (!empty($systemInfo) && $result['has_update']) {
-            $updateInfo = $result['update_info'] ?? null;
-            if ($updateInfo) {
-                $isCompatible = $this->versionCheckService->isCompatible(
-                    $platform,
-                    $updateInfo['version'],
-                    $systemInfo
-                );
-                $result['is_compatible'] = $isCompatible;
-                
-                if (!$isCompatible) {
-                    $result['message'] = 'نسخه جدید با سیستم شما سازگار نیست';
-                }
-            }
+        if ($updateCheck['update_required']) {
+            $latestVersion = $updateCheck['latest_version'];
+            
+            return response()->json([
+                'success' => true,
+                'update_required' => true,
+                'force_update' => $updateCheck['force_update'],
+                'data' => [
+                    'latest_version' => $latestVersion->version,
+                    'latest_build_number' => $latestVersion->build_number,
+                    'download_url' => $latestVersion->download_url,
+                    'update_message' => $latestVersion->update_message,
+                    'release_notes' => $latestVersion->release_notes,
+                    'update_type' => $latestVersion->update_type,
+                    'platform' => $latestVersion->platform,
+                ]
+            ]);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $result,
+            'update_required' => false,
+            'force_update' => false,
+            'data' => [
+                'latest_version' => $updateCheck['latest_version']?->version,
+                'latest_build_number' => $updateCheck['latest_version']?->build_number,
+            ]
         ]);
     }
 
@@ -106,7 +108,7 @@ class VersionController extends Controller
     public function getLatestVersion(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'platform' => 'required|string|in:android,ios,web',
+            'platform' => 'required|string|in:android,ios',
         ]);
 
         if ($validator->fails()) {
@@ -118,7 +120,7 @@ class VersionController extends Controller
         }
 
         $platform = $request->input('platform');
-        $latestVersion = $this->versionCheckService->getLatestVersion($platform);
+        $latestVersion = AppVersion::getLatestForPlatform($platform);
 
         if (!$latestVersion) {
             return response()->json([
@@ -127,11 +129,19 @@ class VersionController extends Controller
             ], 404);
         }
 
-        $versionInfo = $this->versionCheckService->formatUpdateInfo($latestVersion);
-
         return response()->json([
             'success' => true,
-            'data' => $versionInfo,
+            'data' => [
+                'version' => $latestVersion->version,
+                'build_number' => $latestVersion->build_number,
+                'platform' => $latestVersion->platform,
+                'download_url' => $latestVersion->download_url,
+                'update_message' => $latestVersion->update_message,
+                'release_notes' => $latestVersion->release_notes,
+                'update_type' => $latestVersion->update_type,
+                'release_date' => $latestVersion->release_date?->toISOString(),
+                'effective_date' => $latestVersion->effective_date?->toISOString(),
+            ]
         ]);
     }
 
@@ -140,7 +150,17 @@ class VersionController extends Controller
      */
     public function getStatistics(): JsonResponse
     {
-        $statistics = $this->versionCheckService->getVersionStatistics();
+        $statistics = [
+            'total_versions' => AppVersion::count(),
+            'active_versions' => AppVersion::active()->count(),
+            'latest_versions' => AppVersion::latest()->count(),
+            'force_updates' => AppVersion::forceUpdate()->count(),
+            'optional_updates' => AppVersion::optionalUpdate()->count(),
+            'platforms' => [
+                'android' => AppVersion::where('platform', 'android')->orWhere('platform', 'both')->count(),
+                'ios' => AppVersion::where('platform', 'ios')->orWhere('platform', 'both')->count(),
+            ],
+        ];
 
         return response()->json([
             'success' => true,

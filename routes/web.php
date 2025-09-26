@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\UserAnalyticsController;
 use App\Http\Controllers\Admin\ContentAnalyticsController;
 use App\Http\Controllers\Admin\RevenueAnalyticsController;
 use App\Http\Controllers\Admin\SystemAnalyticsController;
+use App\Http\Controllers\Admin\AppVersionController;
 use App\Http\Controllers\PaymentCallbackController;
 use App\Http\Controllers\ErrorController;
 
@@ -145,6 +146,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
     Route::post('users/{user}/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('users.notifications.mark-all-read');
     Route::post('notifications/send-test', [NotificationController::class, 'sendTest'])->name('notifications.send-test');
+    
+    // App Versions
+    Route::resource('app-versions', AppVersionController::class);
+    Route::post('app-versions/{appVersion}/toggle-active', [AppVersionController::class, 'toggleActive'])->name('app-versions.toggle-active');
+    Route::post('app-versions/{appVersion}/set-latest', [AppVersionController::class, 'setLatest'])->name('app-versions.set-latest');
     Route::get('notifications/statistics', [NotificationController::class, 'statistics'])->name('notifications.statistics');
     
     // Analytics

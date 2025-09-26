@@ -105,11 +105,10 @@ Route::prefix('v1')->middleware('security')->group(function () {
     // Version management routes
     Route::prefix('version')->group(function () {
         Route::post('check', [VersionController::class, 'checkForUpdates']);
-        Route::post('updates', [VersionController::class, 'getAllUpdates']);
         Route::get('latest', [VersionController::class, 'getLatestVersion']);
-        Route::post('compatibility', [VersionController::class, 'checkCompatibility']);
-        Route::post('usage', [VersionController::class, 'reportUsage']);
+        Route::get('statistics', [VersionController::class, 'getStatistics']);
         Route::get('config', [VersionController::class, 'getAppConfig']);
+        Route::post('report-usage', [VersionController::class, 'reportUsage']);
     });
     
     // User search routes
