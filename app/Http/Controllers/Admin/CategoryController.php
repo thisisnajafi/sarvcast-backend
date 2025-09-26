@@ -15,7 +15,13 @@ class CategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Category::query();
+        $query = Category::query()
+            ->withCount([
+                'stories as published_stories_count' => function ($q) {
+                    $q->where('status', 'published');
+                },
+                'stories as total_stories_count'
+            ]);
 
         // Search functionality
         if ($request->has('search') && $request->search) {
@@ -35,7 +41,7 @@ class CategoryController extends Controller
         $sortBy = $request->get('sort_by', 'sort_order');
         $sortOrder = $request->get('sort_order', 'asc');
         
-        $allowedSortFields = ['name', 'story_count', 'total_episodes', 'average_rating', 'sort_order', 'created_at'];
+        $allowedSortFields = ['name', 'story_count', 'published_stories_count', 'total_episodes', 'average_rating', 'sort_order', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
         }
@@ -73,10 +79,11 @@ class CategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100|unique:categories',
+            'slug' => 'nullable|string|max:100|unique:categories',
             'description' => 'nullable|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
             'color' => 'nullable|string|max:7',
-            'is_active' => 'boolean',
+            'is_active' => 'required|boolean',
             'sort_order' => 'nullable|integer|min:0',
         ]);
 
@@ -131,10 +138,11 @@ class CategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100|unique:categories,name,' . $category->id,
+            'slug' => 'nullable|string|max:100|unique:categories,slug,' . $category->id,
             'description' => 'nullable|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
             'color' => 'nullable|string|max:7',
-            'is_active' => 'boolean',
+            'is_active' => 'required|boolean',
             'sort_order' => 'nullable|integer|min:0',
         ]);
 

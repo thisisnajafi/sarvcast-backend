@@ -83,54 +83,29 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Status -->
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت</label>
-                    <select name="status" id="status" 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('status') border-red-500 @enderror" required>
-                        <option value="active" {{ old('status', 'active') == 'active' ? 'selected' : '' }}>فعال</option>
-                        <option value="inactive" {{ old('status') == 'inactive' ? 'selected' : '' }}>غیرفعال</option>
+                    <label for="is_active" class="block text-sm font-medium text-gray-700 mb-2">وضعیت</label>
+                    <select name="is_active" id="is_active" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('is_active') border-red-500 @enderror" required>
+                        <option value="1" {{ old('is_active', 1) == 1 ? 'selected' : '' }}>فعال</option>
+                        <option value="0" {{ old('is_active') == 0 ? 'selected' : '' }}>غیرفعال</option>
                     </select>
-                    @error('status')
+                    @error('is_active')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
 
-                <!-- Order -->
+                <!-- Sort Order -->
                 <div>
-                    <label for="order" class="block text-sm font-medium text-gray-700 mb-2">ترتیب نمایش</label>
-                    <input type="number" name="order" id="order" value="{{ old('order', 0) }}" min="0" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('order') border-red-500 @enderror"
+                    <label for="sort_order" class="block text-sm font-medium text-gray-700 mb-2">ترتیب نمایش</label>
+                    <input type="number" name="sort_order" id="sort_order" value="{{ old('sort_order', 0) }}" min="0" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('sort_order') border-red-500 @enderror"
                            placeholder="ترتیب نمایش دسته‌بندی">
-                    @error('order')
+                    @error('sort_order')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
 
-            <!-- Meta Information -->
-            <div class="mb-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">اطلاعات SEO</h3>
-                <div class="space-y-4">
-                    <div>
-                        <label for="meta_title" class="block text-sm font-medium text-gray-700 mb-2">عنوان متا</label>
-                        <input type="text" name="meta_title" id="meta_title" value="{{ old('meta_title') }}" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('meta_title') border-red-500 @enderror"
-                               placeholder="عنوان متا برای SEO">
-                        @error('meta_title')
-                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    
-                    <div>
-                        <label for="meta_description" class="block text-sm font-medium text-gray-700 mb-2">توضیحات متا</label>
-                        <textarea name="meta_description" id="meta_description" rows="3" 
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('meta_description') border-red-500 @enderror"
-                                  placeholder="توضیحات متا برای SEO">{{ old('meta_description') }}</textarea>
-                        @error('meta_description')
-                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                        @enderror
-                    </div>
-                </div>
-            </div>
 
             <!-- Submit Button -->
             <div class="flex justify-end space-x-4 space-x-reverse">

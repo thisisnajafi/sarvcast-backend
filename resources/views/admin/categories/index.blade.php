@@ -80,7 +80,12 @@
                                 <div class="text-sm text-gray-900 max-w-xs truncate">{{ $category->description }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ $category->story_count ?? 0 }}
+                                <div class="flex flex-col">
+                                    <span class="font-medium">{{ $category->published_stories_count ?? 0 }}</span>
+                                    @if(($category->story_count ?? 0) != ($category->published_stories_count ?? 0))
+                                        <span class="text-xs text-gray-400">(stored: {{ $category->story_count ?? 0 }})</span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
