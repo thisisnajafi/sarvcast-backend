@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Traits\HasImageUrl;
 
 class Person extends Model
 {
+    use HasImageUrl;
     protected $fillable = [
         'name',
         'bio',
@@ -140,5 +142,13 @@ class Person extends Model
     public function getJalaliLastActiveAtRelativeAttribute()
     {
         return $this->last_active_at ? \App\Helpers\JalaliHelper::getRelativeTime($this->last_active_at) : null;
+    }
+
+    /**
+     * Get the image URL for the person
+     */
+    public function getImageUrlAttribute()
+    {
+        return $this->getImageUrlFromPath($this->attributes['image_url'] ?? null);
     }
 }

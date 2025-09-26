@@ -98,7 +98,8 @@ class PersonController extends Controller
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $imagePath = $image->storeAs('people', $imageName, 'public');
-            $personData['image_url'] = Storage::url($imagePath);
+            // Store only the relative path
+            $personData['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
         }
 
         Person::create($personData);
@@ -169,7 +170,8 @@ class PersonController extends Controller
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $imagePath = $image->storeAs('people', $imageName, 'public');
-            $personData['image_url'] = Storage::url($imagePath);
+            // Store only the relative path
+            $personData['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
         }
 
         $person->update($personData);

@@ -228,7 +228,8 @@ class EpisodeController extends Controller
             if ($request->hasFile('audio_file')) {
                 $audioFile = $request->file('audio_file');
                 $audioPath = $audioFile->store('episodes/audio', 'public');
-                $data['audio_url'] = Storage::url($audioPath);
+                // Store only the relative path
+                $data['audio_url'] = str_replace(storage_path('app/public/'), '', $audioPath);
 
                 // Process audio if requested
                 if ($request->boolean('process_audio')) {
@@ -260,7 +261,8 @@ class EpisodeController extends Controller
             if ($request->hasFile('cover_image')) {
                 $coverImage = $request->file('cover_image');
                 $imagePath = $coverImage->store('episodes/covers', 'public');
-                $data['cover_image_url'] = Storage::url($imagePath);
+                // Store only the relative path
+                $data['cover_image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
 
                 // Process image if requested
                 if ($request->boolean('resize_image')) {
@@ -440,7 +442,8 @@ class EpisodeController extends Controller
 
             $audioFile = $request->file('audio_file');
             $audioPath = $audioFile->store('episodes/audio', 'public');
-            $data['audio_url'] = Storage::url($audioPath);
+            // Store only the relative path
+            $data['audio_url'] = str_replace(storage_path('app/public/'), '', $audioPath);
         }
 
         // Handle cover image upload
@@ -453,7 +456,8 @@ class EpisodeController extends Controller
 
             $coverImage = $request->file('cover_image');
             $imagePath = $coverImage->store('episodes/covers', 'public');
-            $data['cover_image_url'] = Storage::url($imagePath);
+            // Store only the relative path
+            $data['cover_image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
         }
 
         $episode->update($data);

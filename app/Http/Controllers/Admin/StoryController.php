@@ -209,12 +209,14 @@ class StoryController extends Controller
         // Handle file uploads
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('stories', 'public');
-            $validated['image_url'] = asset('storage/' . $imagePath);
+            // Store only the relative path
+            $validated['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
         }
         
         if ($request->hasFile('cover_image')) {
             $coverImagePath = $request->file('cover_image')->store('stories', 'public');
-            $validated['cover_image_url'] = asset('storage/' . $coverImagePath);
+            // Store only the relative path
+            $validated['cover_image_url'] = str_replace(storage_path('app/public/'), '', $coverImagePath);
         }
 
         $story = Story::create($validated);
@@ -283,12 +285,14 @@ class StoryController extends Controller
         // Handle file uploads
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('stories', 'public');
-            $validated['image_url'] = asset('storage/' . $imagePath);
+            // Store only the relative path
+            $validated['image_url'] = str_replace(storage_path('app/public/'), '', $imagePath);
         }
         
         if ($request->hasFile('cover_image')) {
             $coverImagePath = $request->file('cover_image')->store('stories', 'public');
-            $validated['cover_image_url'] = asset('storage/' . $coverImagePath);
+            // Store only the relative path
+            $validated['cover_image_url'] = str_replace(storage_path('app/public/'), '', $coverImagePath);
         }
 
         $story->update($validated);

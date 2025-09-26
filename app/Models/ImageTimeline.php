@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\HasImageUrl;
 
 class ImageTimeline extends Model
 {
+    use HasImageUrl;
     protected $fillable = [
         'episode_id',
         'voice_actor_id',
@@ -171,7 +173,7 @@ class ImageTimeline extends Model
             'id' => $this->id,
             'start_time' => $this->start_time,
             'end_time' => $this->end_time,
-            'image_url' => $this->image_url,
+            'image_url' => $this->getImageUrlFromPath($this->image_url),
             'image_order' => $this->image_order,
             'scene_description' => $this->scene_description,
             'transition_type' => $this->transition_type,

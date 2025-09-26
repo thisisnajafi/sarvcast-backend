@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Storage;
+use App\Traits\HasImageUrl;
 
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, HasImageUrl;
 
     protected $fillable = [
         'name',
@@ -124,9 +125,6 @@ class Category extends Model
      */
     public function getImageUrlAttribute()
     {
-        if ($this->icon_path) {
-            return Storage::disk('public')->url($this->icon_path);
-        }
-        return null;
+        return $this->getImageUrlFromPath($this->icon_path);
     }
 }

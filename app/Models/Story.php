@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\HasImageUrl;
 
 // Missing model imports
 use App\Models\Category;
@@ -17,7 +18,7 @@ use App\Models\User;
 
 class Story extends Model
 {
-    use HasFactory;
+    use HasFactory, HasImageUrl;
 
     /**
      * The attributes that are mass assignable.
@@ -639,5 +640,21 @@ class Story extends Model
             'total_episodes' => $this->total_episodes_count,
             'free_episodes' => $this->free_episodes_count,
         ]);
+    }
+
+    /**
+     * Get the image URL for the story
+     */
+    public function getImageUrlAttribute()
+    {
+        return $this->getImageUrlFromPath($this->attributes['image_url'] ?? null);
+    }
+
+    /**
+     * Get the cover image URL for the story
+     */
+    public function getCoverImageUrlAttribute()
+    {
+        return $this->getImageUrlFromPath($this->attributes['cover_image_url'] ?? null);
     }
 }

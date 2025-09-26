@@ -10,10 +10,11 @@ use App\Events\NewUserRegistrationEvent;
 use App\UserAnalytics;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Models\TeacherAccount;
+use App\Traits\HasImageUrl;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens, UserAnalytics;
+    use HasFactory, Notifiable, HasApiTokens, UserAnalytics, HasImageUrl;
 
     /**
      * The attributes that are mass assignable.
@@ -495,5 +496,13 @@ class User extends Authenticatable
                 }
             }
         });
+    }
+
+    /**
+     * Get the profile image URL for the user
+     */
+    public function getProfileImageUrlAttribute()
+    {
+        return $this->getImageUrlFromPath($this->attributes['profile_image_url'] ?? null);
     }
 }

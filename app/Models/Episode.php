@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\HasImageUrl;
 
 class Episode extends Model
 {
-    use HasFactory;
+    use HasFactory, HasImageUrl;
 
     protected $fillable = [
         'story_id',
@@ -176,5 +177,19 @@ class Episode extends Model
     public function isPremium()
     {
         return $this->is_premium;
+    }
+
+    /**
+     * Get the image URLs for the episode
+     */
+    public function getImageUrlsAttribute()
+    {
+        $imageUrls = $this->attributes['image_urls'] ?? [];
+        if (is_array($imageUrls)) {
+            return array_map(function($url) {
+                return $this->getImageUrlFromPath($url);
+            }, $imageUrls);
+        }
+        return [];
     }
 }

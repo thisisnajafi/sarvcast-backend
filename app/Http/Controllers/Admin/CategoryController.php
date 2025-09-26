@@ -88,12 +88,13 @@ class CategoryController extends Controller
 
         $data = $request->except(['image']);
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imagePath = $image->store('categories', 'public');
-            $data['icon_path'] = $imagePath;
-        }
+           // Handle image upload
+           if ($request->hasFile('image')) {
+               $image = $request->file('image');
+               $imagePath = $image->store('categories', 'public');
+               // Store only the relative path
+               $data['icon_path'] = str_replace(storage_path('app/public/'), '', $imagePath);
+           }
 
         $category = Category::create($data);
 
@@ -143,17 +144,18 @@ class CategoryController extends Controller
 
         $data = $request->except(['image']);
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($category->icon_path && Storage::disk('public')->exists($category->icon_path)) {
-                Storage::disk('public')->delete($category->icon_path);
-            }
-            
-            $image = $request->file('image');
-            $imagePath = $image->store('categories', 'public');
-            $data['icon_path'] = $imagePath;
-        }
+           // Handle image upload
+           if ($request->hasFile('image')) {
+               // Delete old image if exists
+               if ($category->icon_path && Storage::disk('public')->exists($category->icon_path)) {
+                   Storage::disk('public')->delete($category->icon_path);
+               }
+               
+               $image = $request->file('image');
+               $imagePath = $image->store('categories', 'public');
+               // Store only the relative path
+               $data['icon_path'] = str_replace(storage_path('app/public/'), '', $imagePath);
+           }
 
         $category->update($data);
 
