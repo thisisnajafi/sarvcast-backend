@@ -72,6 +72,14 @@ Route::prefix('v1')->middleware('security')->group(function () {
     
     Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware('cache.api:1800'); // 30 minutes
     
+    // Story ratings routes
+    Route::get('stories/{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'index'])->middleware('cache.api:900'); // 15 minutes
+    Route::get('stories/{story}/ratings/statistics', [\App\Http\Controllers\Api\StoryRatingController::class, 'statistics'])->middleware('cache.api:900'); // 15 minutes
+    
+    // Episode play count routes
+    Route::post('episodes/{episode}/play', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'increment']);
+    Route::get('episodes/{episode}/play/statistics', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'statistics'])->middleware('cache.api:300'); // 5 minutes
+    
     // People routes
     Route::get('people', [PersonController::class, 'index'])->middleware('cache.api:900'); // 15 minutes
     Route::get('people/search', [PersonController::class, 'search'])->middleware('cache.api:300'); // 5 minutes
@@ -139,12 +147,21 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('{story}/favorite', [StoryController::class, 'addFavorite']);
         Route::delete('{story}/favorite', [StoryController::class, 'removeFavorite']);
         Route::post('{story}/rating', [StoryController::class, 'rate']);
+        
+        // Story ratings (authenticated)
+        Route::get('{story}/ratings/my', [\App\Http\Controllers\Api\StoryRatingController::class, 'show']);
+        Route::post('{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'store']);
+        Route::delete('{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'destroy']);
     });
 
     // Episode routes
     Route::prefix('episodes')->group(function () {
         Route::post('{episode}/play', [EpisodeController::class, 'play']);
         Route::post('{episode}/bookmark', [EpisodeController::class, 'bookmark']);
+        
+        // Episode play count (authenticated)
+        Route::get('{episode}/play/history', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'userHistory']);
+        Route::post('{episode}/play/completed', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'markCompleted']);
         Route::delete('{episode}/bookmark', [EpisodeController::class, 'removeBookmark']);
     });
 

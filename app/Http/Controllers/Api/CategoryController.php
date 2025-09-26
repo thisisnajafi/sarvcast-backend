@@ -9,11 +9,18 @@ use Illuminate\Http\Request;
 class CategoryController extends Controller
 {
     /**
-     * Get all active categories
+     * Get all active categories that have stories
      */
     public function index(Request $request)
     {
-        $query = Category::active()->ordered();
+        $query = Category::active()
+            ->ordered()
+            ->whereHas('stories', function($q) {
+                $q->where('status', 'published');
+            })
+            ->withCount(['stories' => function($q) {
+                $q->where('status', 'published');
+            }]);
 
         // Apply limit if specified
         $limit = $request->get('limit', 10);
@@ -50,8 +57,9 @@ class CategoryController extends Controller
                 'color' => $category->color,
                 'status' => $category->status,
                 'order' => $category->order,
-                'story_count' => $category->story_count,
+                'story_count' => $category->stories_count,
                 'icon_path' => $category->icon_path,
+                'image_url' => $category->image_url,
                 'created_at' => $category->created_at->toISOString(),
                 'updated_at' => $category->updated_at->toISOString()
             ];

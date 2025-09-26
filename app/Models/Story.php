@@ -13,6 +13,7 @@ use App\Models\Episode;
 use App\Models\StoryComment;
 use App\Models\Favorite;
 use App\Models\Rating;
+use App\Models\StoryRating;
 use App\Models\PlayHistory;
 use App\Models\User;
 
@@ -212,6 +213,14 @@ class Story extends Model
     public function ratings()
     {
         return $this->hasMany(Rating::class);
+    }
+
+    /**
+     * Get the story ratings for the story.
+     */
+    public function storyRatings()
+    {
+        return $this->hasMany(StoryRating::class);
     }
 
     /**

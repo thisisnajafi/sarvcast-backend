@@ -96,6 +96,7 @@ class CategoryService {
       "order": 1,
       "story_count": 15,
       "icon_path": "/icons/adventure-stories.svg",
+      "image_url": "https://example.com/category-images/adventure.jpg",
       "created_at": "2024-01-15T10:30:00Z",
       "updated_at": "2024-01-20T14:45:00Z"
     }
@@ -115,6 +116,7 @@ class Category {
   final int order;
   final int storyCount;
   final String iconPath;
+  final String? imageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -128,6 +130,7 @@ class Category {
     required this.order,
     required this.storyCount,
     required this.iconPath,
+    this.imageUrl,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -143,6 +146,7 @@ class Category {
       order: json['order'],
       storyCount: json['story_count'],
       iconPath: json['icon_path'],
+      imageUrl: json['image_url'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -674,11 +678,34 @@ class _HomePageState extends State<HomePage> {
               color: Color(int.parse(category.color.replaceFirst('#', '0xff'))),
               borderRadius: BorderRadius.circular(30),
             ),
-            child: Icon(
-              Icons.category,
-              color: Colors.white,
-              size: 30,
-            ),
+            child: category.imageUrl != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: CachedNetworkImage(
+                      imageUrl: category.imageUrl!,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Color(int.parse(category.color.replaceFirst('#', '0xff'))),
+                        child: Icon(
+                          Icons.category,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Icon(
+                        Icons.category,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    ),
+                  )
+                : Icon(
+                    Icons.category,
+                    color: Colors.white,
+                    size: 30,
+                  ),
           ),
           SizedBox(height: 8),
           Text(
