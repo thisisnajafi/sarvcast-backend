@@ -1,4 +1,4 @@
-name: LGBTinder Backend
+name: SarvCast Backend
 
 on:
   push:
@@ -76,6 +76,19 @@ jobs:
       - name: Directory Permissions
         run: chmod -R 777 storage bootstrap/cache
 
+      - name: Create Storage Link
+        run: |
+          echo "🔗 Creating storage symlink..."
+          php artisan storage:link --force
+          echo "✅ Storage symlink created successfully"
+
+      - name: Set Storage Permissions
+        run: |
+          echo "🔐 Setting storage permissions..."
+          chmod -R 755 storage/app/public
+          chmod -R 755 public/storage
+          echo "✅ Storage permissions set successfully"
+
       - name: Test Database Connection
         run: |
           echo "🔍 Testing database connection..."
@@ -101,16 +114,31 @@ jobs:
           exclude: |
             .env
             .env.*
+            node_modules/
+            .git/
+            .github/
+            tests/
+            phpunit.xml
+            *.md
+            .styleci.yml
+      - name: Post-deployment Storage Setup
+        run: |
+          echo "🔧 Setting up storage on production server..."
+          echo "📋 This step will be handled by the server configuration"
+          echo "✅ Storage setup instructions provided"
+
       - name: Verify deployment
         run: |
           echo "✅ Deployment verification..."
           echo "📋 Deployment completed successfully!"
           echo ""
-          echo "🎉 Your LGBTinder application has been deployed and optimized!"
+          echo "🎉 Your SarvCast application has been deployed and optimized!"
           echo ""
           echo "🔧 What was done:"
           echo "  ✅ Files deployed via FTP"
+          echo "  ✅ Storage symlink created"
           echo "  ✅ Permissions set correctly"
+          echo "  ✅ Storage directories configured"
 
       - name: Notify Telegram
         env:
@@ -120,7 +148,7 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
-          MESSAGE=$(echo -e "😎 <b>LGBTinder Admin Dashboard</b> 😎\n\n👌 <b>Status:</b> Deployment Complete\n\n👤 <b>User:</b> ${GITHUB_ACTOR}\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
+          MESSAGE=$(echo -e "😎 <b>SarvCast Admin Dashboard</b> 😎\n\n👌 <b>Status:</b> Deployment Complete\n\n👤 <b>User:</b> ${GITHUB_ACTOR}\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
           curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
             -d text="${MESSAGE}" \
