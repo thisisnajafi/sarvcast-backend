@@ -165,7 +165,7 @@ class EpisodeController extends Controller
      */
     public function create()
     {
-        $stories = Story::whereIn('status', ['published', 'approved'])->get();
+        $stories = Story::with('category')->orderBy('title', 'asc')->get();
         $narrators = Person::whereJsonContains('roles', 'narrator')->get();
 
         return view('admin.episodes.create', compact('stories', 'narrators'));
@@ -406,7 +406,7 @@ class EpisodeController extends Controller
      */
     public function edit(Episode $episode)
     {
-        $stories = Story::whereIn('status', ['published', 'approved'])->get();
+        $stories = Story::with('category')->orderBy('title', 'asc')->get();
         $narrators = Person::whereJsonContains('roles', 'narrator')->get();
 
         return view('admin.episodes.edit', compact('episode', 'stories', 'narrators'));

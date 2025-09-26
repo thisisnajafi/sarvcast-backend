@@ -49,6 +49,19 @@
                             <source id="audio-source" src="" type="audio/mpeg">
                             مرورگر شما از پخش کننده صوتی پشتیبانی نمی‌کند.
                         </audio>
+                        
+                        <!-- Playback Speed Controls -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">سرعت پخش</label>
+                            <div class="flex items-center space-x-4 space-x-reverse">
+                                <button type="button" id="speed-0.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(0.5)">0.5x</button>
+                                <button type="button" id="speed-1x" class="px-3 py-1 text-sm border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1)">1x</button>
+                                <button type="button" id="speed-1.25x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.25)">1.25x</button>
+                                <button type="button" id="speed-1.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.5)">1.5x</button>
+                                <button type="button" id="speed-2x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(2)">2x</button>
+                            </div>
+                        </div>
+                        
                         <div class="flex items-center justify-between text-sm text-gray-600">
                             <span id="current-time">00:00</span>
                             <span id="total-duration">00:00</span>
@@ -73,13 +86,17 @@
                         <option value="">انتخاب داستان</option>
                         @foreach($stories as $story)
                             <option value="{{ $story->id }}" {{ old('story_id') == $story->id ? 'selected' : '' }}>
-                                {{ $story->title }} - {{ $story->category->name }}
+                                {{ $story->title }} - {{ $story->category->name ?? 'بدون دسته' }} 
+                                @if($story->status)
+                                    ({{ ucfirst($story->status) }})
+                                @endif
                             </option>
                         @endforeach
                     </select>
                     @error('story_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <p class="mt-1 text-xs text-gray-500">تمام داستان‌ها (منتشر شده، تایید شده، پیش‌نویس، در انتظار، رد شده)</p>
                 </div>
 
                 <!-- Episode Title -->
@@ -280,6 +297,9 @@ function initializeAudioPlayer() {
     const totalDurationSpan = document.getElementById('total-duration');
 
     if (audioPlayer) {
+        // Set default playback speed to 1x
+        audioPlayer.playbackRate = 1;
+        
         audioPlayer.addEventListener('loadedmetadata', function() {
             const duration = audioPlayer.duration;
             totalDurationSpan.textContent = formatTime(duration);
@@ -296,6 +316,74 @@ function initializeAudioPlayer() {
             audioPlayer.currentTime = timeSlider.value;
         });
     }
+}
+
+// Set playback speed function
+function setPlaybackSpeed(speed) {
+    const audioPlayer = document.getElementById('audio-player');
+    if (audioPlayer) {
+        audioPlayer.playbackRate = speed;
+        
+        // Update button styles
+        const speedButtons = ['speed-0.5x', 'speed-1x', 'speed-1.25x', 'speed-1.5x', 'speed-2x'];
+        speedButtons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.classList.remove('bg-blue-500', 'text-white');
+                button.classList.add('hover:bg-gray-100');
+            }
+        });
+        
+        // Highlight selected speed button
+        const selectedButton = document.getElementById(`speed-${speed}x`);
+        if (selectedButton) {
+            selectedButton.classList.add('bg-blue-500', 'text-white');
+            selectedButton.classList.remove('hover:bg-gray-100');
+        }
+        
+        // Show notification
+        showNotification(`سرعت پخش به ${speed}x تغییر کرد`, 'info');
+    }
+}
+
+// Show notification function
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm max-w-sm transform transition-all duration-300 translate-x-full`;
+    
+    // Set background color based on type
+    switch(type) {
+        case 'success':
+            notification.classList.add('bg-green-500');
+            break;
+        case 'error':
+            notification.classList.add('bg-red-500');
+            break;
+        case 'warning':
+            notification.classList.add('bg-yellow-500');
+            break;
+        default:
+            notification.classList.add('bg-blue-500');
+    }
+    
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
 }
 
 function handleAudioUpload(input) {

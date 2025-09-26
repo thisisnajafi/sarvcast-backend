@@ -54,13 +54,17 @@
                     <option value="">انتخاب داستان</option>
                     @foreach($stories as $story)
                         <option value="{{ $story->id }}" {{ old('story_id', $episode->story_id) == $story->id ? 'selected' : '' }}>
-                            {{ $story->title }}
+                            {{ $story->title }} - {{ $story->category->name ?? 'بدون دسته' }}
+                            @if($story->status)
+                                ({{ ucfirst($story->status) }})
+                            @endif
                         </option>
                     @endforeach
                 </select>
                 @error('story_id')
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                 @enderror
+                <p class="mt-1 text-xs text-gray-500">تمام داستان‌ها (منتشر شده، تایید شده، پیش‌نویس، در انتظار، رد شده)</p>
             </div>
 
             <!-- Description -->

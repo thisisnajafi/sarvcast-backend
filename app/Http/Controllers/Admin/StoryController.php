@@ -194,7 +194,7 @@ class StoryController extends Controller
             'writer_id' => 'nullable|exists:people,id',
             'author_id' => 'nullable|exists:people,id',
             'narrator_id' => 'nullable|exists:people,id',
-            'duration' => 'required|integer|min:1',
+            'duration' => 'nullable|integer|min:0',
             'total_episodes' => 'nullable|integer|min:1',
             'free_episodes' => 'nullable|integer|min:0',
             'is_premium' => 'boolean',
@@ -208,6 +208,11 @@ class StoryController extends Controller
 
         // Set default language (all stories are in Persian)
         $validated['language'] = 'persian';
+        
+        // Ensure duration has a default value if not provided
+        if (!isset($validated['duration']) || empty($validated['duration'])) {
+            $validated['duration'] = 0;
+        }
 
         // Handle file uploads
         if ($request->hasFile('image')) {
@@ -277,7 +282,7 @@ class StoryController extends Controller
             'writer_id' => 'nullable|exists:people,id',
             'author_id' => 'nullable|exists:people,id',
             'narrator_id' => 'nullable|exists:people,id',
-            'duration' => 'required|integer|min:1',
+            'duration' => 'nullable|integer|min:0',
             'total_episodes' => 'nullable|integer|min:1',
             'free_episodes' => 'nullable|integer|min:0',
             'is_premium' => 'boolean',
@@ -291,6 +296,11 @@ class StoryController extends Controller
 
         // Set default language (all stories are in Persian)
         $validated['language'] = 'persian';
+        
+        // Ensure duration has a default value if not provided
+        if (!isset($validated['duration']) || empty($validated['duration'])) {
+            $validated['duration'] = 0;
+        }
 
         // Handle file uploads
         if ($request->hasFile('image')) {
