@@ -125,7 +125,7 @@ class Category extends Model
     public function getImageUrlAttribute()
     {
         if ($this->icon_path) {
-            return Storage::url($this->icon_path);
+            return Storage::disk('public')->url($this->icon_path);
         }
         return null;
     }
