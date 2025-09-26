@@ -192,7 +192,7 @@
                     <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">مدت زمان (دقیقه)</label>
                     <input type="number" name="duration" id="duration" value="{{ old('duration') }}" min="1" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror"
-                           placeholder="مدت زمان کل داستان">
+                           placeholder="مدت زمان کل داستان" required>
                     @error('duration')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
@@ -478,7 +478,7 @@ function validateStoryForm() {
     const errors = [];
     
     // Required field validation
-    const requiredFields = ['title', 'description', 'category_id', 'age_group'];
+    const requiredFields = ['title', 'description', 'category_id', 'age_group', 'duration'];
     requiredFields.forEach(fieldName => {
         const field = form.querySelector(`[name="${fieldName}"]`);
         if (field && !field.value.trim()) {
