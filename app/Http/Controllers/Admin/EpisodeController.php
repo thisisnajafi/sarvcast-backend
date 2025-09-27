@@ -167,8 +167,9 @@ class EpisodeController extends Controller
     {
         $stories = Story::with('category')->orderBy('title', 'asc')->get();
         $narrators = Person::whereJsonContains('roles', 'narrator')->get();
+        $people = Person::orderBy('name', 'asc')->get();
 
-        return view('admin.episodes.create', compact('stories', 'narrators'));
+        return view('admin.episodes.create', compact('stories', 'narrators', 'people'));
     }
 
     /**
@@ -329,18 +330,19 @@ class EpisodeController extends Controller
                 foreach ($imageTimelineData as $timelineData) {
                     // Handle image file upload
                     $imagePath = null;
-                    if (isset($timelineData['image_file'])) {
-                        // This would need to be handled differently since we can't directly access files from JSON
-                        // We'll need to modify the approach
+                    if (isset($timelineData['image_file']) && $timelineData['image_file']) {
+                        // For now, we'll store the image path as provided
+                        // In a real implementation, you'd handle file upload here
+                        $imagePath = $timelineData['image_file'];
                     }
                     
                     $episode->imageTimelines()->create([
-                        'start_time' => $timelineData['start_time'],
-                        'end_time' => $timelineData['end_time'],
+                        'start_time' => $timelineData['start_time'] ?? 0,
+                        'end_time' => $timelineData['end_time'] ?? $episode->duration,
                         'image_url' => $imagePath,
-                        'image_order' => $timelineData['image_order'],
-                        'scene_description' => $timelineData['scene_description'],
-                        'transition_type' => $timelineData['transition_type'],
+                        'image_order' => $timelineData['image_order'] ?? 0,
+                        'scene_description' => $timelineData['scene_description'] ?? '',
+                        'transition_type' => $timelineData['transition_type'] ?? 'fade',
                         'is_key_frame' => $timelineData['is_key_frame'] ?? false,
                     ]);
                 }
@@ -396,7 +398,7 @@ class EpisodeController extends Controller
      */
     public function show(Episode $episode)
     {
-        $episode->load(['story', 'narrator', 'people', 'imageTimelines']);
+        $episode->load(['story', 'narrator', 'people', 'imageTimelines', 'voiceActors.person', 'playHistories.user']);
 
         return view('admin.episodes.show', compact('episode'));
     }

@@ -44,6 +44,22 @@
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <!-- Narrator -->
+                <div>
+                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی</label>
+                    <select name="narrator_id" id="narrator_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
+                        <option value="">انتخاب راوی</option>
+                        @foreach($narrators as $narrator)
+                            <option value="{{ $narrator->id }}" {{ old('narrator_id', $episode->narrator_id) == $narrator->id ? 'selected' : '' }}>
+                                {{ $narrator->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('narrator_id')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             <!-- Story Selection -->

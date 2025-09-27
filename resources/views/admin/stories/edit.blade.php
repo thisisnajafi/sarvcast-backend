@@ -166,6 +166,25 @@
                 </div>
             </div>
 
+            <!-- Additional People -->
+            <div class="mb-6">
+                <label for="people" class="block text-sm font-medium text-gray-700 mb-2">افراد اضافی</label>
+                <select name="people[]" id="people" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('people') border-red-500 @enderror" size="6">
+                    @foreach($people as $person)
+                        <option value="{{ $person->id }}" {{ in_array($person->id, old('people', $story->people->pluck('id')->toArray())) ? 'selected' : '' }}>
+                            {{ $person->name }} 
+                            @if($person->roles)
+                                ({{ implode(', ', json_decode($person->roles)) }})
+                            @endif
+                        </option>
+                    @endforeach
+                </select>
+                @error('people')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+                <p class="text-sm text-gray-500 mt-1">برای انتخاب چند نفر، کلید Ctrl را نگه دارید</p>
+            </div>
+
             <!-- Current Images -->
             @if($story->cover_image_url || $story->image_url)
                 <div class="mb-6">

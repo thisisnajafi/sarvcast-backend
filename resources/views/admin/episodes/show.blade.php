@@ -99,6 +99,17 @@
                         </div>
                         
                         <div>
+                            <label class="block text-sm font-medium text-gray-700">راوی</label>
+                            <p class="mt-1 text-sm text-gray-900">
+                                @if($episode->narrator)
+                                    {{ $episode->narrator->name }}
+                                @else
+                                    <span class="text-gray-500">تعیین نشده</span>
+                                @endif
+                            </p>
+                        </div>
+                        
+                        <div>
                             <label class="block text-sm font-medium text-gray-700">حجم فایل</label>
                             <p class="mt-1 text-sm text-gray-900">{{ $episode->file_size ? $episode->file_size . ' مگابایت' : 'نامشخص' }}</p>
                         </div>
@@ -175,6 +186,41 @@
                             </svg>
                             افزودن صداپیشه
                         </a>
+                    </div>
+                @endif
+            </div>
+
+            <!-- People -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">افراد مرتبط</h3>
+                @if($episode->people->count() > 0)
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        @foreach($episode->people as $person)
+                            <div class="flex items-center space-x-3 space-x-reverse p-3 bg-gray-50 rounded-lg">
+                                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                    @if($person->image_url)
+                                        <img src="{{ $person->image_url }}" alt="{{ $person->name }}" class="w-10 h-10 rounded-full object-cover">
+                                    @else
+                                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                    @endif
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">{{ $person->name }}</p>
+                                    @if($person->roles)
+                                        <p class="text-xs text-gray-500">{{ implode(', ', json_decode($person->roles)) }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-8">
+                        <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        <p class="text-sm text-gray-500">هیچ فردی برای این اپیزود تعریف نشده است</p>
                     </div>
                 @endif
             </div>

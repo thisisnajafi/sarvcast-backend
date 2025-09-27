@@ -108,6 +108,22 @@
                     @enderror
                 </div>
 
+                <!-- Narrator -->
+                <div>
+                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی</label>
+                    <select name="narrator_id" id="narrator_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
+                        <option value="">انتخاب راوی</option>
+                        @foreach($narrators as $narrator)
+                            <option value="{{ $narrator->id }}" {{ old('narrator_id') == $narrator->id ? 'selected' : '' }}>
+                                {{ $narrator->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('narrator_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- Episode Number -->
                 <div>
                     <label for="episode_number" class="block text-sm font-medium text-gray-700 mb-2">شماره اپیزود *</label>
@@ -205,6 +221,31 @@
 
                 <!-- Hidden inputs for image timeline data -->
                 <input type="hidden" name="image_timeline_data" id="image-timeline-data">
+            </div>
+        </div>
+
+        <!-- People Selection -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">افراد مرتبط</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="people" class="block text-sm font-medium text-gray-700 mb-2">انتخاب افراد</label>
+                    <select name="people[]" id="people" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('people') border-red-500 @enderror" size="6">
+                        @foreach($people as $person)
+                            <option value="{{ $person->id }}" {{ in_array($person->id, old('people', [])) ? 'selected' : '' }}>
+                                {{ $person->name }} 
+                                @if($person->roles)
+                                    ({{ implode(', ', json_decode($person->roles)) }})
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('people')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-xs text-gray-500">برای انتخاب چند نفر، کلید Ctrl را نگه دارید</p>
+                </div>
             </div>
         </div>
 

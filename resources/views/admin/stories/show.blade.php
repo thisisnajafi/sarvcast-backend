@@ -140,6 +140,34 @@
                 </div>
             </div>
 
+            <!-- Additional People -->
+            @if($story->people->count() > 0)
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">افراد اضافی</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        @foreach($story->people as $person)
+                            <div class="flex items-center space-x-3 space-x-reverse p-3 bg-gray-50 rounded-lg">
+                                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                    @if($person->image_url)
+                                        <img src="{{ $person->image_url }}" alt="{{ $person->name }}" class="w-10 h-10 rounded-full object-cover">
+                                    @else
+                                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                    @endif
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">{{ $person->name }}</p>
+                                    @if($person->pivot->role)
+                                        <p class="text-xs text-gray-500">{{ ucfirst($person->pivot->role) }}</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <!-- Episodes -->
             <div class="bg-white rounded-lg shadow-sm p-6">
                 <div class="flex justify-between items-center mb-6">

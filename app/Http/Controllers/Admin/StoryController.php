@@ -204,6 +204,8 @@ class StoryController extends Controller
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
+            'people' => 'nullable|array',
+            'people.*' => 'exists:people,id',
         ]);
 
         // Set default language (all stories are in Persian)
@@ -232,6 +234,15 @@ class StoryController extends Controller
         }
 
         $story = Story::create($validated);
+
+        // Attach people relationships if provided
+        if ($request->filled('people')) {
+            $peopleData = [];
+            foreach ($request->people as $personId) {
+                $peopleData[$personId] = ['role' => 'voice_actor']; // Default role
+            }
+            $story->people()->attach($peopleData);
+        }
 
         return redirect()->route('admin.stories.index')
             ->with('success', 'داستان با موفقیت ایجاد شد.');
@@ -292,6 +303,8 @@ class StoryController extends Controller
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
+            'people' => 'nullable|array',
+            'people.*' => 'exists:people,id',
         ]);
 
         // Set default language (all stories are in Persian)
@@ -330,6 +343,15 @@ class StoryController extends Controller
         }
 
         $story->update($validated);
+
+        // Sync people relationships if provided
+        if ($request->has('people')) {
+            $peopleData = [];
+            foreach ($request->people as $personId) {
+                $peopleData[$personId] = ['role' => 'voice_actor']; // Default role
+            }
+            $story->people()->sync($peopleData);
+        }
 
         return redirect()->route('admin.stories.index')
             ->with('success', 'داستان با موفقیت به‌روزرسانی شد.');
