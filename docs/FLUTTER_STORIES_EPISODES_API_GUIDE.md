@@ -201,7 +201,19 @@ final response = await http.get(
 }
 ```
 
-### **2. Get Single Episode Details**
+### **2. Get All Episodes**
+```dart
+// GET /episodes
+final response = await http.get(
+  Uri.parse('https://my.sarvcast.ir/api/v1/episodes?story_id=1&per_page=20'),
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  },
+);
+```
+
+### **3. Get Single Episode Details**
 ```dart
 // GET /episodes/{id}
 final response = await http.get(
@@ -768,8 +780,10 @@ void debugApiResponse(http.Response response) {
 - `GET /stories/recent` - Get recent stories
 - `GET /stories/{id}` - Get single story
 - `GET /stories/{id}/episodes` - Get story episodes
+- `GET /episodes` - Get all episodes (with filters)
 - `GET /episodes/{id}` - Get single episode
 - `POST /episodes/{id}/play` - Increment play count
+- `GET /episodes/{id}/play/statistics` - Get episode play statistics
 - `GET /categories` - Get all categories
 - `GET /categories/{id}/stories` - Get category stories
 

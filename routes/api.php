@@ -70,6 +70,7 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('stories/recent', [StoryController::class, 'recent'])->middleware('cache.api:900'); // 15 minutes
     Route::get('stories/recommendations', [StoryController::class, 'recommendations'])->middleware('cache.api:300'); // 5 minutes
     
+    Route::get('episodes', [EpisodeController::class, 'index'])->middleware('cache.api:900'); // 15 minutes
     Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware('cache.api:1800'); // 30 minutes
     
     // Story ratings routes

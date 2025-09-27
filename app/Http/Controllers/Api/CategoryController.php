@@ -14,10 +14,8 @@ class CategoryController extends Controller
     private function transformStories($stories)
     {
         foreach ($stories as $story) {
-            // Convert duration from minutes to seconds for API
-            if (isset($story->duration)) {
-                $story->duration = $story->duration * 60; // Convert minutes to seconds
-            }
+            // Duration is already in seconds in database, no conversion needed
+            // The API response should match the Flutter documentation format
         }
         return $stories;
     }

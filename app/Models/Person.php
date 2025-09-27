@@ -73,8 +73,25 @@ class Person extends Model
     }
 
     /**
-     * Get Jalali formatted updated_at date
+     * Get API response format for Person
      */
+    public function toApiResponse(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'bio' => $this->bio,
+            'image_url' => $this->getImageUrlFromPath($this->image_url),
+            'roles' => $this->roles ?? [],
+            'total_stories' => $this->total_stories ?? 0,
+            'total_episodes' => $this->total_episodes ?? 0,
+            'average_rating' => $this->average_rating ?? 0.0,
+            'is_verified' => $this->is_verified ?? false,
+            'last_active_at' => $this->last_active_at?->toISOString(),
+            'created_at' => $this->created_at->toISOString(),
+            'updated_at' => $this->updated_at->toISOString(),
+        ];
+    }
     public function getJalaliUpdatedAtAttribute()
     {
         return \App\Helpers\JalaliHelper::formatForDisplay($this->updated_at, 'Y/m/d');

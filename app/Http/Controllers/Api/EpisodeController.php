@@ -18,17 +18,53 @@ class EpisodeController extends Controller
         $this->accessControlService = $accessControlService;
     }
     /**
+     * Get paginated list of episodes
+     */
+    public function index(Request $request)
+    {
+        $query = Episode::with(['story', 'narrator', 'people', 'imageTimelines'])
+            ->published();
+
+        // Apply filters
+        if ($request->filled('story_id')) {
+            $query->where('story_id', $request->story_id);
+        }
+
+        if ($request->filled('is_premium')) {
+            $query->where('is_premium', $request->boolean('is_premium'));
+        }
+
+        // Apply sorting
+        $sortBy = $request->get('sort_by', 'episode_number');
+        $sortOrder = $request->get('sort_order', 'asc');
+        
+        $allowedSortFields = ['episode_number', 'title', 'duration', 'play_count', 'rating', 'created_at'];
+        if (in_array($sortBy, $allowedSortFields)) {
+            $query->orderBy($sortBy, $sortOrder);
+        }
+
+        $episodes = $query->paginate($request->get('per_page', 20));
+
+        return response()->json([
+            'success' => true,
+            'data' => $episodes->items(),
+            'pagination' => [
+                'current_page' => $episodes->currentPage(),
+                'last_page' => $episodes->lastPage(),
+                'per_page' => $episodes->perPage(),
+                'total' => $episodes->total()
+            ]
+        ]);
+    }
+
+    /**
      * Get episode details
      */
     public function show(Request $request, Episode $episode)
     {
         $includeTimeline = $request->get('include_timeline', false);
         
-        $episode->load(['story', 'narrator', 'people']);
-        
-        if ($includeTimeline && $episode->use_image_timeline) {
-            $episode->load('imageTimelines');
-        }
+        $episode->load(['story', 'narrator', 'people', 'imageTimelines']);
 
         // Check access control
         $user = $request->user();
@@ -51,8 +87,8 @@ class EpisodeController extends Controller
             'access_info' => $accessInfo
         ];
 
-        // Add timeline data if requested
-        if ($includeTimeline && $episode->use_image_timeline) {
+        // Add timeline data if episode uses image timeline
+        if ($episode->use_image_timeline) {
             $responseData['image_timeline'] = $episode->imageTimelines->map(function($timeline) {
                 return $timeline->toApiResponse();
             });
