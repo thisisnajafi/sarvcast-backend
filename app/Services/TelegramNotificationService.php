@@ -241,8 +241,24 @@ class TelegramNotificationService
         $message .= "• مجموع درآمد: " . number_format($yesterdayAmount) . " تومان\n\n";
         
         $growth = $yesterdayAmount > 0 ? (($todayAmount - $yesterdayAmount) / $yesterdayAmount) * 100 : 0;
-        $growthIcon = $growth > 0 ? '📈' : ($growth < 0 ? '📉' : '➡️');
-        $message .= "{$growthIcon} <b>رشد:</b> " . number_format($growth, 1) . "%\n\n";
+        
+        // Calculate growth arrows (1 arrow per 5% growth)
+        $growthArrows = '';
+        if ($growth > 0) {
+            $arrowCount = floor($growth / 5);
+            $growthArrows = str_repeat('🟢', min($arrowCount, 10)); // Max 10 arrows
+        } elseif ($growth < 0) {
+            $arrowCount = floor(abs($growth) / 5);
+            $growthArrows = str_repeat('🔴', min($arrowCount, 10)); // Max 10 arrows
+        } else {
+            $growthArrows = '➡️';
+        }
+        
+        $message .= "{$growthArrows} <b>رشد:</b> " . number_format($growth, 1) . "%\n\n";
+        
+        // Add total user count
+        $totalUsers = User::count();
+        $message .= "👥 <b>تعداد کل کاربران:</b> " . number_format($totalUsers) . "\n\n";
         
         $message .= "📋 <b>جزئیات فروش امروز:</b>\n";
         foreach ($todaySales->take(5) as $sale) {

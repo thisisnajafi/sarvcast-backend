@@ -9,6 +9,19 @@ use Illuminate\Http\Request;
 class CategoryController extends Controller
 {
     /**
+     * Transform stories for API response
+     */
+    private function transformStories($stories)
+    {
+        foreach ($stories as $story) {
+            // Convert duration from minutes to seconds for API
+            if (isset($story->duration)) {
+                $story->duration = $story->duration * 60; // Convert minutes to seconds
+            }
+        }
+        return $stories;
+    }
+    /**
      * Get all active categories that have stories
      */
     public function index(Request $request)
@@ -117,7 +130,7 @@ class CategoryController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Category stories retrieved successfully',
-                'data' => $stories->items(),
+                'data' => $this->transformStories($stories->items()),
                 'pagination' => [
                     'current_page' => $stories->currentPage(),
                     'last_page' => $stories->lastPage(),
@@ -138,7 +151,7 @@ class CategoryController extends Controller
                 'description' => $story->description,
                 'category_id' => $story->category_id,
                 'age_group' => $story->age_group,
-                'duration' => $story->duration,
+                'duration' => $story->duration * 60, // Convert minutes to seconds
                 'status' => $story->status,
                 'is_premium' => $story->is_premium,
                 'is_completely_free' => $story->is_completely_free ?? true,

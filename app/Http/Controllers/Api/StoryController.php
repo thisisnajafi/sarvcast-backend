@@ -18,6 +18,20 @@ class StoryController extends Controller
     {
         $this->accessControlService = $accessControlService;
     }
+
+    /**
+     * Transform stories for API response
+     */
+    private function transformStories($stories)
+    {
+        foreach ($stories as $story) {
+            // Convert duration from minutes to seconds for API
+            if (isset($story->duration)) {
+                $story->duration = $story->duration * 60; // Convert minutes to seconds
+            }
+        }
+        return $stories;
+    }
     /**
      * Get paginated list of stories
      */
@@ -65,17 +79,12 @@ class StoryController extends Controller
 
         $stories = $query->paginate($request->get('per_page', 20));
 
+        // Transform stories to match API specification
+        $transformedStories = $this->transformStories($stories->items());
+
         return response()->json([
             'success' => true,
-            'data' => [
-                'stories' => $stories->items(),
-                'pagination' => [
-                    'current_page' => $stories->currentPage(),
-                    'last_page' => $stories->lastPage(),
-                    'per_page' => $stories->perPage(),
-                    'total' => $stories->total()
-                ]
-            ]
+            'data' => $transformedStories
         ]);
     }
 
@@ -212,7 +221,7 @@ class StoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Featured stories retrieved successfully',
-            'data' => $stories
+            'data' => $this->transformStories($stories)
         ]);
     }
 
@@ -246,7 +255,7 @@ class StoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Popular stories retrieved successfully',
-            'data' => $stories
+            'data' => $this->transformStories($stories)
         ]);
     }
 
@@ -266,7 +275,7 @@ class StoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Recent stories retrieved successfully',
-            'data' => $stories
+            'data' => $this->transformStories($stories)
         ]);
     }
 
@@ -302,7 +311,7 @@ class StoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Story recommendations retrieved successfully',
-            'data' => $stories
+            'data' => $this->transformStories($stories)
         ]);
     }
 }

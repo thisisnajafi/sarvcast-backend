@@ -27,8 +27,8 @@ Schedule::job(new ScheduledBackupJob('files', false))
     ->name('monthly-files-backup')
     ->description('Create monthly files backup');
 
-// Schedule daily sales summary at 9 PM
+// Schedule daily sales summary at midnight (00:00)
 Schedule::command('telegram:daily-sales-summary')
-    ->dailyAt('21:00')
+    ->dailyAt('00:00')
     ->name('daily-sales-summary')
     ->description('Send daily sales summary to Telegram');
