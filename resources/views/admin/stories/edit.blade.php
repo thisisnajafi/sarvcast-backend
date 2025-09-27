@@ -174,7 +174,7 @@
                         <option value="{{ $person->id }}" {{ in_array($person->id, old('people', $story->people->pluck('id')->toArray())) ? 'selected' : '' }}>
                             {{ $person->name }} 
                             @if($person->roles)
-                                ({{ implode(', ', json_decode($person->roles)) }})
+                                ({{ implode(', ', $person->roles) }})
                             @endif
                         </option>
                     @endforeach

@@ -236,7 +236,7 @@
                             <option value="{{ $person->id }}" {{ in_array($person->id, old('people', [])) ? 'selected' : '' }}>
                                 {{ $person->name }} 
                                 @if($person->roles)
-                                    ({{ implode(', ', json_decode($person->roles)) }})
+                                    ({{ implode(', ', $person->roles) }})
                                 @endif
                             </option>
                         @endforeach

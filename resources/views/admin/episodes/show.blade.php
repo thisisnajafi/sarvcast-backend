@@ -209,7 +209,7 @@
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-900">{{ $person->name }}</p>
                                     @if($person->roles)
-                                        <p class="text-xs text-gray-500">{{ implode(', ', json_decode($person->roles)) }}</p>
+                                        <p class="text-xs text-gray-500">{{ implode(', ', $person->roles) }}</p>
                                     @endif
                                 </div>
                             </div>
