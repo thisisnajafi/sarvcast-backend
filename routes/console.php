@@ -31,4 +31,5 @@ Schedule::job(new ScheduledBackupJob('files', false))
 Schedule::command('telegram:daily-sales-summary')
     ->dailyAt('00:00')
     ->name('daily-sales-summary')
-    ->description('Send daily sales summary to Telegram');
+    ->description('Send daily sales summary to Telegram')
+    ->appendOutputTo(storage_path('logs/scheduler.log'));
