@@ -337,10 +337,10 @@ class EpisodeController extends Controller
                     }
                     
                     $episode->imageTimelines()->create([
-                        'start_time' => $timelineData['start_time'] ?? 0,
-                        'end_time' => $timelineData['end_time'] ?? $episode->duration,
+                        'start_time' => !empty($timelineData['start_time']) ? (int)$timelineData['start_time'] : 0,
+                        'end_time' => !empty($timelineData['end_time']) ? (int)$timelineData['end_time'] : $episode->duration,
                         'image_url' => $imagePath,
-                        'image_order' => $timelineData['image_order'] ?? 0,
+                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : 0,
                         'scene_description' => $timelineData['scene_description'] ?? '',
                         'transition_type' => $timelineData['transition_type'] ?? 'fade',
                         'is_key_frame' => $timelineData['is_key_frame'] ?? false,
@@ -522,10 +522,10 @@ class EpisodeController extends Controller
                     }
                     
                     $episode->imageTimelines()->create([
-                        'start_time' => $timelineData['start_time'] ?? 0,
-                        'end_time' => $timelineData['end_time'] ?? $episode->duration,
+                        'start_time' => !empty($timelineData['start_time']) ? (int)$timelineData['start_time'] : 0,
+                        'end_time' => !empty($timelineData['end_time']) ? (int)$timelineData['end_time'] : $episode->duration,
                         'image_url' => $imagePath,
-                        'image_order' => $timelineData['image_order'] ?? 0,
+                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : 0,
                         'scene_description' => $timelineData['scene_description'] ?? '',
                         'transition_type' => $timelineData['transition_type'] ?? 'fade',
                         'is_key_frame' => $timelineData['is_key_frame'] ?? false,
