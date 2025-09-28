@@ -332,9 +332,22 @@ class EpisodeController extends Controller
                     $imagePath = '';
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
                         // Look for the corresponding file in the request
-                        $imageInputName = 'timeline_image_' . $index;
-                        if ($request->hasFile($imageInputName)) {
-                            $imageFile = $request->file($imageInputName);
+                        // Try different naming patterns
+                        $possibleNames = [
+                            'timeline_image_' . $index,
+                            'timeline_image_' . ($index + 1),
+                            'timeline_image_' . $timelineData['image_order'] ?? $index
+                        ];
+                        
+                        $imageFile = null;
+                        foreach ($possibleNames as $name) {
+                            if ($request->hasFile($name)) {
+                                $imageFile = $request->file($name);
+                                break;
+                            }
+                        }
+                        
+                        if ($imageFile) {
                             $imagePath = $imageFile->store('episodes/timeline', 'public');
                             // Store only the relative path
                             $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);
@@ -525,9 +538,22 @@ class EpisodeController extends Controller
                     $imagePath = '';
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
                         // Look for the corresponding file in the request
-                        $imageInputName = 'timeline_image_' . $index;
-                        if ($request->hasFile($imageInputName)) {
-                            $imageFile = $request->file($imageInputName);
+                        // Try different naming patterns
+                        $possibleNames = [
+                            'timeline_image_' . $index,
+                            'timeline_image_' . ($index + 1),
+                            'timeline_image_' . $timelineData['image_order'] ?? $index
+                        ];
+                        
+                        $imageFile = null;
+                        foreach ($possibleNames as $name) {
+                            if ($request->hasFile($name)) {
+                                $imageFile = $request->file($name);
+                                break;
+                            }
+                        }
+                        
+                        if ($imageFile) {
                             $imagePath = $imageFile->store('episodes/timeline', 'public');
                             // Store only the relative path
                             $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);

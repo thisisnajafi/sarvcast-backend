@@ -22,7 +22,7 @@ class EpisodeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Episode::with(['story', 'narrator', 'people', 'imageTimelines'])
+        $query = Episode::with(['story', 'narrator', 'people', 'imageTimelines.voiceActor.person'])
             ->published();
 
         // Apply filters
@@ -64,7 +64,7 @@ class EpisodeController extends Controller
     {
         $includeTimeline = $request->get('include_timeline', false);
         
-        $episode->load(['story', 'narrator', 'people', 'imageTimelines']);
+        $episode->load(['story', 'narrator', 'people', 'imageTimelines.voiceActor.person']);
 
         // Check access control
         $user = $request->user();

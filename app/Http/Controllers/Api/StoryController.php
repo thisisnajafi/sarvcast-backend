@@ -149,7 +149,7 @@ class StoryController extends Controller
             $query->where('is_premium', false);
         }
 
-        $episodes = $query->with(['narrator', 'people', 'imageTimelines'])->orderBy('episode_number')->get();
+        $episodes = $query->with(['narrator', 'people', 'imageTimelines.voiceActor.person'])->orderBy('episode_number')->get();
 
         return response()->json([
             'success' => true,
