@@ -654,7 +654,7 @@ function addImageTimelineRow(data = {}) {
     const row = document.createElement('div');
     row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
     row.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
                 <input type="file" name="timeline_image_${imageTimelineCounter}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="previewImage(this)">
@@ -663,6 +663,12 @@ function addImageTimelineRow(data = {}) {
                 </div>
             </div>
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">توضیح صحنه</label>
+                <input type="text" name="timeline_scene_${imageTimelineCounter}" value="${data.scene_description || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="توضیح صحنه">
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">شروع (ثانیه)</label>
                 <input type="number" name="timeline_start_${imageTimelineCounter}" value="${data.start_time || suggestedStartTime}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0" onchange="updatePreviousImageEndTime(this)">
             </div>
@@ -670,11 +676,25 @@ function addImageTimelineRow(data = {}) {
                 <label class="block text-sm font-medium text-gray-700 mb-1">پایان (ثانیه)</label>
                 <input type="number" name="timeline_end_${imageTimelineCounter}" value="${data.end_time || ''}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
             </div>
-            <div class="flex items-end">
-                <button type="button" onclick="removeImageTimelineRow(this)" class="w-full px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                    حذف
-                </button>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">نوع انتقال</label>
+                <select name="timeline_transition_${imageTimelineCounter}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="fade" ${data.transition_type === 'fade' ? 'selected' : ''}>محو</option>
+                    <option value="slide" ${data.transition_type === 'slide' ? 'selected' : ''}>اسلاید</option>
+                    <option value="cut" ${data.transition_type === 'cut' ? 'selected' : ''}>برش</option>
+                </select>
             </div>
+            <div class="flex items-center">
+                <label class="flex items-center">
+                    <input type="checkbox" name="timeline_keyframe_${imageTimelineCounter}" ${data.is_key_frame ? 'checked' : ''} class="mr-2">
+                    <span class="text-sm text-gray-700">فریم کلیدی</span>
+                </label>
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button type="button" onclick="removeImageTimelineRow(this)" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                حذف
+            </button>
         </div>
     `;
     
@@ -754,12 +774,19 @@ function updateImageTimelineData() {
         const imageInput = row.querySelector('input[type="file"]');
         const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
         const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
+        const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
+        const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
+        const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
         
-        if (imageInput && startTimeInput && endTimeInput) {
+        if (startTimeInput && endTimeInput) {
             imageTimelineData.push({
-                image_file: imageInput.files[0] ? imageInput.files[0].name : '',
-                start_time: startTimeInput.value,
-                end_time: endTimeInput.value
+                image_file: imageInput && imageInput.files[0] ? imageInput.files[0].name : '',
+                start_time: startTimeInput.value || 0,
+                end_time: endTimeInput.value || 0,
+                scene_description: sceneDescriptionInput ? sceneDescriptionInput.value : '',
+                transition_type: transitionTypeSelect ? transitionTypeSelect.value : 'fade',
+                is_key_frame: isKeyFrameCheckbox ? isKeyFrameCheckbox.checked : false,
+                image_order: index
             });
         }
     });

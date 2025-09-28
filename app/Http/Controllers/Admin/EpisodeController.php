@@ -327,20 +327,28 @@ class EpisodeController extends Controller
             // Handle image timeline data
             if ($request->filled('image_timeline_data')) {
                 $imageTimelineData = json_decode($request->image_timeline_data, true);
-                foreach ($imageTimelineData as $timelineData) {
+                foreach ($imageTimelineData as $index => $timelineData) {
                     // Handle image file upload
                     $imagePath = '';
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
-                        // For now, we'll store the image path as provided
-                        // In a real implementation, you'd handle file upload here
-                        $imagePath = $timelineData['image_file'];
+                        // Look for the corresponding file in the request
+                        $imageInputName = 'timeline_image_' . $index;
+                        if ($request->hasFile($imageInputName)) {
+                            $imageFile = $request->file($imageInputName);
+                            $imagePath = $imageFile->store('episodes/timeline', 'public');
+                            // Store only the relative path
+                            $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);
+                        } else {
+                            // Use the filename as provided (for existing images)
+                            $imagePath = $timelineData['image_file'];
+                        }
                     }
                     
                     $episode->imageTimelines()->create([
                         'start_time' => !empty($timelineData['start_time']) ? (int)$timelineData['start_time'] : 0,
                         'end_time' => !empty($timelineData['end_time']) ? (int)$timelineData['end_time'] : $episode->duration,
                         'image_url' => $imagePath,
-                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : 0,
+                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : $index,
                         'scene_description' => $timelineData['scene_description'] ?? '',
                         'transition_type' => $timelineData['transition_type'] ?? 'fade',
                         'is_key_frame' => $timelineData['is_key_frame'] ?? false,
@@ -512,20 +520,28 @@ class EpisodeController extends Controller
                 $episode->imageTimelines()->delete();
                 
                 // Add new image timelines
-                foreach ($imageTimelineData as $timelineData) {
+                foreach ($imageTimelineData as $index => $timelineData) {
                     // Handle image file upload
                     $imagePath = '';
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
-                        // For now, we'll store the image path as provided
-                        // In a real implementation, you'd handle file upload here
-                        $imagePath = $timelineData['image_file'];
+                        // Look for the corresponding file in the request
+                        $imageInputName = 'timeline_image_' . $index;
+                        if ($request->hasFile($imageInputName)) {
+                            $imageFile = $request->file($imageInputName);
+                            $imagePath = $imageFile->store('episodes/timeline', 'public');
+                            // Store only the relative path
+                            $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);
+                        } else {
+                            // Use the filename as provided (for existing images)
+                            $imagePath = $timelineData['image_file'];
+                        }
                     }
                     
                     $episode->imageTimelines()->create([
                         'start_time' => !empty($timelineData['start_time']) ? (int)$timelineData['start_time'] : 0,
                         'end_time' => !empty($timelineData['end_time']) ? (int)$timelineData['end_time'] : $episode->duration,
                         'image_url' => $imagePath,
-                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : 0,
+                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : $index,
                         'scene_description' => $timelineData['scene_description'] ?? '',
                         'transition_type' => $timelineData['transition_type'] ?? 'fade',
                         'is_key_frame' => $timelineData['is_key_frame'] ?? false,
