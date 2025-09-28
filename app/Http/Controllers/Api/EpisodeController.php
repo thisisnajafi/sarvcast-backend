@@ -133,8 +133,11 @@ class EpisodeController extends Controller
         PlayHistory::create([
             'user_id' => $user->id,
             'episode_id' => $episode->id,
+            'story_id' => $episode->story_id,
             'played_at' => now(),
-            'duration' => $episode->duration
+            'duration_played' => 0, // Default to 0, can be updated later
+            'total_duration' => $episode->duration,
+            'completed' => false
         ]);
 
         // Update episode play count
