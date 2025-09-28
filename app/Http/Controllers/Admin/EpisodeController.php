@@ -228,10 +228,20 @@ class EpisodeController extends Controller
             // Handle audio file upload and processing
             if ($request->hasFile('audio_file')) {
                 $audioFile = $request->file('audio_file');
+                
+                // Ensure directory exists
+                $audioDir = public_path('audio/episodes');
+                if (!file_exists($audioDir)) {
+                    mkdir($audioDir, 0755, true);
+                }
+                
+                // Generate unique filename to avoid conflicts
+                $filename = time() . '_' . $audioFile->getClientOriginalName();
+                
                 // Save to public/audio/episodes directory
-                $audioPath = $audioFile->move(public_path('audio/episodes'), $audioFile->getClientOriginalName());
+                $audioPath = $audioFile->move($audioDir, $filename);
                 // Store only the relative path from public
-                $data['audio_url'] = 'audio/episodes/' . $audioFile->getClientOriginalName();
+                $data['audio_url'] = 'audio/episodes/' . $filename;
 
                 // Process audio if requested
                 if ($request->boolean('process_audio')) {
@@ -354,10 +364,19 @@ class EpisodeController extends Controller
                         }
                         
                         if ($imageFile) {
+                            // Ensure directory exists
+                            $timelineDir = public_path('images/episodes/timeline');
+                            if (!file_exists($timelineDir)) {
+                                mkdir($timelineDir, 0755, true);
+                            }
+                            
+                            // Generate unique filename to avoid conflicts
+                            $filename = time() . '_' . $imageFile->getClientOriginalName();
+                            
                             // Save to public/images/episodes/timeline directory
-                            $imagePath = $imageFile->move(public_path('images/episodes/timeline'), $imageFile->getClientOriginalName());
+                            $imagePath = $imageFile->move($timelineDir, $filename);
                             // Store only the relative path from public
-                            $imagePath = 'images/episodes/timeline/' . $imageFile->getClientOriginalName();
+                            $imagePath = 'images/episodes/timeline/' . $filename;
                             \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
@@ -482,10 +501,20 @@ class EpisodeController extends Controller
                 }
 
                 $audioFile = $request->file('audio_file');
+                
+                // Ensure directory exists
+                $audioDir = public_path('audio/episodes');
+                if (!file_exists($audioDir)) {
+                    mkdir($audioDir, 0755, true);
+                }
+                
+                // Generate unique filename to avoid conflicts
+                $filename = time() . '_' . $audioFile->getClientOriginalName();
+                
                 // Save to public/audio/episodes directory
-                $audioPath = $audioFile->move(public_path('audio/episodes'), $audioFile->getClientOriginalName());
+                $audioPath = $audioFile->move($audioDir, $filename);
                 // Store only the relative path from public
-                $data['audio_url'] = 'audio/episodes/' . $audioFile->getClientOriginalName();
+                $data['audio_url'] = 'audio/episodes/' . $filename;
             }
 
             // Handle cover image upload
@@ -568,10 +597,19 @@ class EpisodeController extends Controller
                         }
                         
                         if ($imageFile) {
+                            // Ensure directory exists
+                            $timelineDir = public_path('images/episodes/timeline');
+                            if (!file_exists($timelineDir)) {
+                                mkdir($timelineDir, 0755, true);
+                            }
+                            
+                            // Generate unique filename to avoid conflicts
+                            $filename = time() . '_' . $imageFile->getClientOriginalName();
+                            
                             // Save to public/images/episodes/timeline directory
-                            $imagePath = $imageFile->move(public_path('images/episodes/timeline'), $imageFile->getClientOriginalName());
+                            $imagePath = $imageFile->move($timelineDir, $filename);
                             // Store only the relative path from public
-                            $imagePath = 'images/episodes/timeline/' . $imageFile->getClientOriginalName();
+                            $imagePath = 'images/episodes/timeline/' . $filename;
                             \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
