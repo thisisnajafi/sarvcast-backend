@@ -339,10 +339,15 @@ class EpisodeController extends Controller
                             'timeline_image_' . $timelineData['image_order'] ?? $index
                         ];
                         
+                        // Debug: Log all available files in request
+                        \Log::info('Available files in request:', array_keys($request->allFiles()));
+                        \Log::info('Looking for timeline image with names:', $possibleNames);
+                        
                         $imageFile = null;
                         foreach ($possibleNames as $name) {
                             if ($request->hasFile($name)) {
                                 $imageFile = $request->file($name);
+                                \Log::info('Found file for name: ' . $name);
                                 break;
                             }
                         }
@@ -351,9 +356,11 @@ class EpisodeController extends Controller
                             $imagePath = $imageFile->store('episodes/timeline', 'public');
                             // Store only the relative path
                             $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);
+                            \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
                             $imagePath = $timelineData['image_file'];
+                            \Log::info('No file found, using provided filename: ' . $imagePath);
                         }
                     }
                     
@@ -545,10 +552,15 @@ class EpisodeController extends Controller
                             'timeline_image_' . $timelineData['image_order'] ?? $index
                         ];
                         
+                        // Debug: Log all available files in request
+                        \Log::info('Available files in request:', array_keys($request->allFiles()));
+                        \Log::info('Looking for timeline image with names:', $possibleNames);
+                        
                         $imageFile = null;
                         foreach ($possibleNames as $name) {
                             if ($request->hasFile($name)) {
                                 $imageFile = $request->file($name);
+                                \Log::info('Found file for name: ' . $name);
                                 break;
                             }
                         }
@@ -557,9 +569,11 @@ class EpisodeController extends Controller
                             $imagePath = $imageFile->store('episodes/timeline', 'public');
                             // Store only the relative path
                             $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);
+                            \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
                             $imagePath = $timelineData['image_file'];
+                            \Log::info('No file found, using provided filename: ' . $imagePath);
                         }
                     }
                     
