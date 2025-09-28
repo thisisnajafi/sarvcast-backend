@@ -33,9 +33,9 @@ class CategoryController extends Controller
                 $q->where('status', 'published');
             }]);
 
-        // Apply limit if specified
-        $limit = $request->get('limit', 10);
-        if ($limit > 0) {
+        // Apply limit if specified (default to no limit to return all categories)
+        $limit = $request->get('limit');
+        if ($limit && $limit > 0) {
             $query->limit($limit);
         }
 

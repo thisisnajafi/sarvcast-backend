@@ -486,12 +486,17 @@ class EpisodeController extends Controller
             'people.*' => 'exists:people,id',
             'image_timeline_data' => 'nullable|string',
             'voice_actors_data' => 'nullable|string',
+            'process_audio' => 'boolean',
+            'audio_quality' => 'nullable|in:low,medium,high',
+            'resize_image' => 'boolean',
+            'image_width' => 'nullable|integer|min:100|max:2000',
+            'image_height' => 'nullable|integer|min:100|max:2000',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $data = $request->except(['audio_file', 'cover_image', 'people', 'image_timeline_data', 'voice_actors_data']);
+            $data = $request->except(['audio_file', 'cover_image', 'people', 'image_timeline_data', 'voice_actors_data', 'process_audio', 'audio_quality', 'resize_image', 'image_width', 'image_height']);
 
             // Handle audio file upload
             if ($request->hasFile('audio_file')) {
@@ -515,6 +520,31 @@ class EpisodeController extends Controller
                 $audioPath = $audioFile->move($audioDir, $filename);
                 // Store only the relative path from public
                 $data['audio_url'] = 'audio/episodes/' . $filename;
+
+                // Process audio if requested
+                if ($request->boolean('process_audio')) {
+                    try {
+                        $audioQuality = $request->input('audio_quality', 'medium');
+                        $processedAudio = $this->audioProcessingService->processAudio(
+                            storage_path('app/public/' . str_replace('/storage/', '', $data['audio_url'])),
+                            [
+                                'quality' => $audioQuality,
+                                'normalize' => true,
+                                'extract_metadata' => true
+                            ]
+                        );
+
+                        if ($processedAudio['success']) {
+                            $data['duration'] = $processedAudio['data']['duration'] ?? $data['duration'];
+                            $data['audio_metadata'] = json_encode($processedAudio['data']['metadata'] ?? []);
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('Audio processing failed', [
+                            'episode_title' => $data['title'],
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
             }
 
             // Handle cover image upload
@@ -529,6 +559,33 @@ class EpisodeController extends Controller
                 $coverImage->move(public_path('images/episodes'), $imageName);
                 // Store only the relative path
                 $data['cover_image_url'] = 'episodes/' . $imageName;
+
+                // Process image if requested
+                if ($request->boolean('resize_image')) {
+                    try {
+                        $imageWidth = $request->input('image_width', 800);
+                        $imageHeight = $request->input('image_height', 600);
+                        
+                        $processedImage = $this->imageProcessingService->processImage(
+                            storage_path('app/public/' . str_replace('/storage/', '', $data['cover_image_url'])),
+                            [
+                                'resize' => ['width' => $imageWidth, 'height' => $imageHeight],
+                                'optimize' => true,
+                                'quality' => 85
+                            ]
+                        );
+
+                        if ($processedImage['success']) {
+                            // Update with processed image path if different
+                            $data['cover_image_url'] = $processedImage['data']['url'] ?? $data['cover_image_url'];
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('Image processing failed', [
+                            'episode_title' => $data['title'],
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
             }
 
             $episode->update($data);
@@ -561,6 +618,12 @@ class EpisodeController extends Controller
                         ]);
                     }
                 }
+                
+                // Update episode with voice actor info
+                $episode->update([
+                    'has_multiple_voice_actors' => count($voiceActorsData) > 1,
+                    'voice_actor_count' => count($voiceActorsData)
+                ]);
             }
 
             // Handle image timeline data
@@ -632,6 +695,22 @@ class EpisodeController extends Controller
                 $episode->update([
                     'use_image_timeline' => count($imageTimelineData) > 0
                 ]);
+            }
+
+            // Send notification if status changed to published
+            if ($episode->status === 'published' && $episode->wasChanged('status')) {
+                $this->notificationService->sendToAllUsers(
+                    'content',
+                    'قسمت جدید منتشر شد',
+                    "قسمت جدید \"{$episode->title}\" از داستان \"{$episode->story->title}\" منتشر شد.",
+                    [
+                        'is_important' => true,
+                        'action_type' => 'button',
+                        'action_text' => 'شنیدن قسمت',
+                        'action_url' => '/episodes/latest',
+                        'data' => ['story_title' => $episode->story->title, 'episode_title' => $episode->title]
+                    ]
+                );
             }
 
             DB::commit();

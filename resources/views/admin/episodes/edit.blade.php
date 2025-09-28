@@ -135,15 +135,40 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">فایل صوتی فعلی</h3>
                     <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between mb-4">
                             <div>
                                 <p class="text-sm font-medium text-gray-900">{{ basename($episode->audio_url) }}</p>
                                 <p class="text-sm text-gray-500">{{ $episode->duration }} دقیقه</p>
                             </div>
-                            <audio controls class="w-64">
+                        </div>
+                        
+                        <!-- Audio Player with Speed Controls -->
+                        <div class="space-y-4">
+                            <audio id="audio-player" controls class="w-full">
                                 <source src="{{ $episode->audio_url }}" type="audio/mpeg">
                                 مرورگر شما از پخش فایل صوتی پشتیبانی نمی‌کند.
                             </audio>
+                            
+                            <!-- Playback Speed Controls -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">سرعت پخش</label>
+                                <div class="flex items-center space-x-4 space-x-reverse">
+                                    <button type="button" id="speed-0.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(0.5)">0.5x</button>
+                                    <button type="button" id="speed-1x" class="px-3 py-1 text-sm border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1)">1x</button>
+                                    <button type="button" id="speed-1.25x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.25)">1.25x</button>
+                                    <button type="button" id="speed-1.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.5)">1.5x</button>
+                                    <button type="button" id="speed-2x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(2)">2x</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Time Display -->
+                            <div class="flex items-center justify-between text-sm text-gray-600">
+                                <span id="current-time">00:00</span>
+                                <span id="total-duration">00:00</span>
+                            </div>
+                            
+                            <!-- Time Slider -->
+                            <input type="range" id="time-slider" min="0" max="100" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
                         </div>
                     </div>
                 </div>
@@ -571,6 +596,93 @@ function removeVoiceActorRow(button) {
     button.closest('.bg-gray-50').remove();
     updateVoiceActorsData();
 }
+
+// Audio player functionality
+function initializeAudioPlayer() {
+    const audioPlayer = document.getElementById('audio-player');
+    const timeSlider = document.getElementById('time-slider');
+    const currentTimeSpan = document.getElementById('current-time');
+    const totalDurationSpan = document.getElementById('total-duration');
+
+    if (audioPlayer) {
+        // Set default playback speed to 1x
+        audioPlayer.playbackRate = 1;
+        
+        audioPlayer.addEventListener('loadedmetadata', function() {
+            const duration = audioPlayer.duration;
+            totalDurationSpan.textContent = formatTime(duration);
+            timeSlider.max = duration;
+        });
+
+        audioPlayer.addEventListener('timeupdate', function() {
+            currentTimeSpan.textContent = formatTime(audioPlayer.currentTime);
+            timeSlider.value = audioPlayer.currentTime;
+        });
+
+        timeSlider.addEventListener('input', function() {
+            audioPlayer.currentTime = timeSlider.value;
+        });
+    }
+}
+
+// Set playback speed function
+function setPlaybackSpeed(speed) {
+    const audioPlayer = document.getElementById('audio-player');
+    if (audioPlayer) {
+        audioPlayer.playbackRate = speed;
+        
+        // Update button styles
+        const speedButtons = ['speed-0.5x', 'speed-1x', 'speed-1.25x', 'speed-1.5x', 'speed-2x'];
+        speedButtons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.classList.remove('bg-blue-500', 'text-white');
+                button.classList.add('hover:bg-gray-100');
+            }
+        });
+        
+        // Highlight selected speed button
+        const selectedButton = document.getElementById(`speed-${speed}x`);
+        if (selectedButton) {
+            selectedButton.classList.add('bg-blue-500', 'text-white');
+            selectedButton.classList.remove('hover:bg-gray-100');
+        }
+        
+        // Show notification
+        showNotification(`سرعت پخش به ${speed}x تغییر کرد`, 'info');
+    }
+}
+
+// Format time function
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+// Show notification function
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white ${
+        type === 'success' ? 'bg-green-500' : 
+        type === 'error' ? 'bg-red-500' : 
+        'bg-blue-500'
+    }`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Initialize audio player when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeAudioPlayer();
+});
 </script>
 @endsection
 
