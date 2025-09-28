@@ -377,20 +377,41 @@ class EpisodeController extends Controller
                         }
                         
                         if ($imageFile) {
-                            // Ensure directory exists
-                            $timelineDir = public_path('images/episodes/timeline');
-                            if (!file_exists($timelineDir)) {
-                                mkdir($timelineDir, 0755, true);
+                            try {
+                                // Ensure directory exists
+                                $timelineDir = public_path('images/episodes/timeline');
+                                if (!file_exists($timelineDir)) {
+                                    mkdir($timelineDir, 0755, true);
+                                }
+                                
+                                // Generate unique filename to avoid conflicts
+                                $filename = $this->generateUniqueFilename($imageFile, 'timeline');
+                                
+                                // Validate file before moving
+                                if (!$imageFile->isValid()) {
+                                    throw new \Exception('Invalid file: ' . $imageFile->getError());
+                                }
+                                
+                                // Check file size (max 10MB)
+                                if ($imageFile->getSize() > 10 * 1024 * 1024) {
+                                    throw new \Exception('File too large: ' . $imageFile->getSize() . ' bytes');
+                                }
+                                
+                                // Save to public/images/episodes/timeline directory
+                                $imagePath = $imageFile->move($timelineDir, $filename);
+                                // Store only the relative path from public
+                                $imagePath = 'images/episodes/timeline/' . $filename;
+                                \Log::info('Successfully saved timeline image to: ' . $imagePath);
+                            } catch (\Exception $e) {
+                                \Log::error('Failed to upload timeline image: ' . $e->getMessage());
+                                \Log::error('File details: ' . json_encode([
+                                    'original_name' => $imageFile->getClientOriginalName(),
+                                    'size' => $imageFile->getSize(),
+                                    'mime_type' => $imageFile->getMimeType(),
+                                    'error' => $imageFile->getError()
+                                ]));
+                                throw new \Exception('خطا در آپلود تصویر تایم‌لاین: ' . $e->getMessage());
                             }
-                            
-                            // Generate unique filename to avoid conflicts
-                            $filename = $this->generateUniqueFilename($imageFile, 'timeline');
-                            
-                            // Save to public/images/episodes/timeline directory
-                            $imagePath = $imageFile->move($timelineDir, $filename);
-                            // Store only the relative path from public
-                            $imagePath = 'images/episodes/timeline/' . $filename;
-                            \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
                             $imagePath = $timelineData['image_file'];
@@ -673,20 +694,41 @@ class EpisodeController extends Controller
                         }
                         
                         if ($imageFile) {
-                            // Ensure directory exists
-                            $timelineDir = public_path('images/episodes/timeline');
-                            if (!file_exists($timelineDir)) {
-                                mkdir($timelineDir, 0755, true);
+                            try {
+                                // Ensure directory exists
+                                $timelineDir = public_path('images/episodes/timeline');
+                                if (!file_exists($timelineDir)) {
+                                    mkdir($timelineDir, 0755, true);
+                                }
+                                
+                                // Generate unique filename to avoid conflicts
+                                $filename = $this->generateUniqueFilename($imageFile, 'timeline');
+                                
+                                // Validate file before moving
+                                if (!$imageFile->isValid()) {
+                                    throw new \Exception('Invalid file: ' . $imageFile->getError());
+                                }
+                                
+                                // Check file size (max 10MB)
+                                if ($imageFile->getSize() > 10 * 1024 * 1024) {
+                                    throw new \Exception('File too large: ' . $imageFile->getSize() . ' bytes');
+                                }
+                                
+                                // Save to public/images/episodes/timeline directory
+                                $imagePath = $imageFile->move($timelineDir, $filename);
+                                // Store only the relative path from public
+                                $imagePath = 'images/episodes/timeline/' . $filename;
+                                \Log::info('Successfully saved timeline image to: ' . $imagePath);
+                            } catch (\Exception $e) {
+                                \Log::error('Failed to upload timeline image: ' . $e->getMessage());
+                                \Log::error('File details: ' . json_encode([
+                                    'original_name' => $imageFile->getClientOriginalName(),
+                                    'size' => $imageFile->getSize(),
+                                    'mime_type' => $imageFile->getMimeType(),
+                                    'error' => $imageFile->getError()
+                                ]));
+                                throw new \Exception('خطا در آپلود تصویر تایم‌لاین: ' . $e->getMessage());
                             }
-                            
-                            // Generate unique filename to avoid conflicts
-                            $filename = $this->generateUniqueFilename($imageFile, 'timeline');
-                            
-                            // Save to public/images/episodes/timeline directory
-                            $imagePath = $imageFile->move($timelineDir, $filename);
-                            // Store only the relative path from public
-                            $imagePath = 'images/episodes/timeline/' . $filename;
-                            \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
                             $imagePath = $timelineData['image_file'];
