@@ -29,6 +29,19 @@ class EpisodeController extends Controller
         $this->audioProcessingService = $audioProcessingService;
         $this->imageProcessingService = $imageProcessingService;
     }
+
+    /**
+     * Generate unique filename with random string and datetime
+     */
+    private function generateUniqueFilename($file, $prefix = '')
+    {
+        $extension = $file->getClientOriginalExtension();
+        $randomString = substr(str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 32);
+        $datetime = now()->format('Y-m-d_H-i-s');
+        $prefix = $prefix ? $prefix . '_' : '';
+        
+        return $prefix . $randomString . '-' . $datetime . '.' . $extension;
+    }
     /**
      * Display a listing of the resource.
      */
@@ -236,7 +249,7 @@ class EpisodeController extends Controller
                 }
                 
                 // Generate unique filename to avoid conflicts
-                $filename = time() . '_' . $audioFile->getClientOriginalName();
+                $filename = $this->generateUniqueFilename($audioFile, 'audio');
                 
                 // Save to public/audio/episodes directory
                 $audioPath = $audioFile->move($audioDir, $filename);
@@ -272,7 +285,7 @@ class EpisodeController extends Controller
             // Handle cover image upload and processing
             if ($request->hasFile('cover_image')) {
                 $coverImage = $request->file('cover_image');
-                $imageName = time() . '_' . $coverImage->getClientOriginalName();
+                $imageName = $this->generateUniqueFilename($coverImage, 'cover');
                 $coverImage->move(public_path('images/episodes'), $imageName);
                 // Store only the relative path
                 $data['cover_image_url'] = 'episodes/' . $imageName;
@@ -371,7 +384,7 @@ class EpisodeController extends Controller
                             }
                             
                             // Generate unique filename to avoid conflicts
-                            $filename = time() . '_' . $imageFile->getClientOriginalName();
+                            $filename = $this->generateUniqueFilename($imageFile, 'timeline');
                             
                             // Save to public/images/episodes/timeline directory
                             $imagePath = $imageFile->move($timelineDir, $filename);
@@ -514,7 +527,7 @@ class EpisodeController extends Controller
                 }
                 
                 // Generate unique filename to avoid conflicts
-                $filename = time() . '_' . $audioFile->getClientOriginalName();
+                $filename = $this->generateUniqueFilename($audioFile, 'audio');
                 
                 // Save to public/audio/episodes directory
                 $audioPath = $audioFile->move($audioDir, $filename);
@@ -555,7 +568,7 @@ class EpisodeController extends Controller
                 }
 
                 $coverImage = $request->file('cover_image');
-                $imageName = time() . '_' . $coverImage->getClientOriginalName();
+                $imageName = $this->generateUniqueFilename($coverImage, 'cover');
                 $coverImage->move(public_path('images/episodes'), $imageName);
                 // Store only the relative path
                 $data['cover_image_url'] = 'episodes/' . $imageName;
@@ -667,7 +680,7 @@ class EpisodeController extends Controller
                             }
                             
                             // Generate unique filename to avoid conflicts
-                            $filename = time() . '_' . $imageFile->getClientOriginalName();
+                            $filename = $this->generateUniqueFilename($imageFile, 'timeline');
                             
                             // Save to public/images/episodes/timeline directory
                             $imagePath = $imageFile->move($timelineDir, $filename);
