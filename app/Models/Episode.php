@@ -77,6 +77,25 @@ class Episode extends Model
     }
 
     /**
+     * Get the full audio URL from a relative path
+     */
+    public function getAudioUrlAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // If it's already a full URL, return as is
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        // Generate full URL using the app's base URL for public audio
+        $baseUrl = rtrim(config('app.url'), '/');
+        return $baseUrl . '/' . ltrim($value, '/');
+    }
+
+    /**
      * Get the scenes for the episode
      */
     public function scenes()

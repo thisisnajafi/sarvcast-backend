@@ -228,9 +228,10 @@ class EpisodeController extends Controller
             // Handle audio file upload and processing
             if ($request->hasFile('audio_file')) {
                 $audioFile = $request->file('audio_file');
-                $audioPath = $audioFile->store('episodes/audio', 'public');
-                // Store only the relative path
-                $data['audio_url'] = str_replace(storage_path('app/public/'), '', $audioPath);
+                // Save to public/audio/episodes directory
+                $audioPath = $audioFile->move(public_path('audio/episodes'), $audioFile->getClientOriginalName());
+                // Store only the relative path from public
+                $data['audio_url'] = 'audio/episodes/' . $audioFile->getClientOriginalName();
 
                 // Process audio if requested
                 if ($request->boolean('process_audio')) {
@@ -353,9 +354,10 @@ class EpisodeController extends Controller
                         }
                         
                         if ($imageFile) {
-                            $imagePath = $imageFile->store('episodes/timeline', 'public');
-                            // Store only the relative path
-                            $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);
+                            // Save to public/images/episodes/timeline directory
+                            $imagePath = $imageFile->move(public_path('images/episodes/timeline'), $imageFile->getClientOriginalName());
+                            // Store only the relative path from public
+                            $imagePath = 'images/episodes/timeline/' . $imageFile->getClientOriginalName();
                             \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
@@ -475,15 +477,15 @@ class EpisodeController extends Controller
             // Handle audio file upload
             if ($request->hasFile('audio_file')) {
                 // Delete old audio file
-                if ($episode->audio_url) {
-                    $oldPath = str_replace('/storage/', '', $episode->audio_url);
-                    Storage::disk('public')->delete($oldPath);
+                if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
+                    unlink(public_path($episode->audio_url));
                 }
 
                 $audioFile = $request->file('audio_file');
-                $audioPath = $audioFile->store('episodes/audio', 'public');
-                // Store only the relative path
-                $data['audio_url'] = str_replace(storage_path('app/public/'), '', $audioPath);
+                // Save to public/audio/episodes directory
+                $audioPath = $audioFile->move(public_path('audio/episodes'), $audioFile->getClientOriginalName());
+                // Store only the relative path from public
+                $data['audio_url'] = 'audio/episodes/' . $audioFile->getClientOriginalName();
             }
 
             // Handle cover image upload
@@ -566,9 +568,10 @@ class EpisodeController extends Controller
                         }
                         
                         if ($imageFile) {
-                            $imagePath = $imageFile->store('episodes/timeline', 'public');
-                            // Store only the relative path
-                            $imagePath = str_replace(storage_path('app/public/'), '', $imagePath);
+                            // Save to public/images/episodes/timeline directory
+                            $imagePath = $imageFile->move(public_path('images/episodes/timeline'), $imageFile->getClientOriginalName());
+                            // Store only the relative path from public
+                            $imagePath = 'images/episodes/timeline/' . $imageFile->getClientOriginalName();
                             \Log::info('Saved timeline image to: ' . $imagePath);
                         } else {
                             // Use the filename as provided (for existing images)
@@ -620,14 +623,12 @@ class EpisodeController extends Controller
             DB::beginTransaction();
 
             // Delete associated files
-            if ($episode->audio_url) {
-                $audioPath = str_replace('/storage/', '', $episode->audio_url);
-                Storage::disk('public')->delete($audioPath);
+            if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
+                unlink(public_path($episode->audio_url));
             }
 
-            if ($episode->cover_image_url) {
-                $imagePath = str_replace('/storage/', '', $episode->cover_image_url);
-                Storage::disk('public')->delete($imagePath);
+            if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
+                unlink(public_path('images/' . $episode->cover_image_url));
             }
 
             $episode->delete();
@@ -705,13 +706,11 @@ class EpisodeController extends Controller
 
                         case 'delete':
                             // Delete associated files
-                            if ($episode->audio_url) {
-                                $audioPath = str_replace('/storage/', '', $episode->audio_url);
-                                Storage::disk('public')->delete($audioPath);
+                            if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
+                                unlink(public_path($episode->audio_url));
                             }
-                            if ($episode->cover_image_url) {
-                                $imagePath = str_replace('/storage/', '', $episode->cover_image_url);
-                                Storage::disk('public')->delete($imagePath);
+                            if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
+                                unlink(public_path('images/' . $episode->cover_image_url));
                             }
                             $episode->delete();
                             break;
