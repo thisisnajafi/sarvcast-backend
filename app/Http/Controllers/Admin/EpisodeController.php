@@ -490,12 +490,12 @@ class EpisodeController extends Controller
                 
                 // Add new voice actors
                 foreach ($voiceActorsData as $voiceActorData) {
-                    if (isset($voiceActorData['person_id']) && isset($voiceActorData['role'])) {
+                    if (!empty($voiceActorData['person_id']) && !empty($voiceActorData['role'])) {
                         $episode->voiceActors()->create([
                             'person_id' => $voiceActorData['person_id'],
                             'role' => $voiceActorData['role'],
-                            'start_time' => $voiceActorData['start_time'] ?? 0,
-                            'end_time' => $voiceActorData['end_time'] ?? $episode->duration,
+                            'start_time' => 0, // Default to 0
+                            'end_time' => $episode->duration, // Default to full episode duration
                             'character_name' => $voiceActorData['character_name'] ?? null,
                             'voice_description' => $voiceActorData['voice_description'] ?? null,
                             'is_primary' => $voiceActorData['is_primary'] ?? false

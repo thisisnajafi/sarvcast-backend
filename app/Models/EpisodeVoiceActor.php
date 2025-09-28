@@ -119,13 +119,8 @@ class EpisodeVoiceActor extends Model
             ],
             'role' => $this->role,
             'character_name' => $this->character_name,
-            'start_time' => $this->start_time,
-            'end_time' => $this->end_time,
             'voice_description' => $this->voice_description,
-            'is_primary' => $this->is_primary,
-            'duration' => $this->end_time - $this->start_time,
-            'start_time_formatted' => $this->formatTime($this->start_time),
-            'end_time_formatted' => $this->formatTime($this->end_time)
+            'is_primary' => $this->is_primary
         ];
     }
 
