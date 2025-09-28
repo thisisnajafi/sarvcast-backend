@@ -22,6 +22,12 @@ trait HasImageUrl
 
         // Generate full URL using the app's base URL for public images
         $baseUrl = rtrim(config('app.url'), '/');
+        
+        // If path already starts with 'images/', don't add it again
+        if (str_starts_with($path, 'images/')) {
+            return $baseUrl . '/' . ltrim($path, '/');
+        }
+        
         return $baseUrl . '/images/' . ltrim($path, '/');
     }
 
