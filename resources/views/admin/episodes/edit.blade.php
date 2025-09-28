@@ -429,11 +429,15 @@ function updateVoiceActorsData() {
         voiceActorsList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
             const narratorSelect = row.querySelector('select[name^="voice_actor_"]');
             const roleInput = row.querySelector('input[name^="voice_actor_role_"]');
+            const startTimeInput = row.querySelector('input[name^="voice_actor_start_"]');
+            const endTimeInput = row.querySelector('input[name^="voice_actor_end_"]');
             
             if (narratorSelect && roleInput) {
                 voiceActorsData.push({
                     person_id: narratorSelect.value,
-                    role: roleInput.value
+                    role: roleInput.value,
+                    start_time: startTimeInput ? parseInt(startTimeInput.value) || 0 : 0,
+                    end_time: endTimeInput ? parseInt(endTimeInput.value) || 0 : 0
                 });
             }
         });
@@ -486,7 +490,7 @@ function addVoiceActorRow(data = {}) {
     const row = document.createElement('div');
     row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
     row.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">صداپیشه</label>
                 <select name="voice_actor_${Date.now()}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
@@ -500,11 +504,19 @@ function addVoiceActorRow(data = {}) {
                 <label class="block text-sm font-medium text-gray-700 mb-1">نقش</label>
                 <input type="text" name="voice_actor_role_${Date.now()}" value="${data.role || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="نقش صداپیشه">
             </div>
-            <div class="flex items-end">
-                <button type="button" onclick="removeVoiceActorRow(this)" class="w-full px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                    حذف
-                </button>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">شروع (ثانیه)</label>
+                <input type="number" name="voice_actor_start_${Date.now()}" value="${data.start_time || 0}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
             </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">پایان (ثانیه)</label>
+                <input type="number" name="voice_actor_end_${Date.now()}" value="${data.end_time || ''}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
+            </div>
+        </div>
+        <div class="mt-4 flex justify-end">
+            <button type="button" onclick="removeVoiceActorRow(this)" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                حذف
+            </button>
         </div>
     `;
     
