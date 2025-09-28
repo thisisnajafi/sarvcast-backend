@@ -302,12 +302,12 @@ class EpisodeController extends Controller
                 
                 // Set narrator_id from first voice actor if not already set
                 if (empty($data['narrator_id']) && !empty($voiceActorsData)) {
-                    $episode->update(['narrator_id' => $voiceActorsData[0]['narrator_id']]);
+                    $episode->update(['narrator_id' => $voiceActorsData[0]['person_id']]);
                 }
                 
                 foreach ($voiceActorsData as $voiceActorData) {
                     $episode->voiceActors()->create([
-                        'person_id' => $voiceActorData['narrator_id'], // Frontend sends narrator_id
+                        'person_id' => $voiceActorData['person_id'], // Frontend sends person_id
                         'role' => 'narrator', // Default role for voice actors
                         'character_name' => null, // Not used for simple voice actors
                         'voice_description' => null, // Not used for simple voice actors
@@ -329,7 +329,7 @@ class EpisodeController extends Controller
                 $imageTimelineData = json_decode($request->image_timeline_data, true);
                 foreach ($imageTimelineData as $timelineData) {
                     // Handle image file upload
-                    $imagePath = null;
+                    $imagePath = '';
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
                         // For now, we'll store the image path as provided
                         // In a real implementation, you'd handle file upload here
@@ -514,7 +514,7 @@ class EpisodeController extends Controller
                 // Add new image timelines
                 foreach ($imageTimelineData as $timelineData) {
                     // Handle image file upload
-                    $imagePath = null;
+                    $imagePath = '';
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
                         // For now, we'll store the image path as provided
                         // In a real implementation, you'd handle file upload here
@@ -729,7 +729,7 @@ class EpisodeController extends Controller
             $newEpisode->release_date = null;
             $newEpisode->play_count = 0;
             $newEpisode->rating = 0;
-            $newEpisode->audio_url = null;
+            $newEpisode->audio_url = ''; // Set to empty string instead of null
             $newEpisode->cover_image_url = null;
             $newEpisode->save();
 
