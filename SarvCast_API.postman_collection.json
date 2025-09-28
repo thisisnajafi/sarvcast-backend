@@ -189,17 +189,43 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/stories?page=1&per_page=20",
+              "raw": "{{base_url}}/stories?per_page=20&sort=newest&category_id=5&age_group=3-5&is_premium=false&search=داستان",
               "host": ["{{base_url}}"],
               "path": ["stories"],
               "query": [
                 {
-                  "key": "page",
-                  "value": "1"
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Number of stories per page (default: 20)"
                 },
                 {
-                  "key": "per_page",
-                  "value": "20"
+                  "key": "sort",
+                  "value": "newest",
+                  "description": "Sort by: newest, oldest, popular, rating (default: newest)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (3-5, 6-8, 9-12, etc.)",
+                  "disabled": true
+                },
+                {
+                  "key": "is_premium",
+                  "value": "false",
+                  "description": "Filter by premium status (true/false)",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "داستان",
+                  "description": "Search in title, subtitle, description",
+                  "disabled": true
                 }
               ]
             }
@@ -543,13 +569,26 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/stories/featured?limit=10",
+              "raw": "{{base_url}}/stories/featured?limit=6&category_id=5&age_group=3-5",
               "host": ["{{base_url}}"],
               "path": ["stories", "featured"],
               "query": [
                 {
                   "key": "limit",
-                  "value": "10"
+                  "value": "6",
+                  "description": "Number of featured stories to return (default: 6)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
                 }
               ]
             }
@@ -566,17 +605,31 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/stories/popular?limit=10&period=week",
+              "raw": "{{base_url}}/stories/popular?limit=10&period=week&category_id=5&age_group=3-5",
               "host": ["{{base_url}}"],
               "path": ["stories", "popular"],
               "query": [
                 {
                   "key": "limit",
-                  "value": "10"
+                  "value": "10",
+                  "description": "Number of popular stories to return (default: 10)"
                 },
                 {
                   "key": "period",
-                  "value": "week"
+                  "value": "week",
+                  "description": "Time period: day, week, month, year (default: week)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
                 }
               ]
             }
@@ -593,13 +646,26 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/stories/recent?limit=10",
+              "raw": "{{base_url}}/stories/recent?limit=10&category_id=5&age_group=3-5",
               "host": ["{{base_url}}"],
               "path": ["stories", "recent"],
               "query": [
                 {
                   "key": "limit",
-                  "value": "10"
+                  "value": "10",
+                  "description": "Number of recent stories to return (default: 10)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
                 }
               ]
             }
@@ -620,13 +686,26 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/stories/recommendations?limit=10",
+              "raw": "{{base_url}}/stories/recommendations?limit=10&category_id=5&age_group=3-5",
               "host": ["{{base_url}}"],
               "path": ["stories", "recommendations"],
               "query": [
                 {
                   "key": "limit",
-                  "value": "10"
+                  "value": "10",
+                  "description": "Number of recommended stories to return (default: 10)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
                 }
               ]
             }
@@ -3734,9 +3813,28 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/categories",
+              "raw": "{{base_url}}/categories?limit=20&page=1&per_page=20",
               "host": ["{{base_url}}"],
-              "path": ["categories"]
+              "path": ["categories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of categories to return (default: 10)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Enable pagination (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page when paginated (default: 20)",
+                  "disabled": true
+                }
+              ]
             }
           }
         },
@@ -3751,9 +3849,45 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/categories/1/stories",
+              "raw": "{{base_url}}/categories/5/stories?limit=10&sort=popular&age_group=3-5&is_premium=false&page=1&per_page=20",
               "host": ["{{base_url}}"],
-              "path": ["categories", "1", "stories"]
+              "path": ["categories", "5", "stories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of stories to return (default: 6)"
+                },
+                {
+                  "key": "sort",
+                  "value": "popular",
+                  "description": "Sort by: newest, oldest, popular, rating (default: newest)"
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (3-5, 6-8, 9-12, etc.)",
+                  "disabled": true
+                },
+                {
+                  "key": "is_premium",
+                  "value": "false",
+                  "description": "Filter by premium status (true/false)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Enable pagination (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page when paginated (default: 20)",
+                  "disabled": true
+                }
+              ]
             }
           }
         }
@@ -4647,3 +4781,7 @@
             }
           }
         }
+      ]
+    }
+  ]
+}

@@ -201,16 +201,63 @@
                 </div>
             @endif
 
-            <!-- New Image -->
+            <!-- People Selection -->
             <div class="mb-6">
-                <label for="image" class="block text-sm font-medium text-gray-700 mb-2">تصویر جدید</label>
-                <input type="file" name="image" id="image" accept="image/*" 
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('image') border-red-500 @enderror">
-                @error('image')
-                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                @enderror
-                <p class="text-sm text-gray-500 mt-1">حداکثر 5 مگابایت، فرمت‌های مجاز: JPG, PNG, WebP</p>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">افراد مرتبط</h3>
+                <div>
+                    <label for="people" class="block text-sm font-medium text-gray-700 mb-2">انتخاب افراد</label>
+                    <select name="people[]" id="people" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('people') border-red-500 @enderror" size="6">
+                        @foreach($people as $person)
+                            <option value="{{ $person->id }}" {{ in_array($person->id, old('people', $episode->people->pluck('id')->toArray())) ? 'selected' : '' }}>
+                                {{ $person->name }} 
+                                @if($person->roles)
+                                    ({{ implode(', ', $person->roles) }})
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('people')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p class="mt-1 text-xs text-gray-500">برای انتخاب چند نفر، کلید Ctrl را نگه دارید</p>
+                </div>
             </div>
+
+            <!-- Voice Actors Management -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">مدیریت صداپیشگان</h3>
+                <div id="voice-actors-list" class="space-y-4">
+                    <!-- Voice actors will be added here dynamically -->
+                </div>
+                <div class="flex justify-center pt-4 border-t border-gray-200">
+                    <button type="button" onclick="addVoiceActorRow()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 space-x-reverse">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span>افزودن صداپیشه</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Image Timeline Management -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">مدیریت تصاویر بر اساس زمان</h3>
+                <div id="image-timeline-list" class="space-y-4">
+                    <!-- Image timelines will be added here dynamically -->
+                </div>
+                <div class="flex justify-center pt-4 border-t border-gray-200">
+                    <button type="button" onclick="addImageTimelineRow()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 space-x-reverse">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span>افزودن تصویر</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hidden inputs for timeline and voice actors data -->
+            <input type="hidden" name="image_timeline_data" id="image-timeline-data">
+            <input type="hidden" name="voice_actors_data" id="voice-actors-data">
 
             <!-- Status and Options -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -303,24 +350,179 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Preview image upload
-    document.getElementById('image').addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                let preview = document.getElementById('image_preview');
-                if (!preview) {
-                    preview = document.createElement('img');
-                    preview.id = 'image_preview';
-                    preview.className = 'mt-2 w-32 h-32 object-cover rounded-lg border';
-                    document.getElementById('image').parentNode.appendChild(preview);
-                }
-                preview.src = e.target.result;
-            };
-            reader.readAsDataURL(this.files[0]);
-        }
-    });
+    // Handle form submission with timeline and people data
+    const form = document.getElementById('episode-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('Form submit event triggered');
+            
+            // Update timeline and voice actors data before submission
+            console.log('Updating timeline and voice actors data...');
+            updateImageTimelineData();
+            updateVoiceActorsData();
+        });
+    }
+    
+    // Initialize timeline and voice actors data from existing episode
+    initializeExistingData();
 });
+
+// Initialize existing timeline and voice actors data
+function initializeExistingData() {
+    // Initialize timeline data from existing episode
+    const existingTimelines = @json($episode->imageTimelines);
+    if (existingTimelines && existingTimelines.length > 0) {
+        existingTimelines.forEach(timeline => {
+            addImageTimelineRow({
+                start_time: timeline.start_time,
+                end_time: timeline.end_time,
+                image_file: timeline.image_url
+            });
+        });
+    }
+    
+    // Initialize voice actors data from existing episode
+    const existingVoiceActors = @json($episode->voiceActors);
+    if (existingVoiceActors && existingVoiceActors.length > 0) {
+        existingVoiceActors.forEach(voiceActor => {
+            addVoiceActorRow({
+                person_id: voiceActor.person_id,
+                role: voiceActor.role
+            });
+        });
+    }
+}
+
+// Update image timeline data for form submission
+function updateImageTimelineData() {
+    const imageTimelineData = [];
+    const imageTimelineList = document.getElementById('image-timeline-list');
+    
+    if (imageTimelineList) {
+        imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
+            const imageInput = row.querySelector('input[type="file"]');
+            const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
+            const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
+            
+            if (imageInput && startTimeInput && endTimeInput) {
+                imageTimelineData.push({
+                    image_file: imageInput.files[0] ? imageInput.files[0].name : '',
+                    start_time: startTimeInput.value,
+                    end_time: endTimeInput.value
+                });
+            }
+        });
+    }
+    
+    const hiddenInput = document.getElementById('image-timeline-data');
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(imageTimelineData);
+    }
+}
+
+// Update voice actors data for form submission
+function updateVoiceActorsData() {
+    const voiceActorsData = [];
+    const voiceActorsList = document.getElementById('voice-actors-list');
+    
+    if (voiceActorsList) {
+        voiceActorsList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
+            const narratorSelect = row.querySelector('select[name^="voice_actor_"]');
+            const roleInput = row.querySelector('input[name^="voice_actor_role_"]');
+            
+            if (narratorSelect && roleInput) {
+                voiceActorsData.push({
+                    person_id: narratorSelect.value,
+                    role: roleInput.value
+                });
+            }
+        });
+    }
+    
+    const hiddenInput = document.getElementById('voice-actors-data');
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(voiceActorsData);
+    }
+}
+
+// Add image timeline row
+function addImageTimelineRow(data = {}) {
+    const imageTimelineList = document.getElementById('image-timeline-list');
+    if (!imageTimelineList) return;
+    
+    const row = document.createElement('div');
+    row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+    row.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
+                <input type="file" name="timeline_image_${Date.now()}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">شروع (ثانیه)</label>
+                <input type="number" name="timeline_start_${Date.now()}" value="${data.start_time || ''}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">پایان (ثانیه)</label>
+                <input type="number" name="timeline_end_${Date.now()}" value="${data.end_time || ''}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
+            </div>
+            <div class="flex items-end">
+                <button type="button" onclick="removeImageTimelineRow(this)" class="w-full px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                    حذف
+                </button>
+            </div>
+        </div>
+    `;
+    
+    imageTimelineList.appendChild(row);
+    updateImageTimelineData();
+}
+
+// Add voice actor row
+function addVoiceActorRow(data = {}) {
+    const voiceActorsList = document.getElementById('voice-actors-list');
+    if (!voiceActorsList) return;
+    
+    const row = document.createElement('div');
+    row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+    row.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">صداپیشه</label>
+                <select name="voice_actor_${Date.now()}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="">انتخاب صداپیشه</option>
+                    @foreach($narrators as $narrator)
+                        <option value="{{ $narrator->id }}" ${data.person_id == {{ $narrator->id }} ? 'selected' : ''}>{{ $narrator->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">نقش</label>
+                <input type="text" name="voice_actor_role_${Date.now()}" value="${data.role || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="نقش صداپیشه">
+            </div>
+            <div class="flex items-end">
+                <button type="button" onclick="removeVoiceActorRow(this)" class="w-full px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                    حذف
+                </button>
+            </div>
+        </div>
+    `;
+    
+    voiceActorsList.appendChild(row);
+    updateVoiceActorsData();
+}
+
+// Remove image timeline row
+function removeImageTimelineRow(button) {
+    button.closest('.bg-gray-50').remove();
+    updateImageTimelineData();
+}
+
+// Remove voice actor row
+function removeVoiceActorRow(button) {
+    button.closest('.bg-gray-50').remove();
+    updateVoiceActorsData();
+}
 </script>
 @endsection
 

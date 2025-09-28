@@ -410,9 +410,10 @@ class EpisodeController extends Controller
     {
         $stories = Story::with('category')->orderBy('title', 'asc')->get();
         $narrators = Person::whereJsonContains('roles', 'narrator')->get();
+        $people = Person::orderBy('name', 'asc')->get();
         $episode->load(['imageTimelines']);
 
-        return view('admin.episodes.edit', compact('episode', 'stories', 'narrators'));
+        return view('admin.episodes.edit', compact('episode', 'stories', 'narrators', 'people'));
     }
 
     /**
@@ -432,42 +433,121 @@ class EpisodeController extends Controller
             'is_premium' => 'boolean',
             'status' => 'required|in:draft,published,archived',
             'release_date' => 'nullable|date',
+            'people' => 'nullable|array',
+            'people.*' => 'exists:people,id',
+            'image_timeline_data' => 'nullable|string',
+            'voice_actors_data' => 'nullable|string',
         ]);
 
-        $data = $request->except(['audio_file', 'cover_image']);
+        try {
+            DB::beginTransaction();
 
-        // Handle audio file upload
-        if ($request->hasFile('audio_file')) {
-            // Delete old audio file
-            if ($episode->audio_url) {
-                $oldPath = str_replace('/storage/', '', $episode->audio_url);
-                Storage::disk('public')->delete($oldPath);
+            $data = $request->except(['audio_file', 'cover_image', 'people', 'image_timeline_data', 'voice_actors_data']);
+
+            // Handle audio file upload
+            if ($request->hasFile('audio_file')) {
+                // Delete old audio file
+                if ($episode->audio_url) {
+                    $oldPath = str_replace('/storage/', '', $episode->audio_url);
+                    Storage::disk('public')->delete($oldPath);
+                }
+
+                $audioFile = $request->file('audio_file');
+                $audioPath = $audioFile->store('episodes/audio', 'public');
+                // Store only the relative path
+                $data['audio_url'] = str_replace(storage_path('app/public/'), '', $audioPath);
             }
 
-            $audioFile = $request->file('audio_file');
-            $audioPath = $audioFile->store('episodes/audio', 'public');
-            // Store only the relative path
-            $data['audio_url'] = str_replace(storage_path('app/public/'), '', $audioPath);
-        }
+            // Handle cover image upload
+            if ($request->hasFile('cover_image')) {
+                // Delete old cover image
+                if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
+                    unlink(public_path('images/' . $episode->cover_image_url));
+                }
 
-        // Handle cover image upload
-        if ($request->hasFile('cover_image')) {
-            // Delete old cover image
-            if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
-                unlink(public_path('images/' . $episode->cover_image_url));
+                $coverImage = $request->file('cover_image');
+                $imageName = time() . '_' . $coverImage->getClientOriginalName();
+                $coverImage->move(public_path('images/episodes'), $imageName);
+                // Store only the relative path
+                $data['cover_image_url'] = 'episodes/' . $imageName;
             }
 
-            $coverImage = $request->file('cover_image');
-            $imageName = time() . '_' . $coverImage->getClientOriginalName();
-            $coverImage->move(public_path('images/episodes'), $imageName);
-            // Store only the relative path
-            $data['cover_image_url'] = 'episodes/' . $imageName;
+            $episode->update($data);
+
+            // Handle people relationships
+            if ($request->filled('people')) {
+                $episode->people()->sync($request->people);
+            } else {
+                $episode->people()->detach();
+            }
+
+            // Handle voice actors data
+            if ($request->filled('voice_actors_data')) {
+                $voiceActorsData = json_decode($request->voice_actors_data, true);
+                
+                // Clear existing voice actors
+                $episode->voiceActors()->delete();
+                
+                // Add new voice actors
+                foreach ($voiceActorsData as $voiceActorData) {
+                    if (isset($voiceActorData['person_id']) && isset($voiceActorData['role'])) {
+                        $episode->voiceActors()->create([
+                            'person_id' => $voiceActorData['person_id'],
+                            'role' => $voiceActorData['role']
+                        ]);
+                    }
+                }
+            }
+
+            // Handle image timeline data
+            if ($request->filled('image_timeline_data')) {
+                $imageTimelineData = json_decode($request->image_timeline_data, true);
+                
+                // Clear existing image timelines
+                $episode->imageTimelines()->delete();
+                
+                // Add new image timelines
+                foreach ($imageTimelineData as $timelineData) {
+                    // Handle image file upload
+                    $imagePath = null;
+                    if (isset($timelineData['image_file']) && $timelineData['image_file']) {
+                        // For now, we'll store the image path as provided
+                        // In a real implementation, you'd handle file upload here
+                        $imagePath = $timelineData['image_file'];
+                    }
+                    
+                    $episode->imageTimelines()->create([
+                        'start_time' => $timelineData['start_time'] ?? 0,
+                        'end_time' => $timelineData['end_time'] ?? $episode->duration,
+                        'image_url' => $imagePath,
+                        'image_order' => $timelineData['image_order'] ?? 0,
+                        'scene_description' => $timelineData['scene_description'] ?? '',
+                        'transition_type' => $timelineData['transition_type'] ?? 'fade',
+                        'is_key_frame' => $timelineData['is_key_frame'] ?? false,
+                    ]);
+                }
+
+                $episode->update([
+                    'use_image_timeline' => count($imageTimelineData) > 0
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.episodes.index')
+                ->with('success', 'اپیزود با موفقیت به‌روزرسانی شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to update episode', [
+                'episode_id' => $episode->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'خطا در به‌روزرسانی اپیزود: ' . $e->getMessage());
         }
-
-        $episode->update($data);
-
-        return redirect()->route('admin.episodes.index')
-            ->with('success', 'اپیزود با موفقیت به‌روزرسانی شد.');
     }
 
     /**

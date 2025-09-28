@@ -557,6 +557,11 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function(e) {
             console.log('Form submit event triggered');
             
+            // Update timeline and voice actors data before submission
+            console.log('Updating timeline and voice actors data...');
+            updateImageTimelineData();
+            updateVoiceActorsData();
+            
             // Show loading state
             const submitButton = form.querySelector('button[type="submit"]');
             const originalText = submitButton.textContent;
