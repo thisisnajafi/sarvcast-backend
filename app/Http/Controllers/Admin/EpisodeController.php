@@ -392,9 +392,23 @@ class EpisodeController extends Controller
                                     throw new \Exception('Invalid file: ' . $imageFile->getError());
                                 }
                                 
-                                // Check file size (max 10MB)
-                                if ($imageFile->getSize() > 10 * 1024 * 1024) {
-                                    throw new \Exception('File too large: ' . $imageFile->getSize() . ' bytes');
+                                // Check if file exists and is readable
+                                if (!file_exists($imageFile->getPathname())) {
+                                    throw new \Exception('Temporary file not found: ' . $imageFile->getPathname());
+                                }
+                                
+                                // Check file size (max 10MB) - with error handling
+                                $fileSize = 0;
+                                try {
+                                    $fileSize = $imageFile->getSize();
+                                } catch (\Exception $sizeError) {
+                                    \Log::warning('Could not get file size: ' . $sizeError->getMessage());
+                                    // Try alternative method
+                                    $fileSize = filesize($imageFile->getPathname());
+                                }
+                                
+                                if ($fileSize > 10 * 1024 * 1024) {
+                                    throw new \Exception('File too large: ' . $fileSize . ' bytes');
                                 }
                                 
                                 // Save to public/images/episodes/timeline directory
@@ -406,9 +420,11 @@ class EpisodeController extends Controller
                                 \Log::error('Failed to upload timeline image: ' . $e->getMessage());
                                 \Log::error('File details: ' . json_encode([
                                     'original_name' => $imageFile->getClientOriginalName(),
-                                    'size' => $imageFile->getSize(),
+                                    'size' => $fileSize ?? 'unknown',
                                     'mime_type' => $imageFile->getMimeType(),
-                                    'error' => $imageFile->getError()
+                                    'error' => $imageFile->getError(),
+                                    'pathname' => $imageFile->getPathname(),
+                                    'exists' => file_exists($imageFile->getPathname())
                                 ]));
                                 throw new \Exception('خطا در آپلود تصویر تایم‌لاین: ' . $e->getMessage());
                             }
@@ -709,9 +725,23 @@ class EpisodeController extends Controller
                                     throw new \Exception('Invalid file: ' . $imageFile->getError());
                                 }
                                 
-                                // Check file size (max 10MB)
-                                if ($imageFile->getSize() > 10 * 1024 * 1024) {
-                                    throw new \Exception('File too large: ' . $imageFile->getSize() . ' bytes');
+                                // Check if file exists and is readable
+                                if (!file_exists($imageFile->getPathname())) {
+                                    throw new \Exception('Temporary file not found: ' . $imageFile->getPathname());
+                                }
+                                
+                                // Check file size (max 10MB) - with error handling
+                                $fileSize = 0;
+                                try {
+                                    $fileSize = $imageFile->getSize();
+                                } catch (\Exception $sizeError) {
+                                    \Log::warning('Could not get file size: ' . $sizeError->getMessage());
+                                    // Try alternative method
+                                    $fileSize = filesize($imageFile->getPathname());
+                                }
+                                
+                                if ($fileSize > 10 * 1024 * 1024) {
+                                    throw new \Exception('File too large: ' . $fileSize . ' bytes');
                                 }
                                 
                                 // Save to public/images/episodes/timeline directory
@@ -723,9 +753,11 @@ class EpisodeController extends Controller
                                 \Log::error('Failed to upload timeline image: ' . $e->getMessage());
                                 \Log::error('File details: ' . json_encode([
                                     'original_name' => $imageFile->getClientOriginalName(),
-                                    'size' => $imageFile->getSize(),
+                                    'size' => $fileSize ?? 'unknown',
                                     'mime_type' => $imageFile->getMimeType(),
-                                    'error' => $imageFile->getError()
+                                    'error' => $imageFile->getError(),
+                                    'pathname' => $imageFile->getPathname(),
+                                    'exists' => file_exists($imageFile->getPathname())
                                 ]));
                                 throw new \Exception('خطا در آپلود تصویر تایم‌لاین: ' . $e->getMessage());
                             }
