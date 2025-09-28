@@ -81,11 +81,35 @@ class AppVersion extends Model
     }
 
     /**
+     * Scope for forced updates (alias for forceUpdate)
+     */
+    public function scopeForced($query)
+    {
+        return $query->where('update_type', 'force');
+    }
+
+    /**
      * Scope for optional updates
      */
     public function scopeOptionalUpdate($query)
     {
         return $query->where('update_type', 'optional');
+    }
+
+    /**
+     * Scope for optional updates (alias for optionalUpdate)
+     */
+    public function scopeOptional($query)
+    {
+        return $query->where('update_type', 'optional');
+    }
+
+    /**
+     * Scope for maintenance updates
+     */
+    public function scopeMaintenance($query)
+    {
+        return $query->where('update_type', 'maintenance');
     }
 
     /**
