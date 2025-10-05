@@ -66,8 +66,8 @@ class TelegramNotificationService
         
         $message = "🛒 <b>فروش جدید!</b>\n\n";
         $message .= "👤 <b>مشتری:</b> {$user->first_name} {$user->last_name}\n";
-        $message .= "📧 <b>ایمیل:</b> {$user->email}\n";
-        $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n\n";
+        $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n";
+        $message .= "🆔 <b>شناسه کاربر:</b> {$user->id}\n\n";
         
         $message .= "💰 <b>جزئیات پرداخت:</b>\n";
         $message .= "• مبلغ: " . number_format($payment->amount) . " ریال\n";
@@ -76,10 +76,15 @@ class TelegramNotificationService
         $message .= "• تاریخ: " . $this->formatJalaliDate($payment->created_at) . "\n\n";
         
         if ($subscription) {
-            $planName = \App\Services\SubscriptionService::PLANS[$subscription->type]['name'] ?? $subscription->type;
+            // Get plan name from subscription service
+            $subscriptionService = app(\App\Services\SubscriptionService::class);
+            $plans = $subscriptionService->getPlans();
+            $planName = $plans[$subscription->type]['name'] ?? $subscription->type;
+            $planDuration = $plans[$subscription->type]['duration_days'] ?? 'نامشخص';
+            
             $message .= "📋 <b>اشتراک:</b>\n";
             $message .= "• نوع: {$planName}\n";
-            $message .= "• مدت: " . (\App\Services\SubscriptionService::PLANS[$subscription->type]['duration_days'] ?? 'نامشخص') . " روز\n";
+            $message .= "• مدت: {$planDuration} روز\n";
             $message .= "• قیمت: " . number_format($subscription->price) . " ریال\n\n";
         }
         
