@@ -329,7 +329,7 @@ class SubscriptionController extends Controller
             $subscription = Subscription::create([
                 'user_id' => $user->id,
                 'type' => $planSlug ?: $plan->slug,
-                'price' => $convertedAmount,
+                'price' => (int) $convertedAmount, // Ensure integer for consistency
                 'currency' => $finalCurrency,
                 'status' => 'pending',
                 'start_date' => null,
@@ -345,7 +345,7 @@ class SubscriptionController extends Controller
             $payment = \App\Models\Payment::create([
                 'user_id' => $user->id,
                 'subscription_id' => $subscription->id,
-                'amount' => $convertedAmount,
+                'amount' => (int) $convertedAmount, // Ensure integer for Zarinpal compatibility
                 'currency' => $finalCurrency,
                 'payment_method' => $request->input('payment_method', 'zarinpal'),
                 'status' => 'pending',
@@ -703,21 +703,21 @@ class SubscriptionController extends Controller
     /**
      * Convert currency amount
      */
-    private function convertCurrency(float $amount, string $fromCurrency, string $toCurrency): float
+    private function convertCurrency(float $amount, string $fromCurrency, string $toCurrency): int
     {
-        // If currencies are the same, return original amount
+        // If currencies are the same, return original amount as integer
         if ($fromCurrency === $toCurrency) {
-            return $amount;
+            return (int) $amount;
         }
 
         // Convert IRT to IRR (multiply by 10)
         if ($fromCurrency === 'IRT' && $toCurrency === 'IRR') {
-            return $amount * 10;
+            return (int) ($amount * 10);
         }
 
         // Convert IRR to IRT (divide by 10)
         if ($fromCurrency === 'IRR' && $toCurrency === 'IRT') {
-            return $amount / 10;
+            return (int) ($amount / 10);
         }
 
         // For other currency conversions, you can add more logic here
@@ -728,7 +728,7 @@ class SubscriptionController extends Controller
             'amount' => $amount
         ]);
 
-        return $amount;
+        return (int) $amount;
     }
 
     /**

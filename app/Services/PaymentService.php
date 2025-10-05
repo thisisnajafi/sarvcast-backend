@@ -35,7 +35,7 @@ class PaymentService
 
             $data = [
                 'merchant_id' => $this->zarinpalMerchantId,
-                'amount' => $payment->amount, // Amount should be in IRR (converted from IRT if needed)
+                'amount' => (int) $payment->amount, // Convert to integer as required by Zarinpal
                 'description' => $payment->description ?? 'پرداخت اشتراک سروکست',
                 'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
                 'metadata' => [
@@ -313,7 +313,7 @@ class PaymentService
                 ->first();
             
             if ($payment) {
-                $verification = $this->verifyZarinPalPayment($authority, $payment->amount);
+                $verification = $this->verifyZarinPalPayment($authority, (int) $payment->amount);
                 
                 if ($verification['success']) {
                     $payment->update([
