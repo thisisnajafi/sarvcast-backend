@@ -121,10 +121,14 @@ class SubscriptionController extends Controller
     public function calculatePrice(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'type' => 'required|string|in:monthly,quarterly,yearly,family'
+            'plan_id' => 'nullable|integer|exists:subscription_plans,id',
+            'type' => 'nullable|string|in:monthly,quarterly,yearly,family',
+            'plan_slug' => 'nullable|string|in:1month,3months,6months,1year'
         ], [
-            'type.required' => 'نوع اشتراک الزامی است',
-            'type.in' => 'نوع اشتراک نامعتبر است'
+            'plan_id.integer' => 'شناسه پلن اشتراک باید عدد باشد',
+            'plan_id.exists' => 'پلن اشتراک یافت نشد',
+            'type.in' => 'نوع اشتراک نامعتبر است',
+            'plan_slug.in' => 'نوع اشتراک نامعتبر است'
         ]);
 
         if ($validator->fails()) {
@@ -136,8 +140,31 @@ class SubscriptionController extends Controller
         }
 
         try {
+            $planId = $request->input('plan_id');
             $type = $request->input('type');
-            $priceInfo = $this->subscriptionService->calculatePrice($type);
+            $planSlug = $request->input('plan_slug');
+            
+            // Determine the plan type to calculate price for
+            $planType = null;
+            if ($planId) {
+                $plan = \App\Models\SubscriptionPlan::find($planId);
+                if ($plan) {
+                    $planType = $plan->slug ?? $plan->type;
+                }
+            } elseif ($planSlug) {
+                $planType = $planSlug;
+            } elseif ($type) {
+                $planType = $type;
+            }
+            
+            if (!$planType) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'نوع پلن اشتراک مشخص نشده است'
+                ], 400);
+            }
+            
+            $priceInfo = $this->subscriptionService->calculatePrice($planType);
 
             return response()->json([
                 'success' => true,
@@ -147,7 +174,9 @@ class SubscriptionController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to calculate subscription price', [
+                'plan_id' => $request->input('plan_id'),
                 'type' => $request->input('type'),
+                'plan_slug' => $request->input('plan_slug'),
                 'error' => $e->getMessage()
             ]);
 
@@ -159,17 +188,28 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Store new subscription (alias for create)
+     */
+    public function store(Request $request): JsonResponse
+    {
+        return $this->create($request);
+    }
+
+    /**
      * Create new subscription
      */
     public function create(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'plan_slug' => 'required|string|in:1month,3months,6months,1year',
+            'plan_id' => 'required|integer|exists:subscription_plans,id',
+            'plan_slug' => 'nullable|string|in:1month,3months,6months,1year',
             'coupon_code' => 'nullable|string|max:50',
             'payment_method' => 'nullable|string|max:50',
             'auto_renew' => 'nullable|boolean'
         ], [
-            'plan_slug.required' => 'نوع اشتراک الزامی است',
+            'plan_id.required' => 'شناسه پلن اشتراک الزامی است',
+            'plan_id.integer' => 'شناسه پلن اشتراک باید عدد باشد',
+            'plan_id.exists' => 'پلن اشتراک یافت نشد',
             'plan_slug.in' => 'نوع اشتراک نامعتبر است',
             'coupon_code.max' => 'کد کوپن نمی‌تواند بیشتر از 50 کاراکتر باشد',
             'payment_method.max' => 'روش پرداخت نمی‌تواند بیشتر از 50 کاراکتر باشد'
@@ -185,11 +225,18 @@ class SubscriptionController extends Controller
 
         try {
             $user = $request->user();
+            $planId = $request->input('plan_id');
             $planSlug = $request->input('plan_slug');
             $couponCode = $request->input('coupon_code');
             
-            // Get plan details
-            $plan = $this->subscriptionService->getPlan($planSlug);
+            // Get plan details - try plan_id first, then plan_slug
+            $plan = null;
+            if ($planId) {
+                $plan = \App\Models\SubscriptionPlan::find($planId);
+            } elseif ($planSlug) {
+                $plan = $this->subscriptionService->getPlan($planSlug);
+            }
+            
             if (!$plan) {
                 return response()->json([
                     'success' => false,
@@ -221,7 +268,7 @@ class SubscriptionController extends Controller
             // Create subscription
             $subscription = Subscription::create([
                 'user_id' => $user->id,
-                'type' => $planSlug,
+                'type' => $planSlug ?: $plan->slug,
                 'amount' => $amount,
                 'currency' => 'IRR',
                 'status' => 'pending',
@@ -236,10 +283,10 @@ class SubscriptionController extends Controller
                 'subscription_id' => $subscription->id,
                 'amount' => $amount,
                 'currency' => 'IRR',
-                'payment_method' => 'zarinpal',
+                'payment_method' => $request->input('payment_method', 'zarinpal'),
                 'status' => 'pending',
                 'transaction_id' => $this->generateTransactionId(),
-                'description' => 'پرداخت اشتراک ' . $plan->name
+                'description' => 'پرداخت اشتراک ' . ($plan->name ?? $plan->title ?? 'اشتراک')
             ]);
 
             return response()->json([
