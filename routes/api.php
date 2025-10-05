@@ -185,6 +185,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('current', [SubscriptionController::class, 'current']);
             Route::get('{subscriptionId}', [SubscriptionController::class, 'show']);
             Route::post('cancel', [SubscriptionController::class, 'cancel']);
+            Route::get('debug/subscription', [SubscriptionController::class, 'debugSubscription']);
+            Route::post('debug/subscription/{subscriptionId}/activate', [SubscriptionController::class, 'manuallyActivateSubscription']);
             Route::get('debug/zarinpal', [SubscriptionController::class, 'debugZarinPal']);
         });
 

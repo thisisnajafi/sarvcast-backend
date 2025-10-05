@@ -785,6 +785,79 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Debug subscription status for a user
+     */
+    public function debugSubscription(Request $request)
+    {
+        $user = $request->user();
+        
+        $subscriptions = Subscription::where('user_id', $user->id)->get();
+        $activeSubscription = $user->activeSubscription;
+        
+        $debugInfo = [
+            'user_id' => $user->id,
+            'total_subscriptions' => $subscriptions->count(),
+            'active_subscription' => $activeSubscription ? [
+                'id' => $activeSubscription->id,
+                'type' => $activeSubscription->type,
+                'status' => $activeSubscription->status,
+                'start_date' => $activeSubscription->start_date,
+                'end_date' => $activeSubscription->end_date,
+                'days_remaining' => max(0, now()->diffInDays($activeSubscription->end_date, false)),
+                'is_active' => $activeSubscription->status === 'active' && $activeSubscription->end_date > now()
+            ] : null,
+            'all_subscriptions' => $subscriptions->map(function($sub) {
+                return [
+                    'id' => $sub->id,
+                    'type' => $sub->type,
+                    'status' => $sub->status,
+                    'start_date' => $sub->start_date,
+                    'end_date' => $sub->end_date,
+                    'is_active' => $sub->status === 'active' && $sub->end_date > now(),
+                    'created_at' => $sub->created_at,
+                    'updated_at' => $sub->updated_at
+                ];
+            }),
+            'current_time' => now(),
+            'timezone' => config('app.timezone')
+        ];
+        
+        return response()->json([
+            'success' => true,
+            'debug_info' => $debugInfo
+        ]);
+    }
+
+    /**
+     * Manually activate a subscription (admin/debug only)
+     */
+    public function manuallyActivateSubscription(Request $request, int $subscriptionId)
+    {
+        // Only allow for admin users or subscription owner
+        $user = $request->user();
+        $subscription = Subscription::find($subscriptionId);
+        
+        if (!$subscription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اشتراک یافت نشد'
+            ], 404);
+        }
+        
+        if ($user->role !== 'admin' && $subscription->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی غیرمجاز'
+            ], 403);
+        }
+        
+        $paymentService = app(\App\Services\PaymentService::class);
+        $result = $paymentService->manuallyActivateSubscription($subscriptionId);
+        
+        return response()->json($result);
+    }
+
+    /**
      * Debug ZarinPal configuration
      */
     public function debugZarinPal(Request $request): JsonResponse

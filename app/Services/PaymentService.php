@@ -356,25 +356,77 @@ class PaymentService
                         'gateway_response' => json_encode($verification),
                     ]);
                     
+                    Log::info('Payment marked as completed', [
+                        'payment_id' => $payment->id,
+                        'authority' => $authority,
+                        'amount' => $payment->amount
+                    ]);
+                    
                     // Activate subscription
                     if ($payment->subscription) {
-                        // Calculate end date based on subscription type
                         $subscription = $payment->subscription;
+                        
+                        Log::info('Starting subscription activation', [
+                            'subscription_id' => $subscription->id,
+                            'current_status' => $subscription->status,
+                            'current_start_date' => $subscription->start_date,
+                            'current_end_date' => $subscription->end_date,
+                            'subscription_type' => $subscription->type,
+                            'user_id' => $subscription->user_id
+                        ]);
+                        
+                        // Calculate end date based on subscription type
                         $startDate = now();
                         $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate);
                         
-                        $subscription->update([
-                            'status' => 'active',
-                            'start_date' => $startDate,
-                            'end_date' => $endDate
-                        ]);
-                        
-                        Log::info('Subscription activated', [
+                        Log::info('Calculated subscription dates', [
                             'subscription_id' => $subscription->id,
-                            'type' => $subscription->type,
                             'start_date' => $startDate,
                             'end_date' => $endDate,
-                            'user_id' => $subscription->user_id
+                            'duration_days' => $startDate->diffInDays($endDate)
+                        ]);
+                        
+                        // Update subscription with transaction to ensure data integrity
+                        \DB::transaction(function() use ($subscription, $startDate, $endDate) {
+                            $subscription->update([
+                                'status' => 'active',
+                                'start_date' => $startDate,
+                                'end_date' => $endDate
+                            ]);
+                            
+                            Log::info('Subscription updated in database', [
+                                'subscription_id' => $subscription->id,
+                                'new_status' => $subscription->fresh()->status,
+                                'new_start_date' => $subscription->fresh()->start_date,
+                                'new_end_date' => $subscription->fresh()->end_date
+                            ]);
+                        });
+                        
+                        // Verify the subscription is now active
+                        $updatedSubscription = $subscription->fresh();
+                        $isActive = $updatedSubscription->status === 'active' && $updatedSubscription->end_date > now();
+                        
+                        Log::info('Subscription activation verification', [
+                            'subscription_id' => $updatedSubscription->id,
+                            'status' => $updatedSubscription->status,
+                            'end_date' => $updatedSubscription->end_date,
+                            'current_time' => now(),
+                            'is_active' => $isActive,
+                            'days_remaining' => $isActive ? max(0, now()->diffInDays($updatedSubscription->end_date, false)) : 0
+                        ]);
+                        
+                        if (!$isActive) {
+                            Log::error('Subscription activation failed - not properly activated', [
+                                'subscription_id' => $updatedSubscription->id,
+                                'status' => $updatedSubscription->status,
+                                'end_date' => $updatedSubscription->end_date,
+                                'current_time' => now()
+                            ]);
+                        }
+                    } else {
+                        Log::error('No subscription found for payment', [
+                            'payment_id' => $payment->id,
+                            'subscription_id' => $payment->subscription_id
                         ]);
                     }
                     
@@ -448,6 +500,76 @@ class PaymentService
         ];
 
         return $durations[$subscriptionType] ?? 30; // Default to 30 days if type not found
+    }
+
+    /**
+     * Manually activate a subscription (for debugging/fixing)
+     */
+    public function manuallyActivateSubscription(int $subscriptionId): array
+    {
+        try {
+            $subscription = \App\Models\Subscription::find($subscriptionId);
+            
+            if (!$subscription) {
+                return [
+                    'success' => false,
+                    'message' => 'اشتراک یافت نشد'
+                ];
+            }
+            
+            Log::info('Manual subscription activation started', [
+                'subscription_id' => $subscriptionId,
+                'current_status' => $subscription->status,
+                'current_start_date' => $subscription->start_date,
+                'current_end_date' => $subscription->end_date,
+                'user_id' => $subscription->user_id
+            ]);
+            
+            // Calculate dates
+            $startDate = now();
+            $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate);
+            
+            // Update subscription
+            \DB::transaction(function() use ($subscription, $startDate, $endDate) {
+                $subscription->update([
+                    'status' => 'active',
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                ]);
+            });
+            
+            // Verify activation
+            $updatedSubscription = $subscription->fresh();
+            $isActive = $updatedSubscription->status === 'active' && $updatedSubscription->end_date > now();
+            
+            Log::info('Manual subscription activation completed', [
+                'subscription_id' => $subscriptionId,
+                'new_status' => $updatedSubscription->status,
+                'new_start_date' => $updatedSubscription->start_date,
+                'new_end_date' => $updatedSubscription->end_date,
+                'is_active' => $isActive,
+                'days_remaining' => $isActive ? max(0, now()->diffInDays($updatedSubscription->end_date, false)) : 0
+            ]);
+            
+            return [
+                'success' => true,
+                'message' => 'اشتراک با موفقیت فعال شد',
+                'subscription' => $updatedSubscription,
+                'is_active' => $isActive
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Manual subscription activation failed', [
+                'subscription_id' => $subscriptionId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'خطا در فعال‌سازی اشتراک: ' . $e->getMessage()
+            ];
+        }
     }
 
     /**
