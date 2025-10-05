@@ -358,9 +358,23 @@ class PaymentService
                     
                     // Activate subscription
                     if ($payment->subscription) {
-                        $payment->subscription->update([
+                        // Calculate end date based on subscription type
+                        $subscription = $payment->subscription;
+                        $startDate = now();
+                        $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate);
+                        
+                        $subscription->update([
                             'status' => 'active',
-                            'start_date' => now()
+                            'start_date' => $startDate,
+                            'end_date' => $endDate
+                        ]);
+                        
+                        Log::info('Subscription activated', [
+                            'subscription_id' => $subscription->id,
+                            'type' => $subscription->type,
+                            'start_date' => $startDate,
+                            'end_date' => $endDate,
+                            'user_id' => $subscription->user_id
                         ]);
                     }
                     
@@ -410,6 +424,30 @@ class PaymentService
             'success' => false,
             'message' => 'پرداخت یافت نشد یا نامعتبر است'
         ];
+    }
+
+    /**
+     * Calculate subscription end date based on type
+     */
+    private function calculateSubscriptionEndDate(string $subscriptionType, $startDate): \Carbon\Carbon
+    {
+        $durationDays = $this->getSubscriptionDurationDays($subscriptionType);
+        return $startDate->copy()->addDays($durationDays);
+    }
+
+    /**
+     * Get subscription duration in days based on type
+     */
+    private function getSubscriptionDurationDays(string $subscriptionType): int
+    {
+        $durations = [
+            '1month' => 30,
+            '3months' => 90,
+            '6months' => 180,
+            '1year' => 365
+        ];
+
+        return $durations[$subscriptionType] ?? 30; // Default to 30 days if type not found
     }
 
     /**

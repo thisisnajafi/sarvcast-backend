@@ -162,7 +162,7 @@ class User extends Authenticatable
      */
     public function activeSubscription()
     {
-        return $this->hasOne(Subscription::class)->where('status', 'active');
+        return $this->hasOne(Subscription::class)->active();
     }
 
     /**
