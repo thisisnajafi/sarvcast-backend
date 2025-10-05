@@ -20,6 +20,9 @@ class Favorite extends Model
         'created_at' => 'datetime',
     ];
 
+    // Disable updated_at timestamp since we only track creation time
+    const UPDATED_AT = null;
+
     /**
      * Get the user that owns the favorite
      */

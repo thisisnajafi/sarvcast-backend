@@ -77,119 +77,55 @@ class FavoriteController extends Controller
             $user = $request->user();
             $storyId = $request->input('story_id');
 
-            Log::info('Adding favorite - Debug Info', [
-                'user_id' => $user->id,
-                'story_id' => $storyId,
-                'request_data' => $request->all()
-            ]);
-
             // Check if story exists and is published
             $story = Story::where('id', $storyId)
                          ->where('status', 'published')
                          ->first();
 
-            Log::info('Story lookup result', [
-                'story_id' => $storyId,
-                'story_found' => $story ? true : false,
-                'story_status' => $story ? $story->status : 'not_found'
-            ]);
-
             if (!$story) {
-                Log::warning('Story not found or not published', [
-                    'story_id' => $storyId,
-                    'user_id' => $user->id
-                ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'داستان یافت نشد یا منتشر نشده است',
-                    'debug' => [
-                        'story_id' => $storyId,
-                        'story_exists' => false
-                    ]
+                    'message' => 'داستان یافت نشد یا منتشر نشده است'
                 ], 404);
             }
 
             // Check if already favorited
-            $isAlreadyFavorited = Favorite::isFavorited($user->id, $storyId);
-            Log::info('Favorite check result', [
-                'user_id' => $user->id,
-                'story_id' => $storyId,
-                'is_already_favorited' => $isAlreadyFavorited
-            ]);
-
-            if ($isAlreadyFavorited) {
+            if (Favorite::isFavorited($user->id, $storyId)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'این داستان قبلاً به علاقه‌مندی‌ها اضافه شده است',
-                    'debug' => [
-                        'story_id' => $storyId,
-                        'already_favorited' => true
-                    ]
+                    'message' => 'این داستان قبلاً به علاقه‌مندی‌ها اضافه شده است'
                 ], 409);
             }
 
-            Log::info('Attempting to add favorite', [
-                'user_id' => $user->id,
-                'story_id' => $storyId
-            ]);
-
             $added = Favorite::addToFavorites($user->id, $storyId);
 
-            Log::info('Add to favorites result', [
-                'user_id' => $user->id,
-                'story_id' => $storyId,
-                'added_successfully' => $added
-            ]);
-
             if ($added) {
-                $favoriteCount = Favorite::getStoryFavoriteCount($storyId);
-                Log::info('Favorite added successfully', [
-                    'user_id' => $user->id,
-                    'story_id' => $storyId,
-                    'favorite_count' => $favoriteCount
-                ]);
-
                 return response()->json([
                     'success' => true,
                     'data' => [
                         'story_id' => $storyId,
                         'is_favorited' => true,
-                        'favorite_count' => $favoriteCount
+                        'favorite_count' => Favorite::getStoryFavoriteCount($storyId)
                     ],
                     'message' => 'داستان به علاقه‌مندی‌ها اضافه شد'
                 ]);
             } else {
-                Log::error('Failed to add favorite - addToFavorites returned false', [
-                    'user_id' => $user->id,
-                    'story_id' => $storyId
-                ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'خطا در اضافه کردن به علاقه‌مندی‌ها',
-                    'debug' => [
-                        'story_id' => $storyId,
-                        'addToFavorites_result' => $added,
-                        'error' => 'addToFavorites method returned false'
-                    ]
+                    'message' => 'خطا در اضافه کردن به علاقه‌مندی‌ها'
                 ], 500);
             }
 
         } catch (\Exception $e) {
-            Log::error('Failed to add favorite - Exception', [
+            Log::error('Failed to add favorite', [
                 'user_id' => $request->user()->id,
                 'story_id' => $request->input('story_id'),
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در اضافه کردن به علاقه‌مندی‌ها',
-                'debug' => [
-                    'error_message' => $e->getMessage(),
-                    'error_file' => $e->getFile(),
-                    'error_line' => $e->getLine()
-                ]
+                'message' => 'خطا در اضافه کردن به علاقه‌مندی‌ها'
             ], 500);
         }
     }
