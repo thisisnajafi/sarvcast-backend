@@ -93,7 +93,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">کل درآمد</h3>
-                    <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ number_format($stats['total_revenue']) }} تومان</p>
+                    <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ number_format($stats['total_revenue']) }} ریال</p>
                 </div>
                 <div class="bg-green-100 dark:bg-green-900 p-3 rounded-full">
                     <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -107,7 +107,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">درآمد ماهانه</h3>
-                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($stats['monthly_revenue']) }} تومان</p>
+                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($stats['monthly_revenue']) }} ریال</p>
                 </div>
                 <div class="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
                     <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,7 +212,7 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ number_format($subscription->price) }} تومان
+                            {{ number_format($subscription->price) }} ریال
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->start_date, 'Y/m/d') }}

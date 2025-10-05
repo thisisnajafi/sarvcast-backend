@@ -98,7 +98,7 @@
             <div class="space-y-3 text-right">
                 <div class="flex justify-between items-center">
                     <span class="text-gray-600">💰 مبلغ پرداخت:</span>
-                    <span class="font-semibold text-gray-800">{{ number_format($payment->amount) }} تومان</span>
+                    <span class="font-semibold text-gray-800">{{ number_format($payment->amount) }} ریال</span>
                 </div>
                 
                 <div class="flex justify-between items-center">
@@ -128,13 +128,13 @@
 
         <!-- Action Buttons -->
         <div class="space-y-4">
-            <a href="#" class="block w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-2xl transition duration-300 transform hover:scale-105">
+            <button onclick="openApp()" class="block w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-6 rounded-2xl transition duration-300 transform hover:scale-105">
                 🎧 شروع گوش دادن به داستان‌ها
-            </a>
+            </button>
             
-            <a href="#" class="block w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
+            <button onclick="returnToApp()" class="block w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
                 📱 بازگشت به اپلیکیشن
-            </a>
+            </button>
         </div>
 
         <!-- Fun Message -->
@@ -156,10 +156,60 @@
     </div>
 
     <script>
+        // App return functionality
+        function returnToApp() {
+            // Get payment data for app
+            const paymentData = {
+                success: true,
+                payment_id: {{ isset($payment) && $payment ? $payment->id : 'null' }},
+                subscription_id: {{ isset($payment) && $payment && $payment->subscription ? $payment->subscription->id : 'null' }},
+                amount: {{ isset($payment) && $payment ? $payment->amount : 'null' }},
+                transaction_id: '{{ isset($payment) && $payment ? $payment->transaction_id : '' }}',
+                timestamp: new Date().toISOString()
+            };
+            
+            // Try multiple methods to return to app
+            const appSchemes = [
+                'sarvcast://payment/success', // Your app's custom scheme
+                'sarvcast://subscription/success',
+                'sarvcast://home',
+                'sarvcast://'
+            ];
+            
+            // Add payment data as query parameters
+            const dataString = encodeURIComponent(JSON.stringify(paymentData));
+            
+            // Try each scheme
+            for (let scheme of appSchemes) {
+                const url = `${scheme}?data=${dataString}`;
+                
+                // Create hidden iframe to try opening the app
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                
+                // Remove iframe after attempt
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }
+            
+            // Show fallback message
+            setTimeout(() => {
+                alert('اگر اپلیکیشن باز نشد، لطفاً به صورت دستی به اپلیکیشن بازگردید.');
+            }, 2000);
+        }
+        
+        function openApp() {
+            // Same as returnToApp but with different messaging
+            returnToApp();
+        }
+        
         // Add some interactive effects
         document.addEventListener('DOMContentLoaded', function() {
             // Add click effect to buttons
-            const buttons = document.querySelectorAll('a');
+            const buttons = document.querySelectorAll('button');
             buttons.forEach(button => {
                 button.addEventListener('click', function(e) {
                     // Create ripple effect
@@ -175,7 +225,8 @@
             
             // Auto redirect after 30 seconds (optional)
             setTimeout(() => {
-                // You can add auto-redirect logic here if needed
+                // Auto return to app after 30 seconds
+                returnToApp();
             }, 30000);
         });
     </script>

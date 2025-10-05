@@ -58,7 +58,7 @@
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">قیمت</label>
-                        <p class="text-sm text-gray-900 dark:text-white">{{ number_format($subscription->price) }} تومان</p>
+                        <p class="text-sm text-gray-900 dark:text-white">{{ number_format($subscription->price) }} ریال</p>
                     </div>
                     
                     <div>
@@ -126,7 +126,7 @@
                                     #{{ $payment->id }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                                    {{ number_format($payment->amount) }} تومان
+                                    {{ number_format($payment->amount) }} ریال
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($payment->status == 'completed')

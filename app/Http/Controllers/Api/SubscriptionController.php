@@ -190,6 +190,7 @@ class SubscriptionController extends Controller
             
             // Determine the plan type to calculate price for
             $planType = null;
+            $plan = null;
             if ($planId) {
                 $plan = \App\Models\SubscriptionPlan::find($planId);
                 if ($plan) {
@@ -209,6 +210,16 @@ class SubscriptionController extends Controller
             }
             
             $priceInfo = $this->subscriptionService->calculatePrice($planType);
+            
+            // Convert currency if needed
+            if ($plan && $plan->currency === 'IRT') {
+                $priceInfo['original_amount'] = $priceInfo['amount'];
+                $priceInfo['original_currency'] = 'IRT';
+                $priceInfo['amount'] = $this->convertCurrency($priceInfo['amount'], 'IRT', 'IRR');
+                $priceInfo['currency'] = 'IRR';
+                $priceInfo['conversion_rate'] = 10;
+                $priceInfo['conversion_note'] = 'قیمت از ریال تومان به ریال تبدیل شده است';
+            }
 
             return response()->json([
                 'success' => true,
@@ -290,6 +301,7 @@ class SubscriptionController extends Controller
 
             // Calculate final amount
             $amount = $plan->final_price;
+            $planCurrency = $plan->currency ?? 'IRT';
             
             // Apply coupon if provided
             if ($couponCode) {
@@ -308,34 +320,59 @@ class SubscriptionController extends Controller
                     ], 400);
                 }
             }
+            
+            // Convert currency from IRT to IRR if needed
+            $convertedAmount = $this->convertCurrency($amount, $planCurrency, 'IRR');
+            $finalCurrency = 'IRR';
 
             // Create subscription
             $subscription = Subscription::create([
                 'user_id' => $user->id,
                 'type' => $planSlug ?: $plan->slug,
-                'price' => $amount,
-                'currency' => 'IRR',
+                'price' => $convertedAmount,
+                'currency' => $finalCurrency,
                 'status' => 'pending',
                 'start_date' => null,
                 'end_date' => null,
                 'auto_renew' => $request->input('auto_renew', true),
             ]);
 
+            // Get plan's first feature for description
+            $planFeatures = $plan->features ?? [];
+            $firstFeature = !empty($planFeatures) ? $planFeatures[0] : ($plan->name ?? $plan->title ?? 'اشتراک');
+            
             // Create payment record
             $payment = \App\Models\Payment::create([
                 'user_id' => $user->id,
                 'subscription_id' => $subscription->id,
-                'amount' => $amount,
-                'currency' => 'IRR',
+                'amount' => $convertedAmount,
+                'currency' => $finalCurrency,
                 'payment_method' => $request->input('payment_method', 'zarinpal'),
                 'status' => 'pending',
-                'transaction_id' => $this->generateTransactionId(),
-                'description' => 'پرداخت اشتراک ' . ($plan->name ?? $plan->title ?? 'اشتراک')
+                'transaction_id' => $this->generateTransactionId()
             ]);
+
+            // Set description for payment service (since it's not in database)
+            $payment->description = $firstFeature;
+            
+            // Initiate Zarinpal payment
+            $paymentService = app(\App\Services\PaymentService::class);
+            $paymentResult = $paymentService->initiateZarinPalPayment($payment);
+
+            if (!$paymentResult['success']) {
+                // If payment initiation fails, clean up the subscription and payment
+                $subscription->delete();
+                $payment->delete();
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $paymentResult['message']
+                ], 500);
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'اشتراک با موفقیت ایجاد شد',
+                'message' => 'اشتراک ایجاد شد. لطفاً پرداخت را تکمیل کنید.',
                 'data' => [
                     'subscription' => [
                         'id' => $subscription->id,
@@ -357,9 +394,11 @@ class SubscriptionController extends Controller
                         'payment_method' => $payment->payment_method,
                         'status' => $payment->status,
                         'transaction_id' => $payment->transaction_id,
-                        'description' => $payment->description,
+                        'description' => $firstFeature,
                         'created_at' => $payment->created_at
-                    ]
+                    ],
+                    'payment_url' => $paymentResult['payment_url'],
+                    'authority' => $paymentResult['authority']
                 ]
             ]);
 
@@ -659,5 +698,36 @@ class SubscriptionController extends Controller
                 'message' => 'خطا در دریافت آمار اشتراک‌ها'
             ], 500);
         }
+    }
+
+    /**
+     * Convert currency amount
+     */
+    private function convertCurrency(float $amount, string $fromCurrency, string $toCurrency): float
+    {
+        // If currencies are the same, return original amount
+        if ($fromCurrency === $toCurrency) {
+            return $amount;
+        }
+
+        // Convert IRT to IRR (multiply by 10)
+        if ($fromCurrency === 'IRT' && $toCurrency === 'IRR') {
+            return $amount * 10;
+        }
+
+        // Convert IRR to IRT (divide by 10)
+        if ($fromCurrency === 'IRR' && $toCurrency === 'IRT') {
+            return $amount / 10;
+        }
+
+        // For other currency conversions, you can add more logic here
+        // For now, return original amount if conversion is not supported
+        Log::warning('Currency conversion not supported', [
+            'from' => $fromCurrency,
+            'to' => $toCurrency,
+            'amount' => $amount
+        ]);
+
+        return $amount;
     }
 }

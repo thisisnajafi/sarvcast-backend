@@ -35,7 +35,7 @@ class PaymentService
 
             $data = [
                 'merchant_id' => $this->zarinpalMerchantId,
-                'amount' => $payment->amount,
+                'amount' => $payment->amount, // Amount should be in IRR (converted from IRT if needed)
                 'description' => $payment->description ?? 'پرداخت اشتراک سروکست',
                 'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
                 'metadata' => [

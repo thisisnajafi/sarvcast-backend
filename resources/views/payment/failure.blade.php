@@ -113,9 +113,9 @@
                 📞 تماس با پشتیبانی
             </a>
             
-            <a href="#" class="block w-full bg-green-100 hover:bg-green-200 text-green-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
-                🏠 بازگشت به خانه
-            </a>
+            <button onclick="returnToApp()" class="block w-full bg-green-100 hover:bg-green-200 text-green-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
+                🏠 بازگشت به اپلیکیشن
+            </button>
         </div>
 
         <!-- Support Information -->
@@ -158,6 +158,47 @@
                     // Redirect to payment page or retry logic
                     window.location.href = '/payment/retry'; // You can customize this URL
                 }, 1000);
+            }, 2000);
+        }
+        
+        function returnToApp() {
+            // Get failure data for app
+            const failureData = {
+                success: false,
+                error: '{{ session("error") ?? "پرداخت ناموفق" }}',
+                timestamp: new Date().toISOString()
+            };
+            
+            // Try multiple methods to return to app
+            const appSchemes = [
+                'sarvcast://payment/failure', // Your app's custom scheme
+                'sarvcast://subscription/failure',
+                'sarvcast://home',
+                'sarvcast://'
+            ];
+            
+            // Add failure data as query parameters
+            const dataString = encodeURIComponent(JSON.stringify(failureData));
+            
+            // Try each scheme
+            for (let scheme of appSchemes) {
+                const url = `${scheme}?data=${dataString}`;
+                
+                // Create hidden iframe to try opening the app
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                
+                // Remove iframe after attempt
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }
+            
+            // Show fallback message
+            setTimeout(() => {
+                alert('اگر اپلیکیشن باز نشد، لطفاً به صورت دستی به اپلیکیشن بازگردید.');
             }, 2000);
         }
         
