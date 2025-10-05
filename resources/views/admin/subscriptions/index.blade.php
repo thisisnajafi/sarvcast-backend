@@ -179,17 +179,17 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center ml-4">
-                                    <span class="text-white font-semibold text-sm">{{ substr($subscription->user->first_name ?? 'U', 0, 1) }}</span>
+                                    <span class="text-white font-semibold text-sm">{{ substr($subscription->user?->first_name ?? 'U', 0, 1) }}</span>
                                 </div>
                                 <div>
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $subscription->user->first_name }} {{ $subscription->user->last_name }}</div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ $subscription->user->email }}</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $subscription->user?->first_name ?? 'کاربر' }} {{ $subscription->user?->last_name ?? 'نامشخص' }}</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ $subscription->user?->email ?? 'ایمیل نامشخص' }}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                {{ \App\Services\SubscriptionService::PLANS[$subscription->type]['name'] ?? $subscription->type }}
+                                {{ $plans[$subscription->type]['name'] ?? ($subscription->type ?? 'نامشخص') }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -212,13 +212,13 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ number_format($subscription->price) }} ریال
+                            {{ number_format($subscription->price ?? 0) }} ریال
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->start_date, 'Y/m/d') }}
+                            {{ $subscription->start_date ? \App\Helpers\JalaliHelper::formatForDisplay($subscription->start_date, 'Y/m/d') : 'نامشخص' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->end_date, 'Y/m/d') }}
+                            {{ $subscription->end_date ? \App\Helpers\JalaliHelper::formatForDisplay($subscription->end_date, 'Y/m/d') : 'نامشخص' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex space-x-2 space-x-reverse">

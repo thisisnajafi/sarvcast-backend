@@ -63,7 +63,10 @@ class SubscriptionController extends Controller
                 ->sum('price')
         ];
 
-        return view('admin.subscriptions.index', compact('subscriptions', 'stats'));
+        // Get plans data for the view
+        $plans = $this->subscriptionService->getPlans();
+
+        return view('admin.subscriptions.index', compact('subscriptions', 'stats', 'plans'));
     }
 
     /**
