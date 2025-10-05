@@ -429,12 +429,12 @@ function updateImageTimelineData() {
     if (imageTimelineList) {
         imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
             const imageInput = row.querySelector('input[type="file"]');
+            const existingImagePath = row.querySelector('.existing-image-path');
             const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
             const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
             const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
             const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
             const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
-            const existingImagePreview = row.querySelector('.image-preview-container img');
             
             if (startTimeInput && endTimeInput) {
                 const timelineData = {
@@ -449,10 +449,10 @@ function updateImageTimelineData() {
                 // Check if there's a new file uploaded
                 if (imageInput && imageInput.files[0]) {
                     timelineData.image_file = imageInput.files[0].name;
-                } else if (existingImagePreview && existingImagePreview.src) {
+                } else if (existingImagePath && existingImagePath.value) {
                     // Preserve existing image if no new file is uploaded
                     // Use the relative path as image_file (same as create method)
-                    timelineData.image_file = existingImagePreview.src.replace(baseUrl + '/', '');
+                    timelineData.image_file = existingImagePath.value;
                 }
                 
                 imageTimelineData.push(timelineData);
@@ -503,6 +503,7 @@ function addImageTimelineRow(data = {}) {
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
                 <input type="file" name="timeline_image_${Date.now()}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="previewImage(this)">
+                ${data.existing_image_url ? '<input type="hidden" class="existing-image-path" value="' + data.existing_image_url + '">' : ''}
                 <div class="mt-2 image-preview-container" style="display: ${data.existing_image_url ? 'block' : 'none'};">
                     <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر" src="${data.existing_image_url ? baseUrl + '/' + data.existing_image_url : ''}">
                     ${data.existing_image_url ? '<p class="text-xs text-gray-500 mt-1">تصویر موجود - برای تغییر، فایل جدید انتخاب کنید</p>' : ''}
