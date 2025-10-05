@@ -71,7 +71,7 @@ class SubscriptionController extends Controller
      */
     public function plans(): View
     {
-        $plans = SubscriptionService::PLANS;
+        $plans = $this->subscriptionService->getPlans();
         
         // Get plan statistics
         $planStats = [];

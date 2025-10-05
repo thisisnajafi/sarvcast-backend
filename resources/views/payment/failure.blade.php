@@ -37,15 +37,6 @@
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
-        .retry-button {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            transition: all 0.3s ease;
-        }
-        
-        .retry-button:hover {
-            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
-            transform: translateY(-2px);
-        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen flex items-center justify-center p-4">
@@ -105,10 +96,6 @@
 
         <!-- Action Buttons -->
         <div class="space-y-4">
-            <button onclick="retryPayment()" class="retry-button w-full text-white font-semibold py-4 px-6 rounded-2xl shadow-lg">
-                🔄 تلاش مجدد برای پرداخت
-            </button>
-            
             <a href="#" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
                 📞 تماس با پشتیبانی
             </a>
@@ -140,27 +127,6 @@
     </div>
 
     <script>
-        function retryPayment() {
-            // Add loading effect
-            const button = event.target;
-            const originalText = button.innerHTML;
-            
-            button.innerHTML = '⏳ در حال پردازش...';
-            button.disabled = true;
-            
-            // Simulate retry process
-            setTimeout(() => {
-                // Here you would typically redirect to payment page or retry the payment
-                // For now, we'll just show a message
-                button.innerHTML = '✅ در حال انتقال...';
-                
-                setTimeout(() => {
-                    // Redirect to payment page or retry logic
-                    window.location.href = '/payment/retry'; // You can customize this URL
-                }, 1000);
-            }, 2000);
-        }
-        
         function returnToApp() {
             // Get failure data for app
             const failureData = {

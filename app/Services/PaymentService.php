@@ -247,6 +247,13 @@ class PaymentService
             if ($response->successful()) {
                 $result = $response->json();
                 
+                Log::info('ZarinPal verification response', [
+                    'authority' => $authority,
+                    'response_code' => $result['data']['code'] ?? 'No code',
+                    'response_data' => $result['data'] ?? 'No data',
+                    'response_errors' => $result['errors'] ?? 'No errors'
+                ]);
+                
                 if ($result['data']['code'] == 100) {
                     Log::info('ZarinPal payment verified successfully', [
                         'authority' => $authority,
@@ -263,7 +270,8 @@ class PaymentService
                     Log::error('ZarinPal payment verification failed', [
                         'authority' => $authority,
                         'error_code' => $result['data']['code'],
-                        'error_message' => $result['errors']['message'] ?? 'خطای نامشخص'
+                        'error_message' => $result['errors']['message'] ?? 'خطای نامشخص',
+                        'full_response' => $result
                     ]);
 
                     return [
@@ -275,7 +283,8 @@ class PaymentService
                 Log::error('ZarinPal verification API request failed', [
                     'authority' => $authority,
                     'status_code' => $response->status(),
-                    'response_body' => $response->body()
+                    'response_body' => $response->body(),
+                    'request_data' => $data
                 ]);
 
                 return [
@@ -306,14 +315,35 @@ class PaymentService
         $authority = $data['Authority'] ?? null;
         $status = $data['Status'] ?? null;
         
+        Log::info('Payment callback received', [
+            'authority' => $authority,
+            'status' => $status,
+            'all_data' => $data
+        ]);
+        
         if ($status === 'OK' && $authority) {
             $payment = Payment::where('transaction_id', $authority)
                 ->where('payment_method', 'zarinpal')
                 ->where('status', 'pending')
                 ->first();
             
+            Log::info('Payment lookup result', [
+                'authority' => $authority,
+                'payment_found' => $payment ? true : false,
+                'payment_id' => $payment?->id,
+                'payment_amount' => $payment?->amount,
+                'payment_status' => $payment?->status
+            ]);
+            
             if ($payment) {
                 $verification = $this->verifyZarinPalPayment($authority, (int) $payment->amount);
+                
+                Log::info('Payment verification result', [
+                    'authority' => $authority,
+                    'verification_success' => $verification['success'],
+                    'verification_message' => $verification['message'] ?? 'No message',
+                    'payment_id' => $payment->id
+                ]);
                 
                 if ($verification['success']) {
                     $payment->update([
@@ -333,6 +363,12 @@ class PaymentService
                     // Fire sales notification event
                     event(new SalesNotificationEvent($payment, $payment->subscription));
                     
+                    Log::info('Payment completed successfully', [
+                        'payment_id' => $payment->id,
+                        'authority' => $authority,
+                        'subscription_id' => $payment->subscription?->id
+                    ]);
+                    
                     return [
                         'success' => true,
                         'payment' => $payment,
@@ -340,12 +376,30 @@ class PaymentService
                     ];
                 } else {
                     $payment->update(['status' => 'failed']);
+                    
+                    Log::error('Payment verification failed', [
+                        'payment_id' => $payment->id,
+                        'authority' => $authority,
+                        'verification_message' => $verification['message'] ?? 'No message'
+                    ]);
+                    
                     return [
                         'success' => false,
                         'message' => $verification['message']
                     ];
                 }
+            } else {
+                Log::warning('Payment not found for callback', [
+                    'authority' => $authority,
+                    'status' => $status
+                ]);
             }
+        } else {
+            Log::warning('Invalid callback data', [
+                'authority' => $authority,
+                'status' => $status,
+                'expected_status' => 'OK'
+            ]);
         }
         
         return [
