@@ -70,7 +70,7 @@ class TelegramNotificationService
         $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n\n";
         
         $message .= "💰 <b>جزئیات پرداخت:</b>\n";
-        $message .= "• مبلغ: " . number_format($payment->amount) . " تومان\n";
+        $message .= "• مبلغ: " . number_format($payment->amount) . " ریال\n";
         $message .= "• روش پرداخت: {$payment->payment_method}\n";
         $message .= "• وضعیت: {$this->getPaymentStatusText($payment->status)}\n";
         $message .= "• تاریخ: " . $this->formatJalaliDate($payment->created_at) . "\n\n";
@@ -80,22 +80,22 @@ class TelegramNotificationService
             $message .= "📋 <b>اشتراک:</b>\n";
             $message .= "• نوع: {$planName}\n";
             $message .= "• مدت: " . (\App\Services\SubscriptionService::PLANS[$subscription->type]['duration_days'] ?? 'نامشخص') . " روز\n";
-            $message .= "• قیمت: " . number_format($subscription->price) . " تومان\n\n";
+            $message .= "• قیمت: " . number_format($subscription->price) . " ریال\n\n";
         }
         
         if ($coupon) {
             $message .= "🎫 <b>کوپن استفاده شده:</b>\n";
             $message .= "• کد: {$coupon->code}\n";
             $message .= "• نوع: {$this->getCouponTypeText($coupon->type)}\n";
-            $message .= "• مقدار: {$coupon->value}" . ($coupon->type === 'percentage' ? '%' : ' تومان') . "\n";
-            $message .= "• تخفیف اعمال شده: " . number_format($payment->discount_amount ?? 0) . " تومان\n\n";
+            $message .= "• مقدار: {$coupon->value}" . ($coupon->type === 'percentage' ? '%' : ' ریال') . "\n";
+            $message .= "• تخفیف اعمال شده: " . number_format($payment->discount_amount ?? 0) . " ریال\n\n";
         } else {
             $message .= "🎫 <b>کوپن:</b> استفاده نشده\n\n";
         }
         
         $message .= "📊 <b>آمار:</b>\n";
         $message .= "• تعداد کل پرداخت‌های کاربر: " . $user->payments()->where('status', 'completed')->count() . "\n";
-        $message .= "• مجموع پرداخت‌های کاربر: " . number_format($user->payments()->where('status', 'completed')->sum('amount')) . " تومان\n";
+        $message .= "• مجموع پرداخت‌های کاربر: " . number_format($user->payments()->where('status', 'completed')->sum('amount')) . " ریال\n";
         
         return $this->sendMessage($message);
     }
@@ -120,15 +120,15 @@ class TelegramNotificationService
         $message .= "• تلفن: {$user->phone_number}\n\n";
         
         $message .= "💰 <b>جزئیات کمیسیون:</b>\n";
-        $message .= "• مبلغ پرداخت: " . number_format($payment->amount) . " تومان\n";
+        $message .= "• مبلغ پرداخت: " . number_format($payment->amount) . " ریال\n";
         $message .= "• نرخ کمیسیون: {$commission->rate}%\n";
-        $message .= "• مبلغ کمیسیون: " . number_format($commission->amount) . " تومان\n";
+        $message .= "• مبلغ کمیسیون: " . number_format($commission->amount) . " ریال\n";
         $message .= "• وضعیت: {$this->getCommissionStatusText($commission->status)}\n";
         $message .= "• تاریخ: " . $this->formatJalaliDate($commission->created_at) . "\n\n";
         
         $message .= "📊 <b>آمار اینفلوئنسر:</b>\n";
         $message .= "• تعداد کل کمیسیون‌ها: " . $influencer->commissions()->count() . "\n";
-        $message .= "• مجموع کمیسیون‌ها: " . number_format($influencer->commissions()->sum('commission_amount')) . " تومان\n";
+        $message .= "• مجموع کمیسیون‌ها: " . number_format($influencer->commissions()->sum('commission_amount')) . " ریال\n";
         
         return $this->sendMessage($message);
     }
@@ -172,14 +172,14 @@ class TelegramNotificationService
         $message .= "📋 <b>اشتراک:</b>\n";
         $message .= "• نوع: {$planName}\n";
         $message .= "• مدت: " . (\App\Services\SubscriptionService::PLANS[$subscription->type]['duration_days'] ?? 'نامشخص') . " روز\n";
-        $message .= "• قیمت: " . number_format($subscription->price) . " تومان\n";
+        $message .= "• قیمت: " . number_format($subscription->price) . " ریال\n";
         $message .= "• تاریخ شروع: " . $this->formatJalaliDate($subscription->start_date) . "\n";
         $message .= "• تاریخ پایان: " . $this->formatJalaliDate($subscription->end_date) . "\n";
         $message .= "• تمدید خودکار: " . ($subscription->auto_renew ? 'فعال' : 'غیرفعال') . "\n\n";
         
         $message .= "📊 <b>آمار کاربر:</b>\n";
         $message .= "• تعداد اشتراک‌ها: " . $user->subscriptions()->count() . "\n";
-        $message .= "• مجموع پرداخت‌ها: " . number_format($user->payments()->where('status', 'completed')->sum('amount')) . " تومان\n";
+        $message .= "• مجموع پرداخت‌ها: " . number_format($user->payments()->where('status', 'completed')->sum('amount')) . " ریال\n";
         
         return $this->sendMessage($message);
     }
@@ -198,7 +198,7 @@ class TelegramNotificationService
         
         $message .= "📋 <b>اشتراک لغو شده:</b>\n";
         $message .= "• نوع: {$planName}\n";
-        $message .= "• قیمت: " . number_format($subscription->price) . " تومان\n";
+        $message .= "• قیمت: " . number_format($subscription->price) . " ریال\n";
         $message .= "• تاریخ لغو: " . $this->formatJalaliDate($subscription->cancelled_at) . "\n";
         
         if ($subscription->cancellation_reason) {
@@ -207,7 +207,7 @@ class TelegramNotificationService
         
         $message .= "\n📊 <b>آمار کاربر:</b>\n";
         $message .= "• تعداد اشتراک‌های لغو شده: " . $user->subscriptions()->where('status', 'cancelled')->count() . "\n";
-        $message .= "• مجموع پرداخت‌ها: " . number_format($user->payments()->where('status', 'completed')->sum('amount')) . " تومان\n";
+        $message .= "• مجموع پرداخت‌ها: " . number_format($user->payments()->where('status', 'completed')->sum('amount')) . " ریال\n";
         
         return $this->sendMessage($message);
     }
@@ -234,11 +234,11 @@ class TelegramNotificationService
         $message = "📊 <b>خلاصه فروش روزانه</b>\n\n";
         $message .= "📅 <b>امروز ({$this->formatJalaliDate($today)}):</b>\n";
         $message .= "• تعداد فروش: " . $todaySales->count() . "\n";
-        $message .= "• مجموع درآمد: " . number_format($todayAmount) . " تومان\n\n";
+        $message .= "• مجموع درآمد: " . number_format($todayAmount) . " ریال\n\n";
         
         $message .= "📅 <b>دیروز ({$this->formatJalaliDate($yesterday)}):</b>\n";
         $message .= "• تعداد فروش: " . $yesterdaySales->count() . "\n";
-        $message .= "• مجموع درآمد: " . number_format($yesterdayAmount) . " تومان\n\n";
+        $message .= "• مجموع درآمد: " . number_format($yesterdayAmount) . " ریال\n\n";
         
         $growth = $yesterdayAmount > 0 ? (($todayAmount - $yesterdayAmount) / $yesterdayAmount) * 100 : 0;
         
@@ -263,7 +263,7 @@ class TelegramNotificationService
         $message .= "📋 <b>جزئیات فروش امروز:</b>\n";
         foreach ($todaySales->take(5) as $sale) {
             $user = $sale->user;
-            $message .= "• {$user->first_name} {$user->last_name}: " . number_format($sale->amount) . " تومان\n";
+            $message .= "• {$user->first_name} {$user->last_name}: " . number_format($sale->amount) . " ریال\n";
         }
         
         if ($todaySales->count() > 5) {
