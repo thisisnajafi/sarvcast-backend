@@ -451,7 +451,8 @@ function updateImageTimelineData() {
                     timelineData.image_file = imageInput.files[0].name;
                 } else if (existingImagePreview && existingImagePreview.src) {
                     // Preserve existing image if no new file is uploaded
-                    timelineData.existing_image_url = existingImagePreview.src.replace(baseUrl + '/', '');
+                    // Use the relative path as image_file (same as create method)
+                    timelineData.image_file = existingImagePreview.src.replace(baseUrl + '/', '');
                 }
                 
                 imageTimelineData.push(timelineData);

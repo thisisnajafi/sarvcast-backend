@@ -687,15 +687,13 @@ class EpisodeController extends Controller
                 foreach ($imageTimelineData as $index => $timelineData) {
                     // Handle image file upload
                     $imagePath = '';
-                    
-                    // Check if there's a new file uploaded
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
                         // Look for the corresponding file in the request
                         // Try different naming patterns
                         $possibleNames = [
                             'timeline_image_' . $index,
                             'timeline_image_' . ($index + 1),
-                            'timeline_image_' . $timelineData['image_order'] ?? $index
+                            'timeline_image_' . ($timelineData['image_order'] ?? $index)
                         ];
                         
                         // Debug: Log all available files in request
@@ -768,10 +766,6 @@ class EpisodeController extends Controller
                             $imagePath = $timelineData['image_file'];
                             \Log::info('No file found, using provided filename: ' . $imagePath);
                         }
-                    } elseif (isset($timelineData['existing_image_url']) && $timelineData['existing_image_url']) {
-                        // Preserve existing image if no new file is uploaded
-                        $imagePath = $timelineData['existing_image_url'];
-                        \Log::info('Preserving existing image: ' . $imagePath);
                     }
                     
                     $episode->imageTimelines()->create([
@@ -784,7 +778,8 @@ class EpisodeController extends Controller
                         'is_key_frame' => $timelineData['is_key_frame'] ?? false,
                     ]);
                 }
-
+                
+                // Update episode with image timeline info
                 $episode->update([
                     'use_image_timeline' => count($imageTimelineData) > 0
                 ]);
