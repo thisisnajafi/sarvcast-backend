@@ -60,6 +60,50 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Get user's current subscription
+     */
+    public function current(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            $currentSubscription = $this->subscriptionService->getActiveSubscription($user->id);
+
+            if (!$currentSubscription) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'subscription' => null,
+                        'has_active_subscription' => false
+                    ],
+                    'message' => 'اشتراک فعالی یافت نشد'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'subscription' => $currentSubscription->summary,
+                    'has_active_subscription' => true,
+                    'days_remaining' => $currentSubscription->days_remaining,
+                    'is_expired' => $currentSubscription->isExpired()
+                ],
+                'message' => 'اشتراک فعلی دریافت شد'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get current subscription', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت اشتراک فعلی'
+            ], 500);
+        }
+    }
+
+    /**
      * Get subscription status
      */
     public function status(Request $request): JsonResponse
@@ -269,7 +313,7 @@ class SubscriptionController extends Controller
             $subscription = Subscription::create([
                 'user_id' => $user->id,
                 'type' => $planSlug ?: $plan->slug,
-                'amount' => $amount,
+                'price' => $amount,
                 'currency' => 'IRR',
                 'status' => 'pending',
                 'start_date' => null,
@@ -297,7 +341,7 @@ class SubscriptionController extends Controller
                         'id' => $subscription->id,
                         'user_id' => $subscription->user_id,
                         'type' => $subscription->type,
-                        'amount' => $subscription->amount,
+                        'price' => $subscription->price,
                         'currency' => $subscription->currency,
                         'status' => $subscription->status,
                         'start_date' => $subscription->start_date,
