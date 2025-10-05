@@ -129,20 +129,23 @@ class AdminMiddleware
         ];
 
         // Log to file
-        \Log::channel('admin')->info('Admin Activity', $logData);
+        \Log::info('Admin Activity', $logData);
 
-        // Store in database for advanced monitoring
+        // Store in database for advanced monitoring (if table exists)
         try {
-            \DB::table('admin_activity_logs')->insert([
-                'user_id' => $user->id,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'method' => $request->method(),
-                'url' => $request->fullUrl(),
-                'route_name' => $request->route()->getName(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // Check if the table exists before trying to insert
+            if (\Schema::hasTable('admin_activity_logs')) {
+                \DB::table('admin_activity_logs')->insert([
+                    'user_id' => $user->id,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'method' => $request->method(),
+                    'url' => $request->fullUrl(),
+                    'route_name' => $request->route()->getName(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         } catch (\Exception $e) {
             // If logging fails, continue without throwing error
             \Log::error('Failed to log admin activity: ' . $e->getMessage());
