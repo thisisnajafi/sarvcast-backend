@@ -324,11 +324,14 @@ class SubscriptionController extends Controller
             // Convert currency from IRT to IRR if needed
             $convertedAmount = $this->convertCurrency($amount, $planCurrency, 'IRR');
             $finalCurrency = 'IRR';
+            
+            // Map plan slug to correct ENUM value
+            $subscriptionType = $this->mapPlanSlugToEnum($planSlug ?: $plan->slug);
 
             // Create subscription
             $subscription = Subscription::create([
                 'user_id' => $user->id,
-                'type' => $planSlug ?: $plan->slug,
+                'type' => $subscriptionType,
                 'price' => (int) $convertedAmount, // Ensure integer for consistency
                 'currency' => $finalCurrency,
                 'status' => 'pending',
@@ -729,6 +732,56 @@ class SubscriptionController extends Controller
         ]);
 
         return (int) $amount;
+    }
+
+    /**
+     * Map plan slug to correct ENUM value for subscriptions table
+     */
+    private function mapPlanSlugToEnum(string $planSlug): string
+    {
+        // Mapping from various possible slug formats to ENUM values
+        $slugMapping = [
+            // Direct matches
+            '1month' => '1month',
+            '3months' => '3months',
+            '6months' => '6months',
+            '1year' => '1year',
+            
+            // Singular forms
+            '3month' => '3months',
+            '6month' => '6months',
+            
+            // Alternative formats
+            'monthly' => '1month',
+            'quarterly' => '3months',
+            'semi-annual' => '6months',
+            'annual' => '1year',
+            'yearly' => '1year',
+            
+            // Numeric formats
+            '1' => '1month',
+            '2' => '3months',
+            '3' => '6months',
+            '4' => '1year',
+        ];
+        
+        $mappedSlug = $slugMapping[$planSlug] ?? $planSlug;
+        
+        // Validate that the mapped slug is a valid ENUM value
+        $validEnumValues = ['1month', '3months', '6months', '1year'];
+        
+        if (!in_array($mappedSlug, $validEnumValues)) {
+            Log::warning('Invalid subscription type mapped', [
+                'original_slug' => $planSlug,
+                'mapped_slug' => $mappedSlug,
+                'valid_values' => $validEnumValues
+            ]);
+            
+            // Default to 1month if mapping fails
+            return '1month';
+        }
+        
+        return $mappedSlug;
     }
 
     /**
