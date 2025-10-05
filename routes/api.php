@@ -142,6 +142,18 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::delete('profiles/{profile}', [UserController::class, 'deleteProfile']);
     });
 
+    // Favorites routes (outside mobile group for easier access)
+    Route::prefix('favorites')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\FavoriteController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\FavoriteController::class, 'store']);
+        Route::delete('/{storyId}', [\App\Http\Controllers\Api\FavoriteController::class, 'destroy']);
+        Route::post('/toggle', [\App\Http\Controllers\Api\FavoriteController::class, 'toggle']);
+        Route::get('/check/{storyId}', [\App\Http\Controllers\Api\FavoriteController::class, 'check']);
+        Route::get('/most-favorited', [\App\Http\Controllers\Api\FavoriteController::class, 'mostFavorited']);
+        Route::get('/stats', [\App\Http\Controllers\Api\FavoriteController::class, 'stats']);
+        Route::post('/bulk', [\App\Http\Controllers\Api\FavoriteController::class, 'bulk']);
+    });
+
     // Story routes
     Route::prefix('stories')->group(function () {
         Route::post('{story}/favorite', [StoryController::class, 'addFavorite']);
