@@ -347,6 +347,9 @@
 </div>
 
 <script>
+// Base URL for assets
+const baseUrl = '{{ url('') }}';
+
 document.addEventListener('DOMContentLoaded', function() {
     // Preview audio file
     document.getElementById('audio_file').addEventListener('change', function() {
@@ -448,7 +451,7 @@ function updateImageTimelineData() {
                     timelineData.image_file = imageInput.files[0].name;
                 } else if (existingImagePreview && existingImagePreview.src) {
                     // Preserve existing image if no new file is uploaded
-                    timelineData.existing_image_url = existingImagePreview.src.replace(window.location.origin, '');
+                    timelineData.existing_image_url = existingImagePreview.src.replace(baseUrl + '/', '');
                 }
                 
                 imageTimelineData.push(timelineData);
@@ -500,7 +503,7 @@ function addImageTimelineRow(data = {}) {
                 <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
                 <input type="file" name="timeline_image_${Date.now()}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="previewImage(this)">
                 <div class="mt-2 image-preview-container" style="display: ${data.existing_image_url ? 'block' : 'none'};">
-                    <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر" src="${data.existing_image_url ? '{{ asset('') }}' + data.existing_image_url : ''}">
+                    <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر" src="${data.existing_image_url ? baseUrl + '/' + data.existing_image_url : ''}">
                     ${data.existing_image_url ? '<p class="text-xs text-gray-500 mt-1">تصویر موجود - برای تغییر، فایل جدید انتخاب کنید</p>' : ''}
                 </div>
             </div>
