@@ -258,13 +258,17 @@ class PaymentService
                     Log::info('ZarinPal payment verified successfully', [
                         'authority' => $authority,
                         'ref_id' => $result['data']['ref_id'],
-                        'amount' => $result['data']['amount']
+                        'amount' => $amount, // Use the amount we sent for verification
+                        'card_pan' => $result['data']['card_pan'] ?? null,
+                        'fee' => $result['data']['fee'] ?? null
                     ]);
 
                     return [
                         'success' => true,
                         'ref_id' => $result['data']['ref_id'],
-                        'amount' => $result['data']['amount']
+                        'amount' => $amount, // Use the amount we sent for verification
+                        'card_pan' => $result['data']['card_pan'] ?? null,
+                        'fee' => $result['data']['fee'] ?? null
                     ];
                 } else {
                     Log::error('ZarinPal payment verification failed', [
