@@ -128,6 +128,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('refresh', [AuthController::class, 'refresh']);
         Route::get('profile', [AuthController::class, 'profile']);
+        Route::get('debug-premium', [AuthController::class, 'debugPremium']);
         Route::put('profile', [AuthController::class, 'updateProfile']);
         Route::post('change-password', [AuthController::class, 'changePassword']);
     });

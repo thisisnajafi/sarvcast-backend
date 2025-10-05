@@ -299,16 +299,51 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Get premium information
+        // Get premium information with enhanced debugging
         $activeSubscription = $user->activeSubscription;
-        $isPremium = $activeSubscription ? true : false;
+        
+        // Enhanced premium detection with fallback
+        $isPremium = false;
+        $subscriptionStatus = 'none';
+        $subscriptionType = null;
+        $subscriptionEndDate = null;
+        $daysRemaining = 0;
+        
+        if ($activeSubscription) {
+            $isPremium = true;
+            $subscriptionStatus = 'active';
+            $subscriptionType = $activeSubscription->type;
+            $subscriptionEndDate = $activeSubscription->end_date;
+            $daysRemaining = max(0, now()->diffInDays($activeSubscription->end_date, false));
+        } else {
+            // Fallback: Check for any active subscription manually
+            $manualActiveSubscription = \App\Models\Subscription::where('user_id', $user->id)
+                ->where('status', 'active')
+                ->where('end_date', '>', now())
+                ->first();
+                
+            if ($manualActiveSubscription) {
+                $isPremium = true;
+                $subscriptionStatus = 'active';
+                $subscriptionType = $manualActiveSubscription->type;
+                $subscriptionEndDate = $manualActiveSubscription->end_date;
+                $daysRemaining = max(0, now()->diffInDays($manualActiveSubscription->end_date, false));
+                
+                // Log the issue for debugging
+                \Log::warning('Premium detection fallback used', [
+                    'user_id' => $user->id,
+                    'subscription_id' => $manualActiveSubscription->id,
+                    'reason' => 'activeSubscription relationship returned null but manual query found active subscription'
+                ]);
+            }
+        }
         
         $premiumInfo = [
             'is_premium' => $isPremium,
-            'subscription_status' => $isPremium ? 'active' : 'none',
-            'subscription_type' => $isPremium ? $activeSubscription->type : null,
-            'subscription_end_date' => $isPremium ? $activeSubscription->end_date : null,
-            'days_remaining' => $isPremium ? max(0, now()->diffInDays($activeSubscription->end_date, false)) : 0,
+            'subscription_status' => $subscriptionStatus,
+            'subscription_type' => $subscriptionType,
+            'subscription_end_date' => $subscriptionEndDate,
+            'days_remaining' => $daysRemaining,
         ];
 
         return response()->json([
@@ -422,6 +457,78 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'رمز عبور با موفقیت تغییر کرد'
+        ]);
+    }
+
+    /**
+     * Debug premium status for troubleshooting
+     */
+    public function debugPremium(Request $request)
+    {
+        $user = $request->user();
+        
+        // Get all subscriptions for debugging
+        $allSubscriptions = \App\Models\Subscription::where('user_id', $user->id)->get();
+        
+        // Test activeSubscription relationship
+        $activeSubscription = $user->activeSubscription;
+        
+        // Test hasActiveSubscription method
+        $hasActiveSubscription = $user->hasActiveSubscription();
+        
+        // Manual query for active subscriptions
+        $manualActiveSubscriptions = \App\Models\Subscription::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->where('end_date', '>', now())
+            ->get();
+            
+        // Test AccessControlService
+        $accessControlService = app(\App\Services\AccessControlService::class);
+        $hasPremiumAccess = $accessControlService->hasPremiumAccess($user->id);
+        $accessLevel = $accessControlService->getUserAccessLevel($user->id);
+        
+        $debugInfo = [
+            'user_id' => $user->id,
+            'current_time' => now(),
+            'timezone' => config('app.timezone'),
+            'all_subscriptions' => $allSubscriptions->map(function($sub) {
+                return [
+                    'id' => $sub->id,
+                    'type' => $sub->type,
+                    'status' => $sub->status,
+                    'start_date' => $sub->start_date,
+                    'end_date' => $sub->end_date,
+                    'is_status_active' => $sub->status === 'active',
+                    'is_end_date_future' => $sub->end_date ? $sub->end_date > now() : false,
+                    'should_be_active' => $sub->status === 'active' && $sub->end_date && $sub->end_date > now(),
+                    'created_at' => $sub->created_at,
+                    'updated_at' => $sub->updated_at
+                ];
+            }),
+            'active_subscription_relationship' => $activeSubscription ? [
+                'id' => $activeSubscription->id,
+                'type' => $activeSubscription->type,
+                'status' => $activeSubscription->status,
+                'end_date' => $activeSubscription->end_date
+            ] : null,
+            'has_active_subscription_method' => $hasActiveSubscription,
+            'manual_active_subscriptions' => $manualActiveSubscriptions->map(function($sub) {
+                return [
+                    'id' => $sub->id,
+                    'type' => $sub->type,
+                    'status' => $sub->status,
+                    'end_date' => $sub->end_date
+                ];
+            }),
+            'access_control_service' => [
+                'has_premium_access' => $hasPremiumAccess,
+                'access_level' => $accessLevel
+            ]
+        ];
+        
+        return response()->json([
+            'success' => true,
+            'debug_info' => $debugInfo
         ]);
     }
 

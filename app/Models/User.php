@@ -166,6 +166,32 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's current active subscription with debugging.
+     */
+    public function activeSubscriptionWithDebug()
+    {
+        $subscription = $this->hasOne(Subscription::class)->active()->first();
+        
+        if (!$subscription) {
+            // Log debug information
+            \Log::info('No active subscription found for user', [
+                'user_id' => $this->id,
+                'all_subscriptions' => $this->subscriptions()->get()->map(function($sub) {
+                    return [
+                        'id' => $sub->id,
+                        'status' => $sub->status,
+                        'end_date' => $sub->end_date,
+                        'is_active_status' => $sub->status === 'active',
+                        'is_end_date_future' => $sub->end_date ? $sub->end_date > now() : false
+                    ];
+                })
+            ]);
+        }
+        
+        return $subscription;
+    }
+
+    /**
      * Get the user's teacher account.
      */
     public function teacherAccount()
