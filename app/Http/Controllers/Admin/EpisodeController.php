@@ -687,6 +687,8 @@ class EpisodeController extends Controller
                 foreach ($imageTimelineData as $index => $timelineData) {
                     // Handle image file upload
                     $imagePath = '';
+                    
+                    // Check if there's a new file uploaded
                     if (isset($timelineData['image_file']) && $timelineData['image_file']) {
                         // Look for the corresponding file in the request
                         // Try different naming patterns
@@ -766,6 +768,10 @@ class EpisodeController extends Controller
                             $imagePath = $timelineData['image_file'];
                             \Log::info('No file found, using provided filename: ' . $imagePath);
                         }
+                    } elseif (isset($timelineData['existing_image_url']) && $timelineData['existing_image_url']) {
+                        // Preserve existing image if no new file is uploaded
+                        $imagePath = $timelineData['existing_image_url'];
+                        \Log::info('Preserving existing image: ' . $imagePath);
                     }
                     
                     $episode->imageTimelines()->create([

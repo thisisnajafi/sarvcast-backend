@@ -431,17 +431,27 @@ function updateImageTimelineData() {
             const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
             const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
             const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
+            const existingImagePreview = row.querySelector('.image-preview-container img');
             
             if (startTimeInput && endTimeInput) {
-                imageTimelineData.push({
-                    image_file: imageInput && imageInput.files[0] ? imageInput.files[0].name : '',
+                const timelineData = {
                     start_time: startTimeInput.value || 0,
                     end_time: endTimeInput.value || 0,
                     scene_description: sceneDescriptionInput ? sceneDescriptionInput.value : '',
                     transition_type: transitionTypeSelect ? transitionTypeSelect.value : 'fade',
                     is_key_frame: isKeyFrameCheckbox ? isKeyFrameCheckbox.checked : false,
                     image_order: index
-                });
+                };
+                
+                // Check if there's a new file uploaded
+                if (imageInput && imageInput.files[0]) {
+                    timelineData.image_file = imageInput.files[0].name;
+                } else if (existingImagePreview && existingImagePreview.src) {
+                    // Preserve existing image if no new file is uploaded
+                    timelineData.existing_image_url = existingImagePreview.src.replace(window.location.origin, '');
+                }
+                
+                imageTimelineData.push(timelineData);
             }
         });
     }
@@ -489,8 +499,9 @@ function addImageTimelineRow(data = {}) {
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
                 <input type="file" name="timeline_image_${Date.now()}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="previewImage(this)">
-                <div class="mt-2 image-preview-container" style="display: none;">
-                    <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر">
+                <div class="mt-2 image-preview-container" style="display: ${data.existing_image_url ? 'block' : 'none'};">
+                    <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر" src="${data.existing_image_url ? '{{ asset('') }}' + data.existing_image_url : ''}">
+                    ${data.existing_image_url ? '<p class="text-xs text-gray-500 mt-1">تصویر موجود - برای تغییر، فایل جدید انتخاب کنید</p>' : ''}
                 </div>
             </div>
             <div>
@@ -679,9 +690,26 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// Initialize existing timeline data
+function initializeExistingTimelineData() {
+    @if($episode->imageTimelines && $episode->imageTimelines->count() > 0)
+        @foreach($episode->imageTimelines as $timeline)
+            addImageTimelineRow({
+                start_time: {{ $timeline->start_time }},
+                end_time: {{ $timeline->end_time }},
+                scene_description: '{{ addslashes($timeline->scene_description) }}',
+                transition_type: '{{ $timeline->transition_type }}',
+                is_key_frame: {{ $timeline->is_key_frame ? 'true' : 'false' }},
+                existing_image_url: '{{ $timeline->image_url }}'
+            });
+        @endforeach
+    @endif
+}
+
 // Initialize audio player when page loads
 document.addEventListener('DOMContentLoaded', function() {
     initializeAudioPlayer();
+    initializeExistingTimelineData();
 });
 </script>
 @endsection
