@@ -353,11 +353,11 @@ class SubscriptionController extends Controller
             ]);
 
             // Set description for payment service (since it's not in database)
-            $payment->description = $firstFeature;
+            // $payment->description = $firstFeature; // Removed - not a database column
             
             // Initiate Zarinpal payment
             $paymentService = app(\App\Services\PaymentService::class);
-            $paymentResult = $paymentService->initiateZarinPalPayment($payment);
+            $paymentResult = $paymentService->initiateZarinPalPayment($payment, $firstFeature);
 
             if (!$paymentResult['success']) {
                 // If payment initiation fails, clean up the subscription and payment

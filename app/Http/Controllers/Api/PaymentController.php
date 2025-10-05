@@ -52,12 +52,12 @@ class PaymentController extends Controller
             'currency' => 'IRR',
             'payment_method' => 'zarinpal',
             'status' => 'pending',
-            'transaction_id' => $this->generateTransactionId(),
-            'description' => 'پرداخت اشتراک ' . $subscription->type
+            'transaction_id' => $this->generateTransactionId()
         ]);
 
         // Initiate payment with ZarinPal
-        $result = $this->paymentService->initiateZarinPalPayment($payment);
+        $description = 'پرداخت اشتراک ' . $subscription->type;
+        $result = $this->paymentService->initiateZarinPalPayment($payment, $description);
 
         if ($result['success']) {
             return response()->json([

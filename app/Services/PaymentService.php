@@ -25,7 +25,7 @@ class PaymentService
     /**
      * Initiate payment with ZarinPal
      */
-    public function initiateZarinPalPayment(Payment $payment): array
+    public function initiateZarinPalPayment(Payment $payment, string $description = null): array
     {
         try {
             // Determine API URL based on sandbox mode
@@ -36,7 +36,7 @@ class PaymentService
             $data = [
                 'merchant_id' => $this->zarinpalMerchantId,
                 'amount' => (int) $payment->amount, // Convert to integer as required by Zarinpal
-                'description' => $payment->description ?? 'پرداخت اشتراک سروکست',
+                'description' => $description ?? 'پرداخت اشتراک سروکست',
                 'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
                 'metadata' => [
                     'payment_id' => $payment->id,

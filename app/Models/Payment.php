@@ -28,7 +28,6 @@ class Payment extends Model
         'refunded_at',
         'refund_reason',
         'refund_amount',
-        'description',
         'metadata'
     ];
 
