@@ -116,13 +116,13 @@ class TelegramNotificationService
         
         $message = "💸 <b>کمیسیون اینفلوئنسر!</b>\n\n";
         $message .= "👤 <b>اینفلوئنسر:</b> {$influencer->first_name} {$influencer->last_name}\n";
-        $message .= "📧 <b>ایمیل:</b> {$influencer->email}\n";
-        $message .= "📱 <b>تلفن:</b> {$influencer->phone_number}\n\n";
+        $message .= "📱 <b>تلفن:</b> {$influencer->phone_number}\n";
+        $message .= "🆔 <b>شناسه:</b> {$influencer->id}\n\n";
         
         $message .= "🛒 <b>مشتری معرفی شده:</b>\n";
         $message .= "• نام: {$user->first_name} {$user->last_name}\n";
-        $message .= "• ایمیل: {$user->email}\n";
-        $message .= "• تلفن: {$user->phone_number}\n\n";
+        $message .= "• تلفن: {$user->phone_number}\n";
+        $message .= "• شناسه: {$user->id}\n\n";
         
         $message .= "💰 <b>جزئیات کمیسیون:</b>\n";
         $message .= "• مبلغ پرداخت: " . number_format($payment->amount) . " ریال\n";
@@ -145,8 +145,8 @@ class TelegramNotificationService
     {
         $message = "👋 <b>کاربر جدید!</b>\n\n";
         $message .= "👤 <b>نام:</b> {$user->first_name} {$user->last_name}\n";
-        $message .= "📧 <b>ایمیل:</b> {$user->email}\n";
         $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n";
+        $message .= "🆔 <b>شناسه:</b> {$user->id}\n";
         $message .= "👶 <b>نوع کاربر:</b> {$this->getUserRoleText($user->role)}\n";
         $message .= "📅 <b>تاریخ ثبت‌نام:</b> " . $this->formatJalaliDate($user->created_at) . "\n\n";
         
@@ -168,15 +168,21 @@ class TelegramNotificationService
     public function sendSubscriptionRenewalNotification(Subscription $subscription): bool
     {
         $user = $subscription->user;
-        $planName = \App\Services\SubscriptionService::PLANS[$subscription->type]['name'] ?? $subscription->type;
+        
+        // Get plan name from subscription service
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        $plans = $subscriptionService->getPlans();
+        $planName = $plans[$subscription->type]['name'] ?? $subscription->type;
+        $planDuration = $plans[$subscription->type]['duration_days'] ?? 'نامشخص';
         
         $message = "🔄 <b>تمدید اشتراک!</b>\n\n";
         $message .= "👤 <b>کاربر:</b> {$user->first_name} {$user->last_name}\n";
-        $message .= "📧 <b>ایمیل:</b> {$user->email}\n\n";
+        $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n";
+        $message .= "🆔 <b>شناسه:</b> {$user->id}\n\n";
         
         $message .= "📋 <b>اشتراک:</b>\n";
         $message .= "• نوع: {$planName}\n";
-        $message .= "• مدت: " . (\App\Services\SubscriptionService::PLANS[$subscription->type]['duration_days'] ?? 'نامشخص') . " روز\n";
+        $message .= "• مدت: {$planDuration} روز\n";
         $message .= "• قیمت: " . number_format($subscription->price) . " ریال\n";
         $message .= "• تاریخ شروع: " . $this->formatJalaliDate($subscription->start_date) . "\n";
         $message .= "• تاریخ پایان: " . $this->formatJalaliDate($subscription->end_date) . "\n";
@@ -195,11 +201,16 @@ class TelegramNotificationService
     public function sendSubscriptionCancellationNotification(Subscription $subscription): bool
     {
         $user = $subscription->user;
-        $planName = \App\Services\SubscriptionService::PLANS[$subscription->type]['name'] ?? $subscription->type;
+        
+        // Get plan name from subscription service
+        $subscriptionService = app(\App\Services\SubscriptionService::class);
+        $plans = $subscriptionService->getPlans();
+        $planName = $plans[$subscription->type]['name'] ?? $subscription->type;
         
         $message = "❌ <b>لغو اشتراک!</b>\n\n";
         $message .= "👤 <b>کاربر:</b> {$user->first_name} {$user->last_name}\n";
-        $message .= "📧 <b>ایمیل:</b> {$user->email}\n\n";
+        $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n";
+        $message .= "🆔 <b>شناسه:</b> {$user->id}\n\n";
         
         $message .= "📋 <b>اشتراک لغو شده:</b>\n";
         $message .= "• نوع: {$planName}\n";

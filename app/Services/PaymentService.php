@@ -433,6 +433,22 @@ class PaymentService
                     // Fire sales notification event
                     event(new SalesNotificationEvent($payment, $payment->subscription));
                     
+                    // Also send Telegram notification directly as backup
+                    try {
+                        $telegramService = app(\App\Services\TelegramNotificationService::class);
+                        $telegramSuccess = $telegramService->sendSalesNotification($payment, $payment->subscription);
+                        
+                        Log::info('Direct Telegram notification result', [
+                            'payment_id' => $payment->id,
+                            'success' => $telegramSuccess
+                        ]);
+                    } catch (\Exception $telegramError) {
+                        Log::error('Direct Telegram notification failed', [
+                            'payment_id' => $payment->id,
+                            'error' => $telegramError->getMessage()
+                        ]);
+                    }
+                    
                     Log::info('Payment completed successfully', [
                         'payment_id' => $payment->id,
                         'authority' => $authority,

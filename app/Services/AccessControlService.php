@@ -19,6 +19,7 @@ class AccessControlService
         try {
             $user = User::find($userId);
             if (!$user) {
+                Log::info('hasPremiumAccess: User not found', ['user_id' => $userId]);
                 return false;
             }
 
@@ -29,6 +30,13 @@ class AccessControlService
                                              ->first();
 
             if ($activeSubscription) {
+                Log::info('hasPremiumAccess: Active subscription found', [
+                    'user_id' => $userId,
+                    'subscription_id' => $activeSubscription->id,
+                    'status' => $activeSubscription->status,
+                    'end_date' => $activeSubscription->end_date,
+                    'current_time' => now()
+                ]);
                 return true;
             }
 
@@ -38,7 +46,33 @@ class AccessControlService
                                            ->where('end_date', '>', now())
                                            ->first();
 
-            return $trialSubscription !== null;
+            if ($trialSubscription) {
+                Log::info('hasPremiumAccess: Trial subscription found', [
+                    'user_id' => $userId,
+                    'subscription_id' => $trialSubscription->id,
+                    'status' => $trialSubscription->status,
+                    'end_date' => $trialSubscription->end_date
+                ]);
+                return true;
+            }
+
+            // Debug: Check all subscriptions for this user
+            $allSubscriptions = Subscription::where('user_id', $userId)->get();
+            Log::info('hasPremiumAccess: No active subscription found', [
+                'user_id' => $userId,
+                'all_subscriptions' => $allSubscriptions->map(function($sub) {
+                    return [
+                        'id' => $sub->id,
+                        'status' => $sub->status,
+                        'end_date' => $sub->end_date,
+                        'is_active_status' => $sub->status === 'active',
+                        'is_end_date_future' => $sub->end_date ? $sub->end_date > now() : false,
+                        'should_be_active' => $sub->status === 'active' && $sub->end_date && $sub->end_date > now()
+                    ];
+                })
+            ]);
+
+            return false;
 
         } catch (\Exception $e) {
             Log::error('Failed to check premium access', [
@@ -150,7 +184,15 @@ class AccessControlService
             }
 
             // Check premium access
-            if ($this->hasPremiumAccess($userId)) {
+            $hasPremium = $this->hasPremiumAccess($userId);
+            Log::info('canAccessEpisode: Premium access check', [
+                'user_id' => $userId,
+                'episode_id' => $episodeId,
+                'episode_is_premium' => $episode->is_premium,
+                'has_premium_access' => $hasPremium
+            ]);
+            
+            if ($hasPremium) {
                 return [
                     'has_access' => true,
                     'reason' => 'premium_subscription',
@@ -167,6 +209,13 @@ class AccessControlService
                     'message' => 'قسمت در محدوده رایگان است'
                 ];
             }
+
+            Log::info('canAccessEpisode: Access denied - premium required', [
+                'user_id' => $userId,
+                'episode_id' => $episodeId,
+                'episode_number' => $episode->episode_number,
+                'free_episodes_count' => $freeEpisodesCount
+            ]);
 
             return [
                 'has_access' => false,
