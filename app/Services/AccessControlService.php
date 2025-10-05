@@ -23,14 +23,11 @@ class AccessControlService
                 return false;
             }
 
-            // Check for active subscription
-            $activeSubscription = Subscription::where('user_id', $userId)
-                                             ->where('status', 'active')
-                                             ->where('end_date', '>', now())
-                                             ->first();
-
+            // Use the same logic as User model's activeSubscription relationship
+            $activeSubscription = $user->activeSubscription;
+            
             if ($activeSubscription) {
-                Log::info('hasPremiumAccess: Active subscription found', [
+                Log::info('hasPremiumAccess: Active subscription found via User model', [
                     'user_id' => $userId,
                     'subscription_id' => $activeSubscription->id,
                     'status' => $activeSubscription->status,
@@ -40,7 +37,7 @@ class AccessControlService
                 return true;
             }
 
-            // Check for trial subscription
+            // Check for trial subscription using the same pattern
             $trialSubscription = Subscription::where('user_id', $userId)
                                            ->where('status', 'trial')
                                            ->where('end_date', '>', now())

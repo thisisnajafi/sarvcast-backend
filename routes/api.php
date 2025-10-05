@@ -59,35 +59,35 @@ Route::prefix('v1')->middleware('security')->group(function () {
     });
 
     // Public content routes (with caching)
-    Route::get('categories', [CategoryController::class, 'index'])->middleware('cache.api:1800'); // 30 minutes
-    Route::get('categories/{category}/stories', [CategoryController::class, 'stories'])->middleware('cache.api:900'); // 15 minutes
+    Route::get('categories', [CategoryController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('categories/{category}/stories', [CategoryController::class, 'stories'])->middleware('cache.api:180'); // 3 minutes
     
-    Route::get('stories', [StoryController::class, 'index'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('stories/{story}', [StoryController::class, 'show'])->middleware('cache.api:1800'); // 30 minutes
-    Route::get('stories/{story}/episodes', [StoryController::class, 'episodes'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('stories/featured', [StoryController::class, 'featured'])->middleware('cache.api:1800'); // 30 minutes
-    Route::get('stories/popular', [StoryController::class, 'popular'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('stories/recent', [StoryController::class, 'recent'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('stories/recommendations', [StoryController::class, 'recommendations'])->middleware('cache.api:300'); // 5 minutes
+    Route::get('stories', [StoryController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/{story}', [StoryController::class, 'show'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/{story}/episodes', [StoryController::class, 'episodes'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/featured', [StoryController::class, 'featured'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/popular', [StoryController::class, 'popular'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/recent', [StoryController::class, 'recent'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/recommendations', [StoryController::class, 'recommendations'])->middleware('cache.api:180'); // 3 minutes
     
-    Route::get('episodes', [EpisodeController::class, 'index'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware('cache.api:1800'); // 30 minutes
+    Route::get('episodes', [EpisodeController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware(['auth:sanctum', 'cache.api:180']); // 3 minutes
     
     // Story ratings routes
-    Route::get('stories/{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'index'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('stories/{story}/ratings/statistics', [\App\Http\Controllers\Api\StoryRatingController::class, 'statistics'])->middleware('cache.api:900'); // 15 minutes
+    Route::get('stories/{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/{story}/ratings/statistics', [\App\Http\Controllers\Api\StoryRatingController::class, 'statistics'])->middleware('cache.api:180'); // 3 minutes
     
     // Episode play count routes
     Route::post('episodes/{episode}/play', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'increment']);
-    Route::get('episodes/{episode}/play/statistics', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'statistics'])->middleware('cache.api:300'); // 5 minutes
+    Route::get('episodes/{episode}/play/statistics', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'statistics'])->middleware('cache.api:180'); // 3 minutes
     
     // People routes
-    Route::get('people', [PersonController::class, 'index'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('people/search', [PersonController::class, 'search'])->middleware('cache.api:300'); // 5 minutes
-    Route::get('people/role/{role}', [PersonController::class, 'getByRole'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('people/{person}', [PersonController::class, 'show'])->middleware('cache.api:1800'); // 30 minutes
-    Route::get('people/{person}/stories', [PersonController::class, 'stories'])->middleware('cache.api:900'); // 15 minutes
-    Route::get('people/{person}/statistics', [PersonController::class, 'statistics'])->middleware('cache.api:300'); // 5 minutes
+    Route::get('people', [PersonController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('people/search', [PersonController::class, 'search'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('people/role/{role}', [PersonController::class, 'getByRole'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('people/{person}', [PersonController::class, 'show'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('people/{person}/stories', [PersonController::class, 'stories'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('people/{person}/statistics', [PersonController::class, 'statistics'])->middleware('cache.api:180'); // 3 minutes
     
     // File upload routes (DISABLED - Admin only)
     // Route::post('upload/image', [FileUploadController::class, 'uploadImage']);

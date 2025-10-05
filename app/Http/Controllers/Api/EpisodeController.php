@@ -68,7 +68,24 @@ class EpisodeController extends Controller
 
         // Check access control
         $user = $request->user();
-        $accessInfo = $this->accessControlService->canAccessEpisode($user ? $user->id : 0, $episode->id);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'احراز هویت الزامی است',
+                'error_code' => 'AUTHENTICATION_REQUIRED',
+                'data' => [
+                    'access_info' => [
+                        'has_access' => false,
+                        'reason' => 'authentication_required',
+                        'message' => 'احراز هویت الزامی است'
+                    ],
+                    'upgrade_required' => false
+                ]
+            ], 401);
+        }
+        
+        $accessInfo = $this->accessControlService->canAccessEpisode($user->id, $episode->id);
 
         if (!$accessInfo['has_access']) {
             return response()->json([

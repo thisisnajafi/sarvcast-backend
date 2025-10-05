@@ -26,7 +26,10 @@ class CacheApiResponses
 
         // Check if response is cached
         if (Cache::has($cacheKey)) {
-            return response()->json(Cache::get($cacheKey));
+            $cachedResponse = response()->json(Cache::get($cacheKey));
+            $cachedResponse->headers->set('Cache-Control', "public, max-age={$ttl}");
+            $cachedResponse->headers->set('X-Cache', 'HIT');
+            return $cachedResponse;
         }
 
         // Process request
@@ -39,6 +42,10 @@ class CacheApiResponses
                 Cache::put($cacheKey, $responseData, $ttl);
             }
         }
+
+        // Set cache headers for the response
+        $response->headers->set('Cache-Control', "public, max-age={$ttl}");
+        $response->headers->set('X-Cache', 'MISS');
 
         return $response;
     }
