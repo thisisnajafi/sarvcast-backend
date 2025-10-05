@@ -259,7 +259,7 @@ class UserController extends Controller
         // Get recent activity
         $recentActivity = $user->playHistories()
             ->with('episode.story')
-            ->latest()
+            ->orderBy('played_at', 'desc')
             ->limit(10)
             ->get();
 
@@ -638,7 +638,7 @@ class UserController extends Controller
         $activity = [
             'play_histories' => $user->playHistories()
                 ->with(['episode.story'])
-                ->latest()
+                ->orderBy('played_at', 'desc')
                 ->limit(20)
                 ->get(),
             'favorites' => $user->favorites()
