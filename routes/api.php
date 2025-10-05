@@ -178,14 +178,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     });
 
     // Subscription routes
-    Route::prefix('subscriptions')->group(function () {
-        Route::get('plans', [SubscriptionController::class, 'plans']);
-        Route::post('calculate-price', [SubscriptionController::class, 'calculatePrice']);
-        Route::post('/', [SubscriptionController::class, 'store']);
-        Route::get('current', [SubscriptionController::class, 'current']);
-        Route::get('{subscriptionId}', [SubscriptionController::class, 'show']);
-        Route::post('cancel', [SubscriptionController::class, 'cancel']);
-    });
+        Route::prefix('subscriptions')->group(function () {
+            Route::get('plans', [SubscriptionController::class, 'plans']);
+            Route::post('calculate-price', [SubscriptionController::class, 'calculatePrice']);
+            Route::post('/', [SubscriptionController::class, 'store']);
+            Route::get('current', [SubscriptionController::class, 'current']);
+            Route::get('{subscriptionId}', [SubscriptionController::class, 'show']);
+            Route::post('cancel', [SubscriptionController::class, 'cancel']);
+            Route::get('debug/zarinpal', [SubscriptionController::class, 'debugZarinPal']);
+        });
 
     // Payment routes
     Route::prefix('payments')->group(function () {

@@ -48,12 +48,34 @@ class PaymentService
             Log::info('Initiating ZarinPal payment', [
                 'payment_id' => $payment->id,
                 'amount' => $payment->amount,
+                'currency' => $payment->currency,
                 'merchant_id' => $this->zarinpalMerchantId,
                 'sandbox_mode' => $this->sandboxMode,
-                'api_url' => $apiUrl
+                'api_url' => $apiUrl,
+                'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
+                'description' => $payment->description ?? 'پرداخت اشتراک سروکست'
+            ]);
+
+            // Log the exact request data being sent
+            Log::debug('ZarinPal request data', [
+                'payment_id' => $payment->id,
+                'request_data' => $data,
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json'
+                ]
             ]);
 
             $response = Http::post($apiUrl, $data);
+
+            // Log response details for debugging
+            Log::debug('ZarinPal response received', [
+                'payment_id' => $payment->id,
+                'status_code' => $response->status(),
+                'successful' => $response->successful(),
+                'response_body' => $response->body(),
+                'response_headers' => $response->headers()
+            ]);
 
             if ($response->successful()) {
                 $result = $response->json();
@@ -81,39 +103,115 @@ class PaymentService
                         'authority' => $result['data']['authority']
                     ];
                 } else {
+                    $errorCode = $result['data']['code'] ?? 'unknown';
+                    $errorMessage = $result['errors']['message'] ?? 'خطای نامشخص';
+                    
+                    // Map common ZarinPal error codes to Persian messages
+                    $errorMessages = [
+                        -1 => 'اطلاعات ارسال شده ناقص است',
+                        -2 => 'IP یا مرچنت کد پذیرنده صحیح نیست',
+                        -3 => 'با توجه به محدودیت‌های شاپرک، امکان پردازش وجود ندارد',
+                        -4 => 'سطح تایید پذیرنده پایین‌تر از سطح نقره‌ای است',
+                        -11 => 'درخواست مورد نظر یافت نشد',
+                        -12 => 'امکان ویرایش درخواست میسر نیست',
+                        -21 => 'هیچ نوع عملیات مالی برای این تراکنش یافت نشد',
+                        -22 => 'تراکنش ناموفق است',
+                        -33 => 'رقم تراکنش با رقم پرداخت شده مطابقت ندارد',
+                        -34 => 'سقف تقسیم تراکنش از لحاظ تعداد یا رقم عبور نموده است',
+                        -40 => 'اجازه دسترسی به متد مورد نظر وجود ندارد',
+                        -41 => 'اطلاعات ارسال شده مربوط به AdditionalData غیرمعتبر است',
+                        -42 => 'مدت زمان معتبر طول عمر شناسه پرداخت باید بین 30 دقیقه تا 45 روز باشد',
+                        -54 => 'درخواست مورد نظر آرشیو شده است',
+                        100 => 'عملیات با موفقیت انجام شد',
+                        101 => 'عملیات پرداخت قبلاً انجام شده است'
+                    ];
+                    
+                    $persianMessage = $errorMessages[$errorCode] ?? $errorMessage;
+                    
                     Log::error('ZarinPal payment initiation failed', [
                         'payment_id' => $payment->id,
-                        'error_code' => $result['data']['code'],
-                        'error_message' => $result['errors']['message'] ?? 'خطای نامشخص'
+                        'error_code' => $errorCode,
+                        'error_message' => $errorMessage,
+                        'persian_message' => $persianMessage,
+                        'request_data' => $data,
+                        'response_data' => $result
                     ]);
 
                     return [
                         'success' => false,
-                        'message' => 'خطا در ایجاد درخواست پرداخت: ' . ($result['errors']['message'] ?? 'خطای نامشخص')
+                        'message' => 'خطا در ایجاد درخواست پرداخت: ' . $persianMessage,
+                        'debug_info' => [
+                            'error_code' => $errorCode,
+                            'original_message' => $errorMessage,
+                            'sandbox_mode' => $this->sandboxMode
+                        ]
                     ];
                 }
             } else {
-                Log::error('ZarinPal API request failed', [
+                $errorDetails = [
                     'payment_id' => $payment->id,
                     'status_code' => $response->status(),
-                    'response_body' => $response->body()
-                ]);
+                    'response_body' => $response->body(),
+                    'request_data' => $data,
+                    'api_url' => $apiUrl,
+                    'sandbox_mode' => $this->sandboxMode,
+                    'merchant_id' => $this->zarinpalMerchantId
+                ];
+                
+                Log::error('ZarinPal API request failed', $errorDetails);
+
+                // Try to parse error response
+                $responseBody = $response->body();
+                $errorMessage = 'خطا در ارتباط با درگاه پرداخت';
+                
+                try {
+                    $errorData = json_decode($responseBody, true);
+                    if (isset($errorData['errors']['message'])) {
+                        $errorMessage = 'خطا در درگاه پرداخت: ' . $errorData['errors']['message'];
+                    } elseif (isset($errorData['message'])) {
+                        $errorMessage = 'خطا در درگاه پرداخت: ' . $errorData['message'];
+                    }
+                } catch (\Exception $parseError) {
+                    Log::warning('Failed to parse ZarinPal error response', [
+                        'response_body' => $responseBody,
+                        'parse_error' => $parseError->getMessage()
+                    ]);
+                }
 
                 return [
                     'success' => false,
-                    'message' => 'خطا در ارتباط با درگاه پرداخت'
+                    'message' => $errorMessage,
+                    'debug_info' => [
+                        'status_code' => $response->status(),
+                        'api_url' => $apiUrl,
+                        'sandbox_mode' => $this->sandboxMode
+                    ]
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('ZarinPal payment initiation failed', [
+            $errorDetails = [
                 'payment_id' => $payment->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $data ?? null,
+                'api_url' => $apiUrl ?? null,
+                'sandbox_mode' => $this->sandboxMode,
+                'merchant_id' => $this->zarinpalMerchantId
+            ];
+            
+            Log::error('ZarinPal payment initiation failed with exception', $errorDetails);
 
             return [
                 'success' => false,
-                'message' => 'خطا در سیستم پرداخت'
+                'message' => 'خطا در ارتباط با درگاه پرداخت: ' . $e->getMessage(),
+                'debug_info' => [
+                    'exception_type' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'sandbox_mode' => $this->sandboxMode
+                ]
             ];
         }
     }
@@ -286,5 +384,58 @@ class PaymentService
             'success' => true,
             'message' => 'پرداخت بازگردانده شد'
         ];
+    }
+
+    /**
+     * Check ZarinPal configuration and connectivity
+     */
+    public function checkZarinPalConfiguration(): array
+    {
+        try {
+            $config = [
+                'merchant_id' => $this->zarinpalMerchantId,
+                'sandbox_mode' => $this->sandboxMode,
+                'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
+                'api_url' => $this->sandboxMode 
+                    ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json'
+                    : 'https://api.zarinpal.com/pg/v4/payment/request.json'
+            ];
+            
+            Log::info('ZarinPal configuration check', $config);
+            
+            // Test basic connectivity
+            $testUrl = $this->sandboxMode 
+                ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json'
+                : 'https://api.zarinpal.com/pg/v4/payment/request.json';
+                
+            $testResponse = Http::timeout(10)->get($testUrl);
+            
+            return [
+                'success' => true,
+                'config' => $config,
+                'connectivity_test' => [
+                    'url' => $testUrl,
+                    'status_code' => $testResponse->status(),
+                    'reachable' => $testResponse->status() !== 0
+                ]
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('ZarinPal configuration check failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'config' => [
+                    'merchant_id' => $this->zarinpalMerchantId,
+                    'sandbox_mode' => $this->sandboxMode,
+                    'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback'
+                ]
+            ];
+        }
     }
 }

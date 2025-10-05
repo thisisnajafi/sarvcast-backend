@@ -730,4 +730,34 @@ class SubscriptionController extends Controller
 
         return $amount;
     }
+
+    /**
+     * Debug ZarinPal configuration
+     */
+    public function debugZarinPal(Request $request): JsonResponse
+    {
+        try {
+            $paymentService = app(\App\Services\PaymentService::class);
+            $configCheck = $paymentService->checkZarinPalConfiguration();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $configCheck,
+                'message' => 'اطلاعات پیکربندی زرین‌پال دریافت شد'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to debug ZarinPal configuration', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت اطلاعات پیکربندی زرین‌پال',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

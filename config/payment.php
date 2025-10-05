@@ -11,8 +11,8 @@ return [
     */
 
     'zarinpal' => [
-        'merchant_id' => '1f8c6606-d923-4bdb-8d52-9affc9b877c8', // Hardcoded merchant ID
-        'sandbox' => false, // Production mode
+        'merchant_id' => env('ZARINPAL_MERCHANT_ID', '77751ff3-c1cc-411b-869d-2ac7d7b02f88'),
+        'sandbox' => env('ZARINPAL_SANDBOX', false),
         'api_url' => 'https://api.zarinpal.com/pg/v4/payment/',
     ],
 
