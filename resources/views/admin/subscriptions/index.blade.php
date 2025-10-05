@@ -125,7 +125,7 @@
                 <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">جستجو</label>
                 <input type="text" name="search" id="search" value="{{ request('search') }}" 
                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                       placeholder="نام، ایمیل یا شماره تلفن کاربر">
+                       placeholder="نام یا شماره تلفن کاربر">
             </div>
 
             <div>
@@ -183,7 +183,7 @@
                                 </div>
                                 <div>
                                     <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $subscription->user?->first_name ?? 'کاربر' }} {{ $subscription->user?->last_name ?? 'نامشخص' }}</div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ $subscription->user?->email ?? 'ایمیل نامشخص' }}</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ $subscription->user?->phone_number ?? 'شماره تلفن نامشخص' }}</div>
                                 </div>
                             </div>
                         </td>

@@ -299,6 +299,18 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        // Get premium information
+        $activeSubscription = $user->activeSubscription;
+        $isPremium = $activeSubscription ? true : false;
+        
+        $premiumInfo = [
+            'is_premium' => $isPremium,
+            'subscription_status' => $isPremium ? 'active' : 'none',
+            'subscription_type' => $isPremium ? $activeSubscription->type : null,
+            'subscription_end_date' => $isPremium ? $activeSubscription->end_date : null,
+            'days_remaining' => $isPremium ? max(0, now()->diffInDays($activeSubscription->end_date, false)) : 0,
+        ];
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -315,6 +327,7 @@ class AuthController extends Controller
                 'phone_verified_at' => $user->phone_verified_at,
                 'last_login_at' => $user->last_login_at,
                 'created_at' => $user->created_at,
+                'premium' => $premiumInfo,
             ]
         ]);
     }

@@ -31,7 +31,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">نوع پلن</label>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            {{ \App\Services\SubscriptionService::PLANS[$subscription->type]['name'] ?? $subscription->type }}
+                            {{ $plans[$subscription->type]['name'] ?? ($subscription->type ?? 'نامشخص') }}
                         </span>
                     </div>
                     
@@ -175,37 +175,41 @@
                 
                 <div class="flex items-center mb-4">
                     <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center ml-4">
-                        <span class="text-white font-semibold text-lg">{{ substr($subscription->user->first_name ?? 'U', 0, 1) }}</span>
+                        <span class="text-white font-semibold text-lg">{{ substr($subscription->user?->first_name ?? 'U', 0, 1) }}</span>
                     </div>
                     <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ $subscription->user->first_name }} {{ $subscription->user->last_name }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $subscription->user->email }}</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ $subscription->user?->first_name ?? 'کاربر' }} {{ $subscription->user?->last_name ?? 'نامشخص' }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $subscription->user?->phone_number ?? 'شماره تلفن نامشخص' }}</p>
                     </div>
                 </div>
                 
                 <div class="space-y-3">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">شماره تلفن</label>
-                        <p class="text-sm text-gray-900 dark:text-white">{{ $subscription->user->phone_number ?? 'ثبت نشده' }}</p>
+                        <p class="text-sm text-gray-900 dark:text-white">{{ $subscription->user?->phone_number ?? 'ثبت نشده' }}</p>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">تاریخ عضویت</label>
-                        <p class="text-sm text-gray-900 dark:text-white">{{ \App\Helpers\JalaliHelper::formatForDisplay($subscription->user->created_at, 'Y/m/d') }}</p>
+                        <p class="text-sm text-gray-900 dark:text-white">{{ $subscription->user?->created_at ? \App\Helpers\JalaliHelper::formatForDisplay($subscription->user->created_at, 'Y/m/d') : 'نامشخص' }}</p>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">وضعیت حساب</label>
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $subscription->user->is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' }}">
-                            {{ $subscription->user->is_active ? 'فعال' : 'غیرفعال' }}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ ($subscription->user?->status ?? 'inactive') === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' }}">
+                            {{ ($subscription->user?->status ?? 'inactive') === 'active' ? 'فعال' : 'غیرفعال' }}
                         </span>
                     </div>
                 </div>
                 
                 <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <a href="{{ route('admin.users.show', $subscription->user) }}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium">
-                        مشاهده پروفایل کاربر →
-                    </a>
+                    @if($subscription->user)
+                        <a href="{{ route('admin.users.show', $subscription->user) }}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium">
+                            مشاهده پروفایل کاربر →
+                        </a>
+                    @else
+                        <p class="text-sm text-gray-500 dark:text-gray-400">کاربر یافت نشد</p>
+                    @endif
                 </div>
             </div>
 

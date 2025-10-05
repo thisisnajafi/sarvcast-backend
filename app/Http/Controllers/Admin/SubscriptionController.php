@@ -44,7 +44,6 @@ class SubscriptionController extends Controller
             $query->whereHas('user', function($q) use ($request) {
                 $q->where('first_name', 'like', '%' . $request->search . '%')
                   ->orWhere('last_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
                   ->orWhere('phone_number', 'like', '%' . $request->search . '%');
             });
         }
@@ -150,7 +149,10 @@ class SubscriptionController extends Controller
     {
         $subscription->load('user', 'payments');
         
-        return view('admin.subscriptions.show', compact('subscription'));
+        // Get plans data for the view
+        $plans = $this->subscriptionService->getPlans();
+        
+        return view('admin.subscriptions.show', compact('subscription', 'plans'));
     }
 
     /**
