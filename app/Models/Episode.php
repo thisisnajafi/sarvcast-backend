@@ -71,6 +71,15 @@ class Episode extends Model
         return $this->hasMany(Rating::class);
     }
 
+    public function imageTimeline()
+    {
+        return $this->hasOne(ImageTimeline::class);
+    }
+    
+    // Keep the old method for backward compatibility but mark as deprecated
+    /**
+     * @deprecated Use imageTimeline() instead. Each episode should have only one timeline.
+     */
     public function imageTimelines()
     {
         return $this->hasMany(ImageTimeline::class)->orderBy('image_order');

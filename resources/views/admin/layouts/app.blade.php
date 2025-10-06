@@ -131,7 +131,7 @@
                         </svg>
                         افزودن اپیزود
                     </a>
-                    @if(request()->routeIs('admin.episodes.show') || request()->routeIs('admin.episodes.edit') || request()->routeIs('admin.episodes.voice-actors.*'))
+                    @if(request()->routeIs('admin.episodes.show') || request()->routeIs('admin.episodes.edit') || request()->routeIs('admin.episodes.voice-actors.*') || request()->routeIs('admin.episodes.timeline.*') || request()->routeIs('admin.stories.timeline.*'))
                     <a href="{{ route('admin.episodes.show', request()->route('episode')) }}" class="flex items-center px-6 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200 {{ request()->routeIs('admin.episodes.show') ? 'text-purple-700 dark:text-purple-300 font-medium' : '' }}">
                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -145,6 +145,30 @@
                         </svg>
                         مدیریت صداپیشگان
                     </a>
+                    <a href="{{ route('admin.episodes.timeline.index', request()->route('episode')) }}" class="flex items-center px-6 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200 {{ request()->routeIs('admin.episodes.timeline.*') ? 'text-purple-700 dark:text-purple-300 font-medium' : '' }}">
+                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        مدیریت تایم‌لاین (قدیمی)
+                    </a>
+                    @if(request()->route('episode'))
+                        @php 
+                            $episodeId = request()->route('episode');
+                            // Handle case where episode might be a collection or model
+                            if (is_object($episodeId)) {
+                                $episodeId = $episodeId->id ?? $episodeId;
+                            }
+                            $episode = \App\Models\Episode::find($episodeId);
+                        @endphp
+                        @if($episode && $episode->story)
+                            <a href="{{ route('admin.stories.timeline.index', $episode->story) }}" class="flex items-center px-6 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200 {{ request()->routeIs('admin.stories.timeline.*') ? 'text-purple-700 dark:text-purple-300 font-medium' : '' }}">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                مدیریت تایم‌لاین (جدید)
+                            </a>
+                        @endif
+                    @endif
                     @endif
                 </div>
                 @endif
@@ -165,6 +189,16 @@
                         </svg>
                     </div>
                     <span class="font-medium">افراد</span>
+                </a>
+                
+                <!-- Timeline Management -->
+                <a href="{{ route('admin.timelines.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-teal-50 hover:to-teal-100 dark:hover:from-teal-900 dark:hover:to-teal-800 hover:text-teal-700 dark:hover:text-teal-300 transition-all duration-200 {{ request()->routeIs('admin.timelines.*') ? 'bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 text-teal-700 dark:text-teal-300 border-l-2 border-teal-500' : '' }}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.timelines.*') ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium">مدیریت تایم‌لاین</span>
                 </a>
                 
                 <a href="{{ route('admin.users.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-indigo-100 dark:hover:from-indigo-900 dark:hover:to-indigo-800 hover:text-indigo-700 dark:hover:text-indigo-300 transition-all duration-200 {{ request()->routeIs('admin.users.*') ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900 dark:to-indigo-800 text-indigo-700 dark:text-indigo-300 border-l-2 border-indigo-500' : '' }}">

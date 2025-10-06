@@ -7,6 +7,12 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">{{ $episode->title }}</h1>
         <div class="flex space-x-4 space-x-reverse">
+            <a href="{{ route('admin.episodes.timeline.index', $episode) }}" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition duration-200 flex items-center">
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                مدیریت تایم‌لاین
+            </a>
             <a href="{{ route('admin.episodes.voice-actors.index', $episode) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-200 flex items-center">
                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
@@ -41,30 +47,69 @@
                 </div>
             @endif
 
-            <!-- Image Timeline -->
-            @if($episode->imageTimelines && $episode->imageTimelines->count() > 0)
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">تصاویر زمان‌بندی</h3>
+            <!-- Timeline Management -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">تایم‌لاین تصویری</h3>
+                    @if($episode->use_image_timeline)
+                        <a href="{{ route('admin.episodes.timeline.index', $episode) }}" 
+                           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                            مدیریت تایم‌لاین
+                        </a>
+                    @else
+                        <a href="{{ route('admin.episodes.timeline.create', $episode) }}" 
+                           class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                            ایجاد تایم‌لاین
+                        </a>
+                    @endif
+                </div>
+                
+                @if($episode->use_image_timeline && $episode->imageTimelines && $episode->imageTimelines->count() > 0)
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        @foreach($episode->imageTimelines as $timeline)
+                        @foreach($episode->imageTimelines->take(6) as $timeline)
                             <div class="border border-gray-200 rounded-lg p-4">
                                 @if($timeline->image_url)
-                                    <img src="{{ $timeline->getImageUrlFromPath($timeline->image_url) }}" 
+                                    <img src="{{ $timeline->image_url }}" 
                                          alt="Timeline Image" 
                                          class="w-full h-32 object-cover rounded-lg mb-3">
                                 @endif
                                 <div class="text-sm text-gray-600">
-                                    <p><strong>شروع:</strong> {{ $timeline->start_time }} ثانیه</p>
-                                    <p><strong>پایان:</strong> {{ $timeline->end_time }} ثانیه</p>
+                                    <p><strong>شروع:</strong> {{ gmdate('i:s', $timeline->start_time) }}</p>
+                                    <p><strong>پایان:</strong> {{ gmdate('i:s', $timeline->end_time) }}</p>
                                     @if($timeline->scene_description)
-                                        <p><strong>توضیحات:</strong> {{ $timeline->scene_description }}</p>
+                                        <p><strong>توضیحات:</strong> {{ Str::limit($timeline->scene_description, 50) }}</p>
+                                    @endif
+                                    <p><strong>انتقال:</strong> {{ $timeline->transition_type }}</p>
+                                    @if($timeline->is_key_frame)
+                                        <span class="inline-block px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full mt-2">فریم کلیدی</span>
                                     @endif
                                 </div>
                             </div>
                         @endforeach
                     </div>
-                </div>
-            @endif
+                    
+                    @if($episode->imageTimelines->count() > 6)
+                        <div class="mt-4 text-center">
+                            <a href="{{ route('admin.episodes.timeline.index', $episode) }}" 
+                               class="text-primary hover:text-primary/80 text-sm">
+                                مشاهده همه {{ $episode->imageTimelines->count() }} تایم‌لاین
+                            </a>
+                        </div>
+                    @endif
+                @else
+                    <div class="text-center py-8">
+                        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <h4 class="text-lg font-medium text-gray-900 mb-2">هنوز تایم‌لاینی ایجاد نشده</h4>
+                        <p class="text-gray-600 mb-4">برای افزودن تصاویر همگام با صدا، تایم‌لاین ایجاد کنید.</p>
+                        <a href="{{ route('admin.episodes.timeline.create', $episode) }}" 
+                           class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors">
+                            ایجاد اولین تایم‌لاین
+                        </a>
+                    </div>
+                @endif
+            </div>
 
             <!-- Episode Details -->
             <div class="bg-white rounded-lg shadow-sm p-6">

@@ -19,7 +19,6 @@ class AdminDashboard {
         try {
             await Promise.all([
                 this.loadUserStatistics(),
-                this.loadCoinStatistics(),
                 this.loadCouponStatistics(),
                 this.loadPaymentStatistics()
             ]);
@@ -51,28 +50,6 @@ class AdminDashboard {
         }
     }
 
-    async loadCoinStatistics() {
-        try {
-            const response = await fetch('/api/v1/coins/global-statistics', {
-                headers: {
-                    'Authorization': `Bearer ${this.getAuthToken()}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to load coin statistics');
-            }
-
-            const data = await response.json();
-            
-            if (data.success) {
-                this.updateCoinStatistics(data.data);
-            }
-        } catch (error) {
-            console.error('Error loading coin statistics:', error);
-        }
-    }
 
     async loadCouponStatistics() {
         try {
@@ -124,12 +101,6 @@ class AdminDashboard {
         document.getElementById('total-users').textContent = this.formatNumber(stats.total_users);
     }
 
-    updateCoinStatistics(stats) {
-        document.getElementById('total-coins').textContent = this.formatNumber(stats.total_coins_in_circulation);
-        document.getElementById('users-with-coins').textContent = this.formatNumber(stats.total_users_with_coins);
-        document.getElementById('coins-earned').textContent = this.formatNumber(stats.total_coins_earned);
-        document.getElementById('coins-spent').textContent = this.formatNumber(stats.total_coins_spent);
-    }
 
     updateCouponStatistics(stats) {
         document.getElementById('active-coupons').textContent = this.formatNumber(stats.active_coupons);

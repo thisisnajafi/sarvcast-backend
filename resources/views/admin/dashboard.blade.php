@@ -253,67 +253,51 @@
     </div>
 </div>
 
-<!-- User Activity & Rewards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <!-- User Coins -->
-    <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
+<!-- Plan Sales Overview -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Plan Sales Today -->
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm font-medium text-yellow-800 mb-1">سکه‌های کاربران</p>
-                <p class="text-2xl font-bold text-yellow-900">{{ number_format($stats['total_user_coins']) }}</p>
+                <p class="text-sm font-medium text-blue-800 mb-1">فروش امروز</p>
+                <p class="text-2xl font-bold text-blue-900">{{ number_format($stats['plan_sales_today']) }}</p>
+                <p class="text-xs text-blue-700 mt-1">اشتراک فروخته شده</p>
             </div>
-            <div class="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+            <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                 </svg>
             </div>
         </div>
     </div>
 
-    <!-- User Points -->
+    <!-- Plan Sales This Week -->
     <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm font-medium text-green-800 mb-1">امتیازات کاربران</p>
-                <p class="text-2xl font-bold text-green-900">{{ number_format($stats['total_user_points']) }}</p>
+                <p class="text-sm font-medium text-green-800 mb-1">فروش این هفته</p>
+                <p class="text-2xl font-bold text-green-900">{{ number_format($stats['plan_sales_this_week']) }}</p>
+                <p class="text-xs text-green-700 mt-1">اشتراک فروخته شده</p>
             </div>
             <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                 </svg>
             </div>
         </div>
     </div>
 
-    <!-- User Achievements -->
+    <!-- Plan Sales Growth -->
     <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm font-medium text-purple-800 mb-1">دستاوردها</p>
-                <p class="text-2xl font-bold text-purple-900">{{ number_format($stats['total_user_achievements']) }}</p>
+                <p class="text-sm font-medium text-purple-800 mb-1">رشد فروش</p>
+                <p class="text-2xl font-bold text-purple-900">+{{ $stats['plan_sales_growth_rate'] }}%</p>
+                <p class="text-xs text-purple-700 mt-1">نسبت به ماه قبل</p>
             </div>
             <div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-                </svg>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reports -->
-    <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-sm font-medium text-red-800 mb-1">گزارش‌ها</p>
-                <p class="text-2xl font-bold text-red-900">{{ number_format($stats['total_reports']) }}</p>
-                <div class="flex items-center mt-2 space-x-3 space-x-reverse">
-                    <span class="text-xs text-yellow-600 font-medium">{{ number_format($stats['pending_reports']) }} در انتظار</span>
-                    <span class="text-xs text-green-600 font-medium">{{ number_format($stats['resolved_reports']) }} حل شده</span>
-                </div>
-            </div>
-            <div class="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"></path>
                 </svg>
             </div>
         </div>
@@ -526,8 +510,109 @@
     </div>
 </div>
 
-<!-- Top Content Section -->
+<!-- Plan Sales Details Section -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Top Selling Plans -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">پرفروش‌ترین پلن‌ها</h3>
+                <a href="{{ route('admin.subscription-plans.index') }}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">مشاهده همه</a>
+            </div>
+        </div>
+        <div class="p-6">
+            @if($topSellingPlans->count() > 0)
+                <div class="space-y-4">
+                    @foreach($topSellingPlans as $plan)
+                    <div class="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center space-x-4 space-x-reverse">
+                            <div class="w-12 h-12 bg-gradient-to-br from-indigo-400 to-indigo-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $plan->name }}</span>
+                                <p class="text-xs text-gray-500 mt-1">{{ number_format($plan->price) }} تومان</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 space-x-reverse">
+                            <div class="text-right">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $plan->subscriptions_count }}</div>
+                                <div class="text-xs text-gray-500">فروش</div>
+                            </div>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                                {{ $plan->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                {{ $plan->is_active ? 'فعال' : 'غیرفعال' }}
+                            </span>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-500">هیچ پلنی یافت نشد</p>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Plan Sales Analytics -->
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 bg-gradient-to-r from-green-50 to-green-100 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آمار فروش پلن‌ها</h3>
+                <a href="{{ route('admin.subscriptions.index') }}" class="text-green-600 hover:text-green-800 text-sm font-medium">مشاهده همه</a>
+            </div>
+        </div>
+        <div class="p-6">
+            @if($planSalesData->count() > 0)
+                <div class="space-y-4">
+                    @foreach($planSalesData as $planSale)
+                    <div class="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center space-x-4 space-x-reverse">
+                            <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">
+                                    @if($planSale->type === '1month') یک ماهه
+                                    @elseif($planSale->type === '3months') سه ماهه
+                                    @elseif($planSale->type === '6months') شش ماهه
+                                    @elseif($planSale->type === '1year') یک ساله
+                                    @else {{ $planSale->type }}
+                                    @endif
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">{{ number_format($planSale->count) }} فروش</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ number_format($planSale->total_revenue) }}</div>
+                            <div class="text-xs text-gray-500">تومان درآمد</div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-500">هیچ فروشی یافت نشد</p>
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
     <!-- Top Categories -->
     <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
         <div class="px-6 py-4 bg-gradient-to-r from-purple-50 to-purple-100 border-b border-gray-200">

@@ -10,6 +10,7 @@ class ImageTimeline extends Model
 {
     use HasImageUrl;
     protected $fillable = [
+        'story_id',
         'episode_id',
         'voice_actor_id',
         'character_id',
@@ -31,7 +32,15 @@ class ImageTimeline extends Model
     ];
 
     /**
-     * Get the episode that owns the image timeline
+     * Get the story that owns the image timeline
+     */
+    public function story(): BelongsTo
+    {
+        return $this->belongsTo(Story::class);
+    }
+
+    /**
+     * Get the episode that owns the image timeline (for backward compatibility)
      */
     public function episode(): BelongsTo
     {
@@ -63,7 +72,15 @@ class ImageTimeline extends Model
     }
 
     /**
-     * Scope a query to only include timelines for a specific episode
+     * Scope a query to only include timelines for a specific story
+     */
+    public function scopeForStory($query, int $storyId)
+    {
+        return $query->where('story_id', $storyId);
+    }
+
+    /**
+     * Scope a query to only include timelines for a specific episode (for backward compatibility)
      */
     public function scopeForEpisode($query, int $episodeId)
     {

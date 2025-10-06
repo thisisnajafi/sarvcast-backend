@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\StoryController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\EpisodeController;
+use App\Http\Controllers\Admin\EpisodeTimelineController;
+use App\Http\Controllers\Admin\TimelineManagementController;
 use App\Http\Controllers\Admin\PersonController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
@@ -70,6 +72,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     Route::get('stories/statistics', [StoryController::class, 'statistics'])->name('stories.statistics');
     Route::post('stories/{story}/publish', [StoryController::class, 'publish'])->name('stories.publish');
     
+    // Story Timeline Management Routes
+    Route::prefix('stories/{story}/timeline')->name('stories.timeline.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'store'])->name('store');
+        Route::get('/{timeline}/edit', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'edit'])->name('edit');
+        Route::put('/{timeline}', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'update'])->name('update');
+        Route::delete('/{timeline}', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'bulkAction'])->name('bulk-action');
+    });
+    
     // Episodes
     Route::resource('episodes', EpisodeController::class);
     Route::post('episodes/bulk-action', [EpisodeController::class, 'bulkAction'])->name('episodes.bulk-action');
@@ -78,6 +91,24 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     Route::get('episodes/statistics', [EpisodeController::class, 'statistics'])->name('episodes.statistics');
     Route::post('episodes/{episode}/publish', [EpisodeController::class, 'publish'])->name('episodes.publish');
     Route::post('stories/{story}/episodes/reorder', [EpisodeController::class, 'reorder'])->name('stories.episodes.reorder');
+    
+    // Episode Timeline Management Routes
+    Route::prefix('episodes/{episode}/timeline')->name('episodes.timeline.')->group(function () {
+        Route::get('/', [EpisodeTimelineController::class, 'index'])->name('index');
+        Route::get('/create', [EpisodeTimelineController::class, 'create'])->name('create');
+        Route::post('/', [EpisodeTimelineController::class, 'store'])->name('store');
+        Route::get('/{timeline}/edit', [EpisodeTimelineController::class, 'edit'])->name('edit');
+        Route::put('/{timeline}', [EpisodeTimelineController::class, 'update'])->name('update');
+        Route::delete('/{timeline}', [EpisodeTimelineController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [EpisodeTimelineController::class, 'bulkAction'])->name('bulk-action');
+    });
+    
+    // Global Timeline Management Routes
+    Route::prefix('timelines')->name('timelines.')->group(function () {
+        Route::get('/', [TimelineManagementController::class, 'index'])->name('index');
+        Route::get('/statistics', [TimelineManagementController::class, 'statistics'])->name('statistics');
+        Route::post('/bulk-action', [TimelineManagementController::class, 'bulkAction'])->name('bulk-action');
+    });
     
     // Comments Management
     Route::prefix('comments')->name('comments.')->group(function () {
@@ -95,9 +126,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('/statistics', [\App\Http\Controllers\Admin\CommentsManagementController::class, 'statistics'])->name('statistics');
         Route::get('/export', [\App\Http\Controllers\Admin\CommentsManagementController::class, 'export'])->name('export');
     });
-    
-    // Timeline Management
-    Route::get('episodes/{episode}/timeline', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'show'])->name('episodes.timeline');
     
     // Voice Actor Management
     Route::prefix('episodes/{episode}/voice-actors')->name('episodes.voice-actors.')->group(function () {

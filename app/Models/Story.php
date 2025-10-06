@@ -75,6 +75,7 @@ class Story extends Model
         'last_played_at',
         'trending_since',
         'analytics_data',
+        'use_image_timeline',
     ];
 
     /**
@@ -98,6 +99,7 @@ class Story extends Model
             'is_premium' => 'boolean',
             'is_completely_free' => 'boolean',
             'allow_resubmission' => 'boolean',
+            'use_image_timeline' => 'boolean',
         ];
     }
 
@@ -147,6 +149,14 @@ class Story extends Model
     public function episodes()
     {
         return $this->hasMany(Episode::class);
+    }
+
+    /**
+     * Get the image timelines for the story.
+     */
+    public function imageTimelines()
+    {
+        return $this->hasMany(ImageTimeline::class);
     }
 
     /**

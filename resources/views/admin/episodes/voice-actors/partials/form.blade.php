@@ -95,37 +95,21 @@
             @enderror
         </div>
 
-        <!-- Time Range -->
-        <div>
-            <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                زمان شروع (ثانیه) <span class="text-red-500">*</span>
-            </label>
-            <input type="number" id="start_time" name="start_time" 
-                   min="0" 
-                   max="{{ isset($episode) ? $episode->duration : 3600 }}" 
-                   required
-                   value="{{ old('start_time', isset($voiceActor) ? $voiceActor->start_time : '') }}"
-                   placeholder="0"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
-            @error('start_time')
-                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-            @enderror
-        </div>
-
-        <div>
-            <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                زمان پایان (ثانیه) <span class="text-red-500">*</span>
-            </label>
-            <input type="number" id="end_time" name="end_time" 
-                   min="1" 
-                   max="{{ isset($episode) ? $episode->duration : 3600 }}" 
-                   required
-                   value="{{ old('end_time', isset($voiceActor) ? $voiceActor->end_time : (isset($episode) ? $episode->duration : '')) }}"
-                   placeholder="{{ isset($episode) ? $episode->duration : '3600' }}"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
-            @error('end_time')
-                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-            @enderror
+        <!-- Time Range (Hidden - automatically set to full episode duration) -->
+        <input type="hidden" id="start_time" name="start_time" value="0">
+        <input type="hidden" id="end_time" name="end_time" value="{{ isset($episode) ? $episode->duration : 0 }}">
+        
+        <!-- Note about time range -->
+        <div class="col-span-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div class="text-sm text-blue-800 dark:text-blue-300">
+                    <p class="font-medium mb-1">توجه:</p>
+                    <p>صداپیشه به طور خودکار برای کل مدت زمان اپیزود ({{ isset($episode) ? gmdate('i:s', $episode->duration) : '00:00' }}) تنظیم می‌شود.</p>
+                </div>
+            </div>
         </div>
 
         <!-- Time Range Display -->

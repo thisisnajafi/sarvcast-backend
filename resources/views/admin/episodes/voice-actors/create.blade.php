@@ -145,48 +145,19 @@
                     @enderror
                 </div>
 
-                <!-- Time Range -->
-                <div>
-                    <label for="start_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        زمان شروع (ثانیه) <span class="text-red-500">*</span>
-                    </label>
-                    <input type="number" id="start_time" name="start_time" min="0" max="{{ $episode->duration }}" required
-                           placeholder="0"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
-                    @error('start_time')
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div>
-                    <label for="end_time" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        زمان پایان (ثانیه) <span class="text-red-500">*</span>
-                    </label>
-                    <input type="number" id="end_time" name="end_time" min="1" max="{{ $episode->duration }}" required
-                           placeholder="{{ $episode->duration }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
-                    @error('end_time')
-                        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Time Range Display -->
-                <div class="md:col-span-2">
-                    <div class="bg-blue-50 dark:bg-blue-900 rounded-lg p-4">
-                        <h4 class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">پیش‌نمایش زمان</h4>
-                        <div class="flex items-center space-x-4 space-x-reverse">
-                            <div class="flex items-center space-x-2 space-x-reverse">
-                                <span class="text-sm text-blue-700 dark:text-blue-300">شروع:</span>
-                                <span id="start-time-display" class="font-mono text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">00:00</span>
-                            </div>
-                            <div class="flex items-center space-x-2 space-x-reverse">
-                                <span class="text-sm text-blue-700 dark:text-blue-300">پایان:</span>
-                                <span id="end-time-display" class="font-mono text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">00:00</span>
-                            </div>
-                            <div class="flex items-center space-x-2 space-x-reverse">
-                                <span class="text-sm text-blue-700 dark:text-blue-300">مدت:</span>
-                                <span id="duration-display" class="font-mono text-sm bg-white dark:bg-gray-800 px-2 py-1 rounded">0 ثانیه</span>
-                            </div>
+                <!-- Time Range (Hidden - automatically set to full episode duration) -->
+                <input type="hidden" id="start_time" name="start_time" value="0">
+                <input type="hidden" id="end_time" name="end_time" value="{{ $episode->duration }}">
+                
+                <!-- Note about time range -->
+                <div class="md:col-span-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="text-sm text-blue-800 dark:text-blue-300">
+                            <p class="font-medium mb-1">توجه:</p>
+                            <p>صداپیشه به طور خودکار برای کل مدت زمان اپیزود ({{ gmdate('i:s', $episode->duration) }}) تنظیم می‌شود.</p>
                         </div>
                     </div>
                 </div>
@@ -235,28 +206,6 @@
             </div>
         </form>
     </div>
-
-    <!-- Time Validation Info -->
-    <div class="mt-6 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                </svg>
-            </div>
-            <div class="mr-3">
-                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">نکات مهم</h3>
-                <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-                    <ul class="list-disc list-inside space-y-1">
-                        <li>زمان شروع باید کمتر از زمان پایان باشد</li>
-                        <li>زمان پایان نمی‌تواند بیشتر از مدت زمان کل قسمت باشد</li>
-                        <li>زمان‌های صداپیشگان نباید با یکدیگر تداخل داشته باشند</li>
-                        <li>فقط یک صداپیشه می‌تواند به عنوان اصلی تعیین شود</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 @endsection
 
@@ -266,11 +215,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const episodeDuration = {{ $episode->duration }};
     const personSelect = document.getElementById('person_id');
     const personInfo = document.getElementById('person-info');
-    const startTimeInput = document.getElementById('start_time');
-    const endTimeInput = document.getElementById('end_time');
-    const startTimeDisplay = document.getElementById('start-time-display');
-    const endTimeDisplay = document.getElementById('end-time-display');
-    const durationDisplay = document.getElementById('duration-display');
 
     // Person selection change
     personSelect.addEventListener('change', function() {
@@ -282,16 +226,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Time inputs change
-    startTimeInput.addEventListener('input', updateTimeDisplay);
-    endTimeInput.addEventListener('input', updateTimeDisplay);
-
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
-        if (!validateTimeRange()) {
-            e.preventDefault();
-            alert('زمان شروع باید کمتر از زمان پایان باشد');
-        }
+        // No time validation needed since times are automatic
     });
 
     function showPersonInfo(option) {
@@ -316,46 +253,6 @@ document.addEventListener('DOMContentLoaded', function() {
         personInfo.classList.add('hidden');
     }
 
-    function updateTimeDisplay() {
-        const startTime = parseInt(startTimeInput.value) || 0;
-        const endTime = parseInt(endTimeInput.value) || 0;
-        
-        startTimeDisplay.textContent = formatTime(startTime);
-        endTimeDisplay.textContent = formatTime(endTime);
-        
-        const duration = Math.max(0, endTime - startTime);
-        durationDisplay.textContent = `${duration} ثانیه`;
-        
-        // Validate time range
-        validateTimeRange();
-    }
-
-    function formatTime(seconds) {
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-
-    function validateTimeRange() {
-        const startTime = parseInt(startTimeInput.value) || 0;
-        const endTime = parseInt(endTimeInput.value) || 0;
-        
-        if (startTime >= endTime) {
-            startTimeInput.classList.add('border-red-500');
-            endTimeInput.classList.add('border-red-500');
-            return false;
-        }
-        
-        if (endTime > episodeDuration) {
-            endTimeInput.classList.add('border-red-500');
-            return false;
-        }
-        
-        startTimeInput.classList.remove('border-red-500');
-        endTimeInput.classList.remove('border-red-500');
-        return true;
-    }
-
     // Auto-suggest character name based on role
     document.getElementById('role').addEventListener('change', function() {
         const characterNameInput = document.getElementById('character_name');
@@ -368,9 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
             characterNameInput.value = '';
         }
     });
-
-    // Initialize time display
-    updateTimeDisplay();
 });
 </script>
 @endpush

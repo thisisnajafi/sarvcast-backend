@@ -50,17 +50,6 @@
                             مرورگر شما از پخش کننده صوتی پشتیبانی نمی‌کند.
                         </audio>
                         
-                        <!-- Playback Speed Controls -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">سرعت پخش</label>
-                            <div class="flex items-center space-x-4 space-x-reverse">
-                                <button type="button" id="speed-0.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(0.5)">0.5x</button>
-                                <button type="button" id="speed-1x" class="px-3 py-1 text-sm border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1)">1x</button>
-                                <button type="button" id="speed-1.25x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.25)">1.25x</button>
-                                <button type="button" id="speed-1.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.5)">1.5x</button>
-                                <button type="button" id="speed-2x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(2)">2x</button>
-                            </div>
-                        </div>
                         
                         <div class="flex items-center justify-between text-sm text-gray-600">
                             <span id="current-time">00:00</span>
@@ -199,30 +188,6 @@
             </div>
         </div>
 
-        <!-- Image Timeline Management -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">مدیریت تصاویر بر اساس زمان</h2>
-            
-            <div class="space-y-4">
-                <!-- Image Timeline List -->
-                <div id="image-timeline-list" class="space-y-4">
-                    <!-- Image timelines will be added here dynamically -->
-                </div>
-
-                <!-- Add Image Timeline Button - MOVED TO BOTTOM -->
-                <div class="flex justify-center pt-4 border-t border-gray-200">
-                    <button type="button" id="add-image-timeline" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 space-x-reverse">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        <span>افزودن تصویر در زمان فعلی</span>
-                    </button>
-                </div>
-
-                <!-- Hidden inputs for image timeline data -->
-                <input type="hidden" name="image_timeline_data" id="image-timeline-data">
-            </div>
-        </div>
 
         <!-- People Selection -->
         <div class="bg-white rounded-lg shadow-sm p-6">
@@ -327,7 +292,6 @@ const availableVoiceActors = @json($narrators);
 document.addEventListener('DOMContentLoaded', function() {
     initializeAudioPlayer();
     initializeVoiceActorManagement();
-    initializeImageTimelineManagement();
 });
 
 // Audio Player Functions
@@ -359,33 +323,6 @@ function initializeAudioPlayer() {
     }
 }
 
-// Set playback speed function
-function setPlaybackSpeed(speed) {
-    const audioPlayer = document.getElementById('audio-player');
-    if (audioPlayer) {
-        audioPlayer.playbackRate = speed;
-        
-        // Update button styles
-        const speedButtons = ['speed-0.5x', 'speed-1x', 'speed-1.25x', 'speed-1.5x', 'speed-2x'];
-        speedButtons.forEach(buttonId => {
-            const button = document.getElementById(buttonId);
-            if (button) {
-                button.classList.remove('bg-blue-500', 'text-white');
-                button.classList.add('hover:bg-gray-100');
-            }
-        });
-        
-        // Highlight selected speed button
-        const selectedButton = document.getElementById(`speed-${speed}x`);
-        if (selectedButton) {
-            selectedButton.classList.add('bg-blue-500', 'text-white');
-            selectedButton.classList.remove('hover:bg-gray-100');
-        }
-        
-        // Show notification
-        showNotification(`سرعت پخش به ${speed}x تغییر کرد`, 'info');
-    }
-}
 
 // Show notification function
 function showNotification(message, type = 'info') {
@@ -462,9 +399,6 @@ function handleAudioUpload(input) {
             showDurationSuccess(duration);
             
             // Initialize first image timeline automatically
-            if (typeof initializeFirstImageTimeline === 'function') {
-                initializeFirstImageTimeline();
-            }
         });
         
         // Handle loading errors
@@ -558,8 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Form submit event triggered');
             
             // Update timeline and voice actors data before submission
-            console.log('Updating timeline and voice actors data...');
-            updateImageTimelineData();
+            console.log('Updating voice actors data...');
             updateVoiceActorsData();
             
             // Show loading state
@@ -634,113 +567,7 @@ function addVoiceActorRow(data = {}) {
     updateVoiceActorsData();
 }
 
-// Enhanced image timeline management with persistence and auto-linking
-function addImageTimelineRow(data = {}) {
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    if (!imageTimelineList) return;
-    
-    // Get the last image's end time to set as start time for new image
-    const existingRows = imageTimelineList.querySelectorAll('.bg-gray-50');
-    let suggestedStartTime = '';
-    
-    if (existingRows.length > 0) {
-        const lastRow = existingRows[existingRows.length - 1];
-        const lastEndTimeInput = lastRow.querySelector('input[name^="timeline_end_"]');
-        if (lastEndTimeInput && lastEndTimeInput.value) {
-            suggestedStartTime = lastEndTimeInput.value;
-        }
-    }
-    
-    const row = document.createElement('div');
-    row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
-    row.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
-                <input type="file" name="timeline_image_${imageTimelineCounter}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="previewImage(this)">
-                <div class="mt-2 image-preview-container" style="display: none;">
-                    <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر">
-                </div>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">توضیح صحنه</label>
-                <input type="text" name="timeline_scene_${imageTimelineCounter}" value="${data.scene_description || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="توضیح صحنه">
-            </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">شروع (ثانیه)</label>
-                <input type="number" name="timeline_start_${imageTimelineCounter}" value="${data.start_time || suggestedStartTime}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0" onchange="updatePreviousImageEndTime(this)">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">پایان (ثانیه)</label>
-                <input type="number" name="timeline_end_${imageTimelineCounter}" value="${data.end_time || ''}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">نوع انتقال</label>
-                <select name="timeline_transition_${imageTimelineCounter}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    <option value="fade" ${data.transition_type === 'fade' ? 'selected' : ''}>محو</option>
-                    <option value="slide" ${data.transition_type === 'slide' ? 'selected' : ''}>اسلاید</option>
-                    <option value="cut" ${data.transition_type === 'cut' ? 'selected' : ''}>برش</option>
-                </select>
-            </div>
-            <div class="flex items-center">
-                <label class="flex items-center">
-                    <input type="checkbox" name="timeline_keyframe_${imageTimelineCounter}" ${data.is_key_frame ? 'checked' : ''} class="mr-2">
-                    <span class="text-sm text-gray-700">فریم کلیدی</span>
-                </label>
-            </div>
-        </div>
-        <div class="mt-4 flex justify-end">
-            <button type="button" onclick="removeImageTimelineRow(this)" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                حذف
-            </button>
-        </div>
-    `;
-    
-    imageTimelineList.appendChild(row);
-    imageTimelineCounter++;
-    updateImageTimelineData();
-}
 
-// Preview image function
-function previewImage(input) {
-    const file = input.files[0];
-    const previewContainer = input.parentElement.querySelector('.image-preview-container');
-    const previewImg = previewContainer.querySelector('img');
-    
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    } else {
-        previewContainer.style.display = 'none';
-    }
-}
-
-// Update previous image's end time when current image's start time changes
-function updatePreviousImageEndTime(currentStartTimeInput) {
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    if (!imageTimelineList) return;
-    
-    const currentRow = currentStartTimeInput.closest('.bg-gray-50');
-    const allRows = Array.from(imageTimelineList.querySelectorAll('.bg-gray-50'));
-    const currentIndex = allRows.indexOf(currentRow);
-    
-    // If this is not the first image, update the previous image's end time
-    if (currentIndex > 0) {
-        const previousRow = allRows[currentIndex - 1];
-        const previousEndTimeInput = previousRow.querySelector('input[name^="timeline_end_"]');
-        
-        if (previousEndTimeInput && currentStartTimeInput.value) {
-            previousEndTimeInput.value = currentStartTimeInput.value;
-            updateImageTimelineData();
-        }
-    }
-}
 
 // Update voice actors data for form submission
 function updateVoiceActorsData() {
@@ -765,37 +592,6 @@ function updateVoiceActorsData() {
     }
 }
 
-// Update image timeline data for form submission
-function updateImageTimelineData() {
-    const imageTimelineData = [];
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    
-    imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
-        const imageInput = row.querySelector('input[type="file"]');
-        const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
-        const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
-        const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
-        const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
-        const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
-        
-        if (startTimeInput && endTimeInput) {
-            imageTimelineData.push({
-                image_file: imageInput && imageInput.files[0] ? imageInput.files[0].name : '',
-                start_time: startTimeInput.value || 0,
-                end_time: endTimeInput.value || 0,
-                scene_description: sceneDescriptionInput ? sceneDescriptionInput.value : '',
-                transition_type: transitionTypeSelect ? transitionTypeSelect.value : 'fade',
-                is_key_frame: isKeyFrameCheckbox ? isKeyFrameCheckbox.checked : false,
-                image_order: index
-            });
-        }
-    });
-    
-    const hiddenInput = document.getElementById('image-timeline-data');
-    if (hiddenInput) {
-        hiddenInput.value = JSON.stringify(imageTimelineData);
-    }
-}
 
 // Remove voice actor row
 function removeVoiceActorRow(button) {
@@ -803,11 +599,6 @@ function removeVoiceActorRow(button) {
     updateVoiceActorsData();
 }
 
-// Remove image timeline row
-function removeImageTimelineRow(button) {
-    button.closest('.bg-gray-50').remove();
-    updateImageTimelineData();
-}
 
 // Initialize voice actor management
 function initializeVoiceActorManagement() {
@@ -819,67 +610,6 @@ function initializeVoiceActorManagement() {
     }
 }
 
-// Initialize image timeline management
-function initializeImageTimelineManagement() {
-    const addButton = document.getElementById('add-image-timeline');
-    if (addButton) {
-        addButton.addEventListener('click', () => {
-            addImageTimelineAtCurrentTime();
-        });
-    }
-}
-
-// Add image timeline at current audio time
-function addImageTimelineAtCurrentTime() {
-    const audioPlayer = document.getElementById('audio-player');
-    const durationField = document.getElementById('duration');
-    
-    if (!audioPlayer || !durationField.value) {
-        alert('لطفاً ابتدا فایل صوتی را آپلود کنید');
-        return;
-    }
-    
-    const currentTime = audioPlayer.currentTime || 0;
-    const audioDuration = parseFloat(durationField.value);
-    
-    if (currentTime >= audioDuration) {
-        alert('زمان فعلی نمی‌تواند بیشتر یا مساوی مدت زمان کل فایل صوتی باشد');
-        return;
-    }
-    
-    // Get the last image timeline
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    const existingRows = imageTimelineList.querySelectorAll('.bg-gray-50');
-    
-    if (existingRows.length > 0) {
-        // Update the last image's end time to current audio time
-        const lastRow = existingRows[existingRows.length - 1];
-        const lastEndTimeInput = lastRow.querySelector('input[name^="timeline_end_"]');
-        if (lastEndTimeInput) {
-            lastEndTimeInput.value = currentTime.toFixed(1);
-        }
-    }
-    
-    // Create new image timeline with current time as start and audio duration as end
-    addImageTimelineRow({
-        start_time: currentTime.toFixed(1),
-        end_time: audioDuration.toFixed(1)
-    });
-}
-
-// Initialize first image timeline automatically when audio is loaded
-function initializeFirstImageTimeline() {
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    const durationField = document.getElementById('duration');
-    
-    if (imageTimelineList && imageTimelineList.children.length === 0 && durationField.value) {
-        // Create first image with start time 0 and end time = audio duration
-        addImageTimelineRow({
-            start_time: 0,
-            end_time: durationField.value
-        });
-    }
-}
 
 // Clear form data function
 function clearFormData() {

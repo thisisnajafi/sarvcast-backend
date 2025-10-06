@@ -3,32 +3,29 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ImageTimeline;
-use App\Models\Story;
 use App\Models\Episode;
+use App\Models\ImageTimeline;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
 
 class TimelineManagementController extends Controller
 {
     /**
-     * Display a listing of timelines.
+     * Display all timelines across all episodes
      */
     public function index(Request $request)
     {
-        $query = ImageTimeline::with(['episode']);
+        $query = ImageTimeline::with(['episode.story'])
+            ->orderBy('created_at', 'desc');
 
-        // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('scene_description', 'like', "%{$search}%")
-                  ->orWhereHas('episode', function ($q) use ($search) {
-                      $q->where('title', 'like', "%{$search}%");
-                  });
+        // Filter by episode if provided
+        if ($request->filled('episode_id')) {
+            $query->where('episode_id', $request->episode_id);
+        }
+
+        // Filter by story if provided
+        if ($request->filled('story_id')) {
+            $query->whereHas('episode', function($q) use ($request) {
+                $q->where('story_id', $request->story_id);
             });
         }
 
@@ -37,451 +34,100 @@ class TimelineManagementController extends Controller
             $query->where('transition_type', $request->transition_type);
         }
 
-        // Filter by key frame
+        // Filter by key frame status
         if ($request->filled('is_key_frame')) {
-            $query->where('is_key_frame', $request->boolean('is_key_frame'));
+            $query->where('is_key_frame', $request->is_key_frame);
         }
 
-        // Filter by episode
-        if ($request->filled('episode_id')) {
-            $query->where('episode_id', $request->episode_id);
-        }
+        $timelines = $query->paginate(20);
 
-        // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
+        // Get filter options
+        $episodes = Episode::with('story')->orderBy('title')->get();
+        $stories = \App\Models\Story::orderBy('title')->get();
+        $transitionTypes = ['fade', 'cut', 'dissolve', 'slide'];
 
-        $timelines = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        // Get statistics
-        $stats = [
-            'total' => ImageTimeline::count(),
-            'active' => ImageTimeline::count(), // All image timelines are considered active
-            'inactive' => 0, // No inactive status for image timelines
-            'draft' => 0, // No draft status for image timelines
-            'key_frames' => ImageTimeline::where('is_key_frame', true)->count(),
-            'non_key_frames' => ImageTimeline::where('is_key_frame', false)->count(),
-            'fade_transitions' => ImageTimeline::where('transition_type', 'fade')->count(),
-            'cut_transitions' => ImageTimeline::where('transition_type', 'cut')->count(),
-            'slide_transitions' => ImageTimeline::where('transition_type', 'slide')->count(),
-            'dissolve_transitions' => ImageTimeline::where('transition_type', 'dissolve')->count(),
-        ];
-
-        $stories = Story::where('status', 'published')->get();
-        $episodes = Episode::where('status', 'published')->get();
-
-        return view('admin.timeline-management.index', compact('timelines', 'stats', 'stories', 'episodes'));
+        return view('admin.timelines.index', compact('timelines', 'episodes', 'stories', 'transitionTypes'));
     }
 
     /**
-     * Show the form for creating a new timeline.
-     */
-    public function create()
-    {
-        $stories = Story::where('status', 'published')->get();
-        $episodes = Episode::where('status', 'published')->get();
-        return view('admin.timeline-management.create', compact('stories', 'episodes'));
-    }
-
-    /**
-     * Store a newly created timeline.
-     */
-    public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'episode_id' => 'required|exists:episodes,id',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:1',
-            'image_url' => 'required|string|max:500',
-            'image_order' => 'required|integer|min:0',
-            'scene_description' => 'nullable|string|max:1000',
-            'transition_type' => 'nullable|string|in:fade,slide,cut,dissolve',
-            'is_key_frame' => 'nullable|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $data = [
-                'episode_id' => $request->episode_id,
-                'start_time' => $request->start_time,
-                'end_time' => $request->end_time,
-                'image_url' => $request->image_url,
-                'image_order' => $request->image_order,
-                'scene_description' => $request->scene_description,
-                'transition_type' => $request->transition_type ?? 'fade',
-                'is_key_frame' => $request->boolean('is_key_frame', false),
-            ];
-
-            $timeline = ImageTimeline::create($data);
-
-            DB::commit();
-
-            return redirect()->route('admin.timeline-management.index')
-                ->with('success', 'تایم‌لاین تصویر با موفقیت ایجاد شد.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withErrors(['error' => 'خطا در ایجاد تایم‌لاین: ' . $e->getMessage()])
-                ->withInput();
-        }
-    }
-
-    /**
-     * Display the specified timeline.
-     */
-    public function show(ImageTimeline $timeline)
-    {
-        $timeline->load(['episode', 'voiceActor']);
-        
-        // Get related timelines for the same episode
-        $relatedTimelines = ImageTimeline::where('episode_id', $timeline->episode_id)
-            ->where('id', '!=', $timeline->id)
-            ->with(['episode'])
-            ->orderBy('image_order')
-            ->limit(5)
-            ->get();
-
-        return view('admin.timeline-management.show', compact('timeline', 'relatedTimelines'));
-    }
-
-    /**
-     * Show the form for editing the specified timeline.
-     */
-    public function edit(ImageTimeline $timeline)
-    {
-        $stories = Story::where('status', 'published')->get();
-        $episodes = Episode::where('status', 'published')->get();
-        return view('admin.timeline-management.edit', compact('timeline', 'stories', 'episodes'));
-    }
-
-    /**
-     * Update the specified timeline.
-     */
-    public function update(Request $request, ImageTimeline $timeline)
-    {
-        $validator = Validator::make($request->all(), [
-            'episode_id' => 'required|exists:episodes,id',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:1',
-            'image_url' => 'required|string|max:500',
-            'image_order' => 'required|integer|min:0',
-            'scene_description' => 'nullable|string|max:1000',
-            'transition_type' => 'nullable|string|in:fade,slide,cut,dissolve',
-            'is_key_frame' => 'nullable|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $data = [
-                'episode_id' => $request->episode_id,
-                'start_time' => $request->start_time,
-                'end_time' => $request->end_time,
-                'image_url' => $request->image_url,
-                'image_order' => $request->image_order,
-                'scene_description' => $request->scene_description,
-                'transition_type' => $request->transition_type ?? 'fade',
-                'is_key_frame' => $request->boolean('is_key_frame', false),
-            ];
-
-            $timeline->update($data);
-
-            DB::commit();
-
-            return redirect()->route('admin.timeline-management.index')
-                ->with('success', 'تایم‌لاین تصویر با موفقیت به‌روزرسانی شد.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withErrors(['error' => 'خطا در به‌روزرسانی تایم‌لاین: ' . $e->getMessage()])
-                ->withInput();
-        }
-    }
-
-    /**
-     * Remove the specified timeline.
-     */
-    public function destroy(ImageTimeline $timeline)
-    {
-        try {
-            $timeline->delete();
-            return redirect()->route('admin.timeline-management.index')
-                ->with('success', 'تایم‌لاین تصویر با موفقیت حذف شد.');
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->withErrors(['error' => 'خطا در حذف تایم‌لاین: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Bulk actions on timelines.
-     */
-    public function bulkAction(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'action' => 'required|in:delete',
-            'timeline_ids' => 'required|array|min:1',
-            'timeline_ids.*' => 'exists:image_timelines,id',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors(['error' => 'لطفاً حداقل یک تایم‌لاین را انتخاب کنید.']);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $timelines = ImageTimeline::whereIn('id', $request->timeline_ids);
-
-            switch ($request->action) {
-                case 'delete':
-                    $timelines->delete();
-                    break;
-            }
-
-            DB::commit();
-
-            $actionLabels = [
-                'delete' => 'حذف',
-            ];
-
-            return redirect()->back()
-                ->with('success', 'عملیات ' . $actionLabels[$request->action] . ' با موفقیت انجام شد.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->back()
-                ->withErrors(['error' => 'خطا در انجام عملیات: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Get timeline statistics.
+     * Show timeline statistics
      */
     public function statistics()
     {
         $stats = [
             'total_timelines' => ImageTimeline::count(),
-            'key_frames' => ImageTimeline::where('is_key_frame', true)->count(),
-            'non_key_frames' => ImageTimeline::where('is_key_frame', false)->count(),
-            'by_transition_type' => ImageTimeline::selectRaw('transition_type, COUNT(*) as count')
+            'total_episodes_with_timelines' => Episode::where('use_image_timeline', true)->count(),
+            'key_frames_count' => ImageTimeline::where('is_key_frame', true)->count(),
+            'transition_types' => ImageTimeline::selectRaw('transition_type, COUNT(*) as count')
                 ->groupBy('transition_type')
                 ->get(),
-            'timelines_by_episode' => ImageTimeline::selectRaw('episode_id, COUNT(*) as count')
-                ->with('episode')
-                ->groupBy('episode_id')
-                ->orderBy('count', 'desc')
+            'recent_timelines' => ImageTimeline::with(['episode.story'])
+                ->orderBy('created_at', 'desc')
                 ->limit(10)
                 ->get(),
-            'timelines_by_month' => ImageTimeline::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
-                ->groupBy('month')
-                ->orderBy('month', 'desc')
-                ->limit(12)
-                ->get(),
-            'recent_timelines' => ImageTimeline::with(['episode'])->orderBy('created_at', 'desc')->limit(10)->get(),
+            'episodes_with_most_timelines' => Episode::with('story')
+                ->withCount('imageTimelines')
+                ->where('use_image_timeline', true)
+                ->orderBy('image_timelines_count', 'desc')
+                ->limit(10)
+                ->get()
         ];
 
-        return view('admin.timeline-management.statistics', compact('stats'));
+        return view('admin.timelines.statistics', compact('stats'));
     }
 
-    // API Methods
-    public function apiIndex(Request $request)
-    {
-        $query = ImageTimeline::with(['episode']);
-
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('scene_description', 'like', "%{$search}%")
-                  ->orWhereHas('episode', function ($q) use ($search) {
-                      $q->where('title', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        // Filter by transition type
-        if ($request->filled('transition_type')) {
-            $query->where('transition_type', $request->transition_type);
-        }
-
-        // Filter by key frame
-        if ($request->filled('is_key_frame')) {
-            $query->where('is_key_frame', $request->boolean('is_key_frame'));
-        }
-
-        // Filter by episode
-        if ($request->filled('episode_id')) {
-            $query->where('episode_id', $request->episode_id);
-        }
-
-        // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        $timelines = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $timelines->items(),
-            'pagination' => [
-                'current_page' => $timelines->currentPage(),
-                'last_page' => $timelines->lastPage(),
-                'per_page' => $timelines->perPage(),
-                'total' => $timelines->total(),
-            ]
-        ]);
-    }
-
-    public function apiStore(Request $request)
+    /**
+     * Bulk operations on timelines
+     */
+    public function bulkAction(Request $request)
     {
         $request->validate([
-            'episode_id' => 'required|exists:episodes,id',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:1',
-            'image_url' => 'required|string|max:500',
-            'image_order' => 'required|integer|min:0',
-            'scene_description' => 'nullable|string|max:1000',
-            'transition_type' => 'nullable|string|in:fade,slide,cut,dissolve',
-            'is_key_frame' => 'boolean',
+            'action' => 'required|in:delete,change_transition,change_key_frame',
+            'timeline_ids' => 'required|array|min:1',
+            'timeline_ids.*' => 'integer|exists:image_timelines,id',
+            'transition_type' => 'required_if:action,change_transition|in:fade,cut,dissolve,slide',
+            'is_key_frame' => 'required_if:action,change_key_frame|boolean'
         ]);
 
         try {
-            DB::beginTransaction();
+            $timelineIds = $request->timeline_ids;
+            $action = $request->action;
+            $successCount = 0;
 
-            $timeline = ImageTimeline::create([
-                'episode_id' => $request->episode_id,
-                'start_time' => $request->start_time,
-                'end_time' => $request->end_time,
-                'image_url' => $request->image_url,
-                'image_order' => $request->image_order,
-                'scene_description' => $request->scene_description,
-                'transition_type' => $request->transition_type ?? 'fade',
-                'is_key_frame' => $request->boolean('is_key_frame', false),
-            ]);
+            switch ($action) {
+                case 'delete':
+                    foreach ($timelineIds as $timelineId) {
+                        $timeline = ImageTimeline::find($timelineId);
+                        if ($timeline) {
+                            // Delete image file
+                            if ($timeline->image_url && file_exists(public_path($timeline->image_url))) {
+                                unlink(public_path($timeline->image_url));
+                            }
+                            $timeline->delete();
+                            $successCount++;
+                        }
+                    }
+                    break;
 
-            DB::commit();
+                case 'change_transition':
+                    ImageTimeline::whereIn('id', $timelineIds)
+                        ->update(['transition_type' => $request->transition_type]);
+                    $successCount = count($timelineIds);
+                    break;
 
-            return response()->json([
-                'success' => true,
-                'message' => 'تایم‌لاین تصویر با موفقیت ایجاد شد.',
-                'data' => $timeline->load(['episode'])
-            ]);
+                case 'change_key_frame':
+                    ImageTimeline::whereIn('id', $timelineIds)
+                        ->update(['is_key_frame' => $request->boolean('is_key_frame')]);
+                    $successCount = count($timelineIds);
+                    break;
+            }
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error creating timeline: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در ایجاد تایم‌لاین: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function apiShow(ImageTimeline $timeline)
-    {
-        $timeline->load(['episode']);
-
-        return response()->json([
-            'success' => true,
-            'data' => $timeline
-        ]);
-    }
-
-    public function apiUpdate(Request $request, ImageTimeline $timeline)
-    {
-        $request->validate([
-            'episode_id' => 'required|exists:episodes,id',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:1',
-            'image_url' => 'required|string|max:500',
-            'image_order' => 'required|integer|min:0',
-            'scene_description' => 'nullable|string|max:1000',
-            'transition_type' => 'nullable|string|in:fade,slide,cut,dissolve',
-            'is_key_frame' => 'boolean',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $timeline->update([
-                'episode_id' => $request->episode_id,
-                'start_time' => $request->start_time,
-                'end_time' => $request->end_time,
-                'image_url' => $request->image_url,
-                'image_order' => $request->image_order,
-                'scene_description' => $request->scene_description,
-                'transition_type' => $request->transition_type ?? 'fade',
-                'is_key_frame' => $request->boolean('is_key_frame', false),
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تایم‌لاین تصویر با موفقیت به‌روزرسانی شد.',
-                'data' => $timeline->load(['episode'])
-            ]);
+            return redirect()->route('admin.timelines.index')
+                ->with('success', "عملیات {$action} روی {$successCount} تایم‌لاین انجام شد.");
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating timeline: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در به‌روزرسانی تایم‌لاین: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function apiDestroy(ImageTimeline $timeline)
-    {
-        try {
-            DB::beginTransaction();
-
-            $timeline->delete();
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'تایم‌لاین تصویر با موفقیت حذف شد.'
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error deleting timeline: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در حذف تایم‌لاین: ' . $e->getMessage()
-            ], 500);
+            return redirect()->route('admin.timelines.index')
+                ->with('error', 'خطا در انجام عملیات گروهی: ' . $e->getMessage());
         }
     }
 }

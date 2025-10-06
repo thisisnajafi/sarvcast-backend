@@ -49,19 +49,23 @@ class EpisodeVoiceActorController extends Controller
             'person_id' => 'required|exists:people,id',
             'role' => 'required|string|max:100',
             'character_name' => 'nullable|string|max:255',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:1',
             'voice_description' => 'nullable|string|max:1000',
             'is_primary' => 'boolean'
         ], [
             'person_id.required' => 'انتخاب صداپیشه الزامی است',
             'person_id.exists' => 'صداپیشه انتخاب شده وجود ندارد',
-            'role.required' => 'نقش صداپیشه الزامی است',
-            'start_time.required' => 'زمان شروع الزامی است',
-            'end_time.required' => 'زمان پایان الزامی است'
+            'role.required' => 'نقش صداپیشه الزامی است'
         ]);
 
-        $result = $this->voiceActorService->addVoiceActor($episodeId, $request->all());
+        // Get episode to set default start/end times
+        $episode = Episode::findOrFail($episodeId);
+        
+        // Set default start_time to 0 and end_time to episode duration
+        $data = $request->all();
+        $data['start_time'] = 0;
+        $data['end_time'] = $episode->duration;
+
+        $result = $this->voiceActorService->addVoiceActor($episodeId, $data);
 
         if ($result['success']) {
             return redirect()
@@ -95,13 +99,23 @@ class EpisodeVoiceActorController extends Controller
             'person_id' => 'required|exists:people,id',
             'role' => 'required|string|max:100',
             'character_name' => 'nullable|string|max:255',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:1',
             'voice_description' => 'nullable|string|max:1000',
             'is_primary' => 'boolean'
+        ], [
+            'person_id.required' => 'انتخاب صداپیشه الزامی است',
+            'person_id.exists' => 'صداپیشه انتخاب شده وجود ندارد',
+            'role.required' => 'نقش صداپیشه الزامی است'
         ]);
 
-        $result = $this->voiceActorService->updateVoiceActor($voiceActorId, $request->all());
+        // Get episode to set default start/end times
+        $episode = Episode::findOrFail($episodeId);
+        
+        // Set default start_time to 0 and end_time to episode duration
+        $data = $request->all();
+        $data['start_time'] = 0;
+        $data['end_time'] = $episode->duration;
+
+        $result = $this->voiceActorService->updateVoiceActor($voiceActorId, $data);
 
         if ($result['success']) {
             return redirect()

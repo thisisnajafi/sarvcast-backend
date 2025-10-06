@@ -26,9 +26,7 @@ use App\Models\SmsLog;
 use App\Models\UserActivity;
 use App\Models\Report;
 use App\Models\Referral;
-use App\Models\UserCoin;
-use App\Models\UserPoints;
-use App\Models\UserAchievement;
+use App\Models\SubscriptionPlan;
 use App\Models\ContentShare;
 use App\Models\InfluencerCampaign;
 use App\Models\SponsoredContent;
@@ -107,9 +105,6 @@ class DashboardController extends Controller
             
             // User Activity Statistics
             'total_user_activities' => UserActivity::count(),
-            'total_user_coins' => UserCoin::sum('balance'),
-            'total_user_points' => UserPoints::sum('points'),
-            'total_user_achievements' => UserAchievement::count(),
             
             // Campaign Statistics
             'total_influencer_campaigns' => InfluencerCampaign::count(),
@@ -121,6 +116,15 @@ class DashboardController extends Controller
             'total_reports' => Report::count(),
             'pending_reports' => Report::where('status', 'pending')->count(),
             'resolved_reports' => Report::where('status', 'resolved')->count(),
+            
+            // Plan Sales Statistics
+            'total_plans' => SubscriptionPlan::count(),
+            'active_plans' => SubscriptionPlan::where('is_active', true)->count(),
+            'featured_plans' => SubscriptionPlan::where('is_featured', true)->count(),
+            'plan_sales_this_month' => Subscription::whereMonth('created_at', now()->month)->count(),
+            'plan_sales_last_month' => Subscription::whereMonth('created_at', now()->subMonth()->month)->count(),
+            'plan_sales_today' => Subscription::whereDate('created_at', today())->count(),
+            'plan_sales_this_week' => Subscription::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
         ];
 
         // Growth Statistics (comparing with previous periods)
@@ -137,6 +141,11 @@ class DashboardController extends Controller
         $stats['revenue_growth_rate'] = $this->calculateGrowthRate(
             Payment::where('status', 'completed')->whereMonth('created_at', now()->subMonth()->month)->sum('amount'),
             Payment::where('status', 'completed')->whereMonth('created_at', now()->month)->sum('amount')
+        );
+        
+        $stats['plan_sales_growth_rate'] = $this->calculateGrowthRate(
+            Subscription::whereMonth('created_at', now()->subMonth()->month)->count(),
+            Subscription::whereMonth('created_at', now()->month)->count()
         );
 
         // Recent Activity
@@ -185,6 +194,20 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        // Plan Sales Data
+        $planSalesData = Subscription::selectRaw('type, COUNT(*) as count, SUM(price) as total_revenue')
+            ->where('status', 'active')
+            ->groupBy('type')
+            ->orderBy('count', 'desc')
+            ->get();
+
+        $topSellingPlans = SubscriptionPlan::withCount(['subscriptions' => function($query) {
+                $query->where('status', 'active');
+            }])
+            ->orderBy('subscriptions_count', 'desc')
+            ->limit(5)
+            ->get();
+
         // Monthly Revenue Chart Data (last 12 months)
         $monthlyRevenue = Payment::where('status', 'completed')
             ->selectRaw('MONTH(created_at) as month, YEAR(created_at) as year, SUM(amount) as total')
@@ -212,7 +235,9 @@ class DashboardController extends Controller
             'mostPopularStories',
             'recentReports',
             'monthlyRevenue',
-            'dailyUserRegistrations'
+            'dailyUserRegistrations',
+            'planSalesData',
+            'topSellingPlans'
         ));
     }
 

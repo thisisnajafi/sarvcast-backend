@@ -8,7 +8,6 @@ use App\Models\Story;
 use App\Models\Person;
 use App\Services\InAppNotificationService;
 use App\Services\AudioProcessingService;
-use App\Services\ImageProcessingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -18,16 +17,13 @@ class EpisodeController extends Controller
 {
     protected $notificationService;
     protected $audioProcessingService;
-    protected $imageProcessingService;
 
     public function __construct(
         InAppNotificationService $notificationService,
-        AudioProcessingService $audioProcessingService,
-        ImageProcessingService $imageProcessingService
+        AudioProcessingService $audioProcessingService
     ) {
         $this->notificationService = $notificationService;
         $this->audioProcessingService = $audioProcessingService;
-        $this->imageProcessingService = $imageProcessingService;
     }
 
     /**
@@ -320,138 +316,6 @@ class EpisodeController extends Controller
 
             $episode = Episode::create($data);
 
-            // Handle voice actors data
-            if ($request->filled('voice_actors_data')) {
-                $voiceActorsData = json_decode($request->voice_actors_data, true);
-                
-                // Set narrator_id from first voice actor if not already set
-                if (empty($data['narrator_id']) && !empty($voiceActorsData)) {
-                    $episode->update(['narrator_id' => $voiceActorsData[0]['person_id']]);
-                }
-                
-                foreach ($voiceActorsData as $voiceActorData) {
-                    $episode->voiceActors()->create([
-                        'person_id' => $voiceActorData['person_id'], // Frontend sends person_id
-                        'role' => 'narrator', // Default role for voice actors
-                        'character_name' => null, // Not used for simple voice actors
-                        'voice_description' => null, // Not used for simple voice actors
-                        'start_time' => 0, // Default to 0 since timing is not managed here
-                        'end_time' => $episode->duration, // Default to full episode duration
-                        'is_primary' => true, // All voice actors are primary in this simplified version
-                    ]);
-                }
-                
-                // Update episode with voice actor info
-                $episode->update([
-                    'has_multiple_voice_actors' => count($voiceActorsData) > 1,
-                    'voice_actor_count' => count($voiceActorsData)
-                ]);
-            }
-
-            // Handle image timeline data
-            if ($request->filled('image_timeline_data')) {
-                $imageTimelineData = json_decode($request->image_timeline_data, true);
-                foreach ($imageTimelineData as $index => $timelineData) {
-                    // Handle image file upload
-                    $imagePath = '';
-                    if (isset($timelineData['image_file']) && $timelineData['image_file']) {
-                        // Look for the corresponding file in the request
-                        // Try different naming patterns
-                        $possibleNames = [
-                            'timeline_image_' . $index,
-                            'timeline_image_' . ($index + 1),
-                            'timeline_image_' . $timelineData['image_order'] ?? $index
-                        ];
-                        
-                        // Debug: Log all available files in request
-                        \Log::info('Available files in request:', array_keys($request->allFiles()));
-                        \Log::info('Looking for timeline image with names:', $possibleNames);
-                        
-                        $imageFile = null;
-                        foreach ($possibleNames as $name) {
-                            if ($request->hasFile($name)) {
-                                $imageFile = $request->file($name);
-                                \Log::info('Found file for name: ' . $name);
-                                break;
-                            }
-                        }
-                        
-                        if ($imageFile) {
-                            try {
-                                // Ensure directory exists
-                                $timelineDir = public_path('images/episodes/timeline');
-                                if (!file_exists($timelineDir)) {
-                                    mkdir($timelineDir, 0755, true);
-                                }
-                                
-                                // Generate unique filename to avoid conflicts
-                                $filename = $this->generateUniqueFilename($imageFile, 'timeline');
-                                
-                                // Validate file before moving
-                                if (!$imageFile->isValid()) {
-                                    throw new \Exception('Invalid file: ' . $imageFile->getError());
-                                }
-                                
-                                // Check if file exists and is readable
-                                if (!file_exists($imageFile->getPathname())) {
-                                    throw new \Exception('Temporary file not found: ' . $imageFile->getPathname());
-                                }
-                                
-                                // Check file size (max 10MB) - with error handling
-                                $fileSize = 0;
-                                try {
-                                    $fileSize = $imageFile->getSize();
-                                } catch (\Exception $sizeError) {
-                                    \Log::warning('Could not get file size: ' . $sizeError->getMessage());
-                                    // Try alternative method
-                                    $fileSize = filesize($imageFile->getPathname());
-                                }
-                                
-                                if ($fileSize > 10 * 1024 * 1024) {
-                                    throw new \Exception('File too large: ' . $fileSize . ' bytes');
-                                }
-                                
-                                // Save to public/images/episodes/timeline directory
-                                $imagePath = $imageFile->move($timelineDir, $filename);
-                                // Store only the relative path from public
-                                $imagePath = 'images/episodes/timeline/' . $filename;
-                                \Log::info('Successfully saved timeline image to: ' . $imagePath);
-                            } catch (\Exception $e) {
-                                \Log::error('Failed to upload timeline image: ' . $e->getMessage());
-                                \Log::error('File details: ' . json_encode([
-                                    'original_name' => $imageFile->getClientOriginalName(),
-                                    'size' => $fileSize ?? 'unknown',
-                                    'mime_type' => $imageFile->getMimeType(),
-                                    'error' => $imageFile->getError(),
-                                    'pathname' => $imageFile->getPathname(),
-                                    'exists' => file_exists($imageFile->getPathname())
-                                ]));
-                                throw new \Exception('خطا در آپلود تصویر تایم‌لاین: ' . $e->getMessage());
-                            }
-                        } else {
-                            // Use the filename as provided (for existing images)
-                            $imagePath = $timelineData['image_file'];
-                            \Log::info('No file found, using provided filename: ' . $imagePath);
-                        }
-                    }
-                    
-                    $episode->imageTimelines()->create([
-                        'start_time' => !empty($timelineData['start_time']) ? (int)$timelineData['start_time'] : 0,
-                        'end_time' => !empty($timelineData['end_time']) ? (int)$timelineData['end_time'] : $episode->duration,
-                        'image_url' => $imagePath,
-                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : $index,
-                        'scene_description' => $timelineData['scene_description'] ?? '',
-                        'transition_type' => $timelineData['transition_type'] ?? 'fade',
-                        'is_key_frame' => $timelineData['is_key_frame'] ?? false,
-                    ]);
-                }
-                
-                // Update episode with image timeline info
-                $episode->update([
-                    'use_image_timeline' => count($imageTimelineData) > 0
-                ]);
-            }
-
             // Attach people if provided
             if ($request->filled('people')) {
                 $episode->people()->attach($request->people);
@@ -534,8 +398,6 @@ class EpisodeController extends Controller
             'release_date' => 'nullable|date',
             'people' => 'nullable|array',
             'people.*' => 'exists:people,id',
-            'image_timeline_data' => 'nullable|string',
-            'voice_actors_data' => 'nullable|string',
             'process_audio' => 'boolean',
             'audio_quality' => 'nullable|in:low,medium,high',
             'resize_image' => 'boolean',
@@ -546,7 +408,7 @@ class EpisodeController extends Controller
         try {
             DB::beginTransaction();
 
-            $data = $request->except(['audio_file', 'cover_image', 'people', 'image_timeline_data', 'voice_actors_data', 'process_audio', 'audio_quality', 'resize_image', 'image_width', 'image_height']);
+            $data = $request->except(['audio_file', 'cover_image', 'people', 'process_audio', 'audio_quality', 'resize_image', 'image_width', 'image_height']);
 
             // Handle audio file upload
             if ($request->hasFile('audio_file')) {
@@ -645,144 +507,6 @@ class EpisodeController extends Controller
                 $episode->people()->sync($request->people);
             } else {
                 $episode->people()->detach();
-            }
-
-            // Handle voice actors data
-            if ($request->filled('voice_actors_data')) {
-                $voiceActorsData = json_decode($request->voice_actors_data, true);
-                
-                // Clear existing voice actors
-                $episode->voiceActors()->delete();
-                
-                // Add new voice actors
-                foreach ($voiceActorsData as $voiceActorData) {
-                    if (!empty($voiceActorData['person_id']) && !empty($voiceActorData['role'])) {
-                        $episode->voiceActors()->create([
-                            'person_id' => $voiceActorData['person_id'],
-                            'role' => $voiceActorData['role'],
-                            'start_time' => 0, // Default to 0
-                            'end_time' => $episode->duration, // Default to full episode duration
-                            'character_name' => $voiceActorData['character_name'] ?? null,
-                            'voice_description' => $voiceActorData['voice_description'] ?? null,
-                            'is_primary' => $voiceActorData['is_primary'] ?? false
-                        ]);
-                    }
-                }
-                
-                // Update episode with voice actor info
-                $episode->update([
-                    'has_multiple_voice_actors' => count($voiceActorsData) > 1,
-                    'voice_actor_count' => count($voiceActorsData)
-                ]);
-            }
-
-            // Handle image timeline data
-            if ($request->filled('image_timeline_data')) {
-                $imageTimelineData = json_decode($request->image_timeline_data, true);
-                
-                // Clear existing image timelines
-                $episode->imageTimelines()->delete();
-                
-                // Add new image timelines
-                foreach ($imageTimelineData as $index => $timelineData) {
-                    // Handle image file upload
-                    $imagePath = '';
-                    if (isset($timelineData['image_file']) && $timelineData['image_file']) {
-                        // Look for the corresponding file in the request
-                        // Try different naming patterns
-                        $possibleNames = [
-                            'timeline_image_' . $index,
-                            'timeline_image_' . ($index + 1),
-                            'timeline_image_' . ($timelineData['image_order'] ?? $index)
-                        ];
-                        
-                        // Debug: Log all available files in request
-                        \Log::info('Available files in request:', array_keys($request->allFiles()));
-                        \Log::info('Looking for timeline image with names:', $possibleNames);
-                        
-                        $imageFile = null;
-                        foreach ($possibleNames as $name) {
-                            if ($request->hasFile($name)) {
-                                $imageFile = $request->file($name);
-                                \Log::info('Found file for name: ' . $name);
-                                break;
-                            }
-                        }
-                        
-                        if ($imageFile) {
-                            try {
-                                // Ensure directory exists
-                                $timelineDir = public_path('images/episodes/timeline');
-                                if (!file_exists($timelineDir)) {
-                                    mkdir($timelineDir, 0755, true);
-                                }
-                                
-                                // Generate unique filename to avoid conflicts
-                                $filename = $this->generateUniqueFilename($imageFile, 'timeline');
-                                
-                                // Validate file before moving
-                                if (!$imageFile->isValid()) {
-                                    throw new \Exception('Invalid file: ' . $imageFile->getError());
-                                }
-                                
-                                // Check if file exists and is readable
-                                if (!file_exists($imageFile->getPathname())) {
-                                    throw new \Exception('Temporary file not found: ' . $imageFile->getPathname());
-                                }
-                                
-                                // Check file size (max 10MB) - with error handling
-                                $fileSize = 0;
-                                try {
-                                    $fileSize = $imageFile->getSize();
-                                } catch (\Exception $sizeError) {
-                                    \Log::warning('Could not get file size: ' . $sizeError->getMessage());
-                                    // Try alternative method
-                                    $fileSize = filesize($imageFile->getPathname());
-                                }
-                                
-                                if ($fileSize > 10 * 1024 * 1024) {
-                                    throw new \Exception('File too large: ' . $fileSize . ' bytes');
-                                }
-                                
-                                // Save to public/images/episodes/timeline directory
-                                $imagePath = $imageFile->move($timelineDir, $filename);
-                                // Store only the relative path from public
-                                $imagePath = 'images/episodes/timeline/' . $filename;
-                                \Log::info('Successfully saved timeline image to: ' . $imagePath);
-                            } catch (\Exception $e) {
-                                \Log::error('Failed to upload timeline image: ' . $e->getMessage());
-                                \Log::error('File details: ' . json_encode([
-                                    'original_name' => $imageFile->getClientOriginalName(),
-                                    'size' => $fileSize ?? 'unknown',
-                                    'mime_type' => $imageFile->getMimeType(),
-                                    'error' => $imageFile->getError(),
-                                    'pathname' => $imageFile->getPathname(),
-                                    'exists' => file_exists($imageFile->getPathname())
-                                ]));
-                                throw new \Exception('خطا در آپلود تصویر تایم‌لاین: ' . $e->getMessage());
-                            }
-                        } else {
-                            // Use the filename as provided (for existing images)
-                            $imagePath = $timelineData['image_file'];
-                            \Log::info('No file found, using provided filename: ' . $imagePath);
-                        }
-                    }
-                    
-                    $episode->imageTimelines()->create([
-                        'start_time' => !empty($timelineData['start_time']) ? (int)$timelineData['start_time'] : 0,
-                        'end_time' => !empty($timelineData['end_time']) ? (int)$timelineData['end_time'] : $episode->duration,
-                        'image_url' => $imagePath,
-                        'image_order' => !empty($timelineData['image_order']) ? (int)$timelineData['image_order'] : $index,
-                        'scene_description' => $timelineData['scene_description'] ?? '',
-                        'transition_type' => $timelineData['transition_type'] ?? 'fade',
-                        'is_key_frame' => $timelineData['is_key_frame'] ?? false,
-                    ]);
-                }
-                
-                // Update episode with image timeline info
-                $episode->update([
-                    'use_image_timeline' => count($imageTimelineData) > 0
-                ]);
             }
 
             // Send notification if status changed to published
