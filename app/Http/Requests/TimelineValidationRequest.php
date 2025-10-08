@@ -23,7 +23,7 @@ class TimelineValidationRequest extends FormRequest
     {
         return [
             'episode_duration' => 'required|integer|min:1|max:7200', // Max 2 hours
-            'image_timeline' => 'required|array|min:1|max:100',
+            'image_timeline' => 'required|array|min:1',
             'image_timeline.*.start_time' => 'required|integer|min:0',
             'image_timeline.*.end_time' => 'required|integer|min:0',
             'image_timeline.*.image_url' => 'required|url|max:500',
@@ -103,13 +103,7 @@ class TimelineValidationRequest extends FormRequest
         $endTime = $entry['end_time'] ?? 0;
         $duration = $endTime - $startTime;
 
-        // Validate time relationships
-        if ($startTime >= $endTime) {
-            $validator->errors()->add(
-                "image_timeline.{$index}.end_time",
-                "زمان پایان باید بیشتر از زمان شروع باشد"
-            );
-        }
+        // Removed: start_time must be less than end_time validation
 
         // Validate duration limits
         if ($duration < 2) {

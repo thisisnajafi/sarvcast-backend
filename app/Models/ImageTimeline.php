@@ -37,7 +37,7 @@ class ImageTimeline extends Model
             'character_id' => ['nullable', 'integer', 'exists:people,id'],
             'scene_id' => ['nullable', 'integer'],
             'start_time' => ['required', 'integer', 'min:0'],
-            'end_time' => ['required', 'integer', 'min:0', 'gt:start_time'],
+            'end_time' => ['required', 'integer', 'min:0'],
             'image_url' => ['required', 'string', 'max:500'],
             'image_order' => ['required', 'integer', 'min:1'],
             'scene_description' => ['nullable', 'string', 'max:1000'],
@@ -60,7 +60,7 @@ class ImageTimeline extends Model
             'start_time.min' => 'زمان شروع نمی‌تواند منفی باشد',
             'end_time.required' => 'زمان پایان الزامی است',
             'end_time.min' => 'زمان پایان نمی‌تواند منفی باشد',
-            'end_time.gt' => 'زمان پایان باید بیشتر از زمان شروع باشد',
+            // Removed: end_time.gt validation
             'image_url.required' => 'آدرس تصویر الزامی است',
             'image_url.max' => 'آدرس تصویر نمی‌تواند بیشتر از 500 کاراکتر باشد',
             'image_order.required' => 'ترتیب تصویر الزامی است',
@@ -92,7 +92,7 @@ class ImageTimeline extends Model
         
         foreach ($data as $index => $timeline) {
             $rules["timeline.{$index}.start_time"] = ['required', 'integer', 'min:0'];
-            $rules["timeline.{$index}.end_time"] = ['required', 'integer', 'min:0', 'gt:timeline.' . $index . '.start_time'];
+            $rules["timeline.{$index}.end_time"] = ['required', 'integer', 'min:0'];
             $rules["timeline.{$index}.image_url"] = ['required', 'string', 'max:500'];
             $rules["timeline.{$index}.image_order"] = ['required', 'integer', 'min:1'];
             $rules["timeline.{$index}.transition_type"] = ['required', 'in:fade,slide,cut'];

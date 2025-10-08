@@ -59,7 +59,7 @@ class ImageTimelineController extends Controller
     {
         $request->validate([
             'start_time' => 'required|integer|min:0|max:' . $episode->duration,
-            'end_time' => 'required|integer|min:1|max:' . $episode->duration,
+            'end_time' => 'required|integer|min:0|max:' . $episode->duration,
             'image_file' => 'required|image|mimes:jpeg,png,jpg,webp|max:10240',
             'scene_description' => 'nullable|string|max:1000',
             'transition_type' => 'required|in:fade,cut,dissolve,slide',
@@ -144,7 +144,7 @@ class ImageTimelineController extends Controller
     {
         $request->validate([
             'start_time' => 'required|integer|min:0|max:' . $episode->duration,
-            'end_time' => 'required|integer|min:1|max:' . $episode->duration,
+            'end_time' => 'required|integer|min:0|max:' . $episode->duration,
             'image_file' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10240',
             'scene_description' => 'nullable|string|max:1000',
             'transition_type' => 'required|in:fade,cut,dissolve,slide',

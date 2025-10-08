@@ -456,9 +456,7 @@ class StoryTimelineController extends Controller
                 $errors[] = "End time cannot exceed episode duration for entry " . ($i + 1);
             }
             
-            if ($current['start_time'] >= $current['end_time']) {
-                $errors[] = "Start time must be less than end time for entry " . ($i + 1);
-            }
+            // Removed: start_time must be less than end_time validation
             
             // Check for overlaps with next entry
             if ($i < $sortedTimeline->count() - 1) {
@@ -470,19 +468,7 @@ class StoryTimelineController extends Controller
             }
         }
         
-        // Check if timeline covers entire duration
-        if ($sortedTimeline->isNotEmpty()) {
-            $first = $sortedTimeline->first();
-            $last = $sortedTimeline->last();
-            
-            if ($first['start_time'] > 0) {
-                $errors[] = "Timeline must start from 0 seconds";
-            }
-            
-            if ($last['end_time'] < $episodeDuration) {
-                $errors[] = "Timeline must cover entire episode duration";
-            }
-        }
+        // Removed: Timeline must start from 0 seconds and cover entire duration
         
         return $errors;
     }

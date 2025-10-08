@@ -11,12 +11,6 @@ class TimelineValidationService
      * Timeline validation rules configuration
      */
     private const RULES = [
-        'min_duration_per_image' => 2, // seconds
-        'max_duration_per_image' => 60, // seconds
-        'min_coverage_percentage' => 50, // percentage
-        'max_unique_images' => 20,
-        'max_gap_between_images' => 30, // seconds
-        'max_timeline_entries' => 100,
         'min_timeline_entries' => 1,
         'max_episode_duration' => 7200, // 2 hours in seconds
         'min_episode_duration' => 1, // seconds
@@ -31,13 +25,14 @@ class TimelineValidationService
      * Trusted domains for image hosting
      */
     private const TRUSTED_DOMAINS = [
-        'cdn.sarvcast.com',
-        'images.sarvcast.com',
+        'cdn.sarvcast.ir',
+        'images.sarvcast.ir',
         'storage.googleapis.com',
         'amazonaws.com',
         'cloudinary.com',
         'imgur.com',
-        'unsplash.com'
+        'unsplash.com',
+        'my.sarvcast.ir'
     ];
 
     /**
@@ -96,10 +91,6 @@ class TimelineValidationService
             return $errors;
         }
 
-        if (count($timelineData) > self::RULES['max_timeline_entries']) {
-            $errors[] = 'تعداد ورودی‌های تایم‌لاین نمی‌تواند از 100 بیشتر باشد';
-        }
-
         if (count($timelineData) < self::RULES['min_timeline_entries']) {
             $errors[] = 'تایم‌لاین باید حداقل 1 ورودی داشته باشد';
         }
@@ -153,9 +144,7 @@ class TimelineValidationService
             $errors[] = "ورودی {$index}: زمان پایان نمی‌تواند بیش از مدت اپیزود باشد";
         }
 
-        if ($startTime >= $endTime) {
-            $errors[] = "ورودی {$index}: زمان شروع باید کمتر از زمان پایان باشد";
-        }
+        // Removed: start_time must be less than end_time validation
 
         // Validate duration
         $duration = $endTime - $startTime;
@@ -193,20 +182,8 @@ class TimelineValidationService
             $errors[] = "ورودی {$index}: فرمت تصویر پشتیبانی نمی‌شود. فرمت‌های مجاز: " . implode(', ', self::SUPPORTED_FORMATS);
         }
 
-        // Check trusted domain
-        $host = parse_url($imageUrl, PHP_URL_HOST);
-        $isTrustedDomain = false;
-        
-        foreach (self::TRUSTED_DOMAINS as $domain) {
-            if (str_contains($host, $domain)) {
-                $isTrustedDomain = true;
-                break;
-            }
-        }
-
-        if (!$isTrustedDomain) {
-            $errors[] = "ورودی {$index}: تصویر باید از دامنه‌های معتبر آپلود شود";
-        }
+        // Check trusted domain - REMOVED RESTRICTION
+        // Images can now be from any domain
 
         return $errors;
     }
@@ -232,17 +209,8 @@ class TimelineValidationService
             }
         }
 
-        // Check timeline coverage
-        $first = $sortedTimeline->first();
-        $last = $sortedTimeline->last();
-
-        if ($first['start_time'] > 0) {
-            $errors[] = 'تایم‌لاین باید از ثانیه 0 شروع شود';
-        }
-
-        if ($last['end_time'] < $episodeDuration) {
-            $errors[] = 'تایم‌لاین باید کل مدت اپیزود را پوشش دهد';
-        }
+        // Check timeline coverage - REMOVED RESTRICTION
+        // Timeline no longer needs to cover entire episode duration
 
         return $errors;
     }
