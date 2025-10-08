@@ -98,6 +98,38 @@ class Payment extends Model
     }
 
     /**
+     * Scope a query to only include cancelled payments.
+     */
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelled');
+    }
+
+    /**
+     * Scope a query to only include processing payments.
+     */
+    public function scopeProcessing($query)
+    {
+        return $query->where('status', 'processing');
+    }
+
+    /**
+     * Scope a query to only include expired payments.
+     */
+    public function scopeExpired($query)
+    {
+        return $query->where('status', 'expired');
+    }
+
+    /**
+     * Scope a query to only include final payments (completed, failed, cancelled, refunded).
+     */
+    public function scopeFinal($query)
+    {
+        return $query->whereIn('status', ['completed', 'failed', 'cancelled', 'refunded']);
+    }
+
+    /**
      * Scope a query to only include payments by method.
      */
     public function scopeByMethod($query, $method)
@@ -154,6 +186,131 @@ class Payment extends Model
     }
 
     /**
+     * Check if payment is cancelled.
+     */
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
+    }
+
+    /**
+     * Check if payment is processing.
+     */
+    public function isProcessing(): bool
+    {
+        return $this->status === 'processing';
+    }
+
+    /**
+     * Check if payment is in a final state (completed, failed, cancelled, refunded).
+     */
+    public function isFinal(): bool
+    {
+        return in_array($this->status, ['completed', 'failed', 'cancelled', 'refunded']);
+    }
+
+    /**
+     * Check if payment can be refunded.
+     */
+    public function canBeRefunded(): bool
+    {
+        return $this->status === 'completed' && !$this->isRefunded();
+    }
+
+    /**
+     * Check if payment can be cancelled.
+     */
+    public function canBeCancelled(): bool
+    {
+        return in_array($this->status, ['pending', 'processing']);
+    }
+
+    /**
+     * Update payment status with proper validation and logging.
+     */
+    public function updateStatus(string $newStatus, array $additionalData = []): bool
+    {
+        $validTransitions = [
+            'pending' => ['processing', 'completed', 'failed', 'cancelled', 'expired'],
+            'processing' => ['completed', 'failed', 'cancelled'],
+            'completed' => ['refunded'],
+            'failed' => [],
+            'cancelled' => [],
+            'refunded' => [],
+            'expired' => []
+        ];
+
+        if (!isset($validTransitions[$this->status])) {
+            \Log::error('Invalid current payment status', [
+                'payment_id' => $this->id,
+                'current_status' => $this->status,
+                'new_status' => $newStatus
+            ]);
+            return false;
+        }
+
+        if (!in_array($newStatus, $validTransitions[$this->status])) {
+            \Log::warning('Invalid payment status transition', [
+                'payment_id' => $this->id,
+                'current_status' => $this->status,
+                'new_status' => $newStatus,
+                'valid_transitions' => $validTransitions[$this->status]
+            ]);
+            return false;
+        }
+
+        $updateData = array_merge([
+            'status' => $newStatus,
+            'processed_at' => now()
+        ], $additionalData);
+
+        $this->update($updateData);
+
+        \Log::info('Payment status updated', [
+            'payment_id' => $this->id,
+            'old_status' => $this->status,
+            'new_status' => $newStatus,
+            'additional_data' => $additionalData
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Get payment status history.
+     */
+    public function getStatusHistory(): array
+    {
+        $history = [];
+        
+        if ($this->created_at) {
+            $history[] = [
+                'status' => 'created',
+                'timestamp' => $this->created_at,
+                'description' => 'پرداخت ایجاد شد'
+            ];
+        }
+
+        if ($this->processed_at) {
+            $history[] = [
+                'status' => $this->status,
+                'timestamp' => $this->processed_at,
+                'description' => $this->status_in_persian
+            ];
+        }
+
+        if ($this->refunded_at) {
+            $history[] = [
+                'status' => 'refunded',
+                'timestamp' => $this->refunded_at,
+                'description' => 'پرداخت برگشت خورد'
+            ];
+        }
+
+        return $history;
+    }
+
+    /**
      * Get the net amount after fees.
      */
     public function getNetAmountAttribute($value): float
@@ -190,8 +347,10 @@ class Payment extends Model
             'completed' => 'تکمیل شده',
             'failed' => 'ناموفق',
             'pending' => 'در انتظار',
+            'processing' => 'در حال پردازش',
             'refunded' => 'برگشت خورده',
             'cancelled' => 'لغو شده',
+            'expired' => 'منقضی شده',
             default => 'نامشخص'
         };
     }

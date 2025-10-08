@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Validation\Rule;
 use App\Traits\HasImageUrl;
 
 // Missing model imports
@@ -77,6 +78,92 @@ class Story extends Model
         'analytics_data',
         'use_image_timeline',
     ];
+
+    /**
+     * Get validation rules for story creation
+     */
+    public static function getValidationRules($storyId = null)
+    {
+        return [
+            'title' => ['required', 'string', 'max:200'],
+            'subtitle' => ['nullable', 'string', 'max:300'],
+            'description' => ['required', 'string', 'max:5000'],
+            'image_url' => ['required', 'string', 'max:500'],
+            'cover_image_url' => ['nullable', 'string', 'max:500'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'director_id' => ['nullable', 'integer', 'exists:people,id'],
+            'writer_id' => ['nullable', 'integer', 'exists:people,id'],
+            'author_id' => ['nullable', 'integer', 'exists:people,id'],
+            'narrator_id' => ['nullable', 'integer', 'exists:people,id'],
+            'age_group' => ['required', 'string', 'max:20'],
+            'language' => ['required', 'string', 'max:10'],
+            'duration' => ['required', 'integer', 'min:1', 'max:10080'], // 1 minute to 1 week
+            'total_episodes' => ['integer', 'min:0', 'max:1000'],
+            'free_episodes' => ['integer', 'min:0', 'max:1000'],
+            'is_premium' => ['boolean'],
+            'is_completely_free' => ['boolean'],
+            'play_count' => ['integer', 'min:0'],
+            'rating' => ['numeric', 'min:0', 'max:5'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:50'],
+            'status' => ['required', 'in:draft,pending,approved,rejected,published'],
+            'published_at' => ['nullable', 'date'],
+            'age_rating' => ['nullable', 'string', 'max:20'],
+            'content_warnings' => ['nullable', 'array'],
+            'content_warnings.*' => ['string', 'max:100'],
+            'use_image_timeline' => ['boolean'],
+        ];
+    }
+
+    /**
+     * Get validation messages for story validation
+     */
+    public static function getValidationMessages()
+    {
+        return [
+            'title.required' => 'عنوان داستان الزامی است',
+            'title.max' => 'عنوان داستان نمی‌تواند بیشتر از 200 کاراکتر باشد',
+            'subtitle.max' => 'زیرعنوان نمی‌تواند بیشتر از 300 کاراکتر باشد',
+            'description.required' => 'توضیحات داستان الزامی است',
+            'description.max' => 'توضیحات نمی‌تواند بیشتر از 5000 کاراکتر باشد',
+            'image_url.required' => 'تصویر داستان الزامی است',
+            'image_url.max' => 'آدرس تصویر نمی‌تواند بیشتر از 500 کاراکتر باشد',
+            'cover_image_url.max' => 'آدرس تصویر جلد نمی‌تواند بیشتر از 500 کاراکتر باشد',
+            'category_id.required' => 'انتخاب دسته‌بندی الزامی است',
+            'category_id.exists' => 'دسته‌بندی انتخاب شده معتبر نیست',
+            'director_id.exists' => 'کارگردان انتخاب شده معتبر نیست',
+            'writer_id.exists' => 'نویسنده انتخاب شده معتبر نیست',
+            'author_id.exists' => 'نویسنده انتخاب شده معتبر نیست',
+            'narrator_id.exists' => 'راوی انتخاب شده معتبر نیست',
+            'age_group.required' => 'گروه سنی الزامی است',
+            'age_group.max' => 'گروه سنی نمی‌تواند بیشتر از 20 کاراکتر باشد',
+            'language.required' => 'زبان الزامی است',
+            'language.max' => 'زبان نمی‌تواند بیشتر از 10 کاراکتر باشد',
+            'duration.required' => 'مدت زمان داستان الزامی است',
+            'duration.min' => 'مدت زمان داستان باید حداقل 1 دقیقه باشد',
+            'duration.max' => 'مدت زمان داستان نمی‌تواند بیشتر از 1 هفته باشد',
+            'total_episodes.max' => 'تعداد کل اپیزودها نمی‌تواند بیشتر از 1000 باشد',
+            'free_episodes.max' => 'تعداد اپیزودهای رایگان نمی‌تواند بیشتر از 1000 باشد',
+            'rating.min' => 'امتیاز نمی‌تواند کمتر از 0 باشد',
+            'rating.max' => 'امتیاز نمی‌تواند بیشتر از 5 باشد',
+            'status.required' => 'وضعیت داستان الزامی است',
+            'status.in' => 'وضعیت انتخاب شده معتبر نیست',
+            'published_at.date' => 'تاریخ انتشار باید معتبر باشد',
+            'age_rating.max' => 'رده سنی نمی‌تواند بیشتر از 20 کاراکتر باشد',
+            'content_warnings.*.max' => 'هشدار محتوا نمی‌تواند بیشتر از 100 کاراکتر باشد',
+        ];
+    }
+
+    /**
+     * Validate story data
+     */
+    public static function validateStoryData($data, $storyId = null)
+    {
+        $rules = self::getValidationRules($storyId);
+        $messages = self::getValidationMessages();
+        
+        return validator($data, $rules, $messages);
+    }
 
     /**
      * Get the attributes that should be cast.

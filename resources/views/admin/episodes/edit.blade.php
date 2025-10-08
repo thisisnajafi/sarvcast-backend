@@ -350,50 +350,146 @@
 // Base URL for assets
 const baseUrl = '{{ url('') }}';
 
+// Global variables
+let voiceActorsData = [];
+let imageTimelineData = [];
+let voiceActorCounter = 0;
+let imageTimelineCounter = 0;
+
+// Available voice actors (from server)
+const availableVoiceActors = @json($narrators ?? []);
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Preview audio file
-    document.getElementById('audio_file').addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            const file = this.files[0];
-            const fileSize = (file.size / (1024 * 1024)).toFixed(2); // Convert to MB
-            
-            // Update file size field
-            document.getElementById('file_size').value = fileSize;
-            
-            // Create audio preview
-            const audio = document.createElement('audio');
-            audio.controls = true;
-            audio.src = URL.createObjectURL(file);
-            
-            // Remove existing preview
-            const existingPreview = document.getElementById('audio_preview');
-            if (existingPreview) {
-                existingPreview.remove();
-            }
-            
-            // Add new preview
-            audio.id = 'audio_preview';
-            audio.className = 'mt-2 w-full';
-            this.parentNode.appendChild(audio);
+    try {
+        // Preview audio file
+        const audioFileInput = document.getElementById('audio_file');
+        if (audioFileInput) {
+            audioFileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const fileSize = (file.size / (1024 * 1024)).toFixed(2); // Convert to MB
+                    
+                    // Update file size field
+                    const fileSizeField = document.getElementById('file_size');
+                    if (fileSizeField) {
+                        fileSizeField.value = fileSize;
+                    }
+                    
+                    // Create audio preview
+                    const audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = URL.createObjectURL(file);
+                    
+                    // Remove existing preview
+                    const existingPreview = document.getElementById('audio_preview');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    // Add new preview
+                    audio.id = 'audio_preview';
+                    audio.className = 'mt-2 w-full';
+                    this.parentNode.appendChild(audio);
+                }
+            });
         }
-    });
-    
-    // Handle form submission with timeline and people data
-    const form = document.getElementById('episode-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            console.log('Form submit event triggered');
-            
-            // Update timeline and voice actors data before submission
-            console.log('Updating timeline and voice actors data...');
-            updateImageTimelineData();
-            updateVoiceActorsData();
-        });
+        
+        // Handle form submission with timeline and people data
+        const form = document.getElementById('episode-form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                console.log('Form submit event triggered');
+                
+                try {
+                    // Update timeline and voice actors data before submission
+                    console.log('Updating timeline and voice actors data...');
+                    updateImageTimelineData();
+                    updateVoiceActorsData();
+                } catch (error) {
+                    console.error('Error updating form data:', error);
+                    showNotification('خطا در به‌روزرسانی داده‌های فرم', 'error');
+                }
+            });
+        }
+        
+        // Initialize timeline and voice actors data from existing episode
+        initializeExistingData();
+        
+    } catch (error) {
+        console.error('Error initializing page:', error);
+        showNotification('خطا در بارگذاری صفحه', 'error');
     }
-    
-    // Initialize timeline and voice actors data from existing episode
-    initializeExistingData();
 });
+
+// Show notification function
+function showNotification(message, type = 'info') {
+    try {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm max-w-sm transform transition-all duration-300 translate-x-full`;
+        
+        // Set background color based on type
+        switch(type) {
+            case 'success':
+                notification.classList.add('bg-green-500');
+                break;
+            case 'error':
+                notification.classList.add('bg-red-500');
+                break;
+            case 'warning':
+                notification.classList.add('bg-yellow-500');
+                break;
+            default:
+                notification.classList.add('bg-blue-500');
+        }
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            notification.classList.add('translate-x-full');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    } catch (error) {
+        console.error('Error showing notification:', error);
+    }
+}
+
+// Preview image function
+function previewImage(input) {
+    try {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const previewContainer = input.parentNode.querySelector('.image-preview-container');
+                if (previewContainer) {
+                    const img = previewContainer.querySelector('img');
+                    if (img) {
+                        img.src = e.target.result;
+                        previewContainer.style.display = 'block';
+                    }
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    } catch (error) {
+        console.error('Error previewing image:', error);
+        showNotification('خطا در پیش‌نمایش تصویر', 'error');
+    }
+}
 
 // Initialize existing timeline and voice actors data
 function initializeExistingData() {
@@ -493,8 +589,12 @@ function updateVoiceActorsData() {
 
 // Add image timeline row
 function addImageTimelineRow(data = {}) {
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    if (!imageTimelineList) return;
+    try {
+        const imageTimelineList = document.getElementById('image-timeline-list');
+        if (!imageTimelineList) {
+            console.warn('Image timeline list element not found');
+            return;
+        }
     
     const row = document.createElement('div');
     row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
@@ -545,32 +645,23 @@ function addImageTimelineRow(data = {}) {
         </div>
     `;
     
-    imageTimelineList.appendChild(row);
-    updateImageTimelineData();
-}
-
-// Preview image function
-function previewImage(input) {
-    const file = input.files[0];
-    const previewContainer = input.parentElement.querySelector('.image-preview-container');
-    const previewImg = previewContainer.querySelector('img');
-    
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    } else {
-        previewContainer.style.display = 'none';
+        imageTimelineList.appendChild(row);
+        imageTimelineCounter++;
+        updateImageTimelineData();
+    } catch (error) {
+        console.error('Error adding image timeline row:', error);
+        showNotification('خطا در افزودن ردیف تایم‌لاین', 'error');
     }
 }
 
 // Add voice actor row
 function addVoiceActorRow(data = {}) {
-    const voiceActorsList = document.getElementById('voice-actors-list');
-    if (!voiceActorsList) return;
+    try {
+        const voiceActorsList = document.getElementById('voice-actors-list');
+        if (!voiceActorsList) {
+            console.warn('Voice actors list element not found');
+            return;
+        }
     
     const row = document.createElement('div');
     row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
@@ -598,19 +689,40 @@ function addVoiceActorRow(data = {}) {
     `;
     
     voiceActorsList.appendChild(row);
+    voiceActorCounter++;
     updateVoiceActorsData();
+    } catch (error) {
+        console.error('Error adding voice actor row:', error);
+        showNotification('خطا در افزودن ردیف صداپیشه', 'error');
+    }
 }
 
 // Remove image timeline row
 function removeImageTimelineRow(button) {
-    button.closest('.bg-gray-50').remove();
-    updateImageTimelineData();
+    try {
+        const row = button.closest('.bg-gray-50');
+        if (row) {
+            row.remove();
+            updateImageTimelineData();
+        }
+    } catch (error) {
+        console.error('Error removing image timeline row:', error);
+        showNotification('خطا در حذف ردیف تایم‌لاین', 'error');
+    }
 }
 
 // Remove voice actor row
 function removeVoiceActorRow(button) {
-    button.closest('.bg-gray-50').remove();
-    updateVoiceActorsData();
+    try {
+        const row = button.closest('.bg-gray-50');
+        if (row) {
+            row.remove();
+            updateVoiceActorsData();
+        }
+    } catch (error) {
+        console.error('Error removing voice actor row:', error);
+        showNotification('خطا در حذف ردیف صداپیشه', 'error');
+    }
 }
 
 // Audio player functionality

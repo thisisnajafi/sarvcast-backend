@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class PlayHistory extends Model
@@ -148,27 +149,51 @@ class PlayHistory extends Model
     }
 
     /**
-     * Get user's play history with pagination
+     * Get user's play history with pagination (optimized)
      */
     public static function getUserPlayHistory($userId, $perPage = 20)
     {
-        return self::with(['episode', 'story.category'])
-                   ->forUser($userId)
-                   ->orderBy('played_at', 'desc')
-                   ->paginate($perPage);
+        $cacheKey = "user_play_history_{$userId}_page_" . request('page', 1);
+        
+        return Cache::remember($cacheKey, 300, function () use ($userId, $perPage) {
+            return self::select([
+                'id', 'user_id', 'episode_id', 'story_id', 'played_at', 
+                'duration_played', 'total_duration', 'completed'
+            ])
+            ->with([
+                'episode:id,title,duration,episode_number,is_premium',
+                'story:id,title,image_url,category_id',
+                'story.category:id,name'
+            ])
+            ->forUser($userId)
+            ->orderBy('played_at', 'desc')
+            ->paginate($perPage);
+        });
     }
 
     /**
-     * Get user's recent play history
+     * Get user's recent play history (optimized)
      */
     public static function getUserRecentHistory($userId, $limit = 10)
     {
-        return self::with(['episode', 'story.category'])
-                   ->forUser($userId)
-                   ->recent(7)
-                   ->orderBy('played_at', 'desc')
-                   ->limit($limit)
-                   ->get();
+        $cacheKey = "user_recent_history_{$userId}_{$limit}";
+        
+        return Cache::remember($cacheKey, 180, function () use ($userId, $limit) {
+            return self::select([
+                'id', 'user_id', 'episode_id', 'story_id', 'played_at', 
+                'duration_played', 'total_duration', 'completed'
+            ])
+            ->with([
+                'episode:id,title,duration,episode_number,is_premium',
+                'story:id,title,image_url,category_id',
+                'story.category:id,name'
+            ])
+            ->forUser($userId)
+            ->recent(7)
+            ->orderBy('played_at', 'desc')
+            ->limit($limit)
+            ->get();
+        });
     }
 
     /**
@@ -359,5 +384,43 @@ class PlayHistory extends Model
     public function isJustStarted(): bool
     {
         return $this->completion_percentage <= 10;
+    }
+
+    /**
+     * Clear user play history cache
+     */
+    public static function clearUserCache($userId)
+    {
+        $patterns = [
+            "user_play_history_{$userId}_*",
+            "user_recent_history_{$userId}_*",
+            "user_completed_episodes_{$userId}_*",
+            "user_incomplete_episodes_{$userId}_*",
+            "user_stats_{$userId}"
+        ];
+        
+        foreach ($patterns as $pattern) {
+            Cache::forget($pattern);
+        }
+    }
+
+    /**
+     * Boot method to clear cache on model changes
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::created(function ($playHistory) {
+            self::clearUserCache($playHistory->user_id);
+        });
+        
+        static::updated(function ($playHistory) {
+            self::clearUserCache($playHistory->user_id);
+        });
+        
+        static::deleted(function ($playHistory) {
+            self::clearUserCache($playHistory->user_id);
+        });
     }
 }

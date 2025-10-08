@@ -17,6 +17,49 @@ class EpisodeController extends Controller
     {
         $this->accessControlService = $accessControlService;
     }
+
+    /**
+     * Standardized success response
+     */
+    private function successResponse($data = null, $message = null, $meta = null)
+    {
+        $response = ['success' => true];
+        
+        if ($message) {
+            $response['message'] = $message;
+        }
+        
+        if ($data !== null) {
+            $response['data'] = $data;
+        }
+        
+        if ($meta) {
+            $response['meta'] = $meta;
+        }
+        
+        return response()->json($response);
+    }
+
+    /**
+     * Standardized error response
+     */
+    private function errorResponse($message, $errorCode = null, $statusCode = 400, $data = null)
+    {
+        $response = [
+            'success' => false,
+            'message' => $message
+        ];
+        
+        if ($errorCode) {
+            $response['error_code'] = $errorCode;
+        }
+        
+        if ($data) {
+            $response['data'] = $data;
+        }
+        
+        return response()->json($response, $statusCode);
+    }
     /**
      * Get paginated list of episodes
      */
@@ -45,16 +88,18 @@ class EpisodeController extends Controller
 
         $episodes = $query->paginate($request->get('per_page', 20));
 
-        return response()->json([
-            'success' => true,
-            'data' => $episodes->items(),
-            'pagination' => [
-                'current_page' => $episodes->currentPage(),
-                'last_page' => $episodes->lastPage(),
-                'per_page' => $episodes->perPage(),
-                'total' => $episodes->total()
+        return $this->successResponse(
+            $episodes->items(),
+            'Episodes retrieved successfully',
+            [
+                'pagination' => [
+                    'current_page' => $episodes->currentPage(),
+                    'last_page' => $episodes->lastPage(),
+                    'per_page' => $episodes->perPage(),
+                    'total' => $episodes->total()
+                ]
             ]
-        ]);
+        );
     }
 
     /**
@@ -70,11 +115,11 @@ class EpisodeController extends Controller
         $user = $request->user();
         
         if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'احراز هویت الزامی است',
-                'error_code' => 'AUTHENTICATION_REQUIRED',
-                'data' => [
+            return $this->errorResponse(
+                'احراز هویت الزامی است',
+                'AUTHENTICATION_REQUIRED',
+                401,
+                [
                     'access_info' => [
                         'has_access' => false,
                         'reason' => 'authentication_required',
@@ -82,7 +127,7 @@ class EpisodeController extends Controller
                     ],
                     'upgrade_required' => false
                 ]
-            ], 401);
+            );
         }
         
         $accessInfo = $this->accessControlService->canAccessEpisode($user->id, $episode->id);
@@ -176,6 +221,13 @@ class EpisodeController extends Controller
     {
         $user = Auth::user();
 
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'احراز هویت الزامی است'
+            ], 401);
+        }
+
         // Check if already bookmarked
         $existingBookmark = $user->favorites()->where('episode_id', $episode->id)->first();
         
@@ -203,6 +255,13 @@ class EpisodeController extends Controller
     public function removeBookmark(Episode $episode)
     {
         $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'احراز هویت الزامی است'
+            ], 401);
+        }
 
         $user->favorites()->where('episode_id', $episode->id)->delete();
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\Rule;
 use App\Traits\HasImageUrl;
 
 class ImageTimeline extends Model
@@ -23,6 +24,84 @@ class ImageTimeline extends Model
         'transition_type',
         'is_key_frame'
     ];
+
+    /**
+     * Get validation rules for image timeline creation
+     */
+    public static function getValidationRules($timelineId = null)
+    {
+        return [
+            'story_id' => ['nullable', 'integer', 'exists:stories,id'],
+            'episode_id' => ['nullable', 'integer', 'exists:episodes,id'],
+            'voice_actor_id' => ['nullable', 'integer', 'exists:people,id'],
+            'character_id' => ['nullable', 'integer', 'exists:people,id'],
+            'scene_id' => ['nullable', 'integer'],
+            'start_time' => ['required', 'integer', 'min:0'],
+            'end_time' => ['required', 'integer', 'min:0', 'gt:start_time'],
+            'image_url' => ['required', 'string', 'max:500'],
+            'image_order' => ['required', 'integer', 'min:1'],
+            'scene_description' => ['nullable', 'string', 'max:1000'],
+            'transition_type' => ['required', 'in:fade,slide,cut'],
+            'is_key_frame' => ['boolean'],
+        ];
+    }
+
+    /**
+     * Get validation messages for image timeline validation
+     */
+    public static function getValidationMessages()
+    {
+        return [
+            'story_id.exists' => 'داستان انتخاب شده معتبر نیست',
+            'episode_id.exists' => 'اپیزود انتخاب شده معتبر نیست',
+            'voice_actor_id.exists' => 'صداپیشه انتخاب شده معتبر نیست',
+            'character_id.exists' => 'شخصیت انتخاب شده معتبر نیست',
+            'start_time.required' => 'زمان شروع الزامی است',
+            'start_time.min' => 'زمان شروع نمی‌تواند منفی باشد',
+            'end_time.required' => 'زمان پایان الزامی است',
+            'end_time.min' => 'زمان پایان نمی‌تواند منفی باشد',
+            'end_time.gt' => 'زمان پایان باید بیشتر از زمان شروع باشد',
+            'image_url.required' => 'آدرس تصویر الزامی است',
+            'image_url.max' => 'آدرس تصویر نمی‌تواند بیشتر از 500 کاراکتر باشد',
+            'image_order.required' => 'ترتیب تصویر الزامی است',
+            'image_order.min' => 'ترتیب تصویر باید حداقل 1 باشد',
+            'scene_description.max' => 'توضیح صحنه نمی‌تواند بیشتر از 1000 کاراکتر باشد',
+            'transition_type.required' => 'نوع انتقال الزامی است',
+            'transition_type.in' => 'نوع انتقال نامعتبر است',
+        ];
+    }
+
+    /**
+     * Validate image timeline data
+     */
+    public static function validateTimelineData($data, $timelineId = null)
+    {
+        $rules = self::getValidationRules($timelineId);
+        $messages = self::getValidationMessages();
+        
+        return validator($data, $rules, $messages);
+    }
+
+    /**
+     * Validate timeline data for bulk operations
+     */
+    public static function validateBulkTimelineData($data)
+    {
+        $rules = [];
+        $messages = self::getValidationMessages();
+        
+        foreach ($data as $index => $timeline) {
+            $rules["timeline.{$index}.start_time"] = ['required', 'integer', 'min:0'];
+            $rules["timeline.{$index}.end_time"] = ['required', 'integer', 'min:0', 'gt:timeline.' . $index . '.start_time'];
+            $rules["timeline.{$index}.image_url"] = ['required', 'string', 'max:500'];
+            $rules["timeline.{$index}.image_order"] = ['required', 'integer', 'min:1'];
+            $rules["timeline.{$index}.transition_type"] = ['required', 'in:fade,slide,cut'];
+            $rules["timeline.{$index}.scene_description"] = ['nullable', 'string', 'max:1000'];
+            $rules["timeline.{$index}.is_key_frame"] = ['boolean'];
+        }
+        
+        return validator($data, $rules, $messages);
+    }
 
     protected $casts = [
         'start_time' => 'integer',

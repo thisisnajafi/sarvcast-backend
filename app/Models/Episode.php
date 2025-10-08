@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Validation\Rule;
 use App\Traits\HasImageUrl;
 
 class Episode extends Model
@@ -30,6 +31,82 @@ class Episode extends Model
         'has_multiple_voice_actors',
         'voice_actor_count',
     ];
+
+    /**
+     * Get validation rules for episode creation
+     */
+    public static function getValidationRules($episodeId = null)
+    {
+        return [
+            'story_id' => ['required', 'integer', 'exists:stories,id'],
+            'narrator_id' => ['nullable', 'integer', 'exists:people,id'],
+            'title' => ['required', 'string', 'max:200'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'audio_url' => ['required', 'string', 'max:500'],
+            'local_audio_path' => ['nullable', 'string', 'max:500'],
+            'duration' => ['required', 'integer', 'min:1', 'max:1440'], // 1 minute to 24 hours
+            'episode_number' => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::unique('episodes')->where(function ($query) {
+                    return $query->where('story_id', request('story_id'));
+                })->ignore($episodeId)
+            ],
+            'is_premium' => ['boolean'],
+            'image_urls' => ['nullable', 'array'],
+            'image_urls.*' => ['string', 'max:500'],
+            'play_count' => ['integer', 'min:0'],
+            'rating' => ['numeric', 'min:0', 'max:5'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:50'],
+            'status' => ['required', 'in:draft,pending,approved,rejected,published'],
+            'published_at' => ['nullable', 'date'],
+            'use_image_timeline' => ['boolean'],
+            'has_multiple_voice_actors' => ['boolean'],
+            'voice_actor_count' => ['integer', 'min:0', 'max:20'],
+        ];
+    }
+
+    /**
+     * Get validation messages for episode validation
+     */
+    public static function getValidationMessages()
+    {
+        return [
+            'story_id.required' => 'انتخاب داستان الزامی است',
+            'story_id.exists' => 'داستان انتخاب شده معتبر نیست',
+            'narrator_id.exists' => 'راوی انتخاب شده معتبر نیست',
+            'title.required' => 'عنوان اپیزود الزامی است',
+            'title.max' => 'عنوان اپیزود نمی‌تواند بیشتر از 200 کاراکتر باشد',
+            'description.max' => 'توضیحات نمی‌تواند بیشتر از 2000 کاراکتر باشد',
+            'audio_url.required' => 'فایل صوتی الزامی است',
+            'audio_url.max' => 'آدرس فایل صوتی نمی‌تواند بیشتر از 500 کاراکتر باشد',
+            'duration.required' => 'مدت زمان اپیزود الزامی است',
+            'duration.min' => 'مدت زمان اپیزود باید حداقل 1 دقیقه باشد',
+            'duration.max' => 'مدت زمان اپیزود نمی‌تواند بیشتر از 24 ساعت باشد',
+            'episode_number.required' => 'شماره اپیزود الزامی است',
+            'episode_number.min' => 'شماره اپیزود باید حداقل 1 باشد',
+            'episode_number.unique' => 'این شماره اپیزود قبلاً برای این داستان استفاده شده است',
+            'rating.min' => 'امتیاز نمی‌تواند کمتر از 0 باشد',
+            'rating.max' => 'امتیاز نمی‌تواند بیشتر از 5 باشد',
+            'status.required' => 'وضعیت اپیزود الزامی است',
+            'status.in' => 'وضعیت انتخاب شده معتبر نیست',
+            'published_at.date' => 'تاریخ انتشار باید معتبر باشد',
+            'voice_actor_count.max' => 'تعداد صداپیشه‌ها نمی‌تواند بیشتر از 20 باشد',
+        ];
+    }
+
+    /**
+     * Validate episode data
+     */
+    public static function validateEpisodeData($data, $episodeId = null)
+    {
+        $rules = self::getValidationRules($episodeId);
+        $messages = self::getValidationMessages();
+        
+        return validator($data, $rules, $messages);
+    }
 
     protected function casts(): array
     {

@@ -326,14 +326,19 @@ class ImageTimelineController extends Controller
     public function store(Request $request, Episode $episode): JsonResponse
     {
         try {
-            $request->validate([
-                'image_timeline' => 'required|array',
-                'image_timeline.*.start_time' => 'required|integer|min:0',
-                'image_timeline.*.end_time' => 'required|integer|min:0',
-                'image_timeline.*.image_url' => 'required|url',
-            ]);
+            $timelineData = $request->input('image_timeline', []);
+            
+            // Use model validation for comprehensive validation
+            $validator = ImageTimeline::validateBulkTimelineData($timelineData);
+            
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در اعتبارسنجی داده‌های تایم‌لاین',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
 
-            $timelineData = $request->input('image_timeline');
             $count = $this->imageTimelineService->saveTimeline($episode->id, $timelineData);
 
             return response()->json([

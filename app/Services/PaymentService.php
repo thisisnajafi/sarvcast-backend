@@ -350,10 +350,15 @@ class PaymentService
                 ]);
                 
                 if ($verification['success']) {
-                    $payment->update([
-                        'status' => 'completed',
-                        'paid_at' => now(),
+                    $payment->updateStatus('completed', [
                         'gateway_response' => json_encode($verification),
+                        'gateway_fee' => $verification['fee'] ?? 0,
+                        'net_amount' => $payment->amount - ($verification['fee'] ?? 0),
+                        'payment_metadata' => [
+                            'ref_id' => $verification['ref_id'] ?? null,
+                            'card_pan' => $verification['card_pan'] ?? null,
+                            'verification_time' => now()->toISOString()
+                        ]
                     ]);
                     
                     Log::info('Payment marked as completed', [
@@ -461,7 +466,14 @@ class PaymentService
                         'message' => 'پرداخت با موفقیت انجام شد'
                     ];
                 } else {
-                    $payment->update(['status' => 'failed']);
+                    $payment->updateStatus('failed', [
+                        'gateway_response' => json_encode([
+                            'verification_failed' => true,
+                            'error_message' => $verification['message'] ?? 'Unknown error',
+                            'authority' => $authority,
+                            'failed_at' => now()->toISOString()
+                        ])
+                    ]);
                     
                     Log::error('Payment verification failed', [
                         'payment_id' => $payment->id,

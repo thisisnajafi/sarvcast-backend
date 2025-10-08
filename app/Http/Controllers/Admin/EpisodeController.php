@@ -2,28 +2,32 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\BaseController;
 use App\Models\Episode;
 use App\Models\Story;
 use App\Models\Person;
 use App\Services\InAppNotificationService;
 use App\Services\AudioProcessingService;
+use App\Services\ImageProcessingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
-class EpisodeController extends Controller
+class EpisodeController extends BaseController
 {
     protected $notificationService;
     protected $audioProcessingService;
+    protected $imageProcessingService;
 
     public function __construct(
         InAppNotificationService $notificationService,
-        AudioProcessingService $audioProcessingService
+        AudioProcessingService $audioProcessingService,
+        ImageProcessingService $imageProcessingService
     ) {
         $this->notificationService = $notificationService;
         $this->audioProcessingService = $audioProcessingService;
+        $this->imageProcessingService = $imageProcessingService;
     }
 
     /**
@@ -239,7 +243,7 @@ class EpisodeController extends Controller
                 $audioFile = $request->file('audio_file');
                 
                 // Ensure directory exists
-                $audioDir = public_path('audio/episodes');
+                $audioDir = storage_path('app/public/audio/episodes');
                 if (!file_exists($audioDir)) {
                     mkdir($audioDir, 0755, true);
                 }
@@ -247,9 +251,9 @@ class EpisodeController extends Controller
                 // Generate unique filename to avoid conflicts
                 $filename = $this->generateUniqueFilename($audioFile, 'audio');
                 
-                // Save to public/audio/episodes directory
+                // Save to storage/app/public/audio/episodes directory
                 $audioPath = $audioFile->move($audioDir, $filename);
-                // Store only the relative path from public
+                // Store the path relative to storage/app/public
                 $data['audio_url'] = 'audio/episodes/' . $filename;
 
                 // Process audio if requested
@@ -257,7 +261,7 @@ class EpisodeController extends Controller
                     try {
                         $audioQuality = $request->input('audio_quality', 'medium');
                         $processedAudio = $this->audioProcessingService->processAudio(
-                            storage_path('app/public/' . str_replace('/storage/', '', $data['audio_url'])),
+                            storage_path('app/public/' . $data['audio_url']),
                             [
                                 'quality' => $audioQuality,
                                 'normalize' => true,
@@ -413,14 +417,23 @@ class EpisodeController extends Controller
             // Handle audio file upload
             if ($request->hasFile('audio_file')) {
                 // Delete old audio file
-                if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
-                    unlink(public_path($episode->audio_url));
+                if ($episode->audio_url && file_exists(storage_path('app/public/' . $episode->audio_url))) {
+                    try {
+                        unlink(storage_path('app/public/' . $episode->audio_url));
+                        Log::info('Old audio file deleted successfully', ['file' => $episode->audio_url]);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to delete old audio file', [
+                            'file' => $episode->audio_url,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue with the update even if old file deletion fails
+                    }
                 }
 
                 $audioFile = $request->file('audio_file');
                 
                 // Ensure directory exists
-                $audioDir = public_path('audio/episodes');
+                $audioDir = storage_path('app/public/audio/episodes');
                 if (!file_exists($audioDir)) {
                     mkdir($audioDir, 0755, true);
                 }
@@ -428,9 +441,9 @@ class EpisodeController extends Controller
                 // Generate unique filename to avoid conflicts
                 $filename = $this->generateUniqueFilename($audioFile, 'audio');
                 
-                // Save to public/audio/episodes directory
+                // Save to storage/app/public/audio/episodes directory
                 $audioPath = $audioFile->move($audioDir, $filename);
-                // Store only the relative path from public
+                // Store the path relative to storage/app/public
                 $data['audio_url'] = 'audio/episodes/' . $filename;
 
                 // Process audio if requested
@@ -438,7 +451,7 @@ class EpisodeController extends Controller
                     try {
                         $audioQuality = $request->input('audio_quality', 'medium');
                         $processedAudio = $this->audioProcessingService->processAudio(
-                            storage_path('app/public/' . str_replace('/storage/', '', $data['audio_url'])),
+                            storage_path('app/public/' . $data['audio_url']),
                             [
                                 'quality' => $audioQuality,
                                 'normalize' => true,
@@ -463,7 +476,16 @@ class EpisodeController extends Controller
             if ($request->hasFile('cover_image')) {
                 // Delete old cover image
                 if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
-                    unlink(public_path('images/' . $episode->cover_image_url));
+                    try {
+                        unlink(public_path('images/' . $episode->cover_image_url));
+                        Log::info('Old cover image deleted successfully', ['file' => $episode->cover_image_url]);
+                    } catch (\Exception $e) {
+                        Log::warning('Failed to delete old cover image', [
+                            'file' => $episode->cover_image_url,
+                            'error' => $e->getMessage()
+                        ]);
+                        // Continue with the update even if old file deletion fails
+                    }
                 }
 
                 $coverImage = $request->file('cover_image');
@@ -552,12 +574,28 @@ class EpisodeController extends Controller
             DB::beginTransaction();
 
             // Delete associated files
-            if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
-                unlink(public_path($episode->audio_url));
+            if ($episode->audio_url && file_exists(storage_path('app/public/' . $episode->audio_url))) {
+                try {
+                    unlink(storage_path('app/public/' . $episode->audio_url));
+                    Log::info('Audio file deleted successfully', ['file' => $episode->audio_url]);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to delete audio file', [
+                        'file' => $episode->audio_url,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
             if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
-                unlink(public_path('images/' . $episode->cover_image_url));
+                try {
+                    unlink(public_path('images/' . $episode->cover_image_url));
+                    Log::info('Cover image deleted successfully', ['file' => $episode->cover_image_url]);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to delete cover image', [
+                        'file' => $episode->cover_image_url,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
             $episode->delete();
@@ -635,11 +673,27 @@ class EpisodeController extends Controller
 
                         case 'delete':
                             // Delete associated files
-                            if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
-                                unlink(public_path($episode->audio_url));
+                            if ($episode->audio_url && file_exists(storage_path('app/public/' . $episode->audio_url))) {
+                                try {
+                                    unlink(storage_path('app/public/' . $episode->audio_url));
+                                    Log::info('Audio file deleted successfully in bulk action', ['file' => $episode->audio_url]);
+                                } catch (\Exception $e) {
+                                    Log::warning('Failed to delete audio file in bulk action', [
+                                        'file' => $episode->audio_url,
+                                        'error' => $e->getMessage()
+                                    ]);
+                                }
                             }
                             if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
-                                unlink(public_path('images/' . $episode->cover_image_url));
+                                try {
+                                    unlink(public_path('images/' . $episode->cover_image_url));
+                                    Log::info('Cover image deleted successfully in bulk action', ['file' => $episode->cover_image_url]);
+                                } catch (\Exception $e) {
+                                    Log::warning('Failed to delete cover image in bulk action', [
+                                        'file' => $episode->cover_image_url,
+                                        'error' => $e->getMessage()
+                                    ]);
+                                }
                             }
                             $episode->delete();
                             break;

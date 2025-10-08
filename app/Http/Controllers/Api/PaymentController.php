@@ -100,11 +100,23 @@ class PaymentController extends Controller
             ], 404);
         }
 
+        // Handle user cancellation
         if ($request->status !== 'OK') {
-            $payment->update(['status' => 'failed']);
+            $payment->updateStatus('cancelled', [
+                'gateway_response' => json_encode([
+                    'status' => $request->status,
+                    'authority' => $request->authority,
+                    'cancelled_at' => now()->toISOString()
+                ])
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'پرداخت توسط کاربر لغو شد'
+                'message' => 'پرداخت توسط کاربر لغو شد',
+                'data' => [
+                    'payment' => $payment->fresh(),
+                    'status' => 'cancelled'
+                ]
             ], 400);
         }
 
@@ -115,20 +127,50 @@ class PaymentController extends Controller
         );
 
         if ($verificationResult['success']) {
-            // Update payment status
-            $payment->update([
-                'status' => 'completed',
-                'paid_at' => now(),
-                'gateway_response' => json_encode($verificationResult)
+            // Update payment status with comprehensive data
+            $payment->updateStatus('completed', [
+                'gateway_response' => json_encode($verificationResult),
+                'gateway_fee' => $verificationResult['fee'] ?? 0,
+                'net_amount' => $payment->amount - ($verificationResult['fee'] ?? 0),
+                'payment_metadata' => [
+                    'ref_id' => $verificationResult['ref_id'] ?? null,
+                    'card_pan' => $verificationResult['card_pan'] ?? null,
+                    'verification_time' => now()->toISOString()
+                ]
             ]);
 
-            // Activate subscription
+            // Activate subscription with proper error handling
             if ($payment->subscription) {
-                $payment->subscription->update([
-                    'status' => 'active',
-                    'start_date' => now(),
-                    'end_date' => now()->addDays($this->getSubscriptionDays($payment->subscription->type))
-                ]);
+                try {
+                    $subscription = $payment->subscription;
+                    $startDate = now();
+                    $endDate = $startDate->copy()->addDays($this->getSubscriptionDays($subscription->type));
+                    
+                    $subscription->update([
+                        'status' => 'active',
+                        'start_date' => $startDate,
+                        'end_date' => $endDate,
+                        'payment_method' => 'zarinpal',
+                        'transaction_id' => $verificationResult['ref_id'] ?? $request->authority
+                    ]);
+
+                    // Verify subscription activation
+                    $updatedSubscription = $subscription->fresh();
+                    if ($updatedSubscription->status !== 'active') {
+                        \Log::error('Subscription activation failed', [
+                            'subscription_id' => $subscription->id,
+                            'payment_id' => $payment->id,
+                            'expected_status' => 'active',
+                            'actual_status' => $updatedSubscription->status
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Error activating subscription', [
+                        'subscription_id' => $payment->subscription_id,
+                        'payment_id' => $payment->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
             return response()->json([
@@ -136,14 +178,28 @@ class PaymentController extends Controller
                 'message' => 'پرداخت با موفقیت انجام شد',
                 'data' => [
                     'payment' => $payment->fresh(),
-                    'subscription' => $payment->subscription->fresh()
+                    'subscription' => $payment->subscription ? $payment->subscription->fresh() : null,
+                    'ref_id' => $verificationResult['ref_id'] ?? null
                 ]
             ]);
         } else {
-            $payment->update(['status' => 'failed']);
+            // Update payment status to failed with error details
+            $payment->updateStatus('failed', [
+                'gateway_response' => json_encode([
+                    'verification_failed' => true,
+                    'error_message' => $verificationResult['message'] ?? 'Unknown error',
+                    'authority' => $request->authority,
+                    'failed_at' => now()->toISOString()
+                ])
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => $verificationResult['message']
+                'message' => $verificationResult['message'] ?? 'پرداخت ناموفق بود',
+                'data' => [
+                    'payment' => $payment->fresh(),
+                    'status' => 'failed'
+                ]
             ], 400);
         }
     }

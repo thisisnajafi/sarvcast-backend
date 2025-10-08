@@ -94,13 +94,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     
     // Episode Timeline Management Routes
     Route::prefix('episodes/{episode}/timeline')->name('episodes.timeline.')->group(function () {
-        Route::get('/', [EpisodeTimelineController::class, 'index'])->name('index');
-        Route::get('/create', [EpisodeTimelineController::class, 'create'])->name('create');
-        Route::post('/', [EpisodeTimelineController::class, 'store'])->name('store');
-        Route::get('/{timeline}/edit', [EpisodeTimelineController::class, 'edit'])->name('edit');
-        Route::put('/{timeline}', [EpisodeTimelineController::class, 'update'])->name('update');
-        Route::delete('/{timeline}', [EpisodeTimelineController::class, 'destroy'])->name('destroy');
-        Route::post('/bulk-action', [EpisodeTimelineController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'show'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'store'])->name('store');
+        Route::get('/{timeline}/edit', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'edit'])->name('edit');
+        Route::put('/{timeline}', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'update'])->name('update');
+        Route::delete('/{timeline}', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'bulkAction'])->name('bulk-action');
     });
     
     // Global Timeline Management Routes
@@ -660,6 +660,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'bulkAction'])->name('bulk-action');
         Route::get('/export', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'export'])->name('export');
         Route::get('/statistics', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'statistics'])->name('statistics');
+    });
+
+    // Payment Management Routes
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('index');
+        Route::get('/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'show'])->name('show');
+        Route::get('/{payment}/edit', [\App\Http\Controllers\Admin\PaymentController::class, 'edit'])->name('edit');
+        Route::put('/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'update'])->name('update');
+        Route::delete('/{payment}', [\App\Http\Controllers\Admin\PaymentController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\PaymentController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\PaymentController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\PaymentController::class, 'statistics'])->name('statistics');
+        Route::post('/{payment}/refund', [\App\Http\Controllers\Admin\PaymentController::class, 'processRefund'])->name('refund');
     });
 
     // Affiliate Program Management Routes
