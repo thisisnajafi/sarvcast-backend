@@ -33,6 +33,20 @@ class ImageTimelineService
     }
 
     /**
+     * Save timeline (alias for saveTimelineForEpisode)
+     */
+    public function saveTimeline(int $episodeId, array $timelineData): int
+    {
+        $result = $this->saveTimelineForEpisode($episodeId, $timelineData);
+        
+        if (!$result['success']) {
+            throw new \Exception($result['message']);
+        }
+        
+        return $result['data']['timeline_count'] ?? 0;
+    }
+
+    /**
      * Create or update image timeline for episode
      */
     public function saveTimelineForEpisode(int $episodeId, array $timelineData): array

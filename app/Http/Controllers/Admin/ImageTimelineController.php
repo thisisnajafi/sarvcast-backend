@@ -128,12 +128,31 @@ class ImageTimelineController extends Controller
             DB::rollBack();
             Log::error('Failed to create timeline', [
                 'episode_id' => $episode->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->except(['image_file'])
             ]);
+
+            // Provide more detailed error information
+            $errorMessage = 'خطا در ایجاد تایم‌لاین: ' . $e->getMessage();
+            
+            // Add specific error context
+            if (str_contains($e->getMessage(), 'validation')) {
+                $errorMessage = 'خطا در اعتبارسنجی داده‌ها: ' . $e->getMessage();
+            } elseif (str_contains($e->getMessage(), 'upload')) {
+                $errorMessage = 'خطا در آپلود تصویر: ' . $e->getMessage();
+            } elseif (str_contains($e->getMessage(), 'database')) {
+                $errorMessage = 'خطا در ذخیره‌سازی: ' . $e->getMessage();
+            }
 
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'خطا در ایجاد تایم‌لاین: ' . $e->getMessage());
+                ->with('error', $errorMessage)
+                ->with('error_details', [
+                    'error_code' => 'TIMELINE_CREATION_FAILED',
+                    'timestamp' => now()->toISOString(),
+                    'episode_id' => $episode->id
+                ]);
         }
     }
 
@@ -328,14 +347,38 @@ class ImageTimelineController extends Controller
         try {
             $timelineData = $request->input('image_timeline', []);
             
-            // Use model validation for comprehensive validation
+            // Validate input data structure
+            if (empty($timelineData)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'داده‌های تایم‌لاین الزامی است',
+                    'errors' => ['image_timeline' => ['لطفاً حداقل یک ورودی تایم‌لاین اضافه کنید']]
+                ], 422);
+            }
+
+            // Use comprehensive validation service
+            $validationService = new \App\Services\TimelineValidationService();
+            $validationResult = $validationService->validateTimeline($timelineData, $episode->duration);
+            
+            if (!$validationResult['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در اعتبارسنجی داده‌های تایم‌لاین',
+                    'errors' => $validationResult['errors'],
+                    'warnings' => $validationResult['warnings'] ?? [],
+                    'statistics' => $validationResult['statistics'] ?? []
+                ], 422);
+            }
+
+            // Use model validation for additional checks
             $validator = ImageTimeline::validateBulkTimelineData($timelineData);
             
             if ($validator->fails()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'خطا در اعتبارسنجی داده‌های تایم‌لاین',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors()->toArray(),
+                    'warnings' => $validationResult['warnings'] ?? []
                 ], 422);
             }
 
@@ -346,8 +389,10 @@ class ImageTimelineController extends Controller
                 'message' => 'تایم‌لاین تصاویر با موفقیت ایجاد شد',
                 'data' => [
                     'episode_id' => $episode->id,
-                    'timeline_count' => $count
-                ]
+                    'timeline_count' => $count,
+                    'statistics' => $validationResult['statistics'] ?? []
+                ],
+                'warnings' => $validationResult['warnings'] ?? []
             ], 201);
 
         } catch (ValidationException $e) {
@@ -357,9 +402,18 @@ class ImageTimelineController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            Log::error('Timeline creation failed', [
+                'episode_id' => $episode->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'timeline_data' => $request->input('image_timeline', [])
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'خطایی در ایجاد تایم‌لاین تصاویر رخ داد: ' . $e->getMessage()
+                'message' => 'خطایی در ایجاد تایم‌لاین تصاویر رخ داد',
+                'error_details' => $e->getMessage(),
+                'error_code' => 'TIMELINE_CREATION_FAILED'
             ], 500);
         }
     }

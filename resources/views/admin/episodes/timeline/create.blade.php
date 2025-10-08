@@ -1,422 +1,373 @@
 @extends('admin.layouts.app')
 
-@section('title', 'ایجاد تایم‌لاین جدید')
+@section('title', 'مدیریت تایم‌لاین جدید')
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">ایجاد تایم‌لاین جدید</h1>
-            <p class="text-gray-600 mt-1">{{ $episode->title }} - {{ $episode->story->title }}</p>
-            <div class="mt-2 text-sm text-gray-500">
-                <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                    مدت اپیزود: {{ gmdate('i:s', $episode->duration) }}
-                </span>
-            </div>
-        </div>
-        <a href="{{ route('admin.episodes.timeline.index', $episode) }}" 
-           class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
-            بازگشت
-        </a>
-    </div>
-
-    <!-- Audio Player Section -->
-    <div class="bg-white p-6 rounded-lg shadow-sm">
-        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-            <svg class="w-5 h-5 ml-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
-            </svg>
-            پخش کننده صوتی
-        </h3>
-        
-        @if($episode->audio_url)
-            <div class="space-y-4">
-                <!-- Audio Player -->
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <audio id="audio-player" controls class="w-full mb-4">
-                        <source src="{{ $episode->audio_url }}" type="audio/mpeg">
-                        مرورگر شما از پخش فایل صوتی پشتیبانی نمی‌کند.
-                    </audio>
-                    
-                    <!-- Playback Speed Controls -->
-                    <div class="flex items-center space-x-2 space-x-reverse">
-                        <span class="text-sm font-medium text-gray-700">سرعت پخش:</span>
-                        <button type="button" id="speed-0.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(0.5)">0.5x</button>
-                        <button type="button" id="speed-1x" class="px-3 py-1 text-sm border border-gray-300 rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1)">1x</button>
-                        <button type="button" id="speed-1.25x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.25)">1.25x</button>
-                        <button type="button" id="speed-1.5x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(1.5)">1.5x</button>
-                        <button type="button" id="speed-2x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(2)">2x</button>
-                    </div>
-                    
-                    <!-- Time Display -->
-                    <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
-                        <span id="current-time">00:00</span>
-                        <span id="duration">{{ gmdate('i:s', $episode->duration) }}</span>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-images mr-2"></i>
+                        مدیریت تایم‌لاین جدید
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{{ route('admin.episodes.timeline.index', $episode) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right mr-1"></i>
+                            بازگشت به لیست تایم‌لاین‌ها
+                        </a>
                     </div>
                 </div>
-            </div>
-        @else
-            <div class="text-center py-8 text-gray-500">
-                <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
-                </svg>
-                <p>فایل صوتی برای این اپیزود موجود نیست</p>
-            </div>
-        @endif
-    </div>
 
-    <!-- Image Timeline Management -->
-    <div class="bg-white p-6 rounded-lg shadow-sm">
-        <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
-            <svg class="w-5 h-5 ml-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            مدیریت تصاویر بر اساس زمان
-        </h3>
-        
-        <div class="space-y-4">
-            <!-- Image Timeline List -->
-            <div id="image-timeline-list" class="space-y-4">
-                <!-- Image timelines will be added here dynamically -->
-            </div>
+                <div class="card-body">
+                    {{-- Include Timeline Alerts Component --}}
+                    <x-timeline-alerts />
 
-            <!-- Add Image Timeline Button -->
-            <div class="flex justify-center pt-4 border-t border-gray-200">
-                <button type="button" id="add-image-timeline" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 space-x-reverse">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    <span>افزودن تصویر در زمان فعلی</span>
-                </button>
+                    {{-- Episode Information --}}
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info">
+                                    <i class="fas fa-play"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">اپیزود</span>
+                                    <span class="info-box-number">{{ $episode->title }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success">
+                                    <i class="fas fa-clock"></i>
+                                </span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">مدت زمان</span>
+                                    <span class="info-box-number">{{ $episode->duration }} ثانیه</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Timeline Creation Form --}}
+                    <form id="timeline-creation-form" 
+                          class="timeline-creation-form timeline-form" 
+                          action="{{ route('admin.episodes.timeline.store', $episode) }}" 
+                          method="POST" 
+                          enctype="multipart/form-data">
+                        @csrf
+                        
+                        {{-- Hidden Episode Duration --}}
+                        <input type="hidden" id="episode-duration" value="{{ $episode->duration }}">
+
+                        {{-- Timeline Entries Container --}}
+                        <div class="timeline-entries-section">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-list mr-2"></i>
+                                    ورودی‌های تایم‌لاین
+                                </h5>
+                                <button type="button" id="add-timeline-entry" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus mr-1"></i>
+                                    افزودن ورودی جدید
+                                </button>
+                            </div>
+
+                            <div id="timeline-entries-container">
+                                {{-- Timeline entries will be added here dynamically --}}
+                            </div>
+                        </div>
+
+                        {{-- Form Actions --}}
+                        <div class="form-actions mt-4">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-success btn-lg create-timeline-btn">
+                                        <i class="fas fa-save mr-2"></i>
+                                        ایجاد تایم‌لاین
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-lg ml-2" onclick="timelineCreationForm.clearForm()">
+                                        <i class="fas fa-undo mr-2"></i>
+                                        پاک کردن فرم
+                                    </button>
+                                </div>
+                                <div class="col-md-6 text-right">
+                                    <a href="{{ route('admin.episodes.timeline.index', $episode) }}" class="btn btn-outline-secondary btn-lg">
+                                        <i class="fas fa-times mr-2"></i>
+                                        انصراف
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Form -->
-    <div class="bg-white p-6 rounded-lg shadow-sm">
-        <form method="POST" action="{{ route('admin.episodes.timeline.store', $episode) }}" 
-              enctype="multipart/form-data" class="space-y-6" id="timeline-form">
-            @csrf
-
-            <!-- Hidden inputs for timeline data -->
-            <input type="hidden" name="image_timeline_data" id="image-timeline-data">
-
-            <!-- Submit Button -->
-            <div class="flex justify-end space-x-3 space-x-reverse pt-6 border-t border-gray-200">
-                <a href="{{ route('admin.episodes.timeline.index', $episode) }}" 
-                   class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                    انصراف
-                </a>
-                <button type="submit" 
-                        class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-                    ایجاد تایم‌لاین‌ها
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 
-<script>
-let audioPlayer = null;
-let imageTimelineCounter = 0;
+{{-- Timeline Entry Template --}}
+<template id="timeline-entry-template">
+    <div class="timeline-entry card mb-3" data-timeline-index="INDEX">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-image mr-2"></i>
+                    ورودی تایم‌لاین <span class="entry-number">INDEX</span>
+                </h6>
+                <button type="button" class="btn btn-sm btn-danger remove-timeline-entry" data-index="INDEX">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {{-- Start Time --}}
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="timeline_INDEX_start_time">
+                            <i class="fas fa-play mr-1"></i>
+                            زمان شروع (ثانیه)
+                        </label>
+                        <input type="number" 
+                               id="timeline_INDEX_start_time" 
+                               name="timeline[INDEX][start_time]" 
+                               class="form-control" 
+                               min="0" 
+                               max="{{ $episode->duration }}" 
+                               required>
+                        <small class="form-text text-muted">زمان شروع این بخش از اپیزود</small>
+                    </div>
+                </div>
 
-document.addEventListener('DOMContentLoaded', function() {
-    initializeAudioPlayer();
-    initializeImageTimelineManagement();
-});
+                {{-- End Time --}}
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="timeline_INDEX_end_time">
+                            <i class="fas fa-stop mr-1"></i>
+                            زمان پایان (ثانیه)
+                        </label>
+                        <input type="number" 
+                               id="timeline_INDEX_end_time" 
+                               name="timeline[INDEX][end_time]" 
+                               class="form-control" 
+                               min="0" 
+                               max="{{ $episode->duration }}" 
+                               required>
+                        <small class="form-text text-muted">زمان پایان این بخش از اپیزود</small>
+                    </div>
+                </div>
 
-// Audio Player Functions
-function initializeAudioPlayer() {
-    audioPlayer = document.getElementById('audio-player');
-    if (audioPlayer) {
-        // Set default playback speed to 1x
-        audioPlayer.playbackRate = 1;
-        
-        // Update time display
-        audioPlayer.addEventListener('loadedmetadata', function() {
-            const duration = audioPlayer.duration;
-            document.getElementById('duration').textContent = formatTime(duration);
-        });
-        
-        audioPlayer.addEventListener('timeupdate', function() {
-            const currentTime = audioPlayer.currentTime;
-            document.getElementById('current-time').textContent = formatTime(currentTime);
-        });
-    }
-}
+                {{-- Image Order --}}
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="timeline_INDEX_image_order">
+                            <i class="fas fa-sort-numeric-up mr-1"></i>
+                            ترتیب
+                        </label>
+                        <input type="number" 
+                               id="timeline_INDEX_image_order" 
+                               name="timeline[INDEX][image_order]" 
+                               class="form-control" 
+                               min="1" 
+                               value="1" 
+                               required>
+                    </div>
+                </div>
 
-// Set playback speed function
-function setPlaybackSpeed(speed) {
-    const audioPlayer = document.getElementById('audio-player');
-    if (audioPlayer) {
-        audioPlayer.playbackRate = speed;
-        
-        // Update button styles
-        document.querySelectorAll('[id^="speed-"]').forEach(btn => {
-            btn.classList.remove('bg-blue-500', 'text-white');
-            btn.classList.add('hover:bg-gray-100');
-        });
-        
-        document.getElementById(`speed-${speed}x`).classList.add('bg-blue-500', 'text-white');
-        document.getElementById(`speed-${speed}x`).classList.remove('hover:bg-gray-100');
-    }
-}
-
-// Initialize image timeline management
-function initializeImageTimelineManagement() {
-    const addButton = document.getElementById('add-image-timeline');
-    if (addButton) {
-        addButton.addEventListener('click', () => {
-            addImageTimelineAtCurrentTime();
-        });
-    }
-}
-
-// Add image timeline at current audio time
-function addImageTimelineAtCurrentTime() {
-    const audioPlayer = document.getElementById('audio-player');
-    const episodeDuration = {{ $episode->duration }};
-    
-    if (!audioPlayer) {
-        alert('لطفاً ابتدا فایل صوتی را آپلود کنید');
-        return;
-    }
-    
-    const currentTime = audioPlayer.currentTime || 0;
-    
-    if (currentTime >= episodeDuration) {
-        alert('زمان فعلی نمی‌تواند بیشتر یا مساوی مدت زمان کل فایل صوتی باشد');
-        return;
-    }
-    
-    // Get the last image timeline
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    const existingRows = imageTimelineList.querySelectorAll('.bg-gray-50');
-    
-    if (existingRows.length > 0) {
-        // Update the last image's end time to current audio time
-        const lastRow = existingRows[existingRows.length - 1];
-        const lastEndTimeInput = lastRow.querySelector('input[name^="timeline_end_"]');
-        if (lastEndTimeInput) {
-            lastEndTimeInput.value = currentTime.toFixed(1);
-        }
-    }
-    
-    // Create new image timeline with current time as start and episode duration as end
-    addImageTimelineRow({
-        start_time: currentTime.toFixed(1),
-        end_time: episodeDuration.toFixed(1)
-    });
-}
-
-// Enhanced image timeline management with persistence and auto-linking
-function addImageTimelineRow(data = {}) {
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    if (!imageTimelineList) return;
-    
-    // Get the last image's end time to set as start time for new image
-    const existingRows = imageTimelineList.querySelectorAll('.bg-gray-50');
-    let suggestedStartTime = '';
-    
-    if (existingRows.length > 0) {
-        const lastRow = existingRows[existingRows.length - 1];
-        const lastEndTimeInput = lastRow.querySelector('input[name^="timeline_end_"]');
-        if (lastEndTimeInput && lastEndTimeInput.value) {
-            suggestedStartTime = lastEndTimeInput.value;
-        }
-    }
-    
-    const row = document.createElement('div');
-    row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
-    row.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">تصویر</label>
-                <input type="file" name="timeline_image_${imageTimelineCounter}" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="previewImage(this)">
-                <div class="mt-2 image-preview-container" style="display: none;">
-                    <img class="w-full h-32 object-cover rounded-lg border border-gray-300" alt="پیش‌نمایش تصویر">
+                {{-- Transition Type --}}
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="timeline_INDEX_transition_type">
+                            <i class="fas fa-exchange-alt mr-1"></i>
+                            نوع انتقال
+                        </label>
+                        <select id="timeline_INDEX_transition_type" 
+                                name="timeline[INDEX][transition_type]" 
+                                class="form-control" 
+                                required>
+                            <option value="fade">محو شدن (Fade)</option>
+                            <option value="slide">لغزش (Slide)</option>
+                            <option value="cut">برش (Cut)</option>
+                            <option value="dissolve">حل شدن (Dissolve)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">توضیح صحنه</label>
-                <input type="text" name="timeline_scene_${imageTimelineCounter}" value="${data.scene_description || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="توضیح صحنه">
+
+            <div class="row">
+                {{-- Image URL --}}
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="timeline_INDEX_image_url">
+                            <i class="fas fa-link mr-1"></i>
+                            آدرس تصویر
+                        </label>
+                        <input type="url" 
+                               id="timeline_INDEX_image_url" 
+                               name="timeline[INDEX][image_url]" 
+                               class="form-control" 
+                               placeholder="https://example.com/image.jpg" 
+                               required>
+                        <small class="form-text text-muted">آدرس کامل تصویر</small>
+                    </div>
+                </div>
+
+                {{-- Key Frame --}}
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <div class="form-check mt-4">
+                            <input type="checkbox" 
+                                   id="timeline_INDEX_is_key_frame" 
+                                   name="timeline[INDEX][is_key_frame]" 
+                                   class="form-check-input" 
+                                   value="1">
+                            <label class="form-check-label" for="timeline_INDEX_is_key_frame">
+                                <i class="fas fa-star mr-1"></i>
+                                فریم کلیدی
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Scene Description --}}
+            <div class="row">
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="timeline_INDEX_scene_description">
+                            <i class="fas fa-align-right mr-1"></i>
+                            توضیح صحنه
+                        </label>
+                        <textarea id="timeline_INDEX_scene_description" 
+                                  name="timeline[INDEX][scene_description]" 
+                                  class="form-control" 
+                                  rows="2" 
+                                  placeholder="توضیح کوتاه در مورد این بخش از داستان..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Image Preview --}}
+            <div class="row">
+                <div class="col-12">
+                    <div class="image-preview-container">
+                        <div class="image-preview bg-light p-3 rounded text-center">
+                            <i class="fas fa-image text-muted fa-3x"></i>
+                            <p class="text-muted mt-2">پیش‌نمایش تصویر</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">شروع (ثانیه)</label>
-                <input type="number" name="timeline_start_${imageTimelineCounter}" value="${data.start_time || suggestedStartTime}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0" onchange="updatePreviousImageEndTime(this)">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">پایان (ثانیه)</label>
-                <input type="number" name="timeline_end_${imageTimelineCounter}" value="${data.end_time || ''}" min="0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">نوع انتقال</label>
-                <select name="timeline_transition_${imageTimelineCounter}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    <option value="fade" ${data.transition_type === 'fade' ? 'selected' : ''}>محو</option>
-                    <option value="slide" ${data.transition_type === 'slide' ? 'selected' : ''}>اسلاید</option>
-                    <option value="cut" ${data.transition_type === 'cut' ? 'selected' : ''}>برش</option>
-                    <option value="dissolve" ${data.transition_type === 'dissolve' ? 'selected' : ''}>حل شدن</option>
-                </select>
-            </div>
-            <div class="flex items-center">
-                <label class="flex items-center">
-                    <input type="checkbox" name="timeline_keyframe_${imageTimelineCounter}" ${data.is_key_frame ? 'checked' : ''} class="mr-2">
-                    <span class="text-sm text-gray-700">فریم کلیدی</span>
-                </label>
-            </div>
-        </div>
-        <div class="mt-4 flex justify-end">
-            <button type="button" onclick="removeImageTimelineRow(this)" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                حذف
-            </button>
-        </div>
-    `;
-    
-    imageTimelineList.appendChild(row);
-    imageTimelineCounter++;
-    updateImageTimelineData();
-}
+    </div>
+</template>
 
-// Preview image function
-function previewImage(input) {
-    const file = input.files[0];
-    const previewContainer = input.parentElement.querySelector('.image-preview-container');
-    const previewImg = previewContainer.querySelector('img');
+{{-- Existing Timeline Data (if any) --}}
+@if(session('timeline_data'))
+    <div id="existing-timeline-data" style="display: none;">
+        {{ json_encode(session('timeline_data')) }}
+    </div>
+@endif
+@endsection
+
+@section('scripts')
+{{-- Include Timeline Error Handler --}}
+<script src="{{ asset('js/timeline-error-handler.js') }}"></script>
+
+{{-- Include Timeline Creation Form Handler --}}
+<script src="{{ asset('js/timeline-creation-form.js') }}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize timeline creation form
+    window.timelineCreationForm = new TimelineCreationForm();
     
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImg.src = e.target.result;
-            previewContainer.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    } else {
-        previewContainer.style.display = 'none';
+    // Add first timeline entry by default
+    if (document.getElementById('timeline-entries-container').children.length === 0) {
+        document.getElementById('add-timeline-entry').click();
     }
-}
-
-// Update previous image's end time when current image's start time changes
-function updatePreviousImageEndTime(currentStartTimeInput) {
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    if (!imageTimelineList) return;
-    
-    const currentRow = currentStartTimeInput.closest('.bg-gray-50');
-    const allRows = Array.from(imageTimelineList.querySelectorAll('.bg-gray-50'));
-    const currentIndex = allRows.indexOf(currentRow);
-    
-    // If this is not the first image, update the previous image's end time
-    if (currentIndex > 0) {
-        const previousRow = allRows[currentIndex - 1];
-        const previousEndTimeInput = previousRow.querySelector('input[name^="timeline_end_"]');
-        
-        if (previousEndTimeInput && currentStartTimeInput.value) {
-            previousEndTimeInput.value = currentStartTimeInput.value;
-            updateImageTimelineData();
-        }
-    }
-}
-
-// Remove image timeline row
-function removeImageTimelineRow(button) {
-    const row = button.closest('.bg-gray-50');
-    if (row) {
-        row.remove();
-        updateImageTimelineData();
-    }
-}
-
-// Update image timeline data for form submission
-function updateImageTimelineData() {
-    const imageTimelineData = [];
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    
-    imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
-        const imageInput = row.querySelector('input[type="file"]');
-        const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
-        const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
-        const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
-        const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
-        const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
-        
-        if (startTimeInput && endTimeInput && imageInput && imageInput.files[0]) {
-            const timelineData = {
-                start_time: startTimeInput.value || 0,
-                end_time: endTimeInput.value || 0,
-                scene_description: sceneDescriptionInput ? sceneDescriptionInput.value : '',
-                transition_type: transitionTypeSelect ? transitionTypeSelect.value : 'fade',
-                is_key_frame: isKeyFrameCheckbox ? isKeyFrameCheckbox.checked : false,
-                image_order: index + 1,
-                image_file_name: imageInput.files[0].name,
-                image_file_size: imageInput.files[0].size,
-                image_file_type: imageInput.files[0].type
-            };
-            
-            imageTimelineData.push(timelineData);
-        }
-    });
-    
-    const hiddenInput = document.getElementById('image-timeline-data');
-    if (hiddenInput) {
-        hiddenInput.value = JSON.stringify(imageTimelineData);
-    }
-}
-
-function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
-
-// Handle form submission
-document.getElementById('timeline-form').addEventListener('submit', function(e) {
-    updateImageTimelineData();
-    
-    const imageTimelineData = JSON.parse(document.getElementById('image-timeline-data').value || '[]');
-    if (imageTimelineData.length === 0) {
-        e.preventDefault();
-        alert('لطفاً حداقل یک تصویر برای تایم‌لاین اضافه کنید');
-        return;
-    }
-    
-    // Create FormData to handle file uploads properly
-    const formData = new FormData();
-    formData.append('_token', document.querySelector('input[name="_token"]').value);
-    formData.append('image_timeline_data', document.getElementById('image-timeline-data').value);
-    
-    // Add all image files
-    const imageTimelineList = document.getElementById('image-timeline-list');
-    imageTimelineList.querySelectorAll('input[type="file"]').forEach((input, index) => {
-        if (input.files[0]) {
-            formData.append(`timeline_image_${index}`, input.files[0]);
-        }
-    });
-    
-    // Submit via fetch
-    e.preventDefault();
-    
-    fetch(this.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            window.location.href = response.url || '{{ route("admin.episodes.timeline.index", $episode) }}';
-        } else {
-            return response.text().then(html => {
-                document.body.innerHTML = html;
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('خطا در ارسال فرم: ' + error.message);
-    });
 });
 </script>
+@endsection
+
+@section('styles')
+<style>
+.timeline-entry {
+    border-left: 4px solid #007bff;
+}
+
+.timeline-entry .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.timeline-entry .entry-number {
+    background-color: #007bff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+
+.image-preview-container {
+    margin-top: 15px;
+}
+
+.image-preview img {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.timeline-error-alert,
+.timeline-success-alert,
+.timeline-warning-alert {
+    animation: slideInDown 0.5s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.form-control.is-invalid {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.timeline-field-error {
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
 @endsection

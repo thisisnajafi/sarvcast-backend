@@ -176,12 +176,33 @@ class StoryTimelineController extends Controller
             Log::error('Failed to create timeline', [
                 'story_id' => $story->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->except(['timeline_image_*'])
             ]);
+
+            // Provide more detailed error information
+            $errorMessage = 'خطا در ایجاد تایم‌لاین: ' . $e->getMessage();
+            
+            // Add specific error context
+            if (str_contains($e->getMessage(), 'validation')) {
+                $errorMessage = 'خطا در اعتبارسنجی داده‌ها: ' . $e->getMessage();
+            } elseif (str_contains($e->getMessage(), 'upload')) {
+                $errorMessage = 'خطا در آپلود تصویر: ' . $e->getMessage();
+            } elseif (str_contains($e->getMessage(), 'database')) {
+                $errorMessage = 'خطا در ذخیره‌سازی: ' . $e->getMessage();
+            } elseif (str_contains($e->getMessage(), 'overlap')) {
+                $errorMessage = 'تداخل زمانی در تایم‌لاین: ' . $e->getMessage();
+            }
 
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'خطا در ایجاد تایم‌لاین: ' . $e->getMessage());
+                ->with('error', $errorMessage)
+                ->with('error_details', [
+                    'error_code' => 'STORY_TIMELINE_CREATION_FAILED',
+                    'timestamp' => now()->toISOString(),
+                    'story_id' => $story->id,
+                    'selected_episode_id' => $request->selected_episode_id
+                ]);
         }
     }
 
