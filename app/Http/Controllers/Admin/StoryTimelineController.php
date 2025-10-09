@@ -102,7 +102,36 @@ class StoryTimelineController extends Controller
                     ->with('error', implode(', ', $errors));
             }
 
+            // Get all uploaded files and match them with timeline data
+            $uploadedFiles = $request->allFiles();
+            $timelineFiles = [];
+            
+            // Extract timeline image files and sort them by index
+            foreach ($uploadedFiles as $key => $file) {
+                if (strpos($key, 'timeline_image_') === 0) {
+                    $fileIndex = (int) str_replace('timeline_image_', '', $key);
+                    $timelineFiles[$fileIndex] = $file;
+                }
+            }
+            
+            // Sort files by index to ensure correct order
+            ksort($timelineFiles);
+            
+            Log::info("Processing timeline files", [
+                'total_timeline_entries' => count($imageTimelineData),
+                'total_uploaded_files' => count($timelineFiles),
+                'file_indices' => array_keys($timelineFiles)
+            ]);
+
+            // Validate that we have enough files for all timeline entries
+            if (count($timelineFiles) !== count($imageTimelineData)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "تعداد فایل‌های آپلود شده (" . count($timelineFiles) . ") با تعداد ورودی‌های تایم‌لاین (" . count($imageTimelineData) . ") مطابقت ندارد.");
+            }
+
             // Process timeline entries - create one timeline per episode
+            $fileIndex = 0;
             foreach ($imageTimelineData as $index => $timelineData) {
                 // Debug each timeline entry
                 Log::info("Processing timeline entry {$index}", $timelineData);
@@ -112,22 +141,22 @@ class StoryTimelineController extends Controller
                     'selected_episode_id' => $selectedEpisodeId
                 ]);
 
-                // Handle image upload - get the actual file from request
+                // Handle image upload - get the actual file from uploaded files
                 $imageFile = null;
                 
-                // Look for the file in the request with the correct index
-                $fileKey = 'timeline_image_' . $index;
-                if ($request->hasFile($fileKey)) {
-                    $imageFile = $request->file($fileKey);
+                // Get the next available file
+                if (isset($timelineFiles[$fileIndex])) {
+                    $imageFile = $timelineFiles[$fileIndex];
                     Log::info("Found image file for timeline {$index}", [
-                        'file_key' => $fileKey,
+                        'file_index' => $fileIndex,
                         'file_size' => $imageFile->getSize(),
                         'file_name' => $imageFile->getClientOriginalName()
                     ]);
+                    $fileIndex++;
                 } else {
                     Log::warning("No image file found for timeline {$index}", [
-                        'file_key' => $fileKey,
-                        'available_files' => array_keys($request->allFiles())
+                        'file_index' => $fileIndex,
+                        'available_files' => array_keys($timelineFiles)
                     ]);
                 }
                 
