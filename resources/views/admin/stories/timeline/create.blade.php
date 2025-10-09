@@ -435,6 +435,23 @@ function formatTime(seconds) {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
+// Clear file error indicators when file is selected
+function clearFileError(input) {
+    input.style.borderColor = '';
+    input.style.backgroundColor = '';
+    const errorDiv = input.parentNode.querySelector('.file-error-message');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+// Add event listeners to file inputs to clear errors
+document.addEventListener('change', function(e) {
+    if (e.target.type === 'file' && e.target.name.includes('timeline_image')) {
+        clearFileError(e.target);
+    }
+});
+
 // Handle form submission
 document.getElementById('timeline-form').addEventListener('submit', function(e) {
     updateImageTimelineData();
@@ -489,13 +506,48 @@ document.getElementById('timeline-form').addEventListener('submit', function(e) 
         selectedEpisodeId: selectedEpisodeId
     });
     
-    // Add all image files
+    // Add all image files - only those with actual files
+    let fileIndex = 0;
     imageTimelineList.querySelectorAll('input[type="file"]').forEach((input, index) => {
         if (input.files[0]) {
-            formData.append(`timeline_image_${index}`, input.files[0]);
-            console.log(`Added file ${index}:`, input.files[0].name);
+            formData.append(`timeline_image_${fileIndex}`, input.files[0]);
+            console.log(`Added file ${fileIndex}:`, input.files[0].name);
+            fileIndex++;
         }
     });
+    
+    // Validate that file count matches timeline entries count
+    console.log('File count:', fileIndex, 'Timeline entries:', imageTimelineData.length);
+    if (fileIndex !== imageTimelineData.length) {
+        e.preventDefault();
+        
+        // Highlight missing file inputs
+        imageTimelineList.querySelectorAll('input[type="file"]').forEach((input, index) => {
+            if (!input.files[0]) {
+                input.style.borderColor = '#dc3545';
+                input.style.backgroundColor = '#fff5f5';
+                
+                // Add error message
+                let errorDiv = input.parentNode.querySelector('.file-error-message');
+                if (!errorDiv) {
+                    errorDiv = document.createElement('div');
+                    errorDiv.className = 'file-error-message text-danger small mt-1';
+                    input.parentNode.appendChild(errorDiv);
+                }
+                errorDiv.textContent = 'فایل تصویر الزامی است';
+            } else {
+                input.style.borderColor = '';
+                input.style.backgroundColor = '';
+                const errorDiv = input.parentNode.querySelector('.file-error-message');
+                if (errorDiv) {
+                    errorDiv.remove();
+                }
+            }
+        });
+        
+        alert(`تعداد فایل‌های آپلود شده (${fileIndex}) با تعداد ورودی‌های تایم‌لاین (${imageTimelineData.length}) مطابقت ندارد. لطفاً همه فیلدهای تصویر را پر کنید.`);
+        return;
+    }
     
     // Submit via fetch
     e.preventDefault();

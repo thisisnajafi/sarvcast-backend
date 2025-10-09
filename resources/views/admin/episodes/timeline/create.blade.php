@@ -16,10 +16,10 @@
                         <a href="{{ route('admin.episodes.timeline.index', $episode) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-right mr-1"></i>
                             بازگشت به لیست تایم‌لاین‌ها
-                        </a>
+        </a>
+    </div>
                     </div>
-                </div>
-
+                    
                 <div class="card-body">
                     {{-- Include Timeline Alerts Component --}}
                     <x-timeline-alerts />
@@ -34,9 +34,9 @@
                                 <div class="info-box-content">
                                     <span class="info-box-text">اپیزود</span>
                                     <span class="info-box-number">{{ $episode->title }}</span>
-                                </div>
-                            </div>
-                        </div>
+                    </div>
+                </div>
+            </div>
                         <div class="col-md-6">
                             <div class="info-box">
                                 <span class="info-box-icon bg-success">
@@ -45,10 +45,10 @@
                                 <div class="info-box-content">
                                     <span class="info-box-text">مدت زمان</span>
                                     <span class="info-box-number">{{ $episode->duration }} ثانیه</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            </div>
+            </div>
+        </div>
+    </div>
 
                     {{-- Timeline Creation Form --}}
                     <form id="timeline-creation-form" 
@@ -56,8 +56,8 @@
                           action="{{ route('admin.episodes.timeline.store', $episode) }}" 
                           method="POST" 
                           enctype="multipart/form-data">
-                        @csrf
-                        
+            @csrf
+
                         {{-- Hidden Episode Duration --}}
                         <input type="hidden" id="episode-duration" value="{{ $episode->duration }}">
 
@@ -95,12 +95,12 @@
                                 <div class="col-md-6 text-right">
                                     <a href="{{ route('admin.episodes.timeline.index', $episode) }}" class="btn btn-outline-secondary btn-lg">
                                         <i class="fas fa-times mr-2"></i>
-                                        انصراف
-                                    </a>
+                    انصراف
+                </a>
                                 </div>
                             </div>
-                        </div>
-                    </form>
+            </div>
+        </form>
                 </div>
             </div>
         </div>
@@ -138,8 +138,8 @@
                                max="{{ $episode->duration }}" 
                                required>
                         <small class="form-text text-muted">زمان شروع این بخش از اپیزود</small>
-                    </div>
                 </div>
+            </div>
 
                 {{-- End Time --}}
                 <div class="col-md-3">
@@ -156,8 +156,8 @@
                                max="{{ $episode->duration }}" 
                                required>
                         <small class="form-text text-muted">زمان پایان این بخش از اپیزود</small>
-                    </div>
-                </div>
+            </div>
+        </div>
 
                 {{-- Image Order --}}
                 <div class="col-md-2">
@@ -173,8 +173,8 @@
                                min="1" 
                                value="1" 
                                required>
-                    </div>
-                </div>
+            </div>
+            </div>
 
                 {{-- Transition Type --}}
                 <div class="col-md-4">
@@ -191,8 +191,8 @@
                             <option value="slide">لغزش (Slide)</option>
                             <option value="cut">برش (Cut)</option>
                             <option value="dissolve">حل شدن (Dissolve)</option>
-                        </select>
-                    </div>
+                </select>
+            </div>
                 </div>
             </div>
 
@@ -226,11 +226,11 @@
                             <label class="form-check-label" for="timeline_INDEX_is_key_frame">
                                 <i class="fas fa-star mr-1"></i>
                                 فریم کلیدی
-                            </label>
-                        </div>
-                    </div>
-                </div>
+                </label>
             </div>
+        </div>
+                </div>
+        </div>
 
             {{-- Scene Description --}}
             <div class="row">
