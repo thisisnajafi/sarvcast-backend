@@ -506,13 +506,24 @@ document.getElementById('timeline-form').addEventListener('submit', function(e) 
         selectedEpisodeId: selectedEpisodeId
     });
     
-    // Add all image files - only those with actual files
+    // Add all image files - use the same validation logic as updateImageTimelineData()
     let fileIndex = 0;
-    imageTimelineList.querySelectorAll('input[type="file"]').forEach((input, index) => {
-        if (input.files[0]) {
-            formData.append(`timeline_image_${fileIndex}`, input.files[0]);
-            console.log(`Added file ${fileIndex}:`, input.files[0].name);
-            fileIndex++;
+    imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
+        const imageInput = row.querySelector('input[type="file"]');
+        const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
+        const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
+        
+        // Use the same validation logic as updateImageTimelineData()
+        if (startTimeInput && endTimeInput && imageInput && imageInput.files && imageInput.files[0]) {
+            const startTime = parseFloat(startTimeInput.value) || 0;
+            const endTime = parseFloat(endTimeInput.value) || 0;
+            
+            // Only add if we have valid time values (same as timeline data)
+            if (startTime >= 0 && endTime > startTime) {
+                formData.append(`timeline_image_${fileIndex}`, imageInput.files[0]);
+                console.log(`Added file ${fileIndex}:`, imageInput.files[0].name);
+                fileIndex++;
+            }
         }
     });
     
