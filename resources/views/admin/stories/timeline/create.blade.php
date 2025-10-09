@@ -388,37 +388,51 @@ function removeImageTimelineRow(button) {
     }
 }
 
+// Helper function to check if a timeline row is valid (has file and valid times)
+function isValidTimelineRow(row) {
+    const imageInput = row.querySelector('input[type="file"]');
+    const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
+    const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
+    
+    // Check if we have required inputs
+    if (!startTimeInput || !endTimeInput || !imageInput || !imageInput.files || !imageInput.files[0]) {
+        return false;
+    }
+    
+    // Check if time values are valid
+    const startTime = parseFloat(startTimeInput.value) || 0;
+    const endTime = parseFloat(endTimeInput.value) || 0;
+    
+    return startTime >= 0 && endTime > startTime;
+}
+
 // Update image timeline data for form submission
 function updateImageTimelineData() {
     const imageTimelineData = [];
     const imageTimelineList = document.getElementById('image-timeline-list');
     
     imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
-        const imageInput = row.querySelector('input[type="file"]');
-        const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
-        const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
-        const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
-        const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
-        const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
-        
-        // Only include if we have the required time inputs and an image file
-        if (startTimeInput && endTimeInput && imageInput && imageInput.files && imageInput.files[0]) {
+        if (isValidTimelineRow(row)) {
+            const imageInput = row.querySelector('input[type="file"]');
+            const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
+            const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
+            const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
+            const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
+            const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
+            
             const timelineData = {
                 start_time: parseFloat(startTimeInput.value) || 0,
                 end_time: parseFloat(endTimeInput.value) || 0,
                 scene_description: sceneDescriptionInput ? sceneDescriptionInput.value : '',
                 transition_type: transitionTypeSelect ? transitionTypeSelect.value : 'fade',
                 is_key_frame: isKeyFrameCheckbox ? isKeyFrameCheckbox.checked : false,
-                image_order: index + 1,
+                image_order: imageTimelineData.length + 1,
                 image_file_name: imageInput.files[0].name,
                 image_file_size: imageInput.files[0].size,
                 image_file_type: imageInput.files[0].type
             };
             
-            // Only add if we have valid time values
-            if (timelineData.start_time >= 0 && timelineData.end_time > timelineData.start_time) {
-                imageTimelineData.push(timelineData);
-            }
+            imageTimelineData.push(timelineData);
         }
     });
     
@@ -506,15 +520,37 @@ document.getElementById('timeline-form').addEventListener('submit', function(e) 
         selectedEpisodeId: selectedEpisodeId
     });
     
-    // Add all image files - only those with actual files
+    // Add all image files - use the same logic as updateImageTimelineData()
     let fileIndex = 0;
-    imageTimelineList.querySelectorAll('input[type="file"]').forEach((input, index) => {
-        if (input.files[0]) {
-            formData.append(`timeline_image_${fileIndex}`, input.files[0]);
-            console.log(`Added file ${fileIndex}:`, input.files[0].name);
+    const allRows = imageTimelineList.querySelectorAll('.bg-gray-50');
+    console.log('Total rows found:', allRows.length);
+    
+    // Use the same filtering logic as updateImageTimelineData()
+    allRows.forEach((row, index) => {
+        const imageInput = row.querySelector('input[type="file"]');
+        const startTimeInput = row.querySelector('input[name^="timeline_start_"]');
+        const endTimeInput = row.querySelector('input[name^="timeline_end_"]');
+        
+        console.log(`Row ${index}:`, {
+            isValid: isValidTimelineRow(row),
+            hasImageInput: !!imageInput,
+            hasFile: imageInput && imageInput.files && imageInput.files[0],
+            fileName: imageInput && imageInput.files && imageInput.files[0] ? imageInput.files[0].name : 'No file',
+            hasStartTime: !!startTimeInput,
+            hasEndTime: !!endTimeInput,
+            startTime: startTimeInput ? startTimeInput.value : 'N/A',
+            endTime: endTimeInput ? endTimeInput.value : 'N/A'
+        });
+        
+        // Use the same validation logic as updateImageTimelineData()
+        if (isValidTimelineRow(row)) {
+            formData.append(`timeline_image_${fileIndex}`, imageInput.files[0]);
+            console.log(`Added file ${fileIndex}:`, imageInput.files[0].name);
             fileIndex++;
         }
     });
+    
+    console.log('Final file count:', fileIndex);
     
     // Validate that file count matches timeline entries count
     console.log('File count:', fileIndex, 'Timeline entries:', imageTimelineData.length);
