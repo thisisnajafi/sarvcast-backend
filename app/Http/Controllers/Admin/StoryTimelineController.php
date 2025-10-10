@@ -128,7 +128,7 @@ class StoryTimelineController extends Controller
             ]);
 
             // Check for PHP upload limit
-            $maxFileUploads = (int) config('timeline.max_file_uploads', ini_get('max_file_uploads'));
+            $maxFileUploads = 300;
             if ($maxFileUploads && count($imageTimelineData) > $maxFileUploads) {
                 return redirect()->back()
                     ->withInput()
