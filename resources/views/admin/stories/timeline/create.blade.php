@@ -141,6 +141,7 @@ let currentEpisodeDuration = 0;
 document.addEventListener('DOMContentLoaded', function() {
     initializeEpisodeSelector();
     initializeImageTimelineManagement();
+    checkUploadLimit();
 });
 
 // Episode Selector Functions
@@ -338,6 +339,7 @@ function addImageTimelineRow(data = {}) {
     imageTimelineList.appendChild(row);
     imageTimelineCounter++;
     updateImageTimelineData();
+    checkUploadLimit();
 }
 
 // Preview image function
@@ -385,6 +387,7 @@ function removeImageTimelineRow(button) {
     if (row) {
         row.remove();
         updateImageTimelineData();
+        checkUploadLimit();
     }
 }
 
@@ -442,6 +445,32 @@ function clearFileError(input) {
     const errorDiv = input.parentNode.querySelector('.file-error-message');
     if (errorDiv) {
         errorDiv.remove();
+    }
+}
+
+// Check PHP upload limit and show warning
+function checkUploadLimit() {
+    const timelineRows = document.querySelectorAll('#image-timeline-list .bg-gray-50');
+    const phpMaxFileUploads = {{ config('timeline.max_file_uploads', 300) }};
+    
+    // Remove existing warning
+    const existingWarning = document.getElementById('upload-limit-warning');
+    if (existingWarning) {
+        existingWarning.remove();
+    }
+    
+    if (timelineRows.length > phpMaxFileUploads) {
+        const warningDiv = document.createElement('div');
+        warningDiv.id = 'upload-limit-warning';
+        warningDiv.className = 'alert alert-warning mt-3';
+        warningDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            <strong>هشدار:</strong> تعداد تصاویر (${timelineRows.length}) از محدودیت PHP (${phpMaxFileUploads} فایل) بیشتر است.
+            <br><small>لطفاً تعداد تصاویر را کاهش دهید یا با مدیر سیستم تماس بگیرید.</small>
+        `;
+        
+        const form = document.getElementById('timeline-form');
+        form.insertBefore(warningDiv, form.firstChild);
     }
 }
 
@@ -527,6 +556,14 @@ document.getElementById('timeline-form').addEventListener('submit', function(e) 
         }
     });
     
+    // Check PHP upload limit
+    const phpMaxFileUploads = {{ config('timeline.max_file_uploads', 300) }};
+    if (imageTimelineData.length > phpMaxFileUploads) {
+        e.preventDefault();
+        alert(`تعداد تصاویر تایم‌لاین (${imageTimelineData.length}) از محدودیت PHP (${phpMaxFileUploads} فایل در هر درخواست) بیشتر است.\n\nراه‌حل:\n1. تعداد تصاویر را کاهش دهید\n2. با مدیر سیستم تماس بگیرید تا محدودیت افزایش یابد\n3. تصاویر را در چند مرحله آپلود کنید`);
+        return;
+    }
+
     // Validate that file count matches timeline entries count
     console.log('File count:', fileIndex, 'Timeline entries:', imageTimelineData.length);
     if (fileIndex !== imageTimelineData.length) {

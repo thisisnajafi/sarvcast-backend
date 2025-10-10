@@ -120,14 +120,34 @@ class StoryTimelineController extends Controller
             Log::info("Processing timeline files", [
                 'total_timeline_entries' => count($imageTimelineData),
                 'total_uploaded_files' => count($timelineFiles),
-                'file_indices' => array_keys($timelineFiles)
+                'file_indices' => array_keys($timelineFiles),
+                'php_max_file_uploads' => ini_get('max_file_uploads'),
+                'php_post_max_size' => ini_get('post_max_size'),
+                'php_upload_max_filesize' => ini_get('upload_max_filesize'),
+                'php_memory_limit' => ini_get('memory_limit')
             ]);
+
+            // Check for PHP upload limit
+            $maxFileUploads = (int) config('timeline.max_file_uploads', ini_get('max_file_uploads'));
+            if ($maxFileUploads && count($imageTimelineData) > $maxFileUploads) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "تعداد تصاویر تایم‌لاین (" . count($imageTimelineData) . ") از محدودیت PHP ({$maxFileUploads} فایل در هر درخواست) بیشتر است. لطفاً تعداد تصاویر را کاهش دهید یا با مدیر سیستم تماس بگیرید تا محدودیت افزایش یابد.")
+                    ->with('warning', "راه‌حل: محدودیت PHP را افزایش دهید (max_file_uploads = {$maxFileUploads} یا بیشتر) یا تصاویر را در چند مرحله آپلود کنید.");
+            }
 
             // Validate that we have enough files for all timeline entries
             if (count($timelineFiles) !== count($imageTimelineData)) {
+                $errorMessage = "تعداد فایل‌های آپلود شده (" . count($timelineFiles) . ") با تعداد ورودی‌های تایم‌لاین (" . count($imageTimelineData) . ") مطابقت ندارد.";
+                
+                // Add PHP limit information if applicable
+                if ($maxFileUploads && count($imageTimelineData) > $maxFileUploads) {
+                    $errorMessage .= " این ممکن است به دلیل محدودیت PHP باشد (حداکثر {$maxFileUploads} فایل در هر درخواست).";
+                }
+                
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', "تعداد فایل‌های آپلود شده (" . count($timelineFiles) . ") با تعداد ورودی‌های تایم‌لاین (" . count($imageTimelineData) . ") مطابقت ندارد.");
+                    ->with('error', $errorMessage);
             }
 
             // Process timeline entries - create one timeline per episode
