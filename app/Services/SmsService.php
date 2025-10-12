@@ -94,6 +94,23 @@ class SmsService
      */
     public function sendSmsWithTemplate(string $to, int $templateId, array $parameters = []): array
     {
+        // Use procedural PHP method as primary (it works!)
+        try {
+            $text = implode(';', $parameters);
+            $proceduralResult = $this->sendSmsWithProceduralPhp($to, $templateId, $text);
+            if ($proceduralResult['success']) {
+                return $proceduralResult;
+            }
+        } catch (\Exception $proceduralError) {
+            Log::error('Procedural PHP method failed in sendSmsWithTemplate', [
+                'to' => $to,
+                'template_id' => $templateId,
+                'parameters' => $parameters,
+                'error' => $proceduralError->getMessage()
+            ]);
+        }
+
+        // Fallback to GitHub package method if procedural fails
         try {
             // Use Melipayamak library with REST method
             $username = $this->username;
@@ -121,7 +138,7 @@ class SmsService
             $json = json_decode($response);
 
             // Log the response
-            Log::info('SMS sent via Melipayamk with template', [
+            Log::info('SMS sent via Melipayamk with template (GitHub package fallback)', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
                 'response' => $json,
@@ -147,7 +164,7 @@ class SmsService
                 'isFlash' => false
             ];
 
-            Log::error('SMS sending with template failed', [
+            Log::error('Both procedural and GitHub package methods failed in sendSmsWithTemplate', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
                 'error' => $e->getMessage(),
@@ -205,9 +222,27 @@ class SmsService
      */
     private function sendOtpWithTemplate(string $phoneNumber, string $otpCode, string $purpose): array
     {
-        try {
-            $templateId = config('services.melipayamk.templates.verification', 372382);
+        $templateId = config('services.melipayamk.templates.verification', 372382);
 
+        // Use procedural PHP method as primary (it works!)
+        try {
+            $proceduralResult = $this->sendSmsWithProceduralPhp($phoneNumber, $templateId, $otpCode);
+            if ($proceduralResult['success']) {
+                // Store OTP attempt in database
+                $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
+                return $proceduralResult;
+            }
+        } catch (\Exception $proceduralError) {
+            Log::error('Procedural PHP method failed', [
+                'phone_number' => $phoneNumber,
+                'template_id' => $templateId,
+                'otp_code' => $otpCode,
+                'error' => $proceduralError->getMessage()
+            ]);
+        }
+
+        // Fallback to GitHub package method if procedural fails
+        try {
             // Use Melipayamak library for template SMS (REST method)
             $username = $this->username;
             $password = $this->apiToken;
@@ -231,7 +266,7 @@ class SmsService
             $json = json_decode($response);
 
             // Log the response
-            Log::info('SMS sent via Melipayamk template pattern 372382', [
+            Log::info('SMS sent via Melipayamk template pattern 372382 (GitHub package fallback)', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
                 'response' => $json,
@@ -250,11 +285,11 @@ class SmsService
                 'success' => $success,
                 'response' => $json,
                 'message_id' => $json->Value ?? $json->StrRetStatus ?? null,
-                'method' => 'template'
+                'method' => 'template_fallback'
             ];
 
         } catch (\Exception $e) {
-            Log::error('Template SMS sending failed, trying procedural method', [
+            Log::error('Both procedural and GitHub package methods failed', [
                 'melipayamak_username' => $this->username,
                 'phone_number' => $phoneNumber,
                 'template_id' => $templateId,
@@ -263,27 +298,10 @@ class SmsService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            // Try procedural PHP method as fallback
-            try {
-                $proceduralResult = $this->sendSmsWithProceduralPhp($phoneNumber, $templateId, $otpCode);
-                if ($proceduralResult['success']) {
-                    // Store OTP attempt in database
-                    $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
-                    return $proceduralResult;
-                }
-            } catch (\Exception $proceduralError) {
-                Log::error('Procedural PHP method also failed', [
-                    'phone_number' => $phoneNumber,
-                    'template_id' => $templateId,
-                    'otp_code' => $otpCode,
-                    'error' => $proceduralError->getMessage()
-                ]);
-            }
-
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
-                'method' => 'template'
+                'method' => 'template_failed'
             ];
         }
     }
