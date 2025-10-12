@@ -17,7 +17,7 @@ class StoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test data
         $this->category = Category::factory()->create();
         $this->story = Story::factory()->create(['category_id' => $this->category->id]);
@@ -331,6 +331,49 @@ class StoryTest extends TestCase
                             ]
                         ],
                         'pagination'
+                    ]
+                ]);
+    }
+
+    /**
+     * Test episode details includes story favorite status
+     */
+    public function test_episode_details_includes_story_favorite_status()
+    {
+        $episode = Episode::factory()->create(['story_id' => $this->story->id]);
+
+        // Test when story is not favorited
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->getJson("/api/v1/episodes/{$episode->id}");
+
+        $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'success',
+                    'data' => [
+                        'episode',
+                        'access_info',
+                        'is_story_favorited'
+                    ]
+                ])
+                ->assertJson([
+                    'data' => [
+                        'is_story_favorited' => false
+                    ]
+                ]);
+
+        // Add story to favorites
+        $this->user->favorites()->create(['story_id' => $this->story->id]);
+
+        // Test when story is favorited
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->getJson("/api/v1/episodes/{$episode->id}");
+
+        $response->assertStatus(200)
+                ->assertJson([
+                    'data' => [
+                        'is_story_favorited' => true
                     ]
                 ]);
     }

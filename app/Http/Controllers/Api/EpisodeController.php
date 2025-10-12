@@ -24,19 +24,19 @@ class EpisodeController extends Controller
     private function successResponse($data = null, $message = null, $meta = null)
     {
         $response = ['success' => true];
-        
+
         if ($message) {
             $response['message'] = $message;
         }
-        
+
         if ($data !== null) {
             $response['data'] = $data;
         }
-        
+
         if ($meta) {
             $response['meta'] = $meta;
         }
-        
+
         return response()->json($response);
     }
 
@@ -49,15 +49,15 @@ class EpisodeController extends Controller
             'success' => false,
             'message' => $message
         ];
-        
+
         if ($errorCode) {
             $response['error_code'] = $errorCode;
         }
-        
+
         if ($data) {
             $response['data'] = $data;
         }
-        
+
         return response()->json($response, $statusCode);
     }
     /**
@@ -80,7 +80,7 @@ class EpisodeController extends Controller
         // Apply sorting
         $sortBy = $request->get('sort_by', 'episode_number');
         $sortOrder = $request->get('sort_order', 'asc');
-        
+
         $allowedSortFields = ['episode_number', 'title', 'duration', 'play_count', 'rating', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -108,12 +108,12 @@ class EpisodeController extends Controller
     public function show(Request $request, Episode $episode)
     {
         $includeTimeline = $request->get('include_timeline', false);
-        
+
         $episode->load(['story', 'narrator', 'people', 'imageTimelines.voiceActor.person']);
 
         // Check access control
         $user = $request->user();
-        
+
         if (!$user) {
             return $this->errorResponse(
                 'احراز هویت الزامی است',
@@ -129,7 +129,7 @@ class EpisodeController extends Controller
                 ]
             );
         }
-        
+
         $accessInfo = $this->accessControlService->canAccessEpisode($user->id, $episode->id);
 
         if (!$accessInfo['has_access']) {
@@ -144,9 +144,13 @@ class EpisodeController extends Controller
             ], 403);
         }
 
+        // Check if the story is in user's favorites
+        $isStoryFavorited = \App\Models\Favorite::isFavorited($user->id, $episode->story_id);
+
         $responseData = [
             'episode' => $episode,
-            'access_info' => $accessInfo
+            'access_info' => $accessInfo,
+            'is_story_favorited' => $isStoryFavorited
         ];
 
         // Add timeline data if episode uses image timeline
@@ -230,7 +234,7 @@ class EpisodeController extends Controller
 
         // Check if already bookmarked
         $existingBookmark = $user->favorites()->where('episode_id', $episode->id)->first();
-        
+
         if ($existingBookmark) {
             return response()->json([
                 'success' => false,
