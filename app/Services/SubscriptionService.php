@@ -260,7 +260,7 @@ class SubscriptionService
     public function getSubscriptionStatus(int $userId): array
     {
         $activeSubscription = $this->getActiveSubscription($userId);
-        
+
         if (!$activeSubscription) {
             return [
                 'has_subscription' => false,
@@ -270,7 +270,7 @@ class SubscriptionService
             ];
         }
 
-        $daysRemaining = Carbon::parse($activeSubscription->end_date)->diffInDays(now(), false);
+        $daysRemaining = now()->diffInDays($activeSubscription->end_date, false);
 
         return [
             'has_subscription' => true,
@@ -468,7 +468,7 @@ class SubscriptionService
             }
 
             $remainingDays = Carbon::parse($subscription->end_date)->diffInDays(now());
-            
+
             // Calculate prorated price
             $currentPlan = $this->getPlan($subscription->type);
             if (!$currentPlan) {
@@ -476,7 +476,7 @@ class SubscriptionService
             }
             $currentDailyPrice = $currentPlan->price / $currentPlan->duration_days;
             $newDailyPrice = $newPlan->price / $newPlan->duration_days;
-            
+
             $priceDifference = ($newDailyPrice - $currentDailyPrice) * $remainingDays;
 
             $subscription->update([

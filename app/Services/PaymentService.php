@@ -29,7 +29,7 @@ class PaymentService
     {
         try {
             // Determine API URL based on sandbox mode
-            $apiUrl = $this->sandboxMode 
+            $apiUrl = $this->sandboxMode
                 ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json'
                 : 'https://api.zarinpal.com/pg/v4/payment/request.json';
 
@@ -79,7 +79,7 @@ class PaymentService
 
             if ($response->successful()) {
                 $result = $response->json();
-                
+
                 if ($result['data']['code'] == 100) {
                     $payment->update([
                         'transaction_id' => $result['data']['authority'],
@@ -87,7 +87,7 @@ class PaymentService
                         'status' => 'pending'
                     ]);
 
-                    $paymentUrl = $this->sandboxMode 
+                    $paymentUrl = $this->sandboxMode
                         ? 'https://sandbox.zarinpal.com/pg/StartPay/' . $result['data']['authority']
                         : 'https://www.zarinpal.com/pg/StartPay/' . $result['data']['authority'];
 
@@ -105,7 +105,7 @@ class PaymentService
                 } else {
                     $errorCode = $result['data']['code'] ?? 'unknown';
                     $errorMessage = $result['errors']['message'] ?? 'خطای نامشخص';
-                    
+
                     // Map common ZarinPal error codes to Persian messages
                     $errorMessages = [
                         -1 => 'اطلاعات ارسال شده ناقص است',
@@ -125,9 +125,9 @@ class PaymentService
                         100 => 'عملیات با موفقیت انجام شد',
                         101 => 'عملیات پرداخت قبلاً انجام شده است'
                     ];
-                    
+
                     $persianMessage = $errorMessages[$errorCode] ?? $errorMessage;
-                    
+
                     Log::error('ZarinPal payment initiation failed', [
                         'payment_id' => $payment->id,
                         'error_code' => $errorCode,
@@ -157,13 +157,13 @@ class PaymentService
                     'sandbox_mode' => $this->sandboxMode,
                     'merchant_id' => $this->zarinpalMerchantId
                 ];
-                
+
                 Log::error('ZarinPal API request failed', $errorDetails);
 
                 // Try to parse error response
                 $responseBody = $response->body();
                 $errorMessage = 'خطا در ارتباط با درگاه پرداخت';
-                
+
                 try {
                     $errorData = json_decode($responseBody, true);
                     if (isset($errorData['errors']['message'])) {
@@ -200,7 +200,7 @@ class PaymentService
                 'sandbox_mode' => $this->sandboxMode,
                 'merchant_id' => $this->zarinpalMerchantId
             ];
-            
+
             Log::error('ZarinPal payment initiation failed with exception', $errorDetails);
 
             return [
@@ -224,7 +224,7 @@ class PaymentService
     {
         try {
             // Determine API URL based on sandbox mode
-            $apiUrl = $this->sandboxMode 
+            $apiUrl = $this->sandboxMode
                 ? 'https://sandbox.zarinpal.com/pg/v4/payment/verify.json'
                 : 'https://api.zarinpal.com/pg/v4/payment/verify.json';
 
@@ -246,14 +246,14 @@ class PaymentService
 
             if ($response->successful()) {
                 $result = $response->json();
-                
+
                 Log::info('ZarinPal verification response', [
                     'authority' => $authority,
                     'response_code' => $result['data']['code'] ?? 'No code',
                     'response_data' => $result['data'] ?? 'No data',
                     'response_errors' => $result['errors'] ?? 'No errors'
                 ]);
-                
+
                 if ($result['data']['code'] == 100) {
                     Log::info('ZarinPal payment verified successfully', [
                         'authority' => $authority,
@@ -318,19 +318,19 @@ class PaymentService
     {
         $authority = $data['Authority'] ?? null;
         $status = $data['Status'] ?? null;
-        
+
         Log::info('Payment callback received', [
             'authority' => $authority,
             'status' => $status,
             'all_data' => $data
         ]);
-        
+
         if ($status === 'OK' && $authority) {
             $payment = Payment::where('transaction_id', $authority)
                 ->where('payment_method', 'zarinpal')
                 ->where('status', 'pending')
                 ->first();
-            
+
             Log::info('Payment lookup result', [
                 'authority' => $authority,
                 'payment_found' => $payment ? true : false,
@@ -338,17 +338,17 @@ class PaymentService
                 'payment_amount' => $payment?->amount,
                 'payment_status' => $payment?->status
             ]);
-            
+
             if ($payment) {
                 $verification = $this->verifyZarinPalPayment($authority, (int) $payment->amount);
-                
+
                 Log::info('Payment verification result', [
                     'authority' => $authority,
                     'verification_success' => $verification['success'],
                     'verification_message' => $verification['message'] ?? 'No message',
                     'payment_id' => $payment->id
                 ]);
-                
+
                 if ($verification['success']) {
                     $payment->updateStatus('completed', [
                         'gateway_response' => json_encode($verification),
@@ -360,17 +360,17 @@ class PaymentService
                             'verification_time' => now()->toISOString()
                         ]
                     ]);
-                    
+
                     Log::info('Payment marked as completed', [
                         'payment_id' => $payment->id,
                         'authority' => $authority,
                         'amount' => $payment->amount
                     ]);
-                    
+
                     // Activate subscription
                     if ($payment->subscription) {
                         $subscription = $payment->subscription;
-                        
+
                         Log::info('Starting subscription activation', [
                             'subscription_id' => $subscription->id,
                             'current_status' => $subscription->status,
@@ -379,18 +379,18 @@ class PaymentService
                             'subscription_type' => $subscription->type,
                             'user_id' => $subscription->user_id
                         ]);
-                        
+
                         // Calculate end date based on subscription type
                         $startDate = now();
                         $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate);
-                        
+
                         Log::info('Calculated subscription dates', [
                             'subscription_id' => $subscription->id,
                             'start_date' => $startDate,
                             'end_date' => $endDate,
                             'duration_days' => $startDate->diffInDays($endDate)
                         ]);
-                        
+
                         // Update subscription with transaction to ensure data integrity
                         \DB::transaction(function() use ($subscription, $startDate, $endDate) {
                             $subscription->update([
@@ -398,7 +398,7 @@ class PaymentService
                                 'start_date' => $startDate,
                                 'end_date' => $endDate
                             ]);
-                            
+
                             Log::info('Subscription updated in database', [
                                 'subscription_id' => $subscription->id,
                                 'new_status' => $subscription->fresh()->status,
@@ -406,11 +406,11 @@ class PaymentService
                                 'new_end_date' => $subscription->fresh()->end_date
                             ]);
                         });
-                        
+
                         // Verify the subscription is now active
                         $updatedSubscription = $subscription->fresh();
                         $isActive = $updatedSubscription->status === 'active' && $updatedSubscription->end_date > now();
-                        
+
                         Log::info('Subscription activation verification', [
                             'subscription_id' => $updatedSubscription->id,
                             'status' => $updatedSubscription->status,
@@ -419,7 +419,7 @@ class PaymentService
                             'is_active' => $isActive,
                             'days_remaining' => $isActive ? max(0, now()->diffInDays($updatedSubscription->end_date, false)) : 0
                         ]);
-                        
+
                         if (!$isActive) {
                             Log::error('Subscription activation failed - not properly activated', [
                                 'subscription_id' => $updatedSubscription->id,
@@ -434,32 +434,16 @@ class PaymentService
                             'subscription_id' => $payment->subscription_id
                         ]);
                     }
-                    
+
                     // Fire sales notification event
                     event(new SalesNotificationEvent($payment, $payment->subscription));
-                    
-                    // Also send Telegram notification directly as backup
-                    try {
-                        $telegramService = app(\App\Services\TelegramNotificationService::class);
-                        $telegramSuccess = $telegramService->sendSalesNotification($payment, $payment->subscription);
-                        
-                        Log::info('Direct Telegram notification result', [
-                            'payment_id' => $payment->id,
-                            'success' => $telegramSuccess
-                        ]);
-                    } catch (\Exception $telegramError) {
-                        Log::error('Direct Telegram notification failed', [
-                            'payment_id' => $payment->id,
-                            'error' => $telegramError->getMessage()
-                        ]);
-                    }
-                    
+
                     Log::info('Payment completed successfully', [
                         'payment_id' => $payment->id,
                         'authority' => $authority,
                         'subscription_id' => $payment->subscription?->id
                     ]);
-                    
+
                     return [
                         'success' => true,
                         'payment' => $payment,
@@ -474,13 +458,13 @@ class PaymentService
                             'failed_at' => now()->toISOString()
                         ])
                     ]);
-                    
+
                     Log::error('Payment verification failed', [
                         'payment_id' => $payment->id,
                         'authority' => $authority,
                         'verification_message' => $verification['message'] ?? 'No message'
                     ]);
-                    
+
                     return [
                         'success' => false,
                         'message' => $verification['message']
@@ -499,7 +483,7 @@ class PaymentService
                 'expected_status' => 'OK'
             ]);
         }
-        
+
         return [
             'success' => false,
             'message' => 'پرداخت یافت نشد یا نامعتبر است'
@@ -537,14 +521,14 @@ class PaymentService
     {
         try {
             $subscription = \App\Models\Subscription::find($subscriptionId);
-            
+
             if (!$subscription) {
                 return [
                     'success' => false,
                     'message' => 'اشتراک یافت نشد'
                 ];
             }
-            
+
             Log::info('Manual subscription activation started', [
                 'subscription_id' => $subscriptionId,
                 'current_status' => $subscription->status,
@@ -552,11 +536,11 @@ class PaymentService
                 'current_end_date' => $subscription->end_date,
                 'user_id' => $subscription->user_id
             ]);
-            
+
             // Calculate dates
             $startDate = now();
             $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate);
-            
+
             // Update subscription
             \DB::transaction(function() use ($subscription, $startDate, $endDate) {
                 $subscription->update([
@@ -565,11 +549,11 @@ class PaymentService
                     'end_date' => $endDate
                 ]);
             });
-            
+
             // Verify activation
             $updatedSubscription = $subscription->fresh();
             $isActive = $updatedSubscription->status === 'active' && $updatedSubscription->end_date > now();
-            
+
             Log::info('Manual subscription activation completed', [
                 'subscription_id' => $subscriptionId,
                 'new_status' => $updatedSubscription->status,
@@ -578,21 +562,21 @@ class PaymentService
                 'is_active' => $isActive,
                 'days_remaining' => $isActive ? max(0, now()->diffInDays($updatedSubscription->end_date, false)) : 0
             ]);
-            
+
             return [
                 'success' => true,
                 'message' => 'اشتراک با موفقیت فعال شد',
                 'subscription' => $updatedSubscription,
                 'is_active' => $isActive
             ];
-            
+
         } catch (\Exception $e) {
             Log::error('Manual subscription activation failed', [
                 'subscription_id' => $subscriptionId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return [
                 'success' => false,
                 'message' => 'خطا در فعال‌سازی اشتراک: ' . $e->getMessage()
@@ -625,7 +609,7 @@ class PaymentService
         // This would integrate with gateway refund APIs
         // For now, just mark as refunded
         $payment->update(['status' => 'refunded']);
-        
+
         return [
             'success' => true,
             'message' => 'پرداخت بازگردانده شد'
@@ -642,20 +626,20 @@ class PaymentService
                 'merchant_id' => $this->zarinpalMerchantId,
                 'sandbox_mode' => $this->sandboxMode,
                 'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
-                'api_url' => $this->sandboxMode 
+                'api_url' => $this->sandboxMode
                     ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json'
                     : 'https://api.zarinpal.com/pg/v4/payment/request.json'
             ];
-            
+
             Log::info('ZarinPal configuration check', $config);
-            
+
             // Test basic connectivity
-            $testUrl = $this->sandboxMode 
+            $testUrl = $this->sandboxMode
                 ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json'
                 : 'https://api.zarinpal.com/pg/v4/payment/request.json';
-                
+
             $testResponse = Http::timeout(10)->get($testUrl);
-            
+
             return [
                 'success' => true,
                 'config' => $config,
@@ -665,14 +649,14 @@ class PaymentService
                     'reachable' => $testResponse->status() !== 0
                 ]
             ];
-            
+
         } catch (\Exception $e) {
             Log::error('ZarinPal configuration check failed', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),

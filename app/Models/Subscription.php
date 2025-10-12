@@ -112,7 +112,11 @@ class Subscription extends Model
      */
     public function getDaysRemainingAttribute(): int
     {
-        return max(0, Carbon::parse($this->end_date)->diffInDays(now(), false));
+        if (!$this->end_date) {
+            return 0;
+        }
+
+        return max(0, now()->diffInDays($this->end_date, false));
     }
 
     /**

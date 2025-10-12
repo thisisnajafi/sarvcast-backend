@@ -25,7 +25,7 @@ class AccessControlService
 
             // Use the same logic as User model's activeSubscription relationship
             $activeSubscription = $user->activeSubscription;
-            
+
             if ($activeSubscription) {
                 Log::info('hasPremiumAccess: Active subscription found via User model', [
                     'user_id' => $userId,
@@ -188,7 +188,7 @@ class AccessControlService
                 'episode_is_premium' => $episode->is_premium,
                 'has_premium_access' => $hasPremium
             ]);
-            
+
             if ($hasPremium) {
                 return [
                     'has_access' => true,
@@ -263,7 +263,7 @@ class AccessControlService
                                            ->first();
 
             if ($activeSubscription) {
-                $daysRemaining = Carbon::parse($activeSubscription->end_date)->diffInDays(now(), false);
+                $daysRemaining = now()->diffInDays($activeSubscription->end_date, false);
                 return [
                     'level' => 'premium',
                     'has_premium' => true,
@@ -275,7 +275,7 @@ class AccessControlService
             }
 
             if ($trialSubscription) {
-                $daysRemaining = Carbon::parse($trialSubscription->end_date)->diffInDays(now(), false);
+                $daysRemaining = now()->diffInDays($trialSubscription->end_date, false);
                 return [
                     'level' => 'trial',
                     'has_premium' => true,
@@ -321,10 +321,10 @@ class AccessControlService
 
             foreach ($stories as $story) {
                 $accessInfo = $this->canAccessStory($userId, $story->id);
-                
+
                 $storyData = $story->toArray();
                 $storyData['access_info'] = $accessInfo;
-                
+
                 // Add access-specific metadata
                 if ($accessInfo['has_access']) {
                     if ($accessInfo['reason'] === 'limited_free_access') {
@@ -363,10 +363,10 @@ class AccessControlService
 
             foreach ($episodes as $episode) {
                 $accessInfo = $this->canAccessEpisode($userId, $episode->id);
-                
+
                 $episodeData = $episode->toArray();
                 $episodeData['access_info'] = $accessInfo;
-                
+
                 $filteredEpisodes[] = $episodeData;
             }
 
@@ -450,7 +450,7 @@ class AccessControlService
                                        ->where('end_date', '>', now())
                                        ->distinct('user_id')
                                        ->count('user_id');
-            
+
             $trialUsers = Subscription::where('status', 'trial')
                                     ->where('end_date', '>', now())
                                     ->distinct('user_id')
@@ -505,7 +505,7 @@ class AccessControlService
     {
         try {
             $accessLevel = $this->getUserAccessLevel($userId);
-            
+
             $features = [
                 'unlimited_access' => $accessLevel['has_premium'],
                 'download_content' => $accessLevel['has_premium'],
