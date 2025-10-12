@@ -42,7 +42,7 @@ class VersionController extends Controller
 
         if ($updateCheck['update_required']) {
             $latestVersion = $updateCheck['latest_version'];
-            
+
             return response()->json([
                 'success' => true,
                 'update_required' => true,
@@ -268,5 +268,50 @@ class VersionController extends Controller
             'success' => true,
             'message' => 'اطلاعات نسخه ثبت شد',
         ]);
+    }
+
+    /**
+     * Get latest app version code (simple GET endpoint).
+     */
+    public function check(): JsonResponse
+    {
+        try {
+            // Get the latest active version
+            $latestVersion = AppVersion::active()
+                ->latest()
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if (!$latestVersion) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'هیچ نسخه فعالی یافت نشد',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'version_code' => $latestVersion->version,
+                    'build_number' => $latestVersion->build_number,
+                    'platform' => $latestVersion->platform,
+                    'update_type' => $latestVersion->update_type,
+                    'is_latest' => $latestVersion->is_latest,
+                    'release_date' => $latestVersion->release_date?->toISOString(),
+                    'download_url' => $latestVersion->download_url,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting latest version', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت اطلاعات نسخه',
+            ], 500);
+        }
     }
 }

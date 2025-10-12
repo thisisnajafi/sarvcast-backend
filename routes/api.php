@@ -44,16 +44,16 @@ use App\Http\Controllers\Admin\PersonController;
 
 // Public routes
 Route::prefix('v1')->middleware('security')->group(function () {
-    
+
     // Authentication routes
     Route::prefix('auth')->group(function () {
         // SMS verification
         Route::post('send-verification-code', [AuthController::class, 'sendVerificationCode']);
-        
+
         // User authentication (SMS-based)
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
-        
+
         // Admin authentication (phone + password)
         Route::post('admin/login', [AuthController::class, 'adminLogin']);
     });
@@ -61,7 +61,7 @@ Route::prefix('v1')->middleware('security')->group(function () {
     // Public content routes (with caching)
     Route::get('categories', [CategoryController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
     Route::get('categories/{category}/stories', [CategoryController::class, 'stories'])->middleware('cache.api:180'); // 3 minutes
-    
+
     Route::get('stories', [StoryController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/{story}', [StoryController::class, 'show'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/{story}/episodes', [StoryController::class, 'episodes'])->middleware('cache.api:180'); // 3 minutes
@@ -69,18 +69,18 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('stories/popular', [StoryController::class, 'popular'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/recent', [StoryController::class, 'recent'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/recommendations', [StoryController::class, 'recommendations'])->middleware('cache.api:180'); // 3 minutes
-    
+
     Route::get('episodes', [EpisodeController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
     Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware(['auth:sanctum', 'cache.api:180']); // 3 minutes
-    
+
     // Story ratings routes
     Route::get('stories/{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/{story}/ratings/statistics', [\App\Http\Controllers\Api\StoryRatingController::class, 'statistics'])->middleware('cache.api:180'); // 3 minutes
-    
+
     // Episode play count routes
     Route::post('episodes/{episode}/play', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'increment']);
     Route::get('episodes/{episode}/play/statistics', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'statistics'])->middleware('cache.api:180'); // 3 minutes
-    
+
     // People routes
     Route::get('people', [PersonController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
     Route::get('people/search', [PersonController::class, 'search'])->middleware('cache.api:180'); // 3 minutes
@@ -88,30 +88,31 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('people/{person}', [PersonController::class, 'show'])->middleware('cache.api:180'); // 3 minutes
     Route::get('people/{person}/stories', [PersonController::class, 'stories'])->middleware('cache.api:180'); // 3 minutes
     Route::get('people/{person}/statistics', [PersonController::class, 'statistics'])->middleware('cache.api:180'); // 3 minutes
-    
+
     // File upload routes (DISABLED - Admin only)
     // Route::post('upload/image', [FileUploadController::class, 'uploadImage']);
     // Route::post('upload/audio', [FileUploadController::class, 'uploadAudio']);
     // Route::post('upload/document', [FileUploadController::class, 'uploadDocument']);
     // Route::post('upload/multiple', [FileUploadController::class, 'uploadMultiple']);
     // Route::get('upload/config', [FileUploadController::class, 'getUploadConfig']);
-    
+
     // Health check routes
     Route::get('health', [HealthController::class, 'health']);
     Route::get('health/metrics', [HealthController::class, 'metrics']);
     Route::get('health/report', [HealthController::class, 'report']);
     Route::get('health/errors', [HealthController::class, 'errorRates']);
     Route::get('health/performance', [HealthController::class, 'apiPerformance']);
-    
+
     // Version management routes
     Route::prefix('version')->group(function () {
+        Route::get('check', [VersionController::class, 'check']);
         Route::post('check', [VersionController::class, 'checkForUpdates']);
         Route::get('latest', [VersionController::class, 'getLatestVersion']);
         Route::get('statistics', [VersionController::class, 'getStatistics']);
         Route::get('config', [VersionController::class, 'getAppConfig']);
         Route::post('report-usage', [VersionController::class, 'reportUsage']);
     });
-    
+
     // User search routes
     Route::prefix('users')->group(function () {
         Route::post('search', [UserSearchController::class, 'searchUsers']);
@@ -122,7 +123,7 @@ Route::prefix('v1')->middleware('security')->group(function () {
 
 // Protected routes
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
-    
+
     // Authentication routes
     Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
@@ -160,7 +161,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('{story}/favorite', [StoryController::class, 'addFavorite']);
         Route::delete('{story}/favorite', [StoryController::class, 'removeFavorite']);
         Route::post('{story}/rating', [StoryController::class, 'rate']);
-        
+
         // Story ratings (authenticated)
         Route::get('{story}/ratings/my', [\App\Http\Controllers\Api\StoryRatingController::class, 'show']);
         Route::post('{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'store']);
@@ -171,7 +172,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::prefix('episodes')->group(function () {
         Route::post('{episode}/play', [EpisodeController::class, 'play']);
         Route::post('{episode}/bookmark', [EpisodeController::class, 'bookmark']);
-        
+
         // Episode play count (authenticated)
         Route::get('{episode}/play/history', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'userHistory']);
         Route::post('{episode}/play/completed', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'markCompleted']);
@@ -220,34 +221,34 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // App configuration
         Route::get('config', [\App\Http\Controllers\Api\MobileController::class, 'getAppConfig']);
         Route::get('version', [\App\Http\Controllers\Api\MobileController::class, 'getAppVersion']);
-        
+
         // Offline content
         Route::get('offline/stories', [\App\Http\Controllers\Api\MobileController::class, 'getOfflineStories']);
         Route::get('offline/episodes', [\App\Http\Controllers\Api\MobileController::class, 'getOfflineEpisodes']);
-        
+
         // Search and discovery
         Route::get('search', [\App\Http\Controllers\Api\MobileController::class, 'search']);
         Route::get('recommendations', [\App\Http\Controllers\Api\MobileController::class, 'getRecommendations']);
         Route::get('trending', [\App\Http\Controllers\Api\MobileController::class, 'getTrending']);
-        
+
         // User preferences
         Route::get('preferences', [\App\Http\Controllers\Api\MobileController::class, 'getPreferences']);
         Route::put('preferences', [\App\Http\Controllers\Api\MobileController::class, 'updatePreferences']);
-        
+
         // Parental controls
         Route::get('parental-controls', [\App\Http\Controllers\Api\MobileController::class, 'getParentalControls']);
         Route::put('parental-controls', [\App\Http\Controllers\Api\MobileController::class, 'updateParentalControls']);
-        
+
         // Analytics and tracking
         Route::post('track/play', [\App\Http\Controllers\Api\MobileController::class, 'trackPlay']);
         Route::post('track/download', [\App\Http\Controllers\Api\MobileController::class, 'trackDownload']);
         Route::post('track/share', [\App\Http\Controllers\Api\MobileController::class, 'trackShare']);
-        
+
         // Device management
         Route::post('device/register', [\App\Http\Controllers\Api\MobileController::class, 'registerDevice']);
         Route::post('device/token', [\App\Http\Controllers\Api\MobileController::class, 'updateFcmToken']);
         Route::delete('device/unregister', [\App\Http\Controllers\Api\MobileController::class, 'unregisterDevice']);
-        
+
         // File upload routes (DISABLED - Admin only)
         // Route::post('upload/image', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadImage']);
         // Route::post('upload/audio', [\App\Http\Controllers\Api\FileUploadController::class, 'uploadAudio']);
@@ -257,7 +258,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Route::get('upload/info', [\App\Http\Controllers\Api\FileUploadController::class, 'getFileInfo']);
         // Route::post('upload/cleanup', [\App\Http\Controllers\Api\FileUploadController::class, 'cleanupTempFiles']);
         // Route::get('upload/config', [\App\Http\Controllers\Api\FileUploadController::class, 'getUploadConfig']);
-        
+
         // Audio processing routes (MOVED TO ADMIN ONLY)
         // Route::post('audio/process', [\App\Http\Controllers\Api\AudioProcessingController::class, 'processAudio']);
         // Route::post('audio/extract-metadata', [\App\Http\Controllers\Api\AudioProcessingController::class, 'extractMetadata']);
@@ -267,7 +268,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Route::post('audio/validate', [\App\Http\Controllers\Api\AudioProcessingController::class, 'validateAudio']);
         // Route::get('audio/stats', [\App\Http\Controllers\Api\AudioProcessingController::class, 'getStats']);
         // Route::post('audio/cleanup', [\App\Http\Controllers\Api\AudioProcessingController::class, 'cleanup']);
-        
+
         // Image processing routes (MOVED TO ADMIN ONLY)
         // Route::post('image/process', [\App\Http\Controllers\Api\ImageProcessingController::class, 'processImage']);
         // Route::post('image/resize', [\App\Http\Controllers\Api\ImageProcessingController::class, 'resizeImage']);
@@ -280,7 +281,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Route::post('image/validate', [\App\Http\Controllers\Api\ImageProcessingController::class, 'validateImage']);
         // Route::get('image/stats', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getStats']);
         // Route::post('image/cleanup', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cleanup']);
-        
+
         // Favorites routes
         Route::get('favorites', [\App\Http\Controllers\Api\FavoriteController::class, 'index']);
         Route::post('favorites', [\App\Http\Controllers\Api\FavoriteController::class, 'store']);
@@ -290,7 +291,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('favorites/most-favorited', [\App\Http\Controllers\Api\FavoriteController::class, 'mostFavorited']);
         Route::get('favorites/stats', [\App\Http\Controllers\Api\FavoriteController::class, 'stats']);
         Route::post('favorites/bulk', [\App\Http\Controllers\Api\FavoriteController::class, 'bulk']);
-        
+
         // Play History routes
         Route::get('play-history', [\App\Http\Controllers\Api\PlayHistoryController::class, 'index']);
         Route::post('play-history/record', [\App\Http\Controllers\Api\PlayHistoryController::class, 'record']);
@@ -304,7 +305,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('play-history/most-played', [\App\Http\Controllers\Api\PlayHistoryController::class, 'mostPlayed']);
         Route::get('play-history/most-played-stories', [\App\Http\Controllers\Api\PlayHistoryController::class, 'mostPlayedStories']);
         Route::get('play-history/analytics', [\App\Http\Controllers\Api\PlayHistoryController::class, 'analytics']);
-        
+
         // Rating & Review routes
         Route::get('ratings', [\App\Http\Controllers\Api\RatingController::class, 'index']);
         Route::post('ratings/story', [\App\Http\Controllers\Api\RatingController::class, 'submitStoryRating']);
@@ -318,7 +319,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('ratings/recent-reviews', [\App\Http\Controllers\Api\RatingController::class, 'getRecentReviews']);
         Route::get('ratings/user-stats', [\App\Http\Controllers\Api\RatingController::class, 'getUserStats']);
         Route::get('ratings/analytics', [\App\Http\Controllers\Api\RatingController::class, 'getAnalytics']);
-        
+
         // Search & Discovery routes
         Route::get('search/stories', [\App\Http\Controllers\Api\SearchController::class, 'searchStories']);
         Route::get('search/episodes', [\App\Http\Controllers\Api\SearchController::class, 'searchEpisodes']);
@@ -328,7 +329,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('search/trending', [\App\Http\Controllers\Api\SearchController::class, 'getTrending']);
         Route::get('search/filters', [\App\Http\Controllers\Api\SearchController::class, 'getFilters']);
         Route::get('search/stats', [\App\Http\Controllers\Api\SearchController::class, 'getStats']);
-        
+
         // Subscription Management routes
         Route::get('subscriptions', [\App\Http\Controllers\Api\SubscriptionController::class, 'index']);
         Route::get('subscriptions/status', [\App\Http\Controllers\Api\SubscriptionController::class, 'status']);
@@ -342,7 +343,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('subscriptions/trial', [\App\Http\Controllers\Api\SubscriptionController::class, 'createTrial']);
         Route::get('subscriptions/{subscriptionId}', [\App\Http\Controllers\Api\SubscriptionController::class, 'show']);
         Route::get('subscriptions/stats', [\App\Http\Controllers\Api\SubscriptionController::class, 'stats']);
-        
+
         // Access Control routes
         Route::get('access/level', [\App\Http\Controllers\Api\AccessControlController::class, 'getUserAccessLevel']);
         Route::get('access/story/{storyId}', [\App\Http\Controllers\Api\AccessControlController::class, 'checkStoryAccess']);
@@ -352,7 +353,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('access/validate', [\App\Http\Controllers\Api\AccessControlController::class, 'validateContentAccess']);
         Route::post('access/filtered-content', [\App\Http\Controllers\Api\AccessControlController::class, 'getFilteredContent']);
         Route::get('access/statistics', [\App\Http\Controllers\Api\AccessControlController::class, 'getAccessStatistics']);
-        
+
         // SMS Notifications routes
         Route::post('sms/send', [\App\Http\Controllers\Api\SmsController::class, 'send']);
         Route::post('sms/verification-code', [\App\Http\Controllers\Api\SmsController::class, 'sendVerificationCode']);
@@ -365,7 +366,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('sms/statistics', [\App\Http\Controllers\Api\SmsController::class, 'getStatistics']);
         Route::get('sms/templates', [\App\Http\Controllers\Api\SmsController::class, 'getTemplates']);
         Route::get('sms/providers', [\App\Http\Controllers\Api\SmsController::class, 'getProviders']);
-        
+
         // In-App Notifications routes
         Route::get('notifications', [\App\Http\Controllers\Api\InAppNotificationController::class, 'index']);
         Route::get('notifications/unread-count', [\App\Http\Controllers\Api\InAppNotificationController::class, 'unreadCount']);
@@ -376,7 +377,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('notifications/priorities', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getPriorities']);
         Route::get('notifications/categories', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getCategories']);
     });
-    
+
     // Recommendation routes
     Route::prefix('recommendations')->middleware('auth:sanctum')->group(function () {
         Route::get('personalized', [RecommendationController::class, 'getPersonalizedRecommendations']);
@@ -389,7 +390,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('clear-cache', [RecommendationController::class, 'clearRecommendationCache']);
         Route::get('explanation/{storyId}', [RecommendationController::class, 'getRecommendationExplanation']);
     });
-    
+
     // Content Personalization routes
     Route::prefix('personalization')->middleware('auth:sanctum')->group(function () {
         Route::get('feed', [ContentPersonalizationController::class, 'getPersonalizedFeed']);
@@ -405,7 +406,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('clear-cache', [ContentPersonalizationController::class, 'clearPersonalizationCache']);
         Route::get('stats', [ContentPersonalizationController::class, 'getPersonalizationStats']);
     });
-    
+
     // Social Features routes
     Route::prefix('social')->middleware('auth:sanctum')->group(function () {
         Route::post('follow/{userId}', [SocialController::class, 'followUser']);
@@ -422,7 +423,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('trending', [SocialController::class, 'getTrendingContent']);
         Route::get('follow-status/{userId}', [SocialController::class, 'checkFollowStatus']);
     });
-    
+
     // Gamification routes (DISABLED)
     // Route::prefix('gamification')->middleware('auth:sanctum')->group(function () {
     //     Route::get('profile', [GamificationController::class, 'getUserProfile']);
@@ -438,7 +439,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     //     Route::get('all-achievements', [GamificationController::class, 'getAllAchievements']);
     //     Route::get('all-badges', [GamificationController::class, 'getAllBadges']);
     // });
-    
+
     // Voice Actor routes
     Route::prefix('episodes')->middleware('auth:sanctum')->group(function () {
         Route::get('{episodeId}/voice-actors', [EpisodeVoiceActorController::class, 'getVoiceActors']);
@@ -461,14 +462,14 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('{episodeId}/image-for-time', [ImageTimelineController::class, 'getImageForTime']);
         Route::get('{episodeId}/timeline-statistics', [ImageTimelineController::class, 'getStatistics']);
     });
-    
+
     // Story Comments routes
     Route::prefix('stories')->middleware('auth:sanctum')->group(function () {
         Route::get('{storyId}/comments', [StoryCommentController::class, 'getComments']);
         Route::post('{storyId}/comments', [StoryCommentController::class, 'addComment']);
         Route::get('{storyId}/comments/statistics', [StoryCommentController::class, 'getCommentStatistics']);
     });
-    
+
     Route::prefix('comments')->middleware('auth:sanctum')->group(function () {
         Route::get('my-comments', [StoryCommentController::class, 'getUserComments']);
         Route::delete('{commentId}', [StoryCommentController::class, 'deleteComment']);
@@ -483,7 +484,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('statistics', [CoinController::class, 'getStatistics']);
         Route::post('spend', [CoinController::class, 'spendCoins']);
         Route::get('redemption-options', [CoinController::class, 'getRedemptionOptions']);
-        
+
         // Admin only routes
         Route::post('award', [CoinController::class, 'awardCoins']);
         Route::get('global-statistics', [CoinController::class, 'getGlobalStatistics']);
@@ -515,7 +516,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('submit-answer', [QuizController::class, 'submitAnswer']);
         Route::get('statistics', [QuizController::class, 'getUserStatistics']);
         Route::get('episodes/{episodeId}/statistics', [QuizController::class, 'getEpisodeStatistics']);
-        
+
         // Admin only routes
         Route::get('global-statistics', [QuizController::class, 'getGlobalStatistics']);
         Route::post('questions', [QuizController::class, 'createQuestion']);
@@ -530,7 +531,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('referrals', [ReferralController::class, 'getReferrals']);
         Route::post('use-code', [ReferralController::class, 'useReferralCode']);
         Route::post('check-completion', [ReferralController::class, 'checkReferralCompletion']);
-        
+
         // Admin only routes
         Route::get('global-statistics', [ReferralController::class, 'getGlobalStatistics']);
         Route::get('top-referrers', [ReferralController::class, 'getTopReferrers']);
@@ -557,7 +558,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('my-coupons', [\App\Http\Controllers\Api\CouponController::class, 'getMyCoupons']);
         Route::get('my-usage', [\App\Http\Controllers\Api\CouponController::class, 'getCouponUsage']);
         Route::get('my-statistics', [\App\Http\Controllers\Api\CouponController::class, 'getCouponStatistics']);
-        
+
         // Admin only routes
         Route::post('create', [\App\Http\Controllers\Api\CouponController::class, 'createCoupon']);
         Route::get('all', [\App\Http\Controllers\Api\CouponController::class, 'getCoupons']);
@@ -569,7 +570,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::prefix('commission-payments')->middleware('auth:sanctum')->group(function () {
         Route::get('my-payments', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getMyPayments']);
         Route::get('my-history', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getPaymentHistory']);
-        
+
         // Admin only routes
         Route::get('pending', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'getPendingPayments']);
         Route::post('process', [\App\Http\Controllers\Api\CommissionPaymentController::class, 'processPayment']);
@@ -589,7 +590,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('commission-rates', [AffiliateController::class, 'getTierCommissionRates']);
         Route::post('commissions', [AffiliateController::class, 'createCommission']);
         Route::get('partners/{partnerId}/statistics', [AffiliateController::class, 'getPartnerStatistics']);
-        
+
         // Admin only routes
         Route::put('partners/{partnerId}/verify', [AffiliateController::class, 'verifyPartner']);
         Route::put('partners/{partnerId}/suspend', [AffiliateController::class, 'suspendPartner']);
@@ -610,7 +611,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('institution-types', [TeacherController::class, 'getInstitutionTypes']);
         Route::get('teaching-subjects', [TeacherController::class, 'getTeachingSubjects']);
         Route::get('teacher-accounts/{teacherAccountId}/student-licenses', [TeacherController::class, 'getTeacherStudentLicenses']);
-        
+
         // Admin only routes
         Route::put('teacher-accounts/{teacherAccountId}/verify', [TeacherController::class, 'verifyTeacherAccount']);
         Route::get('global-statistics', [TeacherController::class, 'getGlobalStatistics']);
@@ -629,7 +630,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('platforms', [InfluencerController::class, 'getPlatforms']);
         Route::get('compensation-rates', [InfluencerController::class, 'getTierCompensationRates']);
         Route::put('content/{contentId}/metrics', [InfluencerController::class, 'updateContentMetrics']);
-        
+
         // Admin only routes
         Route::put('content/{contentId}/approve', [InfluencerController::class, 'approveContent']);
         Route::put('content/{contentId}/reject', [InfluencerController::class, 'rejectContent']);
@@ -647,7 +648,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('school-types', [SchoolController::class, 'getSchoolTypes']);
         Route::get('school-levels', [SchoolController::class, 'getSchoolLevels']);
         Route::get('partnership-benefits', [SchoolController::class, 'getPartnershipBenefits']);
-        
+
         // Admin only routes
         Route::put('partnerships/{partnershipId}/verify', [SchoolController::class, 'verifyPartnership']);
         Route::get('global-statistics', [SchoolController::class, 'getGlobalStatistics']);
@@ -671,7 +672,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('content-types', [CorporateController::class, 'getContentTypes']);
         Route::get('placement-types', [CorporateController::class, 'getPlacementTypes']);
         Route::put('content/{contentId}/event', [CorporateController::class, 'recordEvent']);
-        
+
         // Admin only routes
         Route::put('content/{contentId}/approve', [CorporateController::class, 'approveContent']);
         Route::put('content/{contentId}/reject', [CorporateController::class, 'rejectContent']);
@@ -681,7 +682,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
 // Admin API Routes
 Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
-    
+
     // Coin Management API
     Route::prefix('coins')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\CoinController::class, 'apiIndex']);

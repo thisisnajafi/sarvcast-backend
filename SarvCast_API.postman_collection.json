@@ -4392,6 +4392,23 @@
       "name": "Version Management",
       "item": [
         {
+          "name": "Get Latest Version Code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/version/check",
+              "host": ["{{base_url}}"],
+              "path": ["version", "check"]
+            }
+          }
+        },
+        {
           "name": "Check for Updates",
           "request": {
             "method": "POST",

@@ -64,6 +64,48 @@
         </div>
     </div>
 
+    <!-- API Endpoint Information -->
+    <div class="bg-white shadow-sm rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-medium text-gray-900">اطلاعات API</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h3 class="text-sm font-medium text-blue-900 mb-2">Version Check API</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <span class="text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded">GET</span>
+                            <code class="text-sm text-blue-800 mr-2">{{ url('/api/v1/version/check') }}</code>
+                        </div>
+                        <p class="text-sm text-blue-700">دریافت آخرین کد نسخه اپلیکیشن</p>
+                        <div class="mt-3">
+                            <button onclick="testVersionCheck()" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">
+                                تست API
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h3 class="text-sm font-medium text-green-900 mb-2">Response Example</h3>
+                    <pre class="text-xs text-green-800 bg-green-100 p-2 rounded overflow-x-auto"><code>{
+  "success": true,
+  "data": {
+    "version_code": "1.0.0",
+    "build_number": "100",
+    "platform": "android",
+    "update_type": "optional",
+    "is_latest": true,
+    "release_date": "2024-01-01T00:00:00.000Z",
+    "download_url": "https://..."
+  }
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content Card -->
     <div class="bg-white shadow-sm rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200">
@@ -253,5 +295,37 @@
     setInterval(function() {
         // You can add AJAX call here to refresh statistics
     }, 30000);
+
+    // Test Version Check API
+    function testVersionCheck() {
+        const button = event.target;
+        const originalText = button.textContent;
+
+        button.textContent = 'در حال تست...';
+        button.disabled = true;
+
+        fetch('{{ url('/api/v1/version/check') }}', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('API تست موفق!\n\nنسخه: ' + data.data.version_code + '\nBuild: ' + data.data.build_number + '\nپلتفرم: ' + data.data.platform);
+            } else {
+                alert('خطا در API: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('خطا در اتصال به API: ' + error.message);
+        })
+        .finally(() => {
+            button.textContent = originalText;
+            button.disabled = false;
+        });
+    }
 </script>
 @endpush
