@@ -167,12 +167,14 @@ class SubscriptionController extends Controller
         $validator = Validator::make($request->all(), [
             'plan_id' => 'nullable|integer|exists:subscription_plans,id',
             'type' => 'nullable|string|in:monthly,quarterly,yearly,family',
-            'plan_slug' => 'nullable|string|in:1month,3months,6months,1year'
+            'plan_slug' => 'nullable|string|in:1month,3months,6months,1year',
+            'coupon_code' => 'nullable|string|max:50'
         ], [
             'plan_id.integer' => 'شناسه پلن اشتراک باید عدد باشد',
             'plan_id.exists' => 'پلن اشتراک یافت نشد',
             'type.in' => 'نوع اشتراک نامعتبر است',
-            'plan_slug.in' => 'نوع اشتراک نامعتبر است'
+            'plan_slug.in' => 'نوع اشتراک نامعتبر است',
+            'coupon_code.max' => 'کد کوپن نمی‌تواند بیشتر از 50 کاراکتر باشد'
         ]);
 
         if ($validator->fails()) {
@@ -187,35 +189,79 @@ class SubscriptionController extends Controller
             $planId = $request->input('plan_id');
             $type = $request->input('type');
             $planSlug = $request->input('plan_slug');
-            
+            $couponCode = $request->input('coupon_code');
+
             // Determine the plan type to calculate price for
             $planType = null;
             $plan = null;
+
             if ($planId) {
                 $plan = \App\Models\SubscriptionPlan::find($planId);
-                if ($plan) {
-                    $planType = $plan->slug ?? $plan->type;
+                if (!$plan) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'پلن اشتراک یافت نشد'
+                    ], 404);
                 }
+                $planType = $plan->slug ?? $plan->type;
             } elseif ($planSlug) {
                 $planType = $planSlug;
+                // Try to get the plan object for additional info
+                $plan = \App\Models\SubscriptionPlan::where('slug', $planSlug)->first();
             } elseif ($type) {
                 $planType = $type;
+                // Try to get the plan object for additional info
+                $plan = \App\Models\SubscriptionPlan::where('type', $type)->first();
             }
-            
+
             if (!$planType) {
                 return response()->json([
                     'success' => false,
                     'message' => 'نوع پلن اشتراک مشخص نشده است'
                 ], 400);
             }
-            
-            $priceInfo = $this->subscriptionService->calculatePrice($planType);
-            
+
+            // If we have a plan object, use it directly for more accurate pricing
+            if ($plan) {
+                $priceInfo = $this->calculatePriceFromPlan($plan);
+            } else {
+                $priceInfo = $this->subscriptionService->calculatePrice($planType);
+            }
+
+            // Apply coupon discount if provided
+            $couponInfo = null;
+            if ($couponCode) {
+                $user = $request->user();
+                $baseAmount = $priceInfo['discounted_price'] ?? $priceInfo['base_price'];
+
+                $couponValidation = app(\App\Services\CouponService::class)->validateCouponCode(
+                    $couponCode,
+                    $user,
+                    $baseAmount
+                );
+
+                if ($couponValidation['success']) {
+                    $couponInfo = $couponValidation['data'];
+                    $priceInfo['original_price'] = $baseAmount;
+                    $priceInfo['coupon_discount'] = $couponInfo['discount_amount'];
+                    $priceInfo['final_price'] = $couponInfo['final_amount'];
+                    $priceInfo['coupon_code'] = $couponCode;
+                    $priceInfo['coupon_info'] = $couponInfo['coupon'];
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $couponValidation['message']
+                    ], 400);
+                }
+            } else {
+                $priceInfo['final_price'] = $priceInfo['discounted_price'] ?? $priceInfo['base_price'];
+            }
+
             // Convert currency if needed
             if ($plan && $plan->currency === 'IRT') {
-                $priceInfo['original_amount'] = $priceInfo['amount'];
+                $priceInfo['original_amount'] = $priceInfo['final_price'];
                 $priceInfo['original_currency'] = 'IRT';
-                $priceInfo['amount'] = $this->convertCurrency($priceInfo['amount'], 'IRT', 'IRR');
+                $priceInfo['amount'] = $this->convertCurrency($priceInfo['final_price'], 'IRT', 'IRR');
                 $priceInfo['currency'] = 'IRR';
                 $priceInfo['conversion_rate'] = 10;
                 $priceInfo['conversion_note'] = 'قیمت از ریال تومان به ریال تبدیل شده است';
@@ -232,6 +278,7 @@ class SubscriptionController extends Controller
                 'plan_id' => $request->input('plan_id'),
                 'type' => $request->input('type'),
                 'plan_slug' => $request->input('plan_slug'),
+                'coupon_code' => $request->input('coupon_code'),
                 'error' => $e->getMessage()
             ]);
 
@@ -283,7 +330,7 @@ class SubscriptionController extends Controller
             $planId = $request->input('plan_id');
             $planSlug = $request->input('plan_slug');
             $couponCode = $request->input('coupon_code');
-            
+
             // Get plan details - try plan_id first, then plan_slug
             $plan = null;
             if ($planId) {
@@ -291,7 +338,7 @@ class SubscriptionController extends Controller
             } elseif ($planSlug) {
                 $plan = $this->subscriptionService->getPlan($planSlug);
             }
-            
+
             if (!$plan) {
                 return response()->json([
                     'success' => false,
@@ -302,7 +349,7 @@ class SubscriptionController extends Controller
             // Calculate final amount
             $amount = $plan->final_price;
             $planCurrency = $plan->currency ?? 'IRT';
-            
+
             // Apply coupon if provided
             if ($couponCode) {
                 $couponValidation = app(\App\Services\CouponService::class)->validateCouponCode(
@@ -310,7 +357,7 @@ class SubscriptionController extends Controller
                     $user,
                     $amount
                 );
-                
+
                 if ($couponValidation['success']) {
                     $amount = $couponValidation['data']['final_amount'];
                 } else {
@@ -320,11 +367,11 @@ class SubscriptionController extends Controller
                     ], 400);
                 }
             }
-            
+
             // Convert currency from IRT to IRR if needed
             $convertedAmount = $this->convertCurrency($amount, $planCurrency, 'IRR');
             $finalCurrency = 'IRR';
-            
+
             // Map plan slug to correct ENUM value
             $subscriptionType = $this->mapPlanSlugToEnum($planSlug ?: $plan->slug);
 
@@ -343,7 +390,7 @@ class SubscriptionController extends Controller
             // Get plan's first feature for description
             $planFeatures = $plan->features ?? [];
             $firstFeature = !empty($planFeatures) ? $planFeatures[0] : ($plan->name ?? $plan->title ?? 'اشتراک');
-            
+
             // Create payment record
             $payment = \App\Models\Payment::create([
                 'user_id' => $user->id,
@@ -357,7 +404,7 @@ class SubscriptionController extends Controller
 
             // Set description for payment service (since it's not in database)
             // $payment->description = $firstFeature; // Removed - not a database column
-            
+
             // Initiate Zarinpal payment
             $paymentService = app(\App\Services\PaymentService::class);
             $paymentResult = $paymentService->initiateZarinPalPayment($payment, $firstFeature);
@@ -366,7 +413,7 @@ class SubscriptionController extends Controller
                 // If payment initiation fails, clean up the subscription and payment
                 $subscription->delete();
                 $payment->delete();
-                
+
                 return response()->json([
                     'success' => false,
                     'message' => $paymentResult['message']
@@ -613,7 +660,7 @@ class SubscriptionController extends Controller
         try {
             $user = $request->user();
             $trialDays = $request->input('trial_days', 7);
-            
+
             $subscription = $this->subscriptionService->createTrialSubscription($user->id, $trialDays);
 
             return response()->json([
@@ -704,6 +751,29 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Calculate price directly from plan object
+     */
+    private function calculatePriceFromPlan(\App\Models\SubscriptionPlan $plan): array
+    {
+        $basePrice = $plan->price;
+        $discount = $plan->discount_percentage ?? 0;
+        $discountedPrice = $basePrice - ($basePrice * $discount / 100);
+
+        return [
+            'type' => $plan->slug ?? $plan->type,
+            'name' => $plan->name,
+            'base_price' => $basePrice,
+            'discount_percentage' => $discount,
+            'discounted_price' => $discountedPrice,
+            'savings' => $basePrice - $discountedPrice,
+            'currency' => $plan->currency ?? 'IRT',
+            'duration_days' => $plan->duration_days ?? 30,
+            'description' => $plan->description,
+            'plan_id' => $plan->id
+        ];
+    }
+
+    /**
      * Convert currency amount
      */
     private function convertCurrency(float $amount, string $fromCurrency, string $toCurrency): int
@@ -746,41 +816,41 @@ class SubscriptionController extends Controller
             '3months' => '3months',
             '6months' => '6months',
             '1year' => '1year',
-            
+
             // Singular forms
             '3month' => '3months',
             '6month' => '6months',
-            
+
             // Alternative formats
             'monthly' => '1month',
             'quarterly' => '3months',
             'semi-annual' => '6months',
             'annual' => '1year',
             'yearly' => '1year',
-            
+
             // Numeric formats
             '1' => '1month',
             '2' => '3months',
             '3' => '6months',
             '4' => '1year',
         ];
-        
+
         $mappedSlug = $slugMapping[$planSlug] ?? $planSlug;
-        
+
         // Validate that the mapped slug is a valid ENUM value
         $validEnumValues = ['1month', '3months', '6months', '1year'];
-        
+
         if (!in_array($mappedSlug, $validEnumValues)) {
             Log::warning('Invalid subscription type mapped', [
                 'original_slug' => $planSlug,
                 'mapped_slug' => $mappedSlug,
                 'valid_values' => $validEnumValues
             ]);
-            
+
             // Default to 1month if mapping fails
             return '1month';
         }
-        
+
         return $mappedSlug;
     }
 
@@ -790,10 +860,10 @@ class SubscriptionController extends Controller
     public function debugSubscription(Request $request)
     {
         $user = $request->user();
-        
+
         $subscriptions = Subscription::where('user_id', $user->id)->get();
         $activeSubscription = $user->activeSubscription;
-        
+
         $debugInfo = [
             'user_id' => $user->id,
             'total_subscriptions' => $subscriptions->count(),
@@ -821,7 +891,7 @@ class SubscriptionController extends Controller
             'current_time' => now(),
             'timezone' => config('app.timezone')
         ];
-        
+
         return response()->json([
             'success' => true,
             'debug_info' => $debugInfo
@@ -836,24 +906,24 @@ class SubscriptionController extends Controller
         // Only allow for admin users or subscription owner
         $user = $request->user();
         $subscription = Subscription::find($subscriptionId);
-        
+
         if (!$subscription) {
             return response()->json([
                 'success' => false,
                 'message' => 'اشتراک یافت نشد'
             ], 404);
         }
-        
+
         if ($user->role !== 'admin' && $subscription->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'دسترسی غیرمجاز'
             ], 403);
         }
-        
+
         $paymentService = app(\App\Services\PaymentService::class);
         $result = $paymentService->manuallyActivateSubscription($subscriptionId);
-        
+
         return response()->json($result);
     }
 
@@ -865,20 +935,20 @@ class SubscriptionController extends Controller
         try {
             $paymentService = app(\App\Services\PaymentService::class);
             $configCheck = $paymentService->checkZarinPalConfiguration();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $configCheck,
                 'message' => 'اطلاعات پیکربندی زرین‌پال دریافت شد'
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('Failed to debug ZarinPal configuration', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در دریافت اطلاعات پیکربندی زرین‌پال',

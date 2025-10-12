@@ -3993,7 +3993,36 @@
           }
         },
         {
-          "name": "Calculate Subscription Price",
+          "name": "Calculate Subscription Price (with plan_id)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": 1,\n  \"coupon_code\": \"WELCOME20\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/calculate-price",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "calculate-price"]
+            }
+          }
+        },
+        {
+          "name": "Calculate Subscription Price (with plan_slug)",
           "request": {
             "method": "POST",
             "header": [
