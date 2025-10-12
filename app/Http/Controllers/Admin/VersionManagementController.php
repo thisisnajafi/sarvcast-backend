@@ -81,6 +81,9 @@ class VersionManagementController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Debug: Log the request data
+        Log::info('Version creation request data', $request->all());
+
         $validator = Validator::make($request->all(), [
             'version' => 'required|string|max:20|unique:app_versions,version',
             'build_number' => 'nullable|string|max:50',
@@ -108,7 +111,11 @@ class VersionManagementController extends Controller
         }
 
         try {
-            $version = AppVersion::create($request->all());
+            // Debug: Log what we're trying to create
+            $dataToCreate = $request->all();
+            Log::info('Data being sent to AppVersion::create', $dataToCreate);
+
+            $version = AppVersion::create($dataToCreate);
 
             // If this is set as latest, update other versions
             if ($request->boolean('is_latest')) {
@@ -187,7 +194,7 @@ class VersionManagementController extends Controller
         try {
             $oldVersion = $version->version;
             $oldPlatform = $version->platform;
-            
+
             $version->update($request->all());
 
             // If this is set as latest, update other versions
@@ -313,7 +320,7 @@ class VersionManagementController extends Controller
     public function statistics(): View
     {
         $stats = $this->versionCheckService->getVersionStatistics();
-        
+
         // Get recent versions
         $recentVersions = AppVersion::orderBy('created_at', 'desc')
             ->limit(10)

@@ -14,15 +14,24 @@ class AppVersion extends Model
         'version',
         'build_number',
         'update_type',
+        'title',
+        'description',
+        'changelog',
+        'update_notes',
         'download_url',
-        'release_notes',
-        'update_message',
+        'minimum_os_version',
+        'compatibility',
         'is_active',
         'is_latest',
+        'release_date',
+        'force_update_date',
+        'priority',
+        'metadata',
+        'release_notes',
+        'update_message',
         'min_supported_version_code',
         'target_version_code',
         'compatibility_requirements',
-        'release_date',
         'effective_date',
         'expiry_date',
         'created_by',
@@ -31,8 +40,11 @@ class AppVersion extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'is_latest' => 'boolean',
+        'compatibility' => 'array',
         'compatibility_requirements' => 'array',
+        'metadata' => 'array',
         'release_date' => 'datetime',
+        'force_update_date' => 'datetime',
         'effective_date' => 'datetime',
         'expiry_date' => 'datetime',
     ];
@@ -146,7 +158,7 @@ class AppVersion extends Model
     public static function checkUpdateRequired($platform, $currentVersion, $currentBuildNumber = null)
     {
         $latestVersion = static::getLatestForPlatform($platform);
-        
+
         if (!$latestVersion) {
             return [
                 'update_required' => false,
@@ -157,7 +169,7 @@ class AppVersion extends Model
 
         // Compare versions
         $versionComparison = version_compare($currentVersion, $latestVersion->version);
-        
+
         // If current version is older
         if ($versionComparison < 0) {
             return [
@@ -191,7 +203,7 @@ class AppVersion extends Model
     public function compareWith($version, $buildNumber = null)
     {
         $versionComparison = version_compare($this->version, $version);
-        
+
         if ($versionComparison !== 0) {
             return $versionComparison;
         }
@@ -256,10 +268,10 @@ class AppVersion extends Model
     public function isCurrentlyEffective()
     {
         $now = now();
-        
+
         $effective = !$this->effective_date || $this->effective_date <= $now;
         $notExpired = !$this->expiry_date || $this->expiry_date >= $now;
-        
+
         return $effective && $notExpired;
     }
 
