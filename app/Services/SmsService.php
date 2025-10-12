@@ -31,9 +31,9 @@ class SmsService
             $password = $this->apiToken;
             $api = new MelipayamakApi($username, $password);
             $sms = $api->sms();
-            
+
             $from = config('services.melipayamk.sender', '50002710008883');
-            
+
             // Prepare sending data for logging
             $sendingData = [
                 'username' => $username,
@@ -43,11 +43,11 @@ class SmsService
                 'text' => $message,
                 'isFlash' => false
             ];
-            
+
             // Send SMS exactly as documented
             $response = $sms->send($to, $from, $message);
             $json = json_decode($response);
-            
+
             // Log the response
             Log::info('SMS sent via Melipayamk', [
                 'melipayamak_username' => $this->username,
@@ -73,7 +73,7 @@ class SmsService
                 'text' => $message,
                 'isFlash' => false
             ];
-            
+
             Log::error('SMS sending failed', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
@@ -95,14 +95,14 @@ class SmsService
     public function sendSmsWithTemplate(string $to, int $templateId, array $parameters = []): array
     {
         try {
-            // Use Melipayamak library exactly as documented
+            // Use Melipayamak library with REST method
             $username = $this->username;
             $password = $this->apiToken;
             $api = new MelipayamakApi($username, $password);
-            $sms = $api->sms();
-            
+            $sms = $api->sms('rest');
+
             $from = config('services.melipayamk.sender', '50002710008883');
-            
+
             // Prepare sending data for logging
             $sendingData = [
                 'username' => $username,
@@ -113,11 +113,13 @@ class SmsService
                 'parameters' => $parameters,
                 'isFlash' => false
             ];
-            
+
             // Send SMS with template exactly as documented
-            $response = $sms->sendByBaseNumber($parameters, $templateId, $to);
+            // Parameters: text (semicolon-separated string), to (phone), bodyId (pattern code)
+            $text = implode(';', $parameters);
+            $response = $sms->sendByBaseNumber($text, $to, $templateId);
             $json = json_decode($response);
-            
+
             // Log the response
             Log::info('SMS sent via Melipayamk with template', [
                 'melipayamak_username' => $this->username,
@@ -144,7 +146,7 @@ class SmsService
                 'parameters' => $parameters,
                 'isFlash' => false
             ];
-            
+
             Log::error('SMS sending with template failed', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
@@ -160,35 +162,35 @@ class SmsService
     }
 
     /**
-     * Generate and send OTP code using Melipayamak template pattern 371085
+     * Generate and send OTP code using Melipayamak template pattern 372382
      * Falls back to regular SMS if template fails
      */
     public function sendOtp(string $phoneNumber, string $purpose = 'verification'): array
     {
         $otpCode = $this->generateOtpCode();
-        
+
         // Store OTP in cache for 5 minutes
         $cacheKey = "otp_{$phoneNumber}_{$purpose}";
         Cache::put($cacheKey, $otpCode, 300); // 5 minutes
 
-        // Try template SMS first (pattern 371085)
+        // Try template SMS first (pattern 372382)
         $templateResult = $this->sendOtpWithTemplate($phoneNumber, $otpCode, $purpose);
-        
+
         if ($templateResult['success']) {
             return $templateResult;
         }
-        
+
         // Fallback to regular SMS with template pattern message
         $otpMessage = "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد سروکست";
-        
+
         Log::info('Template SMS failed, using regular SMS fallback', [
             'phone_number' => $phoneNumber,
             'template_error' => $templateResult['error'] ?? 'Unknown error',
             'otp_code' => $otpCode
         ]);
-        
+
         $result = $this->sendSms($phoneNumber, $otpMessage);
-        
+
         if ($result['success']) {
             // Store OTP attempt in database
             $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
@@ -198,20 +200,20 @@ class SmsService
     }
 
     /**
-     * Send OTP using Melipayamak template pattern 371085
+     * Send OTP using Melipayamak template pattern 372382
      * Template message: "کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست"
      */
     private function sendOtpWithTemplate(string $phoneNumber, string $otpCode, string $purpose): array
     {
         try {
-            $templateId = config('services.melipayamk.templates.verification', 371085);
-            
-            // Use Melipayamak library for template SMS
+            $templateId = config('services.melipayamk.templates.verification', 372382);
+
+            // Use Melipayamak library for template SMS (REST method)
             $username = $this->username;
             $password = $this->apiToken;
             $api = new MelipayamakApi($username, $password);
-            $sms = $api->sms();
-            
+            $sms = $api->sms('rest');
+
             // Prepare sending data for logging
             $sendingData = [
                 'username' => $username,
@@ -221,13 +223,15 @@ class SmsService
                 'parameters' => [$otpCode],
                 'template_message' => "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد سروکست"
             ];
-            
-            // Send SMS with template pattern 371085
-            $response = $sms->sendByBaseNumber([$otpCode], $templateId, $phoneNumber);
+
+            // Send SMS with template pattern 372382
+            // Parameters: text (semicolon-separated string), to (phone), bodyId (pattern code)
+            $text = $otpCode; // Single parameter, no need for semicolon
+            $response = $sms->sendByBaseNumber($text, $phoneNumber, $templateId);
             $json = json_decode($response);
-            
+
             // Log the response
-            Log::info('SMS sent via Melipayamk template pattern 371085', [
+            Log::info('SMS sent via Melipayamk template pattern 372382', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
                 'response' => $json,
@@ -236,7 +240,7 @@ class SmsService
             ]);
 
             $success = isset($json->RetStatus) && $json->RetStatus == 1;
-            
+
             if ($success) {
                 // Store OTP attempt in database
                 $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
@@ -250,7 +254,7 @@ class SmsService
             ];
 
         } catch (\Exception $e) {
-            Log::error('Template SMS sending failed', [
+            Log::error('Template SMS sending failed, trying procedural method', [
                 'melipayamak_username' => $this->username,
                 'phone_number' => $phoneNumber,
                 'template_id' => $templateId,
@@ -258,6 +262,23 @@ class SmsService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            // Try procedural PHP method as fallback
+            try {
+                $proceduralResult = $this->sendSmsWithProceduralPhp($phoneNumber, $templateId, $otpCode);
+                if ($proceduralResult['success']) {
+                    // Store OTP attempt in database
+                    $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
+                    return $proceduralResult;
+                }
+            } catch (\Exception $proceduralError) {
+                Log::error('Procedural PHP method also failed', [
+                    'phone_number' => $phoneNumber,
+                    'template_id' => $templateId,
+                    'otp_code' => $otpCode,
+                    'error' => $proceduralError->getMessage()
+                ]);
+            }
 
             return [
                 'success' => false,
@@ -278,16 +299,16 @@ class SmsService
         if ($storedCode && $storedCode === $code) {
             // Remove OTP from cache after successful verification
             Cache::forget($cacheKey);
-            
+
             // Update OTP attempt as verified
             $this->updateOtpAttempt($phoneNumber, $code, $purpose, true);
-            
+
             return true;
         }
 
         // Log failed attempt
         $this->updateOtpAttempt($phoneNumber, $code, $purpose, false);
-        
+
         return false;
     }
 
@@ -297,20 +318,17 @@ class SmsService
     public function sendPaymentNotification(string $phoneNumber, float $amount, string $currency = 'IRT'): array
     {
         $message = "پرداخت کمیسیون شما به مبلغ " . number_format($amount) . " " . $currency . " به حساب بانکی شما واریز شد. با تشکر از همکاری شما.";
-        
+
         return $this->sendSms($phoneNumber, $message);
     }
 
     /**
-     * Generate 6-digit OTP code for template pattern 371085
+     * Generate 6-digit OTP code for template pattern 372382
      */
     private function generateOtpCode(): string
     {
-        // Default verification code for development/testing
-        return '123456';
-        
-        // Original random code generation (commented out for now)
-        // return str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        // Generate random 6-digit OTP code
+        return str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -320,7 +338,7 @@ class SmsService
     {
         // Remove any non-numeric characters
         $phoneNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
-        
+
         // Add country code if not present
         if (strlen($phoneNumber) == 10 && substr($phoneNumber, 0, 1) == '9') {
             $phoneNumber = '98' . $phoneNumber;
@@ -412,5 +430,77 @@ class SmsService
             ->count();
 
         return max(0, 5 - $attempts);
+    }
+
+    /**
+     * Send SMS using procedural PHP cURL method (fallback)
+     * Based on procedural PHP example from Melipayamak documentation
+     */
+    private function sendSmsWithProceduralPhp(string $to, int $bodyId, string $otpCode): array
+    {
+        try {
+            $username = $this->username;
+            $password = $this->apiToken;
+
+            $data = array(
+                'username' => $username,
+                'password' => $password,
+                'text' => $otpCode, // Single parameter, no semicolon needed
+                'to' => $to,
+                'bodyId' => $bodyId
+            );
+
+            $post_data = http_build_query($data);
+            $handle = curl_init('https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber');
+
+            curl_setopt($handle, CURLOPT_HTTPHEADER, array(
+                'content-type' => 'application/x-www-form-urlencoded'
+            ));
+            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($handle, CURLOPT_POST, true);
+            curl_setopt($handle, CURLOPT_POSTFIELDS, $post_data);
+
+            $response = curl_exec($handle);
+            $httpCode = curl_getinfo($handle, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($handle);
+            curl_close($handle);
+
+            if ($curlError) {
+                throw new \Exception("cURL Error: " . $curlError);
+            }
+
+            Log::info('Procedural PHP SMS response', [
+                'phone' => $to,
+                'bodyId' => $bodyId,
+                'otp_code' => $otpCode,
+                'response' => $response,
+                'http_code' => $httpCode
+            ]);
+
+            $result = json_decode($response);
+
+            return [
+                'success' => isset($result->RetStatus) && $result->RetStatus == 1,
+                'response' => $result,
+                'message_id' => $result->Value ?? null,
+                'method' => 'procedural_php'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Procedural PHP SMS failed', [
+                'phone' => $to,
+                'bodyId' => $bodyId,
+                'otp_code' => $otpCode,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'method' => 'procedural_php'
+            ];
+        }
     }
 }
