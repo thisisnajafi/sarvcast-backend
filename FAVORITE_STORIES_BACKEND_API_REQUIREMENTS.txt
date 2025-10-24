@@ -1,0 +1,570 @@
+FAVORITE STORIES BACKEND API REQUIREMENTS
+==========================================
+
+OVERVIEW
+--------
+This document outlines the backend API requirements for the SarvCast favorite stories functionality. The favorites page displays user's favorite stories with the ability to add, remove, and manage favorites.
+
+BASE CONFIGURATION
+------------------
+API Base URL: https://my.sarvcast.ir/api/v1
+
+Required Headers:
+- Content-Type: application/json
+- Accept: application/json
+- User-Agent: SarvCast-Flutter/1.0.0
+- Authorization: Bearer {user_token} (REQUIRED for all endpoints)
+
+API ENDPOINTS
+=============
+
+1. GET FAVORITE STORIES
+-----------------------
+Route: GET /favorites/stories
+
+Purpose: Fetch all favorite stories for the authenticated user
+
+Parameters:
+- limit (optional): Number of stories to return (default: 20)
+- page (optional): Page number for pagination (default: 1)
+- sort_by (optional): Sort field (created_at, title, rating, play_count)
+- sort_order (optional): Sort direction (asc, desc)
+
+Expected Response:
+{
+  "success": true,
+  "message": "Favorite stories retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "title": "جنگل جادویی",
+      "subtitle": "ماجراجویی شگفت‌انگیز",
+      "description": "داستانی جادویی درباره جنگلی اسرارآمیز",
+      "category_id": 1,
+      "age_group": "5-8",
+      "duration": 1800,
+      "status": "published",
+      "is_premium": false,
+      "is_completely_free": true,
+      "play_count": 1250,
+      "rating": 4.5,
+      "rating_count": 89,
+      "favorite_count": 45,
+      "episode_count": 3,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-20T14:45:00Z",
+      "category": {
+        "id": 1,
+        "name": "داستان‌های ماجراجویی",
+        "slug": "adventure-stories",
+        "description": "داستان‌های هیجان‌انگیز و ماجراجویانه برای کودکان",
+        "color": "#F59E0B",
+        "status": "active",
+        "order": 1,
+        "story_count": 15,
+        "icon_path": "/icons/adventure-stories.svg",
+        "image_url": "https://my.sarvcast.ir/storage/categories/adventure-bg.jpg",
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-20T14:45:00Z"
+      },
+      "narrator": {
+        "id": 1,
+        "name": "علی احمدی",
+        "bio": "راوی با تجربه",
+        "image_url": "https://my.sarvcast.ir/storage/narrators/ali-ahmadi.jpg",
+        "roles": ["narrator", "voice_actor"],
+        "total_stories": 10,
+        "total_episodes": 50,
+        "average_rating": 4.5,
+        "is_verified": true,
+        "last_active_at": "2024-01-18T16:20:00Z",
+        "created_at": "2024-01-10T09:15:00Z"
+      },
+      "image_url": "https://my.sarvcast.ir/storage/stories/magical-forest.jpg",
+      "cover_image_url": "https://my.sarvcast.ir/storage/stories/magical-forest-cover.jpg",
+      "total_episodes": 3,
+      "free_episodes": 3,
+      "episode_ids": [1, 2, 3],
+      "is_favorite": true,
+      "progress": 0.0,
+      "tags": ["جادو", "جنگل", "ماجراجویی"],
+      "language": "fa",
+      "favorited_at": "2024-01-16T14:30:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total": 15,
+    "last_page": 1,
+    "has_more": false
+  }
+}
+
+2. ADD STORY TO FAVORITES
+-------------------------
+Route: POST /favorites/stories/{story_id}
+
+Purpose: Add a story to user's favorites
+
+Parameters:
+- story_id (required): Story ID in the URL path
+
+Expected Response:
+{
+  "success": true,
+  "message": "Story added to favorites successfully",
+  "data": {
+    "story_id": 1,
+    "user_id": 123,
+    "favorited_at": "2024-01-16T14:30:00Z"
+  }
+}
+
+3. REMOVE STORY FROM FAVORITES
+------------------------------
+Route: DELETE /favorites/stories/{story_id}
+
+Purpose: Remove a story from user's favorites
+
+Parameters:
+- story_id (required): Story ID in the URL path
+
+Expected Response:
+{
+  "success": true,
+  "message": "Story removed from favorites successfully",
+  "data": {
+    "story_id": 1,
+    "user_id": 123,
+    "removed_at": "2024-01-16T14:35:00Z"
+  }
+}
+
+4. CHECK IF STORY IS FAVORITE
+-----------------------------
+Route: GET /favorites/stories/{story_id}
+
+Purpose: Check if a specific story is in user's favorites
+
+Parameters:
+- story_id (required): Story ID in the URL path
+
+Expected Response:
+{
+  "success": true,
+  "message": "Favorite status retrieved successfully",
+  "data": {
+    "story_id": 1,
+    "is_favorite": true,
+    "favorited_at": "2024-01-16T14:30:00Z"
+  }
+}
+
+5. CLEAR ALL FAVORITES
+----------------------
+Route: DELETE /favorites/stories
+
+Purpose: Remove all stories from user's favorites
+
+Expected Response:
+{
+  "success": true,
+  "message": "All favorites cleared successfully",
+  "data": {
+    "user_id": 123,
+    "cleared_count": 15,
+    "cleared_at": "2024-01-16T14:40:00Z"
+  }
+}
+
+6. GET FAVORITE STORIES COUNT
+-----------------------------
+Route: GET /favorites/stories/count
+
+Purpose: Get the total number of favorite stories for the user
+
+Expected Response:
+{
+  "success": true,
+  "message": "Favorite count retrieved successfully",
+  "data": {
+    "count": 15,
+    "user_id": 123
+  }
+}
+
+DATA MODELS
+===========
+
+Story Model (with favorite fields):
+- id: int (required)
+- title: string (required)
+- subtitle: string (required)
+- description: string (required)
+- category_id: int (required)
+- age_group: string (required)
+- duration: int (required) - in seconds
+- status: string (required) - "published", "draft", "archived"
+- is_premium: boolean (required)
+- is_completely_free: boolean (required)
+- play_count: int (required)
+- rating: double (required)
+- rating_count: int (required)
+- favorite_count: int (required)
+- episode_count: int (required)
+- created_at: datetime (required) - ISO 8601 format
+- updated_at: datetime (required) - ISO 8601 format
+- category: object (optional) - Category details
+- narrator: object (optional) - Narrator details
+- image_url: string (optional) - Story thumbnail image URL
+- cover_image_url: string (optional) - Story cover image URL
+- total_episodes: int (required)
+- free_episodes: int (required)
+- episode_ids: array (required) - Array of episode IDs
+- is_favorite: boolean (required) - Always true for favorites endpoint
+- progress: double (required) - User's progress (0.0 to 1.0)
+- tags: array (required) - Array of story tags
+- language: string (required) - Story language code
+- favorited_at: datetime (required) - When story was favorited (ISO 8601)
+
+Category Model:
+- id: int (required)
+- name: string (required)
+- slug: string (required)
+- description: string (required)
+- color: string (required) - Hex color code
+- status: string (required) - "active", "inactive"
+- order: int (required)
+- story_count: int (required)
+- icon_path: string (optional) - Path to category icon
+- image_url: string (optional) - Category background image URL
+- created_at: datetime (required) - ISO 8601 format
+- updated_at: datetime (required) - ISO 8601 format
+
+Person Model (Narrator):
+- id: int (required)
+- name: string (required)
+- bio: string (required)
+- image_url: string (optional) - Narrator profile image URL
+- roles: array (required) - Array of roles (e.g., ["narrator", "voice_actor"])
+- total_stories: int (required)
+- total_episodes: int (required)
+- average_rating: double (required)
+- is_verified: boolean (required)
+- last_active_at: datetime (optional) - ISO 8601 format
+- created_at: datetime (required) - ISO 8601 format
+
+CRITICAL REQUIREMENTS
+=====================
+
+1. AUTHENTICATION
+-----------------
+- ALL endpoints require Bearer token authentication
+- User must be logged in to access favorites
+- Return 401 Unauthorized if token is missing or invalid
+- Return 403 Forbidden if user doesn't have permission
+
+2. STORY IMAGES
+---------------
+- image_url: REQUIRED field for story thumbnails
+- Format: Full URL to story image
+- Resolution: Minimum 300x200px for story cards
+- Aspect Ratio: 3:2 recommended for consistent display
+- Formats: JPG, PNG, WebP supported
+- CDN: Images should be served from CDN for performance
+
+3. FAVORITE STATUS
+------------------
+- is_favorite: Always true for stories returned from favorites endpoint
+- favorited_at: Timestamp when story was added to favorites
+- Progress tracking: Include user's progress for each story
+- Real-time updates: Favorite status should be immediately updated
+
+4. PAGINATION
+-------------
+- Implement proper pagination for large favorite lists
+- Include pagination metadata in response
+- Support limit and page parameters
+- Return has_more flag for infinite scrolling
+
+5. SORTING AND FILTERING
+------------------------
+- Support sorting by favorited_at (newest/oldest first)
+- Support sorting by story title, rating, play_count
+- Support filtering by category, age_group, language
+- Default sort: favorited_at DESC (newest favorites first)
+
+6. PERFORMANCE
+--------------
+- Cache favorite status for frequently accessed stories
+- Optimize database queries with proper indexing
+- Implement efficient pagination
+- Use CDN for image delivery
+- Add appropriate cache headers
+
+ERROR HANDLING
+==============
+
+HTTP Status Codes:
+- 200: Success
+- 201: Created (for adding favorites)
+- 400: Bad Request (invalid parameters)
+- 401: Unauthorized (missing or invalid token)
+- 403: Forbidden (insufficient permissions)
+- 404: Not Found (story or user not found)
+- 409: Conflict (story already in favorites)
+- 500: Server Error
+
+Error Response Format:
+{
+  "success": false,
+  "message": "Error description",
+  "error": {
+    "code": "ERROR_CODE",
+    "details": "Detailed error information"
+  }
+}
+
+Common Error Codes:
+- INVALID_STORY_ID: Story ID is invalid or doesn't exist
+- STORY_ALREADY_FAVORITE: Story is already in favorites
+- STORY_NOT_FAVORITE: Story is not in favorites
+- USER_NOT_FOUND: User not found
+- INVALID_TOKEN: Authentication token is invalid
+- INSUFFICIENT_PERMISSIONS: User doesn't have required permissions
+
+DATABASE SCHEMA
+===============
+
+Favorites Table:
+CREATE TABLE favorites (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    story_id BIGINT NOT NULL,
+    favorited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE,
+    
+    UNIQUE KEY unique_user_story (user_id, story_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_story_id (story_id),
+    INDEX idx_favorited_at (favorited_at)
+);
+
+Stories Table (required fields):
+- id: BIGINT PRIMARY KEY
+- title: VARCHAR(255) NOT NULL
+- subtitle: VARCHAR(255)
+- description: TEXT
+- category_id: BIGINT
+- age_group: VARCHAR(50)
+- duration: INT (seconds)
+- status: ENUM('published', 'draft', 'archived')
+- is_premium: BOOLEAN
+- is_completely_free: BOOLEAN
+- play_count: INT DEFAULT 0
+- rating: DECIMAL(3,2) DEFAULT 0.00
+- rating_count: INT DEFAULT 0
+- favorite_count: INT DEFAULT 0
+- episode_count: INT DEFAULT 0
+- image_url: VARCHAR(500) - REQUIRED for favorites page
+- cover_image_url: VARCHAR(500)
+- total_episodes: INT
+- free_episodes: INT
+- episode_ids: JSON
+- progress: DECIMAL(3,2) DEFAULT 0.00
+- tags: JSON
+- language: VARCHAR(10) DEFAULT 'fa'
+- created_at: TIMESTAMP
+- updated_at: TIMESTAMP
+
+IMPLEMENTATION CHECKLIST
+========================
+
+Backend Requirements:
+[ ] Create favorites table with proper indexes
+[ ] Implement GET /favorites/stories endpoint
+[ ] Implement POST /favorites/stories/{story_id} endpoint
+[ ] Implement DELETE /favorites/stories/{story_id} endpoint
+[ ] Implement GET /favorites/stories/{story_id} endpoint
+[ ] Implement DELETE /favorites/stories endpoint
+[ ] Implement GET /favorites/stories/count endpoint
+[ ] Add authentication middleware to all endpoints
+[ ] Implement proper error handling
+[ ] Add input validation
+[ ] Implement pagination
+[ ] Add sorting and filtering
+[ ] Optimize database queries
+[ ] Add caching layer
+[ ] Set up CDN for images
+[ ] Add rate limiting
+[ ] Implement logging
+[ ] Add API documentation
+[ ] Write unit tests
+[ ] Write integration tests
+[ ] Performance testing
+[ ] Security testing
+
+Database Updates:
+[ ] Create favorites table
+[ ] Add foreign key constraints
+[ ] Create indexes for performance
+[ ] Add image_url field to stories table (if not exists)
+[ ] Update story model to include favorite fields
+[ ] Add database migrations
+[ ] Test database performance
+[ ] Optimize queries
+[ ] Add database monitoring
+
+API Response Updates:
+[ ] Update story model to include favorite fields
+[ ] Add favorited_at timestamp
+[ ] Include category and narrator details
+[ ] Add image URLs for stories
+[ ] Implement proper pagination metadata
+[ ] Add error response format
+[ ] Update API documentation
+[ ] Add response examples
+[ ] Validate all response formats
+
+Testing Requirements:
+[ ] Test all endpoints with valid authentication
+[ ] Test all endpoints with invalid authentication
+[ ] Test adding story to favorites
+[ ] Test removing story from favorites
+[ ] Test clearing all favorites
+[ ] Test pagination
+[ ] Test sorting and filtering
+[ ] Test error scenarios
+[ ] Test performance with large datasets
+[ ] Test image loading
+[ ] Test real-time updates
+[ ] Test concurrent access
+[ ] Test data consistency
+
+FLUTTER IMPLEMENTATION
+======================
+
+Service Class:
+```dart
+class FavoritesApiService {
+  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  
+  Future<List<Story>> getFavoriteStories({
+    int? limit,
+    int? page,
+    String? sortBy,
+    String? sortOrder,
+  }) async {
+    // Implementation
+  }
+  
+  Future<void> addToFavorites(int storyId) async {
+    // Implementation
+  }
+  
+  Future<void> removeFromFavorites(int storyId) async {
+    // Implementation
+  }
+  
+  Future<bool> isFavorite(int storyId) async {
+    // Implementation
+  }
+  
+  Future<void> clearAllFavorites() async {
+    // Implementation
+  }
+  
+  Future<int> getFavoritesCount() async {
+    // Implementation
+  }
+}
+```
+
+State Management:
+```dart
+class FavoritesNotifier extends StateNotifier<FavoritesState> {
+  // Implementation with Riverpod
+}
+```
+
+UI Components:
+- Favorites list with horizontal scrolling
+- Story cards with favorite status
+- Empty state for no favorites
+- Loading states
+- Error handling
+- Pull-to-refresh functionality
+
+SECURITY CONSIDERATIONS
+=======================
+
+1. Authentication
+- Validate JWT tokens
+- Check user permissions
+- Implement token refresh
+- Handle expired tokens
+
+2. Authorization
+- Verify user owns the favorites
+- Prevent access to other users' favorites
+- Validate story ownership
+- Check story permissions
+
+3. Input Validation
+- Validate story IDs
+- Sanitize user inputs
+- Check parameter ranges
+- Prevent SQL injection
+
+4. Rate Limiting
+- Limit API calls per user
+- Prevent abuse
+- Implement throttling
+- Monitor usage patterns
+
+5. Data Protection
+- Encrypt sensitive data
+- Use HTTPS only
+- Implement CORS
+- Add security headers
+
+PERFORMANCE OPTIMIZATION
+========================
+
+1. Database
+- Use proper indexes
+- Optimize queries
+- Implement connection pooling
+- Add query caching
+
+2. API
+- Implement response caching
+- Use compression
+- Optimize JSON serialization
+- Add pagination
+
+3. Images
+- Use CDN delivery
+- Implement lazy loading
+- Optimize image formats
+- Add image caching
+
+4. Monitoring
+- Track API performance
+- Monitor database queries
+- Log error rates
+- Set up alerts
+
+SUPPORT
+=======
+
+For technical support or API issues, contact the development team.
+
+Document Version: 1.0
+Last Updated: January 2024
+Next Review: February 2024
