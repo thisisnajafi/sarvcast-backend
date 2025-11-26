@@ -471,9 +471,11 @@ class MobileController extends Controller
             ]
         );
 
-        // Update episode play count
-        Episode::where('id', $validated['episode_id'])
-            ->increment('play_count');
+        // Only count as a play if user listened for at least 10 seconds
+        if ($validated['duration'] >= 10) {
+            Episode::where('id', $validated['episode_id'])
+                ->increment('play_count');
+        }
 
         return response()->json([
             'success' => true,

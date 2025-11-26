@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\AppVersionController;
 use App\Http\Controllers\PaymentCallbackController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ErrorController;
+use App\Http\Controllers\Admin\StoryExportController;
 
 // Redirect root to admin login if not authenticated
 Route::get('/', function () {
@@ -727,6 +728,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('/export', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'export'])->name('export');
         Route::get('/statistics', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'statistics'])->name('statistics');
     });
+
+    // Story / Episode JSON export & import
+    Route::get('stories/export/json', [StoryExportController::class, 'exportJson'])->name('stories.export-json');
+    Route::post('stories/import/json', [StoryExportController::class, 'importJson'])->name('stories.import-json');
 
     // Version Management Routes
     Route::prefix('versions')->name('versions.')->group(function () {

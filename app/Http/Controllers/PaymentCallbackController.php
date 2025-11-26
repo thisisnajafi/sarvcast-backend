@@ -33,18 +33,20 @@ class PaymentCallbackController extends Controller
             $timestamp = now()->toIso8601String();
 
             if ($result['success']) {
+                // Use parameter names compatible with Flutter deep link parsing
                 $deepLink = $returnScheme . '://payment/success?' . http_build_query([
-                    'transactionId' => $payment->transaction_id,
-                    'paymentId' => $payment->id,
-                    'subscriptionId' => $subscription?->id,
-                    'amount' => $payment->amount,
-                    'currency' => $payment->currency,
+                    'success' => 'true',
+                    'payment_id' => $payment->id,
+                    'subscription_id' => $subscription?->id,
+                    'amount' => (int) $payment->amount,
+                    'transaction_id' => $payment->transaction_id,
                     'timestamp' => $timestamp,
                 ]);
             } else {
                 $deepLink = $returnScheme . '://payment/failure?' . http_build_query([
-                    'paymentId' => $payment->id,
-                    'subscriptionId' => $subscription?->id,
+                    'success' => 'false',
+                    'payment_id' => $payment->id,
+                    'subscription_id' => $subscription?->id,
                     'error' => $result['message'] ?? 'پرداخت ناموفق بود',
                     'timestamp' => $timestamp,
                 ]);

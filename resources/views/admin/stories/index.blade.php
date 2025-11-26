@@ -90,6 +90,16 @@
                     <a href="{{ route('admin.stories.export', request()->query()) }}" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 transition duration-200">
                         خروجی CSV
                     </a>
+                    <a href="{{ route('admin.stories.export-json', request()->query()) }}" class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg hover:bg-emerald-200 transition duration-200">
+                        خروجی JSON (داستان + اپیزود + تایم‌لاین)
+                    </a>
+                    <form action="{{ route('admin.stories.import-json') }}" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2 space-x-reverse">
+                        @csrf
+                        <label class="inline-flex items-center bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-indigo-100 transition duration-200">
+                            <span>ورودی JSON</span>
+                            <input type="file" name="file" accept=".json,application/json" class="hidden" onchange="this.form.submit()">
+                        </label>
+                    </form>
                     <a href="{{ route('admin.stories.create') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
                         افزودن داستان جدید
                     </a>
