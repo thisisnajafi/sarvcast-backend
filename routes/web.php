@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\RevenueAnalyticsController;
 use App\Http\Controllers\Admin\SystemAnalyticsController;
 use App\Http\Controllers\Admin\AppVersionController;
 use App\Http\Controllers\PaymentCallbackController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ErrorController;
 
 // Redirect root to admin login if not authenticated
@@ -29,6 +30,12 @@ Route::get('/', function () {
     }
     return redirect()->route('admin.auth.login');
 })->name('home');
+
+// Public checkout page for subscriptions/payments
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+});
 
 // Admin Authentication Routes
 Route::prefix('admin/auth')->name('admin.auth.')->group(function () {
@@ -48,22 +55,22 @@ Route::prefix('admin/2fa')->name('admin.2fa.')->middleware(['auth:web', 'admin']
 // Admin Routes
 Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Dashboard Routes
     Route::prefix('dashboards')->name('dashboards.')->group(function () {
         Route::get('/stories', [\App\Http\Controllers\Admin\StoriesDashboardController::class, 'index'])->name('stories');
         Route::get('/stories/analytics', [\App\Http\Controllers\Admin\StoriesDashboardController::class, 'analytics'])->name('stories.analytics');
         Route::get('/stories/export', [\App\Http\Controllers\Admin\StoriesDashboardController::class, 'export'])->name('stories.export');
-        
+
         Route::get('/partners', [\App\Http\Controllers\Admin\PartnersDashboardController::class, 'index'])->name('partners');
         Route::get('/partners/analytics', [\App\Http\Controllers\Admin\PartnersDashboardController::class, 'analytics'])->name('partners.analytics');
         Route::get('/partners/export', [\App\Http\Controllers\Admin\PartnersDashboardController::class, 'export'])->name('partners.export');
-        
+
         Route::get('/sales', [\App\Http\Controllers\Admin\SalesDashboardController::class, 'index'])->name('sales');
         Route::get('/sales/analytics', [\App\Http\Controllers\Admin\SalesDashboardController::class, 'analytics'])->name('sales.analytics');
         Route::get('/sales/export', [\App\Http\Controllers\Admin\SalesDashboardController::class, 'export'])->name('sales.export');
     });
-    
+
     // Stories
     Route::resource('stories', StoryController::class);
     Route::post('stories/bulk-action', [StoryController::class, 'bulkAction'])->name('stories.bulk-action');
@@ -71,7 +78,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     Route::get('stories/export', [StoryController::class, 'export'])->name('stories.export');
     Route::get('stories/statistics', [StoryController::class, 'statistics'])->name('stories.statistics');
     Route::post('stories/{story}/publish', [StoryController::class, 'publish'])->name('stories.publish');
-    
+
     // Story Timeline Management Routes
     Route::prefix('stories/{story}/timeline')->name('stories.timeline.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'index'])->name('index');
@@ -82,7 +89,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::delete('/{timeline}', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'destroy'])->name('destroy');
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryTimelineController::class, 'bulkAction'])->name('bulk-action');
     });
-    
+
     // Episodes
     Route::resource('episodes', EpisodeController::class);
     Route::post('episodes/bulk-action', [EpisodeController::class, 'bulkAction'])->name('episodes.bulk-action');
@@ -91,7 +98,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     Route::get('episodes/statistics', [EpisodeController::class, 'statistics'])->name('episodes.statistics');
     Route::post('episodes/{episode}/publish', [EpisodeController::class, 'publish'])->name('episodes.publish');
     Route::post('stories/{story}/episodes/reorder', [EpisodeController::class, 'reorder'])->name('stories.episodes.reorder');
-    
+
     // Episode Timeline Management Routes
     Route::prefix('episodes/{episode}/timeline')->name('episodes.timeline.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'show'])->name('index');
@@ -102,14 +109,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::delete('/{timeline}', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'destroy'])->name('destroy');
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'bulkAction'])->name('bulk-action');
     });
-    
+
     // Global Timeline Management Routes
     Route::prefix('timelines')->name('timelines.')->group(function () {
         Route::get('/', [TimelineManagementController::class, 'index'])->name('index');
         Route::get('/statistics', [TimelineManagementController::class, 'statistics'])->name('statistics');
         Route::post('/bulk-action', [TimelineManagementController::class, 'bulkAction'])->name('bulk-action');
     });
-    
+
     // Comments Management
     Route::prefix('comments')->name('comments.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\CommentsManagementController::class, 'index'])->name('index');
@@ -126,7 +133,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('/statistics', [\App\Http\Controllers\Admin\CommentsManagementController::class, 'statistics'])->name('statistics');
         Route::get('/export', [\App\Http\Controllers\Admin\CommentsManagementController::class, 'export'])->name('export');
     });
-    
+
     // Voice Actor Management
     Route::prefix('episodes/{episode}/voice-actors')->name('episodes.voice-actors.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'index'])->name('index');
@@ -137,13 +144,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::delete('/{voiceActor}', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'destroy'])->name('destroy');
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'bulkAction'])->name('bulk-action');
     });
-    
+
     // Categories
     Route::resource('categories', CategoryController::class);
-    
+
     // People
     Route::resource('people', PersonController::class);
-    
+
     // Users
     Route::get('users/search', [UserController::class, 'search'])->name('users.search');
     Route::resource('users', UserController::class);
@@ -155,54 +162,54 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
     Route::get('users/{user}/activity', [UserController::class, 'activity'])->name('users.activity');
     Route::post('users/{user}/send-notification', [UserController::class, 'sendNotification'])->name('users.send-notification');
     Route::get('users/{user}/profile', [UserController::class, 'profile'])->name('users.profile');
-    
+
     // File Management
     Route::get('files/upload', function () {
         return view('admin.files.upload');
     })->name('files.upload');
-    
+
     // Timeline Management
     Route::get('timeline', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'index'])->name('timeline.index');
-    
+
     // Audio Management
     Route::get('audio', function () {
         return view('admin.audio.index');
     })->name('audio.index');
-    
+
     // Notifications
     Route::resource('notifications', NotificationController::class);
     Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
     Route::post('users/{user}/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('users.notifications.mark-all-read');
     Route::post('notifications/send-test', [NotificationController::class, 'sendTest'])->name('notifications.send-test');
-    
+
     // App Versions
     Route::resource('app-versions', AppVersionController::class);
     Route::post('app-versions/{appVersion}/toggle-active', [AppVersionController::class, 'toggleActive'])->name('app-versions.toggle-active');
     Route::post('app-versions/{appVersion}/set-latest', [AppVersionController::class, 'setLatest'])->name('app-versions.set-latest');
     Route::get('notifications/statistics', [NotificationController::class, 'statistics'])->name('notifications.statistics');
-    
+
     // Analytics
     Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics');
     Route::get('analytics/data', [AnalyticsController::class, 'getAnalyticsData'])->name('analytics.data');
-    
+
     // Coin Analytics
     Route::get('analytics/coin', function () {
         return view('admin.analytics.coin-analytics');
     })->name('analytics.coin');
-    
+
     // Referral Analytics
     Route::get('analytics/referral', function () {
         return view('admin.analytics.referral-analytics');
     })->name('analytics.referral');
-    
-    
-    
-    
+
+
+
+
     // Admin Dashboard
     Route::get('/', function () {
         return view('admin.dashboard.index');
     })->name('dashboard');
-    
+
     // Role Management
     Route::prefix('roles')->name('roles.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\RoleController::class, 'index'])->name('index');
@@ -213,7 +220,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::delete('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'destroy'])->name('destroy');
         Route::post('/assign', [\App\Http\Controllers\Admin\RoleController::class, 'assign'])->name('assign');
     });
-    
+
     // User Analytics
     Route::prefix('user-analytics')->name('user-analytics.')->group(function () {
         Route::get('/', [UserAnalyticsController::class, 'index'])->name('index');
@@ -231,7 +238,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('export', [UserAnalyticsController::class, 'export'])->name('export');
         Route::get('summary', [UserAnalyticsController::class, 'summary'])->name('summary');
     });
-    
+
     // Content Analytics
     Route::prefix('content-analytics')->name('content-analytics.')->group(function () {
         Route::get('/', [ContentAnalyticsController::class, 'index'])->name('index');
@@ -245,7 +252,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('export', [ContentAnalyticsController::class, 'export'])->name('export');
         Route::get('summary', [ContentAnalyticsController::class, 'summary'])->name('summary');
     });
-    
+
     // Revenue Analytics
     Route::prefix('revenue-analytics')->name('revenue-analytics.')->group(function () {
         Route::get('/', [RevenueAnalyticsController::class, 'index'])->name('index');
@@ -258,7 +265,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('export', [RevenueAnalyticsController::class, 'export'])->name('export');
         Route::get('summary', [RevenueAnalyticsController::class, 'summary'])->name('summary');
     });
-    
+
     // System Analytics
     Route::prefix('system-analytics')->name('system-analytics.')->group(function () {
         Route::get('/', [SystemAnalyticsController::class, 'index'])->name('index');
@@ -275,7 +282,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('real-time', [SystemAnalyticsController::class, 'realTime'])->name('real-time');
         Route::get('health-check', [SystemAnalyticsController::class, 'healthCheck'])->name('health-check');
     });
-    
+
     // Content Moderation
     Route::prefix('moderation')->name('moderation.')->group(function () {
         Route::get('/', [ContentModerationController::class, 'index'])->name('index');
@@ -288,12 +295,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('reports', [ContentModerationController::class, 'reports'])->name('reports');
         Route::post('reports/{report}/resolve', [ContentModerationController::class, 'resolveReport'])->name('reports.resolve');
     });
-    
+
 
     // Admin Dashboard API Routes
     Route::prefix('api')->name('api.')->group(function () {
         Route::get('dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'stats'])->name('dashboard.stats');
-        
+
         // Admin Image Timeline API routes
         Route::prefix('episodes/{episode}/timeline')->name('timeline.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'index'])->name('index');
@@ -302,11 +309,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::delete('/', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'destroy'])->name('destroy');
             Route::get('/statistics', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'statistics'])->name('statistics');
         });
-        
+
         Route::post('timeline/validate', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'validateTimeline'])->name('timeline.validate');
         Route::post('timeline/optimize', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'optimize'])->name('timeline.optimize');
         Route::post('timeline/bulk-action', [\App\Http\Controllers\Admin\ImageTimelineController::class, 'bulkAction'])->name('timeline.bulk-action');
-        
+
         // Admin Voice Actor API routes
         Route::prefix('episodes/{episode}/voice-actors')->name('voice-actors.')->group(function () {
             Route::get('/data', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'getVoiceActorsData'])->name('data');
@@ -314,7 +321,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::post('/validate-time-range', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'validateTimeRange'])->name('validate-time-range');
             Route::get('/available-people', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'getAvailablePeople'])->name('available-people');
         });
-        
+
         // Admin Audio Processing API routes
         Route::prefix('audio')->name('audio.')->group(function () {
             Route::post('process', [\App\Http\Controllers\Api\AudioProcessingController::class, 'processAudio'])->name('process');
@@ -326,7 +333,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::get('stats', [\App\Http\Controllers\Api\AudioProcessingController::class, 'getStats'])->name('stats');
             Route::post('cleanup', [\App\Http\Controllers\Api\AudioProcessingController::class, 'cleanup'])->name('cleanup');
         });
-        
+
         // Admin Image Processing API routes
         Route::prefix('image')->name('image.')->group(function () {
             Route::post('process', [\App\Http\Controllers\Api\ImageProcessingController::class, 'processImage'])->name('process');
@@ -341,7 +348,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::get('stats', [\App\Http\Controllers\Api\ImageProcessingController::class, 'getStats'])->name('stats');
             Route::post('cleanup', [\App\Http\Controllers\Api\ImageProcessingController::class, 'cleanup'])->name('cleanup');
         });
-        
+
         // Admin Audio Management API routes
         Route::prefix('audio-management')->name('audio-management.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\AudioManagementController::class, 'index'])->name('index');
@@ -349,7 +356,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::get('stats', [\App\Http\Controllers\Admin\AudioManagementController::class, 'getStats'])->name('stats');
             Route::post('bulk-operation', [\App\Http\Controllers\Admin\AudioManagementController::class, 'bulkOperation'])->name('bulk-operation');
         });
-        
+
         // Admin Performance Monitoring API routes
         Route::prefix('performance')->name('performance.')->group(function () {
             Route::get('dashboard', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'dashboard'])->name('dashboard');
@@ -361,7 +368,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::get('timeline-metrics', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'timelineMetrics'])->name('timeline-metrics');
             Route::get('comment-metrics', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'commentMetrics'])->name('comment-metrics');
         });
-        
+
         // Admin Backup and Recovery API routes
         Route::prefix('backup')->name('backup.')->group(function () {
             Route::post('create-full', [\App\Http\Controllers\Admin\BackupController::class, 'createFullBackup'])->name('create-full');
@@ -375,7 +382,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::post('schedule', [\App\Http\Controllers\Admin\BackupController::class, 'scheduleBackups'])->name('schedule.create');
             Route::get('schedule', [\App\Http\Controllers\Admin\BackupController::class, 'getBackupSchedule'])->name('schedule.get');
         });
-        
+
         // Admin In-App Notifications API routes
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::post('create', [\App\Http\Controllers\Api\InAppNotificationController::class, 'create'])->name('create');
@@ -383,7 +390,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
             Route::get('statistics', [\App\Http\Controllers\Api\InAppNotificationController::class, 'statistics'])->name('statistics');
             Route::post('cleanup-expired', [\App\Http\Controllers\Api\InAppNotificationController::class, 'cleanupExpired'])->name('cleanup-expired');
         });
-        
+
         // Admin Subscriptions API routes
         Route::get('subscriptions', [\App\Http\Controllers\Admin\SubscriptionController::class, 'index'])->name('subscriptions');
     });
@@ -468,7 +475,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\SchoolController::class, 'bulkAction'])->name('bulk-action');
         Route::get('/export', [\App\Http\Controllers\Admin\SchoolController::class, 'export'])->name('export');
         Route::get('/statistics', [\App\Http\Controllers\Admin\SchoolController::class, 'statistics'])->name('statistics');
-        
+
         // Teacher assignment routes
         Route::post('/{school}/assign-teacher', [\App\Http\Controllers\Admin\SchoolController::class, 'assignTeacher'])->name('assign-teacher');
         Route::delete('/{school}/remove-teacher', [\App\Http\Controllers\Admin\SchoolController::class, 'removeTeacherAssignment'])->name('remove-teacher');
@@ -745,11 +752,11 @@ Route::prefix('payment')->group(function () {
 //     Route::get('/coins', function () {
 //         return view('user.coins.dashboard');
 //     })->name('user.coins.dashboard');
-//     
+//
 //     Route::get('/coins/transactions', function () {
 //         return view('user.coins.transactions');
 //     })->name('user.coins.transactions');
-//     
+//
 //     Route::get('/coins/redemption', function () {
 //         return view('user.coins.redemption');
 //     })->name('user.coins.redemption');
@@ -760,11 +767,11 @@ Route::prefix('payment')->group(function () {
 //     Route::get('/quiz/episode', function () {
 //         return view('user.quiz.episode-quiz');
 //     })->name('user.quiz.episode');
-//     
+//
 //     Route::get('/quiz/history', function () {
 //         return view('user.quiz.quiz-history');
 //     })->name('user.quiz.history');
-//     
+//
 //     Route::get('/quiz/statistics', function () {
 //         return view('user.quiz.quiz-statistics');
 //     })->name('user.quiz.statistics');

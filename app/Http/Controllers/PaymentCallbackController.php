@@ -21,14 +21,46 @@ class PaymentCallbackController extends Controller
     public function zarinpalCallback(Request $request)
     {
         $result = $this->paymentService->processCallback($request->all());
-        
+
+        $payment = $result['payment'] ?? null;
+        $metadata = $payment?->metadata ?? [];
+        $source = $metadata['source'] ?? null;
+        $returnScheme = $metadata['return_scheme'] ?? null;
+
+        // If flow originated from the app, redirect back via deep link
+        if ($payment && $source === 'app' && $returnScheme) {
+            $subscription = $payment->subscription;
+            $timestamp = now()->toIso8601String();
+
+            if ($result['success']) {
+                $deepLink = $returnScheme . '://payment/success?' . http_build_query([
+                    'transactionId' => $payment->transaction_id,
+                    'paymentId' => $payment->id,
+                    'subscriptionId' => $subscription?->id,
+                    'amount' => $payment->amount,
+                    'currency' => $payment->currency,
+                    'timestamp' => $timestamp,
+                ]);
+            } else {
+                $deepLink = $returnScheme . '://payment/failure?' . http_build_query([
+                    'paymentId' => $payment->id,
+                    'subscriptionId' => $subscription?->id,
+                    'error' => $result['message'] ?? 'پرداخت ناموفق بود',
+                    'timestamp' => $timestamp,
+                ]);
+            }
+
+            return redirect()->away($deepLink);
+        }
+
+        // Default web behaviour
         if ($result['success']) {
             return redirect()->route('payment.success', [
-                'payment_id' => $result['payment']->id
+                'payment_id' => $payment?->id
             ])->with('success', $result['message']);
-        } else {
-            return redirect()->route('payment.failure')->with('error', $result['message']);
         }
+
+        return redirect()->route('payment.failure')->with('error', $result['message']);
     }
 
     /**
@@ -37,15 +69,15 @@ class PaymentCallbackController extends Controller
     public function success(Request $request)
     {
         $paymentId = $request->get('payment_id');
-        
+
         if ($paymentId) {
             $payment = \App\Models\Payment::with(['user', 'subscription'])->find($paymentId);
-            
+
             if ($payment) {
                 return view('payment.success', compact('payment'));
             }
         }
-        
+
         return view('payment.success');
     }
 
