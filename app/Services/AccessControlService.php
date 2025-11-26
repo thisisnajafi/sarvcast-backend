@@ -53,25 +53,10 @@ class AccessControlService
                 return true;
             }
 
-            // Fallback: treat any non-expired subscription as premium, even if status is inconsistent
+            // Debug: log all subscriptions for this user when no active/trial found
             $allSubscriptions = Subscription::where('user_id', $userId)->get();
 
-            $nonExpired = $allSubscriptions->first(function ($sub) {
-                return $sub->end_date && $sub->end_date > now();
-            });
-
-            if ($nonExpired) {
-                Log::warning('hasPremiumAccess: Non-expired subscription found with non-standard status, granting premium access', [
-                    'user_id' => $userId,
-                    'subscription_id' => $nonExpired->id,
-                    'status' => $nonExpired->status,
-                    'end_date' => $nonExpired->end_date
-                ]);
-                return true;
-            }
-
-            // Debug details when no subscription qualifies
-            Log::info('hasPremiumAccess: No active or non-expired subscription found', [
+            Log::info('hasPremiumAccess: No active or trial subscription found', [
                 'user_id' => $userId,
                 'all_subscriptions' => $allSubscriptions->map(function($sub) {
                     return [
