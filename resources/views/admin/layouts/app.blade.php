@@ -38,10 +38,10 @@
     </style>
     <script src="{{ asset('js/voice-actor-management.js') }}"></script>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 font-iran transition-colors duration-300">
-    <div class="flex h-screen">
+<body class="bg-gray-50 dark:bg-gray-900 font-iran transition-colors duration-300 overflow-x-hidden">
+    <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <div id="sidebar" class="w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-all duration-300 z-40">
+        <div id="sidebar" class="hidden lg:flex w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-40">
             <div class="p-6">
                 <div class="flex items-center space-x-3 space-x-reverse">
                     <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -549,7 +549,7 @@
         </div>
         
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col mr-64">
+        <div class="flex-1 flex flex-col lg:mr-64 mr-0 transition-all duration-300">
             <!-- Header -->
             <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
                 <div class="px-6 py-4 flex justify-between items-center">

@@ -31,6 +31,12 @@ Route::get('/', function () {
     return redirect()->route('admin.auth.login');
 })->name('home');
 
+// Fallback login route expected by Laravel's auth middleware
+// Redirects to existing admin login page so "auth" middleware can redirect properly.
+Route::get('/login', function () {
+    return redirect()->route('admin.auth.login');
+})->name('login');
+
 // Public checkout page for subscriptions/payments
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
