@@ -232,7 +232,7 @@ class CoinDashboardManager {
     }
 
     createPackageItem(package) {
-        const discount = package.original_price > package.price ? 
+        const discount = package.original_price > package.price ?
             Math.round(((package.original_price - package.price) / package.original_price) * 100) : 0;
 
         return `
@@ -241,7 +241,7 @@ class CoinDashboardManager {
                     <h3 class="font-bold text-lg text-gray-800">${package.name}</h3>
                     ${discount > 0 ? `<span class="discount-badge bg-red-500 text-white text-xs px-2 py-1 rounded-full">${discount}% تخفیف</span>` : ''}
                 </div>
-                
+
                 <div class="package-content text-center">
                     <div class="coins-amount text-3xl font-bold text-blue-600 mb-2">
                         ${package.coins.toLocaleString('fa-IR')}
@@ -256,7 +256,7 @@ class CoinDashboardManager {
                             </div>
                         ` : ''}
                     </div>
-                    
+
                     <button class="purchase-package-btn w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
                             data-package-id="${package.id}">
                         خرید
@@ -296,7 +296,7 @@ class CoinDashboardManager {
             if (data.success) {
                 this.showSuccess('خرید با موفقیت انجام شد!');
                 this.refreshData();
-                
+
                 // Redirect to payment if needed
                 if (data.payment_url) {
                     window.location.href = data.payment_url;
@@ -325,21 +325,21 @@ class CoinDashboardManager {
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                
+
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">تعداد سکه برای تبدیل:</label>
-                        <input type="number" id="redeem-amount" class="w-full border border-gray-300 rounded-lg px-3 py-2" 
+                        <input type="number" id="redeem-amount" class="w-full border border-gray-300 rounded-lg px-3 py-2"
                                min="1" max="${this.currentBalance}" placeholder="تعداد سکه">
                     </div>
-                    
+
                     <div class="bg-blue-50 p-3 rounded-lg">
                         <p class="text-sm text-blue-800">
                             <i class="fas fa-info-circle mr-1"></i>
                             هر 100 سکه معادل 1000 تومان است
                         </p>
                     </div>
-                    
+
                     <div id="redeem-preview" class="hidden">
                         <div class="bg-gray-50 p-3 rounded-lg">
                             <p class="text-sm text-gray-600">
@@ -348,7 +348,7 @@ class CoinDashboardManager {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="mt-6 flex justify-end space-x-3 space-x-reverse">
                     <button class="close-modal px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
                         انصراف
@@ -498,7 +498,7 @@ class CoinDashboardManager {
     showNotification(message, type = 'info') {
         const notification = document.createElement('div');
         notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm max-w-sm transform transition-all duration-300 translate-x-full`;
-        
+
         switch(type) {
             case 'success': notification.classList.add('bg-green-500'); break;
             case 'error': notification.classList.add('bg-red-500'); break;
@@ -512,10 +512,10 @@ class CoinDashboardManager {
         setTimeout(() => { notification.classList.remove('translate-x-full'); }, 100);
         setTimeout(() => {
             notification.classList.add('translate-x-full');
-            setTimeout(() => { 
-                if (notification.parentNode) { 
-                    notification.parentNode.removeChild(notification); 
-                } 
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
             }, 300);
         }, 3000);
     }

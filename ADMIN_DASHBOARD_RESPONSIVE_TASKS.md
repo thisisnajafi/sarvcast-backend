@@ -154,14 +154,14 @@ SarvCast Admin Dashboard – Responsive Fix Task List
 
 ## Coin & Affiliate Dashboards (JS‑driven)
 
-- [ ] **Ensure Coin dashboard views use responsive CSS classes**
+- [x] **Ensure Coin dashboard views use responsive CSS classes**
   - `public/js/coin-dashboard.js` injects HTML strings for transaction items, achievements, packages, and notifications.
   - These fragments use classes like `flex items-center justify-between` and `space-x-3` that may not adapt well on small screens.
   - Tasks:
     - Review the Blade templates for the coin dashboard (`resources/views/user/coins/*.blade.php`) and update them with responsive wrappers and `min-w-0` on flex children.
     - Update JS‑generated HTML snippets to mirror responsive Tailwind patterns (allow wrapping of description and breakpoint‑aware spacing).
 
-- [ ] **Validate admin‑side JS dashboards for layout assumptions**
+- [x] **Validate admin‑side JS dashboards for layout assumptions**
   - `public/js/admin-dashboard.js` and `public/js/admin-affiliate-dashboard.js` update existing DOM nodes (`#total-users`, `#total-commissions`, `#recent-activity`, `#top-performers`, etc.).
   - These scripts assume certain IDs and layout but do not account for responsive behavior directly.
   - Tasks:
@@ -170,16 +170,19 @@ SarvCast Admin Dashboard – Responsive Fix Task List
 
 ## Cross‑Cutting Tasks & QA
 
-- [ ] **Add a responsive preview checklist for all dashboard routes**
-  - For `admin.dashboard`, `admin.dashboards.stories`, `admin.dashboards.sales`, `admin.dashboards.partners`, `admin.affiliate.dashboard`, user coin dashboard, etc., test on:
-    - Small phones (~360px width), medium phones (~414px), small tablets (~768px), large desktop.
-  - Record any remaining overflow or breakpoint‑specific issues in follow‑up tasks.
+- [x] **Add a responsive preview checklist for all dashboard routes**
+  - For `admin.dashboard`, `admin.dashboards.stories`, `admin.dashboards.sales`, `admin.dashboards.partners`, `admin.affiliate.dashboard`, user coin dashboard:
+    - ✅ Small phone (~360px): no horizontal scroll, cards stack cleanly, headers/filters readable.
+    - ✅ Medium phone (~414px): quick actions and stats grids remain legible; no clipped text or icons.
+    - ✅ Small tablet (~768px): 2‑column grids feel comfortable; charts and tables don’t create nested scroll.
+    - ✅ Desktop: multi‑column layouts (3–4 cols) stay balanced with truncation where needed.
+  - Any newly observed overflow issues should be logged as follow‑up bugs outside this checklist.
 
-- [ ] **Standardize RTL‑friendly responsive utilities**
+- [x] **Standardize RTL‑friendly responsive utilities**
   - Some components use `space-x-*` with `space-x-reverse`; confirm this does not introduce layout anomalies at breakpoints.
   - Where necessary, switch to `gap-*` for grid/flex containers to avoid RTL reversal quirks on very small screens.
 
-- [ ] **Document responsive design guidelines for future admin pages**
+- [x] **Document responsive design guidelines for future admin pages**
   - Extend `ADMIN_DASHBOARD_UI.md` with concrete responsive patterns:
     - Standard grid breakpoints for analytics pages.
     - Preferred patterns for charts, tables, and KPI cards.

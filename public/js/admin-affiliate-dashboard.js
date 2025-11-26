@@ -183,18 +183,18 @@ class AdminAffiliateDashboard {
         const iconClass = this.getActivityIconClass(activity.type);
         
         div.innerHTML = `
-            <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconClass}">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconClass} flex-shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                 </svg>
             </div>
-            <div class="ml-4 flex-1">
-                <h4 class="text-sm font-medium text-gray-900">${activity.title}</h4>
-                <p class="text-xs text-gray-500">${this.formatDate(activity.created_at)}</p>
+            <div class="ml-4 flex-1 min-w-0">
+                <h4 class="text-sm font-medium text-gray-900 truncate" title="${activity.title}">${activity.title}</h4>
+                <p class="text-xs text-gray-500 whitespace-nowrap">${this.formatDate(activity.created_at)}</p>
             </div>
-            <div class="text-right">
-                <div class="text-sm font-medium text-blue-600">${this.formatCurrency(activity.amount || 0)}</div>
-                <div class="text-xs text-gray-500">${activity.partner_name || ''}</div>
+            <div class="text-right flex-shrink-0 ml-3">
+                <div class="text-sm font-medium text-blue-600 whitespace-nowrap">${this.formatCurrency(activity.amount || 0)}</div>
+                <div class="text-xs text-gray-500 truncate max-w-[8rem]" title="${activity.partner_name || ''}">${activity.partner_name || ''}</div>
             </div>
         `;
         
@@ -208,18 +208,18 @@ class AdminAffiliateDashboard {
         const rankClass = this.getRankClass(rank);
         
         div.innerHTML = `
-            <div class="flex items-center">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center ${rankClass} mr-3">
+            <div class="flex items-center min-w-0">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center ${rankClass} mr-3 flex-shrink-0">
                     <span class="text-sm font-bold text-white">${rank}</span>
                 </div>
-                <div>
-                    <h4 class="text-sm font-medium text-gray-900">${performer.name}</h4>
-                    <p class="text-xs text-gray-500">${performer.type}</p>
+                <div class="min-w-0">
+                    <h4 class="text-sm font-medium text-gray-900 truncate" title="${performer.name}">${performer.name}</h4>
+                    <p class="text-xs text-gray-500 truncate" title="${performer.type}">${performer.type}</p>
                 </div>
             </div>
-            <div class="text-right">
-                <div class="text-sm font-medium text-green-600">${this.formatCurrency(performer.total_commission || 0)}</div>
-                <div class="text-xs text-gray-500">${performer.total_sales || 0} فروش</div>
+            <div class="text-right flex-shrink-0 ml-3">
+                <div class="text-sm font-medium text-green-600 whitespace-nowrap">${this.formatCurrency(performer.total_commission || 0)}</div>
+                <div class="text-xs text-gray-500 whitespace-nowrap">${performer.total_sales || 0} فروش</div>
             </div>
         `;
         
@@ -233,13 +233,13 @@ class AdminAffiliateDashboard {
         const statusClass = this.getCommissionStatusClass(commission.status);
         
         div.innerHTML = `
-            <div class="flex-1">
-                <h4 class="text-sm font-medium text-gray-900">${commission.partner_name}</h4>
-                <p class="text-xs text-gray-500">${this.formatDate(commission.created_at)}</p>
+            <div class="flex-1 min-w-0">
+                <h4 class="text-sm font-medium text-gray-900 truncate" title="${commission.partner_name}">${commission.partner_name}</h4>
+                <p class="text-xs text-gray-500 whitespace-nowrap">${this.formatDate(commission.created_at)}</p>
             </div>
-            <div class="text-right">
-                <div class="text-sm font-medium text-green-600">${this.formatCurrency(commission.amount)}</div>
-                <div class="text-xs ${statusClass}">${this.getCommissionStatusText(commission.status)}</div>
+            <div class="text-right flex-shrink-0 ml-3">
+                <div class="text-sm font-medium text-green-600 whitespace-nowrap">${this.formatCurrency(commission.amount)}</div>
+                <div class="text-xs ${statusClass} whitespace-nowrap">${this.getCommissionStatusText(commission.status)}</div>
             </div>
         `;
         

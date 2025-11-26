@@ -23,7 +23,7 @@ class PaymentCallbackController extends Controller
         $result = $this->paymentService->processCallback($request->all());
 
         $payment = $result['payment'] ?? null;
-        $metadata = $payment?->metadata ?? [];
+        $metadata = $payment?->payment_metadata ?? [];
         $source = $metadata['source'] ?? null;
         $returnScheme = $metadata['return_scheme'] ?? null;
 

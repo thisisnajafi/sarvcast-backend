@@ -513,6 +513,16 @@
 
 ## Responsive Design
 
+### Grid Breakpoints & Layouts
+- Use `grid grid-cols-1 md:grid-cols-2` for most KPI card sections and upgrade to `xl:grid-cols-3` or `xl:grid-cols-4` only when there is enough horizontal space.
+- For narrow analytics containers, prefer `md:grid-cols-2 xl:grid-cols-3/4` instead of putting 3–4 columns at `md`.
+- Always add `min-w-0` to flex/grid children that contain text so `truncate` and wrapping work correctly without forcing horizontal scroll.
+
+### RTL‑Friendly Spacing
+- Prefer `gap-*` on flex/grid containers when you just need spacing between items; this avoids `space-x` + `space-x-reverse` quirks in RTL at very small widths.
+- Where `space-x-*` is required (e.g. icon + label rows), always pair with `space-x-reverse` and ensure the text container has `min-w-0` and can truncate/wrap safely.
+- Keep amounts, dates, and short labels in `whitespace-nowrap` spans, but never apply `whitespace-nowrap` to potentially long Persian titles.
+
 ### Mobile Navigation
 ```html
 <!-- Mobile Menu Button -->

@@ -93,7 +93,7 @@ class CheckoutController extends Controller
             'payment_method' => 'zarinpal',
             'payment_gateway' => 'zarinpal',
             'transaction_id' => 'PAY_' . time() . '_' . rand(1000, 9999),
-            'metadata' => [
+            'payment_metadata' => [
                 'source' => $source,
                 'return_scheme' => $returnScheme,
             ],
