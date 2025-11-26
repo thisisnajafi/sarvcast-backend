@@ -42,17 +42,25 @@
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <div id="sidebar" class="hidden lg:flex w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-40 translate-x-full lg:translate-x-0">
-            <div class="p-6">
-                <div class="flex items-center space-x-3 space-x-reverse">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3 space-x-reverse">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900 dark:text-white">سروکست</h1>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">پنل مدیریت</p>
+                        </div>
+                    </div>
+                    <!-- Mobile sidebar close button -->
+                    <button id="sidebar-close" class="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-900 dark:text-white">سروکست</h1>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">پنل مدیریت</p>
-                    </div>
+                    </button>
                 </div>
             </div>
 
@@ -838,9 +846,10 @@
         // Sidebar toggle functionality (mobile & desktop)
         document.addEventListener('DOMContentLoaded', function() {
             const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebarClose = document.getElementById('sidebar-close');
             const sidebar = document.getElementById('sidebar');
 
-            if (!sidebarToggle || !sidebar) {
+            if (!sidebar || !sidebarToggle) {
                 return;
             }
 
@@ -864,6 +873,12 @@
                     closeSidebar();
                 }
             });
+
+            if (sidebarClose) {
+                sidebarClose.addEventListener('click', function() {
+                    closeSidebar();
+                });
+            }
 
             // Keep sidebar state in sync with viewport size
             window.addEventListener('resize', function() {

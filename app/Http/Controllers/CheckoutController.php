@@ -34,12 +34,17 @@ class CheckoutController extends Controller
         if (!$selectedPlan && $plans->isNotEmpty()) {
             $selectedPlan = $plans->first();
         }
+        // Allow pre-calculated pricing data (e.g. after applying coupon) to be passed in
+        $priceInfo = $request->get('priceInfo');
+        $appliedCouponCode = $request->get('appliedCouponCode');
 
         return view('checkout.index', [
             'plans' => $plans,
             'selectedPlan' => $selectedPlan,
             'planSlug' => $planSlug,
             'source' => $request->query('source', 'web'),
+            'priceInfo' => $priceInfo,
+            'appliedCouponCode' => $appliedCouponCode,
         ]);
     }
 
@@ -53,8 +58,10 @@ class CheckoutController extends Controller
     {
         $request->validate([
             'plan_id' => 'required|exists:subscription_plans,id',
+            'coupon_code' => 'nullable|string|max:64',
         ]);
 
+        $action = $request->input('action', 'pay');
         $user = Auth::user();
         if (!$user) {
             return redirect()->route('login')->withErrors([
@@ -70,6 +77,43 @@ class CheckoutController extends Controller
             $returnScheme = 'sarvcast';
         }
 
+        $couponCode = trim((string) $request->input('coupon_code', '')) ?: null;
+
+        // First branch: user clicked "apply coupon" -> calculate and show price, do NOT start payment yet
+        if ($action === 'apply_coupon') {
+            try {
+                $priceInfo = $this->calculatePriceForPlan($plan, $couponCode, $user);
+            } catch (\RuntimeException $e) {
+                return back()
+                    ->withErrors(['coupon_code' => $e->getMessage()])
+                    ->withInput();
+            }
+
+            $plans = SubscriptionPlan::active()->ordered()->get();
+
+            // Re-render checkout with updated pricing and selected plan
+            return view('checkout.index', [
+                'plans' => $plans,
+                'selectedPlan' => $plan,
+                'planSlug' => $plan->slug,
+                'source' => $source,
+                'priceInfo' => $priceInfo,
+                'appliedCouponCode' => $couponCode,
+            ]);
+        }
+
+        // Otherwise: user clicked the main "pay" button -> calculate final price and start payment
+        try {
+            $priceInfo = $this->calculatePriceForPlan($plan, $couponCode, $user);
+        } catch (\RuntimeException $e) {
+            return back()
+                ->withErrors(['coupon_code' => $e->getMessage()])
+                ->withInput();
+        }
+
+        // Amount for subscription is kept in IRT (toman) for consistency with the app
+        $subscriptionPriceToman = $priceInfo['original_amount'] ?? $priceInfo['final_price'];
+
         // Create a pending subscription for this plan
         $subscription = Subscription::create([
             'user_id' => $user->id,
@@ -77,18 +121,19 @@ class CheckoutController extends Controller
             'status' => 'pending',
             'start_date' => now(),
             'end_date' => now()->copy()->addDays($plan->duration_days),
-            'price' => $plan->final_price,
+            'price' => $subscriptionPriceToman,
             'currency' => $plan->currency,
             'auto_renew' => false,
             'payment_method' => 'zarinpal',
         ]);
 
         // Create a pending payment record
+        // NOTE: amount for the gateway is always in IRR (rial), so we use the converted amount here.
         $payment = Payment::create([
             'user_id' => $user->id,
             'subscription_id' => $subscription->id,
-            'amount' => $subscription->price,
-            'currency' => $subscription->currency,
+            'amount' => $priceInfo['amount'],
+            'currency' => $priceInfo['currency'], // typically IRR for Zarinpal
             'status' => 'pending',
             'payment_method' => 'zarinpal',
             'payment_gateway' => 'zarinpal',
@@ -96,6 +141,7 @@ class CheckoutController extends Controller
             'payment_metadata' => [
                 'source' => $source,
                 'return_scheme' => $returnScheme,
+                'price_info' => $priceInfo,
             ],
         ]);
 
@@ -112,6 +158,71 @@ class CheckoutController extends Controller
         }
 
         return redirect()->away($result['payment_url']);
+    }
+
+    /**
+     * Calculate price for a given plan and optional coupon code
+     * and prepare both display (IRT) and gateway (IRR) amounts.
+     *
+     * This mirrors the logic in Api\SubscriptionController@calculatePrice
+     * so that web checkout and app API behave consistently.
+     */
+    private function calculatePriceForPlan(SubscriptionPlan $plan, ?string $couponCode, $user): array
+    {
+        $basePrice = $plan->price;
+        $discount = $plan->discount_percentage ?? 0;
+        $discountedPrice = $basePrice - ($basePrice * $discount / 100);
+
+        $priceInfo = [
+            'type' => $plan->slug ?? $plan->type,
+            'name' => $plan->name,
+            'base_price' => $basePrice,
+            'discount_percentage' => $discount,
+            'discounted_price' => $discountedPrice,
+            'savings' => $basePrice - $discountedPrice,
+            'currency' => $plan->currency ?? 'IRT',
+            'duration_days' => $plan->duration_days ?? 30,
+            'description' => $plan->description,
+            'plan_id' => $plan->id,
+        ];
+
+        // Apply coupon discount if provided
+        if ($couponCode) {
+            $baseAmount = $priceInfo['discounted_price'] ?? $priceInfo['base_price'];
+
+            $couponValidation = app(\App\Services\CouponService::class)->validateCouponCode(
+                $couponCode,
+                $user,
+                $baseAmount
+            );
+
+            if ($couponValidation['success']) {
+                $couponInfo = $couponValidation['data'];
+                $priceInfo['original_price'] = $baseAmount;
+                $priceInfo['coupon_discount'] = $couponInfo['discount_amount'];
+                $priceInfo['final_price'] = $couponInfo['final_amount'];
+                $priceInfo['coupon_code'] = $couponCode;
+                $priceInfo['coupon_info'] = $couponInfo['coupon'];
+            } else {
+                throw new \RuntimeException($couponValidation['message']);
+            }
+        } else {
+            $priceInfo['final_price'] = $priceInfo['discounted_price'] ?? $priceInfo['base_price'];
+        }
+
+        // Convert to IRR for the payment gateway if needed
+        if ($priceInfo['currency'] === 'IRT') {
+            $priceInfo['original_amount'] = $priceInfo['final_price'];
+            $priceInfo['original_currency'] = 'IRT';
+            $priceInfo['amount'] = (int) ($priceInfo['final_price'] * 10); // toman -> rial
+            $priceInfo['currency'] = 'IRR';
+            $priceInfo['conversion_rate'] = 10;
+            $priceInfo['conversion_note'] = 'مبلغ از تومان به ریال برای درگاه پرداخت تبدیل شد';
+        } else {
+            $priceInfo['amount'] = (int) $priceInfo['final_price'];
+        }
+
+        return $priceInfo;
     }
 }
 

@@ -121,8 +121,7 @@
                             کد تخفیف
                         </h3>
                         <p class="text-[11px] text-slate-400 mb-3">
-                            در نسخه بعدی، این ورودی مستقیماً به API کوپن‌های سایت متصل می‌شود
-                            و مبلغ نهایی را محاسبه می‌کند.
+                            اگر کد تخفیف دارید، آن را وارد کنید تا مبلغ نهایی اشتراک برای شما محاسبه شود.
                         </p>
                         <div class="flex gap-2">
                             <input
@@ -131,15 +130,20 @@
                                 name="coupon_code"
                                 class="flex-1 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500"
                                 placeholder="مثلاً WELCOME"
+                                value="{{ old('coupon_code', $appliedCouponCode ?? '') }}"
                             >
                             <button
-                                type="button"
-                                class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 text-slate-400 cursor-not-allowed"
-                                disabled
+                                type="submit"
+                                name="action"
+                                value="apply_coupon"
+                                class="px-3 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white transition"
                             >
                                 اعمال
                             </button>
                         </div>
+                        @error('coupon_code')
+                            <p class="mt-2 text-[11px] text-red-400">{{ $message }}</p>
+                        @enderror
                         <input type="hidden" name="source" value="{{ $source }}">
                         @if($source === 'app')
                             <input type="hidden" name="return_scheme" value="sarvcast">
@@ -157,10 +161,30 @@
                                 <span class="text-slate-400">پلن انتخاب‌شده</span>
                                 <span class="text-slate-100 font-medium">{{ $selectedPlan->name }}</span>
                             </div>
+
+                            @php
+                                $hasCalculatedPrice = isset($priceInfo);
+                            @endphp
+
                             <div class="flex items-center justify-between text-xs">
                                 <span class="text-slate-400">قیمت پایه</span>
-                                <span class="text-slate-100 font-medium">{{ $selectedPlan->formatted_price }}</span>
+                                <span class="text-slate-100 font-medium">
+                                    @if($hasCalculatedPrice)
+                                        {{ number_format($priceInfo['base_price']) }} تومان
+                                    @else
+                                        {{ $selectedPlan->formatted_price }}
+                                    @endif
+                                </span>
                             </div>
+
+                            @if($hasCalculatedPrice && !empty($priceInfo['coupon_discount'] ?? null))
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-slate-400">تخفیف کوپن</span>
+                                    <span class="text-emerald-300 font-medium">
+                                        {{ number_format($priceInfo['coupon_discount']) }} تومان-
+                                    </span>
+                                </div>
+                            @endif
                         @else
                             <p class="text-[11px] text-slate-500">
                                 برای ادامه، ابتدا یکی از پلن‌های موجود را انتخاب کنید.
@@ -170,18 +194,28 @@
                         <div class="border-t border-slate-800 my-2"></div>
 
                         <div class="flex items-center justify-between text-xs">
-                            <span class="text-slate-300 font-semibold">مبلغ نهایی (بدون تخفیف)</span>
+                            <span class="text-slate-300 font-semibold">
+                                مبلغ نهایی (تومان)
+                            </span>
                             <span class="text-emerald-300 font-bold">
-                                {{ $selectedPlan ? $selectedPlan->formatted_final_price : '—' }}
+                                @if(isset($priceInfo))
+                                    {{ number_format($priceInfo['final_price']) }} تومان
+                                @else
+                                    {{ $selectedPlan ? $selectedPlan->formatted_final_price : '—' }}
+                                @endif
                             </span>
                         </div>
 
+                        @if(isset($priceInfo) && !empty($priceInfo['conversion_note'] ?? null))
+                            <p class="mt-1 text-[11px] text-slate-500">
+                                {{ $priceInfo['conversion_note'] }}
+                                ({{ number_format($priceInfo['amount']) }} ریال در درگاه پرداخت)
+                            </p>
+                        @endif
+
                         <p class="text-[11px] text-slate-500">
-                            با کلیک روی دکمه زیر، در نسخه نهایی:
-                            <br>
-                            ۱) اشتراک ایجاد می‌شود،
-                            ۲) پرداخت با زرین‌پال آغاز می‌شود،
-                            ۳) در صورت شروع از اپلیکیشن، پس از پرداخت، به اپ برمی‌گردید.
+                            با کلیک روی دکمه زیر، اشتراک برای شما ایجاد شده و به درگاه امن زرین‌پال هدایت می‌شوید.
+                            در صورت شروع از اپلیکیشن، پس از پرداخت، به اپ برمی‌گردید.
                         </p>
 
                         <button
