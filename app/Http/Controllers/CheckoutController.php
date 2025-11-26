@@ -122,8 +122,7 @@ class CheckoutController extends Controller
         if ((int) ($priceInfo['final_price'] ?? 0) === 0 || (int) ($priceInfo['amount'] ?? 0) === 0) {
             $subscription = Subscription::create([
                 'user_id' => $user->id,
-                // Use the canonical subscription type (matches enum / mapping in Subscription model)
-                'type' => $plan->type ?? $plan->slug,
+                'type' => $this->mapPlanSlugToEnum($plan->slug),
                 'status' => 'active',
                 'start_date' => now(),
                 'end_date' => now()->copy()->addDays($plan->duration_days),
@@ -162,8 +161,7 @@ class CheckoutController extends Controller
         // Create a pending subscription for this plan (normal paid flow)
         $subscription = Subscription::create([
             'user_id' => $user->id,
-            // Use the canonical subscription type (matches enum / mapping in Subscription model)
-            'type' => $plan->type ?? $plan->slug,
+            'type' => $this->mapPlanSlugToEnum($plan->slug),
             'status' => 'pending',
             'start_date' => now(),
             'end_date' => now()->copy()->addDays($plan->duration_days),
@@ -221,7 +219,7 @@ class CheckoutController extends Controller
         $discountedPrice = $basePrice - ($basePrice * $discount / 100);
 
         $priceInfo = [
-            'type' => $plan->slug ?? $plan->type,
+            'type' => $plan->slug,
             'name' => $plan->name,
             'base_price' => $basePrice,
             'discount_percentage' => $discount,
@@ -270,6 +268,42 @@ class CheckoutController extends Controller
         }
 
         return $priceInfo;
+    }
+
+    /**
+     * Map plan slug to correct ENUM value for subscriptions.type
+     * (kept in sync with Api\SubscriptionController::mapPlanSlugToEnum).
+     */
+    private function mapPlanSlugToEnum(string $planSlug): string
+    {
+        $slugMapping = [
+            '1month' => '1month',
+            '3months' => '3months',
+            '6months' => '6months',
+            '1year' => '1year',
+            '3month' => '3months',
+            '6month' => '6months',
+            'monthly' => '1month',
+            'quarterly' => '3months',
+            'semi-annual' => '6months',
+            'annual' => '1year',
+            'yearly' => '1year',
+            '1' => '1month',
+            '2' => '3months',
+            '3' => '6months',
+            '4' => '1year',
+        ];
+
+        $mappedSlug = $slugMapping[$planSlug] ?? $planSlug;
+
+        if (!in_array($mappedSlug, ['1month', '3months', '6months', '1year'])) {
+            \Log::warning('CheckoutController: Unknown plan slug mapping for subscription type', [
+                'plan_slug' => $planSlug,
+                'mapped_slug' => $mappedSlug,
+            ]);
+        }
+
+        return $mappedSlug;
     }
 }
 
