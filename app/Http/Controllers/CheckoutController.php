@@ -122,7 +122,8 @@ class CheckoutController extends Controller
         if ((int) ($priceInfo['final_price'] ?? 0) === 0 || (int) ($priceInfo['amount'] ?? 0) === 0) {
             $subscription = Subscription::create([
                 'user_id' => $user->id,
-                'type' => $plan->slug,
+                // Use the canonical subscription type (matches enum / mapping in Subscription model)
+                'type' => $plan->type ?? $plan->slug,
                 'status' => 'active',
                 'start_date' => now(),
                 'end_date' => now()->copy()->addDays($plan->duration_days),
@@ -161,7 +162,8 @@ class CheckoutController extends Controller
         // Create a pending subscription for this plan (normal paid flow)
         $subscription = Subscription::create([
             'user_id' => $user->id,
-            'type' => $plan->slug,
+            // Use the canonical subscription type (matches enum / mapping in Subscription model)
+            'type' => $plan->type ?? $plan->slug,
             'status' => 'pending',
             'start_date' => now(),
             'end_date' => now()->copy()->addDays($plan->duration_days),
