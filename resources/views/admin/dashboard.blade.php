@@ -5,30 +5,34 @@
 
 @section('content')
 <!-- Welcome Section -->
-<div class="mb-8">
-    <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold mb-2">خوش آمدید به پنل مدیریت سروکست</h1>
-                <p class="text-blue-100 text-lg">مدیریت کامل پلتفرم داستان‌های صوتی کودکان</p>
-                <div class="mt-4 flex items-center space-x-6 space-x-reverse">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold">{{ number_format($stats['total_users']) }}</div>
-                        <div class="text-sm text-blue-100">کل کاربران</div>
+<div class="mb-6 sm:mb-8">
+    <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8 text-white">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 truncate">
+                    خوش آمدید به پنل مدیریت سروکست
+                </h1>
+                <p class="text-sm sm:text-base text-blue-100">
+                    مدیریت کامل پلتفرم داستان‌های صوتی کودکان
+                </p>
+                <div class="mt-4 flex flex-wrap items-center gap-4 sm:gap-6">
+                    <div class="text-center min-w-[90px]">
+                        <div class="text-xl sm:text-2xl font-bold">{{ number_format($stats['total_users']) }}</div>
+                        <div class="text-xs sm:text-sm text-blue-100">کل کاربران</div>
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold">{{ number_format($stats['total_stories']) }}</div>
-                        <div class="text-sm text-blue-100">کل داستان‌ها</div>
+                    <div class="text-center min-w-[90px]">
+                        <div class="text-xl sm:text-2xl font-bold">{{ number_format($stats['total_stories']) }}</div>
+                        <div class="text-xs sm:text-sm text-blue-100">کل داستان‌ها</div>
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold">{{ number_format($stats['total_revenue']) }}</div>
-                        <div class="text-sm text-blue-100">درآمد کل (تومان)</div>
+                    <div class="text-center min-w-[120px]">
+                        <div class="text-xl sm:text-2xl font-bold">{{ number_format($stats['total_revenue']) }}</div>
+                        <div class="text-xs sm:text-sm text-blue-100">درآمد کل (تومان)</div>
                     </div>
                 </div>
             </div>
-            <div class="hidden md:block">
-                <div class="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="hidden md:block flex-shrink-0">
+                <div class="w-16 h-16 lg:w-20 lg:h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <svg class="w-8 h-8 lg:w-10 lg:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
                 </div>
@@ -38,14 +42,14 @@
 </div>
 
 <!-- Main Statistics Overview -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
     <!-- Total Users Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+        <div class="flex items-center justify-between min-w-0">
             <div>
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 dark:text-gray-300 mb-1">کل کاربران</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">کل کاربران</p>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white dark:text-white">{{ number_format($stats['total_users']) }}</p>
-                <div class="flex items-center mt-2 space-x-4 space-x-reverse">
+                <div class="flex items-center mt-2 space-x-4 space-x-reverse text-xs sm:text-sm flex-wrap">
                     <span class="text-sm text-green-600 dark:text-green-400 font-medium">{{ number_format($stats['active_users']) }} فعال</span>
                     <span class="text-sm text-yellow-600 dark:text-yellow-400 font-medium">{{ number_format($stats['pending_users']) }} در انتظار</span>
                     <span class="text-sm text-red-600 dark:text-red-400 font-medium">{{ number_format($stats['blocked_users']) }} مسدود</span>
@@ -68,14 +72,14 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Total Stories Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+        <div class="flex items-center justify-between min-w-0">
             <div>
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">کل داستان‌ها</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">کل داستان‌ها</p>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_stories']) }}</p>
-                <div class="flex items-center mt-2 space-x-4 space-x-reverse">
+                <div class="flex items-center mt-2 space-x-4 space-x-reverse text-xs sm:text-sm flex-wrap">
                     <span class="text-sm text-green-600 font-medium">{{ number_format($stats['published_stories']) }} منتشر شده</span>
                     <span class="text-sm text-yellow-600 font-medium">{{ number_format($stats['pending_stories']) }} در انتظار</span>
                     <span class="text-sm text-gray-600 dark:text-gray-300 font-medium">{{ number_format($stats['draft_stories']) }} پیش‌نویس</span>
@@ -98,14 +102,14 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Revenue Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+        <div class="flex items-center justify-between min-w-0">
             <div>
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">درآمد کل</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">درآمد کل</p>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_revenue']) }}</p>
-                <div class="flex items-center mt-2 space-x-4 space-x-reverse">
+                <div class="flex items-center mt-2 space-x-4 space-x-reverse text-xs sm:text-sm flex-wrap">
                     <span class="text-sm text-green-600 font-medium">{{ number_format($stats['total_payments']) }} پرداخت موفق</span>
                     <span class="text-sm text-yellow-600 font-medium">{{ number_format($stats['pending_payments']) }} در انتظار</span>
                     <span class="text-sm text-red-600 font-medium">{{ number_format($stats['failed_payments']) }} ناموفق</span>
@@ -128,14 +132,14 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Engagement Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+        <div class="flex items-center justify-between min-w-0">
             <div>
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">تعامل کاربران</p>
+                <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">تعامل کاربران</p>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_comments']) }}</p>
-                <div class="flex items-center mt-2 space-x-4 space-x-reverse">
+                <div class="flex items-center mt-2 space-x-4 space-x-reverse text-xs sm:text-sm flex-wrap">
                     <span class="text-sm text-blue-600 font-medium">{{ number_format($stats['total_ratings']) }} امتیاز</span>
                     <span class="text-sm text-purple-600 font-medium">{{ number_format($stats['total_favorites']) }} علاقه‌مندی</span>
                     <span class="text-sm text-green-600 font-medium">{{ number_format($stats['total_play_history']) }} پخش</span>
@@ -163,7 +167,7 @@
 <!-- Secondary Statistics Grid -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
     <!-- Subscriptions -->
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 min-w-0">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">اشتراک‌ها</h3>
             <div class="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600">
@@ -193,7 +197,7 @@
     </div>
 
     <!-- Partnerships -->
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 min-w-0">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">شراکت‌ها</h3>
             <div class="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600">
@@ -223,7 +227,7 @@
     </div>
 
     <!-- Marketing & Activities -->
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 min-w-0">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">بازاریابی</h3>
             <div class="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600">
@@ -254,16 +258,16 @@
 </div>
 
 <!-- Plan Sales Overview -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
     <!-- Plan Sales Today -->
-    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-        <div class="flex items-center justify-between">
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 sm:p-6 border border-blue-200 min-w-0">
+        <div class="flex items-center justify-between gap-4">
             <div>
-                <p class="text-sm font-medium text-blue-800 mb-1">فروش امروز</p>
-                <p class="text-2xl font-bold text-blue-900">{{ number_format($stats['plan_sales_today']) }}</p>
+                <p class="text-sm font-medium text-blue-800 mb-1 whitespace-normal leading-snug">فروش امروز</p>
+                <p class="text-xl sm:text-2xl font-bold text-blue-900">{{ number_format($stats['plan_sales_today']) }}</p>
                 <p class="text-xs text-blue-700 mt-1">اشتراک فروخته شده</p>
             </div>
-            <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                 </svg>
@@ -272,14 +276,14 @@
     </div>
 
     <!-- Plan Sales This Week -->
-    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-        <div class="flex items-center justify-between">
+    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 sm:p-6 border border-green-200 min-w-0">
+        <div class="flex items-center justify-between gap-4">
             <div>
-                <p class="text-sm font-medium text-green-800 mb-1">فروش این هفته</p>
-                <p class="text-2xl font-bold text-green-900">{{ number_format($stats['plan_sales_this_week']) }}</p>
+                <p class="text-sm font-medium text-green-800 mb-1 whitespace-normal leading-snug">فروش این هفته</p>
+                <p class="text-xl sm:text-2xl font-bold text-green-900">{{ number_format($stats['plan_sales_this_week']) }}</p>
                 <p class="text-xs text-green-700 mt-1">اشتراک فروخته شده</p>
             </div>
-            <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                 </svg>
@@ -288,11 +292,11 @@
     </div>
 
     <!-- Plan Sales Growth -->
-    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-        <div class="flex items-center justify-between">
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 sm:p-6 border border-purple-200 min-w-0">
+        <div class="flex items-center justify-between gap-4">
             <div>
-                <p class="text-sm font-medium text-purple-800 mb-1">رشد فروش</p>
-                <p class="text-2xl font-bold text-purple-900">+{{ $stats['plan_sales_growth_rate'] }}%</p>
+                <p class="text-sm font-medium text-purple-800 mb-1 whitespace-normal leading-snug">رشد فروش</p>
+                <p class="text-xl sm:text-2xl font-bold text-purple-900">+{{ $stats['plan_sales_growth_rate'] }}%</p>
                 <p class="text-xs text-purple-700 mt-1">نسبت به ماه قبل</p>
             </div>
             <div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
@@ -306,56 +310,68 @@
 
 <!-- Quick Actions -->
 <div class="mb-8">
-    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 min-w-0">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">عملیات سریع</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <a href="{{ route('admin.stories.create') }}" class="flex flex-col items-center p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all duration-200 group">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+            <a href="{{ route('admin.stories.create') }}" class="flex flex-col items-center justify-center min-h-[4.5rem] p-3 sm:p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all duration-200 group">
                 <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                 </div>
-                <span class="text-sm font-medium text-gray-700">داستان جدید</span>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center whitespace-normal leading-snug">
+                    داستان جدید
+                </span>
             </a>
-            <a href="{{ route('admin.episodes.create') }}" class="flex flex-col items-center p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all duration-200 group">
+            <a href="{{ route('admin.episodes.create') }}" class="flex flex-col items-center justify-center min-h-[4.5rem] p-3 sm:p-4 rounded-lg bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all duration-200 group">
                 <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
                     </svg>
                 </div>
-                <span class="text-sm font-medium text-gray-700">اپیزود جدید</span>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center whitespace-normal leading-snug">
+                    اپیزود جدید
+                </span>
             </a>
-            <a href="{{ route('admin.categories.create') }}" class="flex flex-col items-center p-4 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all duration-200 group">
+            <a href="{{ route('admin.categories.create') }}" class="flex flex-col items-center justify-center min-h-[4.5rem] p-3 sm:p-4 rounded-lg bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all duration-200 group">
                 <div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                     </svg>
                 </div>
-                <span class="text-sm font-medium text-gray-700">دسته‌بندی جدید</span>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center whitespace-normal leading-snug">
+                    دسته‌بندی جدید
+                </span>
             </a>
-            <a href="{{ route('admin.users.index') }}" class="flex flex-col items-center p-4 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 transition-all duration-200 group">
+            <a href="{{ route('admin.users.index') }}" class="flex flex-col items-center justify-center min-h-[4.5rem] p-3 sm:p-4 rounded-lg bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 transition-all duration-200 group">
                 <div class="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
                     </svg>
                 </div>
-                <span class="text-sm font-medium text-gray-700">مدیریت کاربران</span>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center whitespace-normal leading-snug">
+                    مدیریت کاربران
+                </span>
             </a>
-            <a href="{{ route('admin.payments.index') }}" class="flex flex-col items-center p-4 rounded-lg bg-gradient-to-br from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 transition-all duration-200 group">
+            <a href="{{ route('admin.payments.index') }}" class="flex flex-col items-center justify-center min-h-[4.5rem] p-3 sm:p-4 rounded-lg bg-gradient-to-br from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 transition-all duration-200 group">
                 <div class="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                     </svg>
                 </div>
-                <span class="text-sm font-medium text-gray-700">پرداخت‌ها</span>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center whitespace-normal leading-snug">
+                    پرداخت‌ها
+                </span>
             </a>
-            <a href="{{ route('admin.analytics') }}" class="flex flex-col items-center p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 transition-all duration-200 group">
+            <a href="{{ route('admin.analytics') }}" class="flex flex-col items-center justify-center min-h-[4.5rem] p-3 sm:p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 transition-all duration-200 group">
                 <div class="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
-                <span class="text-sm font-medium text-gray-700">آمار و تحلیل</span>
+                <span class="text-xs sm:text-sm font-medium text-gray-700 text-center whitespace-normal leading-snug">
+                    آمار و تحلیل
+                </span>
             </a>
         </div>
     </div>
@@ -364,7 +380,7 @@
 <!-- Content Grid -->
 <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
     <!-- Recent Stories -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b border-gray-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آخرین داستان‌ها</h3>
@@ -383,7 +399,7 @@
                             <p class="text-xs text-gray-400 mt-1">@jalaliRelative($story->created_at)</p>
                         </div>
                         <div class="flex items-center">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                                 @if($story->status === 'published') bg-green-100 text-green-800
                                 @elseif($story->status === 'pending') bg-yellow-100 text-yellow-800
                                 @else bg-red-100 text-red-800
@@ -408,7 +424,7 @@
     </div>
 
     <!-- Recent Users -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-green-50 to-green-100 border-b border-gray-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آخرین کاربران</h3>
@@ -435,7 +451,7 @@
                             <p class="text-xs text-gray-400 mt-1">@jalaliRelative($user->created_at)</p>
                         </div>
                         <div class="flex items-center">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                                 @if($user->status === 'active') bg-green-100 text-green-800
                                 @elseif($user->status === 'pending') bg-yellow-100 text-yellow-800
                                 @else bg-red-100 text-red-800
@@ -460,7 +476,7 @@
     </div>
 
     <!-- Recent Payments -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-yellow-50 to-yellow-100 border-b border-gray-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آخرین پرداخت‌ها</h3>
@@ -485,7 +501,7 @@
                             </div>
                         </div>
                         <div class="flex items-center">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                                 @if($payment->status === 'completed') bg-green-100 text-green-800
                                 @elseif($payment->status === 'pending') bg-yellow-100 text-yellow-800
                                 @else bg-red-100 text-red-800
@@ -513,7 +529,7 @@
 <!-- Plan Sales Details Section -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     <!-- Top Selling Plans -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 border-b border-gray-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">پرفروش‌ترین پلن‌ها</h3>
@@ -541,7 +557,7 @@
                                 <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $plan->subscriptions_count }}</div>
                                 <div class="text-xs text-gray-500">فروش</div>
                             </div>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                                 {{ $plan->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                 {{ $plan->is_active ? 'فعال' : 'غیرفعال' }}
                             </span>
@@ -563,7 +579,7 @@
     </div>
 
     <!-- Plan Sales Analytics -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-green-50 to-green-100 border-b border-gray-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آمار فروش پلن‌ها</h3>
@@ -614,7 +630,7 @@
     </div>
 </div>
     <!-- Top Categories -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-purple-50 to-purple-100 border-b border-gray-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">محبوب‌ترین دسته‌بندی‌ها</h3>
@@ -640,7 +656,7 @@
                                 <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $category->stories_count }}</div>
                                 <div class="text-xs text-gray-500">داستان</div>
                             </div>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                                 {{ $category->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                 {{ $category->is_active ? 'فعال' : 'غیرفعال' }}
                             </span>
@@ -662,7 +678,7 @@
     </div>
 
     <!-- Top Rated Stories -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-yellow-50 to-yellow-100 border-b border-gray-200">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">بهترین داستان‌ها</h3>
@@ -712,11 +728,11 @@
 </div>
 
 <!-- Analytics Chart Section -->
-<div class="mt-8 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-    <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 border-b border-gray-200">
+<div class="mt-8 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
+    <div class="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آمار و تحلیل‌ها</h3>
     </div>
-    <div class="p-6">
+    <div class="p-4 sm:p-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <!-- Conversion Rate -->
             <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
@@ -733,7 +749,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Average Session Time -->
             <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
                 <div class="flex items-center justify-between">
@@ -749,7 +765,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- User Satisfaction -->
             <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
                 <div class="flex items-center justify-between">
@@ -765,7 +781,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Revenue per User -->
             <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-xl border border-yellow-200">
                 <div class="flex items-center justify-between">
@@ -782,24 +798,24 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Chart Placeholder -->
-        <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-8 text-center">
-            <div class="w-20 h-20 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 sm:p-6 lg:p-8 text-center">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                 </svg>
             </div>
-            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">نمودارهای تحلیلی</h4>
-            <p class="text-gray-600 dark:text-gray-300 mb-4">نمودارهای پیشرفته آمار کاربران، درآمد و تعاملات</p>
-            <div class="flex justify-center space-x-4 space-x-reverse">
-                <span class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-100 text-indigo-800 text-sm font-medium">
+            <h4 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">نمودارهای تحلیلی</h4>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4">نمودارهای پیشرفته آمار کاربران، درآمد و تعاملات</p>
+            <div class="flex flex-wrap justify-center gap-2 sm:gap-3">
+                <span class="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-indigo-100 text-indigo-800 text-xs sm:text-sm font-medium">
                     📊 نمودار درآمد ماهانه
                 </span>
-                <span class="inline-flex items-center px-4 py-2 rounded-lg bg-green-100 text-green-800 text-sm font-medium">
+                <span class="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-green-100 text-green-800 text-xs sm:text-sm font-medium">
                     👥 رشد کاربران روزانه
                 </span>
-                <span class="inline-flex items-center px-4 py-2 rounded-lg bg-purple-100 text-purple-800 text-sm font-medium">
+                <span class="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-purple-100 text-purple-800 text-xs sm:text-sm font-medium">
                     📈 تحلیل تعاملات
                 </span>
             </div>
@@ -809,7 +825,7 @@
 
 <!-- Recent Reports Section -->
 @if($recentReports->count() > 0)
-<div class="mt-8 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+<div class="mt-8 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
     <div class="px-6 py-4 bg-gradient-to-r from-red-50 to-red-100 border-b border-gray-200">
         <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آخرین گزارش‌ها</h3>
@@ -833,7 +849,7 @@
                     </div>
                 </div>
                 <div class="flex items-center">
-                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                         @if($report->status === 'resolved') bg-green-100 text-green-800
                         @elseif($report->status === 'pending') bg-yellow-100 text-yellow-800
                         @else bg-red-100 text-red-800

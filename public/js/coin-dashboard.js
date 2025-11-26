@@ -150,16 +150,16 @@ class CoinDashboardManager {
 
         return `
             <div class="transaction-item flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                <div class="flex items-center space-x-3 space-x-reverse">
-                    <div class="transaction-icon">
+                <div class="flex items-center space-x-3 space-x-reverse min-w-0">
+                    <div class="transaction-icon flex-shrink-0">
                         <i class="fas ${typeIcon} ${typeClass}"></i>
                     </div>
-                    <div class="transaction-info">
-                        <p class="text-sm font-medium text-gray-800">${transaction.description}</p>
-                        <p class="text-xs text-gray-500">${date}</p>
+                    <div class="transaction-info min-w-0">
+                        <p class="text-sm font-medium text-gray-800 truncate" title="${transaction.description}">${transaction.description}</p>
+                        <p class="text-xs text-gray-500 whitespace-nowrap">${date}</p>
                     </div>
                 </div>
-                <div class="transaction-amount ${typeClass} font-semibold">
+                <div class="transaction-amount ${typeClass} font-semibold whitespace-nowrap ml-3">
                     ${transaction.type === 'earned' ? '+' : '-'}${transaction.amount}
                 </div>
             </div>

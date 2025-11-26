@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\TimelineManagementController;
 use App\Http\Controllers\Admin\PersonController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\UserAuthController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\ContentModerationController;
@@ -32,10 +33,12 @@ Route::get('/', function () {
 })->name('home');
 
 // Fallback login route expected by Laravel's auth middleware
-// Redirects to existing admin login page so "auth" middleware can redirect properly.
-Route::get('/login', function () {
-    return redirect()->route('admin.auth.login');
-})->name('login');
+// Redirects to the user login form (not the admin panel).
+Route::get('/login', [UserAuthController::class, 'showLoginForm'])->name('login');
+
+// User authentication (web UI) – phone + SMS code
+Route::get('/user/login', [UserAuthController::class, 'showLoginForm'])->name('user.login');
+Route::post('/user/login', [UserAuthController::class, 'login'])->name('user.login.post');
 
 // Public checkout page for subscriptions/payments
 Route::middleware('auth')->group(function () {
