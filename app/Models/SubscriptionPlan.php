@@ -54,7 +54,8 @@ class SubscriptionPlan extends Model
      */
     public function scopeOrdered($query)
     {
-        return $query->orderBy('sort_order')->orderBy('price');
+        // Order plans from highest price to lowest so premium plans appear first
+        return $query->orderByDesc('price');
     }
 
     /**

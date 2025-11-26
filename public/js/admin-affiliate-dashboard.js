@@ -29,7 +29,7 @@ class AdminAffiliateDashboard {
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.updateStatistics(data.data);
             } else {
@@ -55,7 +55,7 @@ class AdminAffiliateDashboard {
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.updateRecentActivity(data.data);
             }
@@ -78,7 +78,7 @@ class AdminAffiliateDashboard {
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.updateTopPerformers(data.data);
             }
@@ -101,7 +101,7 @@ class AdminAffiliateDashboard {
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.updateCommissionOverview(data.data);
             }
@@ -119,14 +119,14 @@ class AdminAffiliateDashboard {
 
     updateRecentActivity(activities) {
         const container = document.getElementById('recent-activity');
-        
+
         if (activities.length === 0) {
             container.innerHTML = '<div class="text-center text-gray-500 py-8">هیچ فعالیتی یافت نشد</div>';
             return;
         }
 
         container.innerHTML = '';
-        
+
         activities.forEach(activity => {
             const activityElement = this.createActivityElement(activity);
             container.appendChild(activityElement);
@@ -135,14 +135,14 @@ class AdminAffiliateDashboard {
 
     updateTopPerformers(performers) {
         const container = document.getElementById('top-performers');
-        
+
         if (performers.length === 0) {
             container.innerHTML = '<div class="text-center text-gray-500 py-8">هیچ داده‌ای یافت نشد</div>';
             return;
         }
 
         container.innerHTML = '';
-        
+
         performers.forEach((performer, index) => {
             const performerElement = this.createPerformerElement(performer, index + 1);
             container.appendChild(performerElement);
@@ -152,7 +152,7 @@ class AdminAffiliateDashboard {
     updateCommissionOverview(overview) {
         const pendingContainer = document.getElementById('pending-commissions');
         const paidContainer = document.getElementById('paid-commissions');
-        
+
         // Update pending commissions
         if (overview.pending && overview.pending.length > 0) {
             pendingContainer.innerHTML = '';
@@ -163,7 +163,7 @@ class AdminAffiliateDashboard {
         } else {
             pendingContainer.innerHTML = '<div class="text-center text-gray-500 py-4">هیچ کمیسیون پرداخت نشده‌ای وجود ندارد</div>';
         }
-        
+
         // Update paid commissions
         if (overview.paid && overview.paid.length > 0) {
             paidContainer.innerHTML = '';
@@ -179,9 +179,9 @@ class AdminAffiliateDashboard {
     createActivityElement(activity) {
         const div = document.createElement('div');
         div.className = 'flex items-center p-3 bg-gray-50 rounded-lg';
-        
+
         const iconClass = this.getActivityIconClass(activity.type);
-        
+
         div.innerHTML = `
             <div class="w-10 h-10 rounded-full flex items-center justify-center ${iconClass} flex-shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,16 +197,16 @@ class AdminAffiliateDashboard {
                 <div class="text-xs text-gray-500 truncate max-w-[8rem]" title="${activity.partner_name || ''}">${activity.partner_name || ''}</div>
             </div>
         `;
-        
+
         return div;
     }
 
     createPerformerElement(performer, rank) {
         const div = document.createElement('div');
         div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
-        
+
         const rankClass = this.getRankClass(rank);
-        
+
         div.innerHTML = `
             <div class="flex items-center min-w-0">
                 <div class="w-8 h-8 rounded-full flex items-center justify-center ${rankClass} mr-3 flex-shrink-0">
@@ -222,16 +222,16 @@ class AdminAffiliateDashboard {
                 <div class="text-xs text-gray-500 whitespace-nowrap">${performer.total_sales || 0} فروش</div>
             </div>
         `;
-        
+
         return div;
     }
 
     createCommissionElement(commission) {
         const div = document.createElement('div');
         div.className = 'flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg';
-        
+
         const statusClass = this.getCommissionStatusClass(commission.status);
-        
+
         div.innerHTML = `
             <div class="flex-1 min-w-0">
                 <h4 class="text-sm font-medium text-gray-900 truncate" title="${commission.partner_name}">${commission.partner_name}</h4>
@@ -242,7 +242,7 @@ class AdminAffiliateDashboard {
                 <div class="text-xs ${statusClass} whitespace-nowrap">${this.getCommissionStatusText(commission.status)}</div>
             </div>
         `;
-        
+
         return div;
     }
 
