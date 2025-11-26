@@ -148,6 +148,9 @@
                         @if($source === 'app')
                             <input type="hidden" name="return_scheme" value="sarvcast">
                         @endif
+                        @if(!empty($episodeId))
+                            <input type="hidden" name="episode_id" value="{{ $episodeId }}">
+                        @endif
                     </div>
 
                     {{-- Summary + CTA --}}

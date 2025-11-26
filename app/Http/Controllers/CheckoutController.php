@@ -45,6 +45,7 @@ class CheckoutController extends Controller
             'source' => $request->query('source', 'web'),
             'priceInfo' => $priceInfo,
             'appliedCouponCode' => $appliedCouponCode,
+            'episodeId' => $request->query('episode_id'),
         ]);
     }
 
@@ -76,6 +77,9 @@ class CheckoutController extends Controller
         if (!$returnScheme && $source === 'app') {
             $returnScheme = 'sarvcast';
         }
+
+        // Optional: episode context when checkout started from a specific episode in the app
+        $episodeId = $request->input('episode_id');
 
         $couponCode = trim((string) $request->input('coupon_code', '')) ?: null;
 
@@ -142,6 +146,7 @@ class CheckoutController extends Controller
                 'source' => $source,
                 'return_scheme' => $returnScheme,
                 'price_info' => $priceInfo,
+                'episode_id' => $episodeId,
             ],
         ]);
 

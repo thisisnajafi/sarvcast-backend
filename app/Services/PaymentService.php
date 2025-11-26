@@ -350,15 +350,19 @@ class PaymentService
                 ]);
 
                 if ($verification['success']) {
+                    // Merge existing metadata (source, return_scheme, episode_id, etc.)
+                    $existingMetadata = $payment->payment_metadata ?? [];
+                    $newMetadata = array_merge($existingMetadata, [
+                        'ref_id' => $verification['ref_id'] ?? null,
+                        'card_pan' => $verification['card_pan'] ?? null,
+                        'verification_time' => now()->toISOString()
+                    ]);
+
                     $payment->updateStatus('completed', [
                         'gateway_response' => json_encode($verification),
                         'gateway_fee' => $verification['fee'] ?? 0,
                         'net_amount' => $payment->amount - ($verification['fee'] ?? 0),
-                        'payment_metadata' => [
-                            'ref_id' => $verification['ref_id'] ?? null,
-                            'card_pan' => $verification['card_pan'] ?? null,
-                            'verification_time' => now()->toISOString()
-                        ]
+                        'payment_metadata' => $newMetadata,
                     ]);
 
                     Log::info('Payment marked as completed', [

@@ -26,6 +26,7 @@ class PaymentCallbackController extends Controller
         $metadata = $payment?->payment_metadata ?? [];
         $source = $metadata['source'] ?? null;
         $returnScheme = $metadata['return_scheme'] ?? null;
+        $episodeId = $metadata['episode_id'] ?? null;
 
         // If flow originated from the app, redirect back via deep link
         if ($payment && $source === 'app' && $returnScheme) {
@@ -34,14 +35,20 @@ class PaymentCallbackController extends Controller
 
             if ($result['success']) {
                 // Use parameter names compatible with Flutter deep link parsing
-                $deepLink = $returnScheme . '://payment/success?' . http_build_query([
+                $params = [
                     'success' => 'true',
                     'payment_id' => $payment->id,
                     'subscription_id' => $subscription?->id,
                     'amount' => (int) $payment->amount,
                     'transaction_id' => $payment->transaction_id,
                     'timestamp' => $timestamp,
-                ]);
+                ];
+
+                if ($episodeId) {
+                    $params['episode_id'] = $episodeId;
+                }
+
+                $deepLink = $returnScheme . '://payment/success?' . http_build_query($params);
             } else {
                 $deepLink = $returnScheme . '://payment/failure?' . http_build_query([
                     'success' => 'false',
