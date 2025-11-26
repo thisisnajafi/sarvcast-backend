@@ -23,7 +23,7 @@ class AccessControlService
                 return false;
             }
 
-            // Use the same logic as User model's activeSubscription relationship
+            // Preferred: use the same logic as User model's activeSubscription relationship
             $activeSubscription = $user->activeSubscription;
 
             if ($activeSubscription) {
@@ -37,7 +37,7 @@ class AccessControlService
                 return true;
             }
 
-            // Check for trial subscription using the same pattern
+            // Also accept explicit trial subscriptions
             $trialSubscription = Subscription::where('user_id', $userId)
                                            ->where('status', 'trial')
                                            ->where('end_date', '>', now())
@@ -53,9 +53,25 @@ class AccessControlService
                 return true;
             }
 
-            // Debug: Check all subscriptions for this user
+            // Fallback: treat any non-expired subscription as premium, even if status is inconsistent
             $allSubscriptions = Subscription::where('user_id', $userId)->get();
-            Log::info('hasPremiumAccess: No active subscription found', [
+
+            $nonExpired = $allSubscriptions->first(function ($sub) {
+                return $sub->end_date && $sub->end_date > now();
+            });
+
+            if ($nonExpired) {
+                Log::warning('hasPremiumAccess: Non-expired subscription found with non-standard status, granting premium access', [
+                    'user_id' => $userId,
+                    'subscription_id' => $nonExpired->id,
+                    'status' => $nonExpired->status,
+                    'end_date' => $nonExpired->end_date
+                ]);
+                return true;
+            }
+
+            // Debug details when no subscription qualifies
+            Log::info('hasPremiumAccess: No active or non-expired subscription found', [
                 'user_id' => $userId,
                 'all_subscriptions' => $allSubscriptions->map(function($sub) {
                     return [
