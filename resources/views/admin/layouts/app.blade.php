@@ -41,7 +41,7 @@
 <body class="bg-gray-50 dark:bg-gray-900 font-iran transition-colors duration-300 overflow-x-hidden">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
-        <div id="sidebar" class="hidden lg:flex w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-40 translate-x-full lg:translate-x-0">
+        <div id="sidebar" class="hidden lg:flex w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-50 translate-x-full lg:translate-x-0">
             <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3 space-x-reverse">
