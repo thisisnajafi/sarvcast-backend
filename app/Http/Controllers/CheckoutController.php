@@ -118,7 +118,47 @@ class CheckoutController extends Controller
         // Amount for subscription is kept in IRT (toman) for consistency with the app
         $subscriptionPriceToman = $priceInfo['original_amount'] ?? $priceInfo['final_price'];
 
-        // Create a pending subscription for this plan
+        // If final price is zero (e.g. 100% coupon), activate subscription immediately
+        if ((int) ($priceInfo['final_price'] ?? 0) === 0 || (int) ($priceInfo['amount'] ?? 0) === 0) {
+            $subscription = Subscription::create([
+                'user_id' => $user->id,
+                'type' => $plan->slug,
+                'status' => 'active',
+                'start_date' => now(),
+                'end_date' => now()->copy()->addDays($plan->duration_days),
+                'price' => $subscriptionPriceToman,
+                'currency' => $plan->currency,
+                'auto_renew' => false,
+                'payment_method' => 'zarinpal',
+            ]);
+
+            // If flow started from the app, redirect back via deep link instead of payment gateway
+            if ($source === 'app' && $returnScheme) {
+                $timestamp = now()->toIso8601String();
+
+                $params = [
+                    'success' => 'true',
+                    'subscription_id' => $subscription->id,
+                    'amount' => 0,
+                    'transaction_id' => 'FREE-COUPON-' . $subscription->id,
+                    'timestamp' => $timestamp,
+                ];
+
+                if ($episodeId) {
+                    $params['episode_id'] = $episodeId;
+                }
+
+                $deepLink = $returnScheme . '://payment/success?' . http_build_query($params);
+
+                return redirect()->away($deepLink);
+            }
+
+            // Web flow: show standard success page without going to gateway
+            return redirect()->route('payment.success')
+                ->with('success', 'اشتراک شما با موفقیت و بدون نیاز به پرداخت فعال شد.');
+        }
+
+        // Create a pending subscription for this plan (normal paid flow)
         $subscription = Subscription::create([
             'user_id' => $user->id,
             'type' => $plan->slug,
