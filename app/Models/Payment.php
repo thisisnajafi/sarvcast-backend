@@ -19,6 +19,7 @@ class Payment extends Model
         'status',
         'payment_method',
         'payment_gateway',
+        'billing_platform',
         'transaction_id',
         'gateway_fee',
         'net_amount',
@@ -28,7 +29,17 @@ class Payment extends Model
         'refunded_at',
         'refund_reason',
         'refund_amount',
-        'metadata'
+        'metadata',
+        // In-app purchase fields
+        'purchase_token',
+        'order_id',
+        'package_name',
+        'product_id',
+        'purchase_state',
+        'purchase_time',
+        'store_response',
+        'is_acknowledged',
+        'acknowledged_at',
     ];
 
     /**

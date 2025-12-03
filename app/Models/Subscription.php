@@ -23,6 +23,11 @@ class Subscription extends Model
         'auto_renew',
         'payment_method',
         'transaction_id',
+        'billing_platform',
+        'store_subscription_id',
+        'auto_renew_enabled',
+        'store_expiry_time',
+        'store_metadata',
     ];
 
     protected $casts = [

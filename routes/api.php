@@ -197,7 +197,14 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('initiate', [PaymentController::class, 'initiate']);
         Route::post('verify', [PaymentController::class, 'verify']);
         Route::get('history', [PaymentController::class, 'history']);
+        
+        // In-app purchase verification
+        Route::post('cafebazaar/verify', [\App\Http\Controllers\Api\InAppPurchaseController::class, 'verifyCafeBazaarPurchase']);
+        Route::post('myket/verify', [\App\Http\Controllers\Api\InAppPurchaseController::class, 'verifyMyketPurchase']);
     });
+    
+    // Billing platform configuration
+    Route::get('billing/platform-config', [\App\Http\Controllers\Api\InAppPurchaseController::class, 'getPlatformConfig']);
 
     // Notification routes
     Route::prefix('notifications')->group(function () {

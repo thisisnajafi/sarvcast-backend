@@ -92,6 +92,86 @@ class SubscriptionService
     }
 
     /**
+     * Create or update subscription (for in-app purchases)
+     */
+    public function createOrUpdateSubscription(int $userId, string $type, float $price, string $currency, array $options = []): Subscription
+    {
+        try {
+            DB::beginTransaction();
+
+            $user = User::findOrFail($userId);
+            $plan = $this->getPlan($type);
+            
+            if (!$plan) {
+                throw new \InvalidArgumentException('Invalid subscription plan type');
+            }
+
+            // Check for existing active subscription
+            $existingSubscription = $this->getActiveSubscription($userId);
+            
+            if ($existingSubscription) {
+                // Extend existing subscription
+                $currentEndDate = Carbon::parse($existingSubscription->end_date);
+                $newEndDate = $currentEndDate->copy()->addDays($plan->duration_days);
+                
+                $existingSubscription->update([
+                    'end_date' => $newEndDate,
+                    'price' => $price,
+                    'currency' => $currency,
+                    'billing_platform' => $options['billing_platform'] ?? 'website',
+                    'store_subscription_id' => $options['store_subscription_id'] ?? null,
+                    'store_metadata' => $options['store_metadata'] ?? null,
+                ]);
+
+                DB::commit();
+                return $existingSubscription->fresh();
+            }
+
+            // Create new subscription
+            $startDate = $options['start_date'] ?? now();
+            $endDate = Carbon::parse($startDate)->addDays($plan->duration_days);
+
+            $subscription = Subscription::create([
+                'user_id' => $userId,
+                'type' => $type,
+                'status' => 'active',
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'price' => $price,
+                'currency' => $currency,
+                'auto_renew' => $options['auto_renew'] ?? true,
+                'payment_method' => $options['payment_method'] ?? 'in_app_purchase',
+                'transaction_id' => $options['transaction_id'] ?? null,
+                'billing_platform' => $options['billing_platform'] ?? 'website',
+                'store_subscription_id' => $options['store_subscription_id'] ?? null,
+                'auto_renew_enabled' => $options['auto_renew_enabled'] ?? true,
+                'store_expiry_time' => $options['store_expiry_time'] ?? null,
+                'store_metadata' => $options['store_metadata'] ?? null,
+            ]);
+
+            DB::commit();
+
+            Log::info('Subscription created/updated via in-app purchase', [
+                'user_id' => $userId,
+                'subscription_id' => $subscription->id,
+                'type' => $type,
+                'billing_platform' => $options['billing_platform'] ?? 'website'
+            ]);
+
+            return $subscription;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to create/update subscription', [
+                'user_id' => $userId,
+                'type' => $type,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Activate a subscription
      */
     public function activateSubscription(int $subscriptionId, string $transactionId = null): Subscription

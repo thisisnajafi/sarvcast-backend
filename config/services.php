@@ -43,4 +43,31 @@ return [
         'sandbox' => env('ZARINPAL_SANDBOX', false),
     ],
 
+    'cafebazaar' => [
+        'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'ir.sarvcast.app'),
+        'api_key' => env('CAFEBAZAAR_API_KEY'),
+        'api_url' => env('CAFEBAZAAR_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate'),
+        'subscription_api_url' => env('CAFEBAZAAR_SUBSCRIPTION_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/subscription'),
+        'acknowledge_url' => env('CAFEBAZAAR_ACKNOWLEDGE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge'),
+        'product_mapping' => [
+            'subscription_1month' => '1month',
+            'subscription_3months' => '3months',
+            'subscription_6months' => '6months',
+            'subscription_1year' => '1year',
+        ],
+    ],
+
+    'myket' => [
+        'package_name' => env('MYKET_PACKAGE_NAME', 'ir.sarvcast.app'),
+        'api_key' => env('MYKET_API_KEY'),
+        'api_url' => env('MYKET_API_URL', 'https://developer.myket.ir/api/applications/validatePurchase'),
+        'subscription_api_url' => env('MYKET_SUBSCRIPTION_API_URL', 'https://developer.myket.ir/api/applications/validateSubscription'),
+        'product_mapping' => [
+            'subscription_1month' => '1month',
+            'subscription_3months' => '3months',
+            'subscription_6months' => '6months',
+            'subscription_1year' => '1year',
+        ],
+    ],
+
 ];

@@ -32,6 +32,10 @@ class PaymentController extends Controller
             $query->where('payment_gateway', $request->payment_gateway);
         }
 
+        if ($request->filled('billing_platform')) {
+            $query->where('billing_platform', $request->billing_platform);
+        }
+
         if ($request->filled('currency')) {
             $query->where('currency', $request->currency);
         }
