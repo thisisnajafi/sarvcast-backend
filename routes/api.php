@@ -179,6 +179,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::delete('{episode}/bookmark', [EpisodeController::class, 'removeBookmark']);
     });
 
+    // Myket subscription routes (root level)
+    Route::get('plans', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'listPlans']);
+    Route::post('subscribe', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'subscribe'])->middleware('auth:sanctum');
+    Route::get('subscription-status', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'subscriptionStatus'])->middleware('auth:sanctum');
+    Route::post('cancel-subscription', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'cancelSubscription'])->middleware('auth:sanctum');
+
     // Subscription routes
         Route::prefix('subscriptions')->group(function () {
             Route::get('plans', [SubscriptionController::class, 'plans']);
@@ -196,6 +202,14 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
                 Route::post('verify', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'verifySubscription']);
                 Route::get('status', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'getSubscriptionStatus']);
                 Route::post('restore', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'restorePurchases']);
+            });
+
+            // Myket subscription routes
+            Route::prefix('myket')->group(function () {
+                Route::get('plans', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'listPlans']);
+                Route::post('subscribe', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'subscribe']);
+                Route::get('subscription-status', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'subscriptionStatus']);
+                Route::post('cancel-subscription', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'cancelSubscription']);
             });
         });
 
