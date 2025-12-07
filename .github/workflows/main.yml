@@ -152,8 +152,11 @@ jobs:
       - name: Install rsync on remote server
         run: |
           echo "📦 Checking/installing rsync on remote server..."
-
+          
+          set +e  # Don't exit on error, we'll handle it manually
+          
           # Check if rsync is already installed
+          echo "🔍 Checking if rsync is installed..."
           RSYNC_CHECK=$(sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
             -o StrictHostKeyChecking=no \
             -o PasswordAuthentication=yes \
@@ -162,8 +165,10 @@ jobs:
             -p ${{ secrets.SSH_PORT || 22 }} \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
             "command -v rsync" 2>&1)
-
-          if echo "$RSYNC_CHECK" | grep -q "rsync"; then
+          
+          RSYNC_CHECK_EXIT=$?
+          
+          if [ $RSYNC_CHECK_EXIT -eq 0 ] && echo "$RSYNC_CHECK" | grep -q "rsync"; then
             echo "✅ rsync is already installed"
             sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
               -o StrictHostKeyChecking=no \
@@ -172,42 +177,77 @@ jobs:
               -o ConnectTimeout=10 \
               -p ${{ secrets.SSH_PORT || 22 }} \
               ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-              "rsync --version | head -1"
+              "rsync --version | head -1" || true
           else
             echo "⚠️ rsync not found. Attempting to install..."
-
-            # Try installation with sudo first, then without sudo
-            INSTALL_RESULT=$(sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+            echo "Checking available package managers..."
+            
+            # Check what package managers are available
+            PKG_MGR=$(sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
               -o StrictHostKeyChecking=no \
               -o PasswordAuthentication=yes \
               -o PubkeyAuthentication=no \
               -o ConnectTimeout=10 \
               -p ${{ secrets.SSH_PORT || 22 }} \
               ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-              "if command -v sudo >/dev/null 2>&1; then \
-                if command -v apt-get >/dev/null 2>&1; then \
-                  sudo apt-get update -qq && sudo apt-get install -y -qq rsync 2>&1; \
-                elif command -v yum >/dev/null 2>&1; then \
-                  sudo yum install -y -q rsync 2>&1; \
-                elif command -v dnf >/dev/null 2>&1; then \
-                  sudo dnf install -y -q rsync 2>&1; \
-                elif command -v apk >/dev/null 2>&1; then \
-                  sudo apk add -q rsync 2>&1; \
-                fi \
-              elif command -v apt-get >/dev/null 2>&1; then \
-                apt-get update -qq && apt-get install -y -qq rsync 2>&1; \
-              elif command -v yum >/dev/null 2>&1; then \
-                yum install -y -q rsync 2>&1; \
-              elif command -v dnf >/dev/null 2>&1; then \
-                dnf install -y -q rsync 2>&1; \
-              elif command -v apk >/dev/null 2>&1; then \
-                apk add -q rsync 2>&1; \
-              else \
-                echo 'ERROR: Could not detect package manager or install rsync.'; \
-                exit 1; \
-              fi" 2>&1)
-
-            # Check if installation was successful
+              "if command -v apt-get >/dev/null 2>&1; then echo 'apt-get'; \
+               elif command -v yum >/dev/null 2>&1; then echo 'yum'; \
+               elif command -v dnf >/dev/null 2>&1; then echo 'dnf'; \
+               elif command -v apk >/dev/null 2>&1; then echo 'apk'; \
+               else echo 'none'; fi" 2>&1)
+            
+            echo "Detected package manager: $PKG_MGR"
+            
+            if [ "$PKG_MGR" = "none" ]; then
+              echo "❌ No package manager found. rsync must be installed manually."
+              echo ""
+              echo "Please contact your hosting provider to install rsync, or"
+              echo "if you have root access, install it manually via SSH."
+              exit 1
+            fi
+            
+            # Try to install rsync
+            echo "Attempting to install rsync using $PKG_MGR..."
+            
+            INSTALL_CMD=""
+            if [ "$PKG_MGR" = "apt-get" ]; then
+              INSTALL_CMD="apt-get update -qq && apt-get install -y -qq rsync"
+            elif [ "$PKG_MGR" = "yum" ]; then
+              INSTALL_CMD="yum install -y -q rsync"
+            elif [ "$PKG_MGR" = "dnf" ]; then
+              INSTALL_CMD="dnf install -y -q rsync"
+            elif [ "$PKG_MGR" = "apk" ]; then
+              INSTALL_CMD="apk add -q rsync"
+            fi
+            
+            if [ -n "$INSTALL_CMD" ]; then
+              INSTALL_RESULT=$(sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+                -o StrictHostKeyChecking=no \
+                -o PasswordAuthentication=yes \
+                -o PubkeyAuthentication=no \
+                -o ConnectTimeout=10 \
+                -p ${{ secrets.SSH_PORT || 22 }} \
+                ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+                "$INSTALL_CMD" 2>&1)
+              
+              INSTALL_EXIT=$?
+              
+              if [ $INSTALL_EXIT -ne 0 ]; then
+                echo "⚠️ Installation command failed (exit code: $INSTALL_EXIT)"
+                echo "Output: $INSTALL_RESULT"
+                echo ""
+                echo "This might mean:"
+                echo "  - You don't have permission to install packages"
+                echo "  - Package manager requires root/sudo access"
+                echo "  - Network issues preventing package download"
+                echo ""
+                echo "Please install rsync manually on your server or contact your hosting provider."
+                exit 1
+              fi
+            fi
+            
+            # Verify installation
+            echo "Verifying rsync installation..."
             if sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
               -o StrictHostKeyChecking=no \
               -o PasswordAuthentication=yes \
@@ -224,19 +264,28 @@ jobs:
                 -o ConnectTimeout=10 \
                 -p ${{ secrets.SSH_PORT || 22 }} \
                 ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-                "rsync --version | head -1"
+                "rsync --version | head -1" || true
             else
-              echo "❌ Failed to install rsync automatically"
-              echo "Installation output: $INSTALL_RESULT"
+              echo "❌ rsync installation failed or verification failed"
               echo ""
               echo "Please install rsync manually on your server:"
-              echo "  - For Ubuntu/Debian: apt-get install rsync"
-              echo "  - For CentOS/RHEL: yum install rsync"
-              echo "  - Or contact your hosting provider to install rsync"
+              echo "  SSH into your server and run:"
+              if [ "$PKG_MGR" = "apt-get" ]; then
+                echo "    apt-get update && apt-get install -y rsync"
+              elif [ "$PKG_MGR" = "yum" ]; then
+                echo "    yum install -y rsync"
+              elif [ "$PKG_MGR" = "dnf" ]; then
+                echo "    dnf install -y rsync"
+              elif [ "$PKG_MGR" = "apk" ]; then
+                echo "    apk add rsync"
+              fi
+              echo ""
+              echo "Or contact your hosting provider to install rsync."
               exit 1
             fi
           fi
-
+          
+          set -e  # Re-enable exit on error
           echo "✅ rsync installation check completed"
 
       - name: 📂 Sync files via SSH (rsync)
