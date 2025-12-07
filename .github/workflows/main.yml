@@ -126,7 +126,7 @@ jobs:
             head -c 100 ~/.ssh/deploy_key
             exit 1
           fi
-          
+
           if ! grep -q "END.*PRIVATE KEY" ~/.ssh/deploy_key; then
             echo "❌ ERROR: SSH key does not contain END marker"
             echo "Last 100 characters of key:"
@@ -136,7 +136,7 @@ jobs:
 
           # Ensure proper line endings (remove Windows CRLF)
           sed -i 's/\r$//' ~/.ssh/deploy_key
-          
+
           # Remove any trailing newlines that might cause issues
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' ~/.ssh/deploy_key
 
