@@ -222,7 +222,7 @@ jobs:
           echo "🎉 Your SarvCast application has been deployed and optimized!"
           echo ""
           echo "🔧 What was done:"
-          echo "  ✅ Files synced to server via SSH (rsync)"
+          echo "  ✅ Files synced to server via FTP"
           echo "  ✅ Public images directories created"
           echo "  ✅ Permissions set correctly"
           echo "  ✅ Image directories configured"
