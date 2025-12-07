@@ -152,7 +152,7 @@ jobs:
       - name: Install rsync on remote server
         run: |
           echo "📦 Checking/installing rsync on remote server..."
-          
+
           # Check if rsync is already installed
           RSYNC_CHECK=$(sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
             -o StrictHostKeyChecking=no \
@@ -162,7 +162,7 @@ jobs:
             -p ${{ secrets.SSH_PORT || 22 }} \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
             "command -v rsync" 2>&1)
-          
+
           if echo "$RSYNC_CHECK" | grep -q "rsync"; then
             echo "✅ rsync is already installed"
             sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
@@ -175,7 +175,7 @@ jobs:
               "rsync --version | head -1"
           else
             echo "⚠️ rsync not found. Attempting to install..."
-            
+
             # Try installation with sudo first, then without sudo
             INSTALL_RESULT=$(sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
               -o StrictHostKeyChecking=no \
@@ -206,7 +206,7 @@ jobs:
                 echo 'ERROR: Could not detect package manager or install rsync.'; \
                 exit 1; \
               fi" 2>&1)
-            
+
             # Check if installation was successful
             if sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
               -o StrictHostKeyChecking=no \
@@ -236,7 +236,7 @@ jobs:
               exit 1
             fi
           fi
-          
+
           echo "✅ rsync installation check completed"
 
       - name: 📂 Sync files via SSH (rsync)
