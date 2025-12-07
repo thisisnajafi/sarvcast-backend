@@ -113,7 +113,7 @@ jobs:
         with:
           server: ${{ secrets.FTP_HOST || '2997021731.cloudylink.com' }}
           username: ${{ secrets.FTP_USERNAME || 'my@sarvcast.ir' }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          password: ${{ secrets.FTP_PASSWORD || 'Prof48017421@#' }}
           server-dir: /
           exclude: |
             .env
