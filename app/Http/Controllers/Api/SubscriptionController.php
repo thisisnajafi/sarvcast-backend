@@ -519,9 +519,9 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Cancel subscription
+     * Cancel subscription (cancels current user's active subscription)
      */
-    public function cancel(Request $request, int $subscriptionId): JsonResponse
+    public function cancel(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'reason' => 'nullable|string|max:500'
@@ -538,8 +538,20 @@ class SubscriptionController extends Controller
         }
 
         try {
+            $user = $request->user();
             $reason = $request->input('reason');
-            $subscription = $this->subscriptionService->cancelSubscription($subscriptionId, $reason);
+            
+            // Get current active subscription
+            $currentSubscription = $this->subscriptionService->getActiveSubscription($user->id);
+            
+            if (!$currentSubscription) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'اشتراک فعالی یافت نشد'
+                ], 404);
+            }
+            
+            $subscription = $this->subscriptionService->cancelSubscription($currentSubscription->id, $reason);
 
             return response()->json([
                 'success' => true,
@@ -551,7 +563,7 @@ class SubscriptionController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Failed to cancel subscription', [
-                'subscription_id' => $subscriptionId,
+                'user_id' => $request->user()->id,
                 'error' => $e->getMessage()
             ]);
 
