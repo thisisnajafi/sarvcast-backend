@@ -139,7 +139,7 @@ jobs:
 
           # Validate key format
           echo "🔍 Validating SSH key format..."
-          
+
           # Check if key contains BEGIN marker (case insensitive, flexible)
           if ! grep -qi "BEGIN.*PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "BEGIN RSA PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "BEGIN OPENSSH PRIVATE KEY" ~/.ssh/deploy_key; then
             echo "❌ ERROR: SSH key does not contain BEGIN marker"
@@ -161,7 +161,7 @@ jobs:
             echo "4. Include ALL lines between BEGIN and END"
             exit 1
           fi
-          
+
           # Check if key contains END marker
           if ! grep -qi "END.*PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "END RSA PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "END OPENSSH PRIVATE KEY" ~/.ssh/deploy_key; then
             echo "❌ ERROR: SSH key does not contain END marker"
