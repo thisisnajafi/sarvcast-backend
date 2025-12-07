@@ -111,9 +111,9 @@ jobs:
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@4.0.0
         with:
-          server: ${{ secrets.FTP_HOST || '2997021731.cloudylink.com' }}
-          username: ${{ secrets.FTP_USERNAME || 'my@sarvcast.ir' }}
-          password: ${{ secrets.FTP_PASSWORD || 'Prof48017421@#' }}
+          server: ftp.sarvcast.ir
+          username: my@sarvcast.ir
+          password: Prof48017421@#
           server-dir: /
           exclude: |
             .env
