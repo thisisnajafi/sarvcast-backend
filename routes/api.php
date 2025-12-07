@@ -190,6 +190,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('debug/subscription', [SubscriptionController::class, 'debugSubscription']);
             Route::post('debug/subscription/{subscriptionId}/activate', [SubscriptionController::class, 'manuallyActivateSubscription']);
             Route::get('debug/zarinpal', [SubscriptionController::class, 'debugZarinPal']);
+            
+            // CafeBazaar subscription routes (flavor-aware)
+            Route::prefix('cafebazaar')->group(function () {
+                Route::post('verify', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'verifySubscription']);
+                Route::get('status', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'getSubscriptionStatus']);
+                Route::post('restore', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'restorePurchases']);
+            });
         });
 
     // Payment routes
