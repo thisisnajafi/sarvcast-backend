@@ -112,9 +112,23 @@ jobs:
         run: |
           echo "🔑 Setting up SSH key for deployment..."
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Write SSH private key with proper formatting
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Ensure proper line endings and format
+          sed -i 's/\r$//' ~/.ssh/deploy_key
+
+          # Add server to known hosts
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} -p ${{ secrets.SSH_PORT || 22 }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod 644 ~/.ssh/known_hosts
+
+          # Test SSH connection
+          echo "🔍 Testing SSH connection..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || 22 }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'" || echo "⚠️ SSH connection test failed, but continuing..."
+
           echo "✅ SSH key configured"
 
       - name: 📂 Sync files via SSH (rsync)
@@ -122,8 +136,9 @@ jobs:
           echo "📤 Syncing files to server via SSH (rsync)..."
           echo "📍 Target: ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_PATH || '/public_html/my' }}/"
 
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p ${{ secrets.SSH_PORT || 22 }}" \
+          # Use rsync with proper SSH options
+          rsync -avz --delete --progress \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -p ${{ secrets.SSH_PORT || 22 }}" \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='.env' \
@@ -147,7 +162,12 @@ jobs:
             --exclude='*.log' \
             ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_PATH || '/public_html/my' }}/
 
-          echo "✅ Files synced successfully!"
+          if [ $? -eq 0 ]; then
+            echo "✅ Files synced successfully!"
+          else
+            echo "❌ File sync failed!"
+            exit 1
+          fi
 
       - name: Run Post-Deployment Commands via SSH
         uses: appleboy/ssh-action@v1.0.3
