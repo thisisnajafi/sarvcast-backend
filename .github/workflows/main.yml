@@ -114,22 +114,67 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Write SSH private key with proper formatting
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          # Write SSH private key using printf to preserve exact formatting
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Ensure proper line endings and format
+          # Validate key format
+          echo "🔍 Validating SSH key format..."
+          if ! grep -q "BEGIN.*PRIVATE KEY" ~/.ssh/deploy_key; then
+            echo "❌ ERROR: SSH key does not contain BEGIN marker"
+            echo "First 100 characters of key:"
+            head -c 100 ~/.ssh/deploy_key
+            exit 1
+          fi
+          
+          if ! grep -q "END.*PRIVATE KEY" ~/.ssh/deploy_key; then
+            echo "❌ ERROR: SSH key does not contain END marker"
+            echo "Last 100 characters of key:"
+            tail -c 100 ~/.ssh/deploy_key
+            exit 1
+          fi
+
+          # Ensure proper line endings (remove Windows CRLF)
           sed -i 's/\r$//' ~/.ssh/deploy_key
+          
+          # Remove any trailing newlines that might cause issues
+          sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' ~/.ssh/deploy_key
+
+          # Verify key file permissions
+          ls -la ~/.ssh/deploy_key
 
           # Add server to known hosts
           ssh-keyscan -H ${{ secrets.SSH_HOST }} -p ${{ secrets.SSH_PORT || 22 }} >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 644 ~/.ssh/known_hosts
 
+          # Test SSH key format with ssh-keygen
+          echo "🔍 Testing SSH key format..."
+          ssh-keygen -l -f ~/.ssh/deploy_key > /dev/null 2>&1 && echo "✅ SSH key format is valid" || {
+            echo "❌ ERROR: SSH key format is invalid"
+            echo "Key file size: $(wc -c < ~/.ssh/deploy_key) bytes"
+            echo "First 5 lines:"
+            head -5 ~/.ssh/deploy_key
+            exit 1
+          }
+
           # Test SSH connection
           echo "🔍 Testing SSH connection..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || 22 }} ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'" || echo "⚠️ SSH connection test failed, but continuing..."
+          ssh -v -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            -o PasswordAuthentication=no \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+            "echo 'SSH connection successful'" 2>&1 | head -20 || {
+            echo "❌ SSH connection test failed"
+            echo "Please verify:"
+            echo "  1. SSH_PRIVATE_KEY secret contains the complete private key"
+            echo "  2. Public key is added to server's ~/.ssh/authorized_keys"
+            echo "  3. SSH_USERNAME and SSH_HOST are correct"
+            exit 1
+          }
 
-          echo "✅ SSH key configured"
+          echo "✅ SSH key configured and tested"
 
       - name: 📂 Sync files via SSH (rsync)
         run: |
@@ -138,7 +183,7 @@ jobs:
 
           # Use rsync with proper SSH options
           rsync -avz --delete --progress \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -p ${{ secrets.SSH_PORT || 22 }}" \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -o IdentitiesOnly=yes -o PasswordAuthentication=no -p ${{ secrets.SSH_PORT || 22 }}" \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='.env' \
