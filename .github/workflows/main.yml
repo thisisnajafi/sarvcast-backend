@@ -114,67 +114,116 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Write SSH private key using printf to preserve exact formatting
-          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          # Write SSH private key - handle multiline properly
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Validate key format
-          echo "🔍 Validating SSH key format..."
-          if ! grep -q "BEGIN.*PRIVATE KEY" ~/.ssh/deploy_key; then
-            echo "❌ ERROR: SSH key does not contain BEGIN marker"
-            echo "First 100 characters of key:"
-            head -c 100 ~/.ssh/deploy_key
-            exit 1
-          fi
+          # Debug: Show key file info
+          echo "📊 Key file information:"
+          echo "  File size: $(wc -c < ~/.ssh/deploy_key) bytes"
+          echo "  Line count: $(wc -l < ~/.ssh/deploy_key) lines"
+          echo ""
+          echo "📄 First 10 lines of key file:"
+          head -10 ~/.ssh/deploy_key | sed 's/./*/g' || head -10 ~/.ssh/deploy_key
+          echo ""
+          echo "📄 Last 5 lines of key file:"
+          tail -5 ~/.ssh/deploy_key | sed 's/./*/g' || tail -5 ~/.ssh/deploy_key
+          echo ""
 
-          if ! grep -q "END.*PRIVATE KEY" ~/.ssh/deploy_key; then
-            echo "❌ ERROR: SSH key does not contain END marker"
-            echo "Last 100 characters of key:"
-            tail -c 100 ~/.ssh/deploy_key
-            exit 1
-          fi
+          # Clean up the key file - remove leading/trailing whitespace
+          sed -i 's/^[[:space:]]*//;s/[[:space:]]*$//' ~/.ssh/deploy_key
+          sed -i '/^$/d' ~/.ssh/deploy_key
 
           # Ensure proper line endings (remove Windows CRLF)
           sed -i 's/\r$//' ~/.ssh/deploy_key
 
-          # Remove any trailing newlines that might cause issues
-          sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' ~/.ssh/deploy_key
+          # Validate key format
+          echo "🔍 Validating SSH key format..."
+          
+          # Check if key contains BEGIN marker (case insensitive, flexible)
+          if ! grep -qi "BEGIN.*PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "BEGIN RSA PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "BEGIN OPENSSH PRIVATE KEY" ~/.ssh/deploy_key; then
+            echo "❌ ERROR: SSH key does not contain BEGIN marker"
+            echo ""
+            echo "The SSH_PRIVATE_KEY secret must contain a complete private key."
+            echo "Expected format:"
+            echo "  -----BEGIN OPENSSH PRIVATE KEY-----"
+            echo "  (key content)"
+            echo "  -----END OPENSSH PRIVATE KEY-----"
+            echo ""
+            echo "Actual first 200 characters received:"
+            head -c 200 ~/.ssh/deploy_key
+            echo ""
+            echo ""
+            echo "Please check your GitHub Secret 'SSH_PRIVATE_KEY':"
+            echo "1. Go to: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo "2. Edit SSH_PRIVATE_KEY"
+            echo "3. Make sure it starts with '-----BEGIN' and ends with '-----END'"
+            echo "4. Include ALL lines between BEGIN and END"
+            exit 1
+          fi
+          
+          # Check if key contains END marker
+          if ! grep -qi "END.*PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "END RSA PRIVATE KEY" ~/.ssh/deploy_key && ! grep -qi "END OPENSSH PRIVATE KEY" ~/.ssh/deploy_key; then
+            echo "❌ ERROR: SSH key does not contain END marker"
+            echo ""
+            echo "The SSH_PRIVATE_KEY secret must end with '-----END PRIVATE KEY-----'"
+            echo "Actual last 200 characters received:"
+            tail -c 200 ~/.ssh/deploy_key
+            echo ""
+            exit 1
+          fi
 
-          # Verify key file permissions
-          ls -la ~/.ssh/deploy_key
+          # Test SSH key format with ssh-keygen
+          echo "🔍 Testing SSH key format with ssh-keygen..."
+          if ssh-keygen -l -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "✅ SSH key format is valid"
+            ssh-keygen -l -f ~/.ssh/deploy_key
+          else
+            echo "❌ ERROR: SSH key format validation failed"
+            echo "Key file details:"
+            echo "  Size: $(wc -c < ~/.ssh/deploy_key) bytes"
+            echo "  Lines: $(wc -l < ~/.ssh/deploy_key)"
+            echo ""
+            echo "First 3 lines (masked):"
+            head -3 ~/.ssh/deploy_key | while IFS= read -r line; do
+              if [[ "$line" == *"BEGIN"* ]] || [[ "$line" == *"END"* ]]; then
+                echo "  $line"
+              else
+                echo "  $(echo "$line" | sed 's/./*/g')"
+              fi
+            done
+            exit 1
+          fi
 
           # Add server to known hosts
+          echo "🔍 Adding server to known hosts..."
           ssh-keyscan -H ${{ secrets.SSH_HOST }} -p ${{ secrets.SSH_PORT || 22 }} >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 644 ~/.ssh/known_hosts
 
-          # Test SSH key format with ssh-keygen
-          echo "🔍 Testing SSH key format..."
-          ssh-keygen -l -f ~/.ssh/deploy_key > /dev/null 2>&1 && echo "✅ SSH key format is valid" || {
-            echo "❌ ERROR: SSH key format is invalid"
-            echo "Key file size: $(wc -c < ~/.ssh/deploy_key) bytes"
-            echo "First 5 lines:"
-            head -5 ~/.ssh/deploy_key
-            exit 1
-          }
-
           # Test SSH connection
           echo "🔍 Testing SSH connection..."
-          ssh -v -i ~/.ssh/deploy_key \
+          if ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=no \
             -o IdentitiesOnly=yes \
             -o PasswordAuthentication=no \
+            -o ConnectTimeout=10 \
             -p ${{ secrets.SSH_PORT || 22 }} \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-            "echo 'SSH connection successful'" 2>&1 | head -20 || {
+            "echo 'SSH connection successful'" 2>&1; then
+            echo "✅ SSH connection test successful"
+          else
             echo "❌ SSH connection test failed"
-            echo "Please verify:"
-            echo "  1. SSH_PRIVATE_KEY secret contains the complete private key"
-            echo "  2. Public key is added to server's ~/.ssh/authorized_keys"
-            echo "  3. SSH_USERNAME and SSH_HOST are correct"
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Verify SSH_PRIVATE_KEY contains the complete private key"
+            echo "2. Verify the corresponding public key is in server's ~/.ssh/authorized_keys"
+            echo "3. Check SSH_USERNAME and SSH_HOST are correct"
+            echo "4. Verify SSH port is correct (default: 22)"
+            echo "5. Check server firewall allows SSH connections"
             exit 1
-          }
+          fi
 
-          echo "✅ SSH key configured and tested"
+          echo "✅ SSH key configured and tested successfully"
 
       - name: 📂 Sync files via SSH (rsync)
         run: |
