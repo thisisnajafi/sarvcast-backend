@@ -190,9 +190,9 @@ jobs:
       - name: Run Post-Deployment Commands via SSH
         run: |
           echo "🚀 Running post-deployment commands via SSH..."
-          
+
           APP_PATH="${{ secrets.APP_PATH || '/public_html/my' }}"
-          
+
           sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
             -o StrictHostKeyChecking=no \
             -o PasswordAuthentication=yes \
