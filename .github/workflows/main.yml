@@ -108,29 +108,46 @@ jobs:
           php artisan view:clear
           echo "✅ Pre-deployment caches cleared"
 
-
-      - name: 📂 Sync files
-        uses: SamKirkland/FTP-Deploy-Action@4.0.0
-        with:
-          server: 2997021731.cloudylink.com
-          username: my@sarvcast.ir
-          password: Prof48017421@#
-          server-dir: /
-          exclude: |
-            .env
-            .env.*
-            node_modules/
-            .git/
-            .github/
-            tests/
-            phpunit.xml
-            *.md
-            .styleci.yml
-      - name: Post-deployment Storage Setup
+      - name: Setup SSH Key
         run: |
-          echo "🔧 Setting up storage on production server..."
-          echo "📋 This step will be handled by the server configuration"
-          echo "✅ Storage setup instructions provided"
+          echo "🔑 Setting up SSH key for deployment..."
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "✅ SSH key configured"
+
+      - name: 📂 Sync files via SSH (rsync)
+        run: |
+          echo "📤 Syncing files to server via SSH (rsync)..."
+          echo "📍 Target: ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_PATH || '/public_html/my' }}/"
+
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts -p ${{ secrets.SSH_PORT || 22 }}" \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='phpunit.xml' \
+            --exclude='*.md' \
+            --exclude='.styleci.yml' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='bootstrap/cache/*' \
+            --exclude='vendor' \
+            --exclude='.DS_Store' \
+            --exclude='Thumbs.db' \
+            --exclude='Homestead.yaml' \
+            --exclude='Homestead.json' \
+            --exclude='Vagrantfile' \
+            --exclude='*.log' \
+            ./ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${{ secrets.APP_PATH || '/public_html/my' }}/
+
+          echo "✅ Files synced successfully!"
 
       - name: Run Post-Deployment Commands via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -172,6 +189,12 @@ jobs:
 
             echo "✅ Post-deployment setup completed successfully!"
 
+      - name: Cleanup SSH Key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          echo "🧹 SSH key cleaned up"
+
       - name: Verify deployment
         run: |
           echo "✅ Deployment verification..."
@@ -180,7 +203,7 @@ jobs:
           echo "🎉 Your SarvCast application has been deployed and optimized!"
           echo ""
           echo "🔧 What was done:"
-          echo "  ✅ Files deployed via FTP"
+          echo "  ✅ Files synced to server via SSH (rsync)"
           echo "  ✅ Public images directories created"
           echo "  ✅ Permissions set correctly"
           echo "  ✅ Image directories configured"

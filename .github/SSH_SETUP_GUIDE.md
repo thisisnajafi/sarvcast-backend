@@ -1,15 +1,24 @@
 # SSH Setup Guide for GitHub Actions Deployment
 
-This guide explains how to configure SSH access for automated post-deployment commands in the GitHub Actions workflow.
+This guide explains how to configure SSH access for automated file deployment and post-deployment commands in the GitHub Actions workflow.
 
 ## Overview
 
-The workflow now automatically runs Laravel commands on your server via SSH after each deployment. This ensures:
+The workflow now uses SSH for both file deployment and running Laravel commands. This ensures:
+- ✅ Files are synced to server via SSH (rsync) - faster and more reliable than FTP
 - ✅ Composer dependencies are installed/updated
 - ✅ Laravel caches are cleared and optimized
 - ✅ Database migrations are run
 - ✅ Application is optimized for production
 - ✅ Permissions are set correctly
+
+## Deployment Method
+
+The workflow uses **rsync over SSH** for file deployment, which provides:
+- **Faster transfers** - Only changed files are synced
+- **More reliable** - No FTP connection timeouts
+- **Secure** - All communication encrypted via SSH
+- **Efficient** - Automatic compression and delta sync
 
 ## Required GitHub Secrets
 
@@ -125,7 +134,17 @@ ssh -i ~/.ssh/github_actions my@sarvcast.ir@2997021731.cloudylink.com
 ssh -i ~/.ssh/github_actions my@sarvcast.ir@2997021731.cloudylink.com "cd /public_html && php artisan --version"
 ```
 
-## Commands Run After Deployment
+## Deployment Process
+
+The workflow performs these steps:
+
+1. **File Sync via rsync**
+   - Syncs all application files to server
+   - Excludes unnecessary files (vendor, .git, tests, etc.)
+   - Only transfers changed files (incremental sync)
+   - Uses SSH for secure transfer
+
+2. **Post-Deployment Commands**
 
 The workflow automatically runs these commands on your server:
 
