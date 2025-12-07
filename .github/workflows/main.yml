@@ -132,6 +132,46 @@ jobs:
           echo "📋 This step will be handled by the server configuration"
           echo "✅ Storage setup instructions provided"
 
+      - name: Run Post-Deployment Commands via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            echo "🚀 Starting post-deployment setup..."
+
+            # Navigate to application directory
+            cd ${{ secrets.APP_PATH || '/public_html/my' }}
+
+            echo "📦 Installing/updating Composer dependencies..."
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            echo "🧹 Clearing Laravel caches..."
+            php artisan config:clear
+            php artisan route:clear
+            php artisan view:clear
+            php artisan cache:clear
+
+            echo "🔄 Running database migrations..."
+            php artisan migrate --force
+
+            echo "⚡ Optimizing Laravel for production..."
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan optimize
+
+            echo "🔐 Setting proper permissions..."
+            chmod -R 755 storage bootstrap/cache
+            chmod -R 755 public/images
+
+            echo "🔗 Creating storage symlink (if needed)..."
+            php artisan storage:link || true
+
+            echo "✅ Post-deployment setup completed successfully!"
+
       - name: Verify deployment
         run: |
           echo "✅ Deployment verification..."
@@ -144,6 +184,10 @@ jobs:
           echo "  ✅ Public images directories created"
           echo "  ✅ Permissions set correctly"
           echo "  ✅ Image directories configured"
+          echo "  ✅ Composer dependencies installed/updated"
+          echo "  ✅ Laravel caches cleared and optimized"
+          echo "  ✅ Database migrations run"
+          echo "  ✅ Application optimized for production"
 
       - name: Notify Telegram
         env:
