@@ -149,6 +149,36 @@ jobs:
 
           echo "✅ SSH authentication configured successfully"
 
+      - name: Install rsync on remote server
+        run: |
+          echo "📦 Installing rsync on remote server..."
+          
+          # Try to install rsync on the remote server
+          # This works for most Linux distributions (Ubuntu, Debian, CentOS, etc.)
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -o PasswordAuthentication=yes \
+            -o PubkeyAuthentication=no \
+            -o ConnectTimeout=10 \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+            "command -v rsync >/dev/null 2>&1 || { \
+              if command -v apt-get >/dev/null 2>&1; then \
+                sudo apt-get update -qq && sudo apt-get install -y -qq rsync; \
+              elif command -v yum >/dev/null 2>&1; then \
+                sudo yum install -y -q rsync; \
+              elif command -v dnf >/dev/null 2>&1; then \
+                sudo dnf install -y -q rsync; \
+              elif command -v apk >/dev/null 2>&1; then \
+                sudo apk add -q rsync; \
+              else \
+                echo '⚠️ Could not detect package manager. Please install rsync manually.'; \
+                exit 1; \
+              fi \
+            } && echo '✅ rsync is installed' && rsync --version | head -1"
+          
+          echo "✅ rsync installation check completed"
+
       - name: 📂 Sync files via SSH (rsync)
         run: |
           echo "📤 Syncing files to server via SSH (rsync)..."
