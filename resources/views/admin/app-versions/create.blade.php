@@ -83,6 +83,39 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="website_update_url">Website Update URL</label>
+                                    <input type="url" name="website_update_url" id="website_update_url" class="form-control @error('website_update_url') is-invalid @enderror" 
+                                           value="{{ old('website_update_url') }}" placeholder="https://example.com/update/website">
+                                    @error('website_update_url')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="cafebazaar_update_url">CafeBazaar Update URL</label>
+                                    <input type="url" name="cafebazaar_update_url" id="cafebazaar_update_url" class="form-control @error('cafebazaar_update_url') is-invalid @enderror" 
+                                           value="{{ old('cafebazaar_update_url') }}" placeholder="https://cafebazaar.ir/app/...">
+                                    @error('cafebazaar_update_url')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="myket_update_url">Myket Update URL</label>
+                                    <input type="url" name="myket_update_url" id="myket_update_url" class="form-control @error('myket_update_url') is-invalid @enderror" 
+                                           value="{{ old('myket_update_url') }}" placeholder="https://myket.ir/app/...">
+                                    @error('myket_update_url')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="form-group">
                             <label for="update_message">Update Message</label>

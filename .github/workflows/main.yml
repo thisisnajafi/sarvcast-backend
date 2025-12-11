@@ -25,7 +25,6 @@ jobs:
           mysql root password: 'iWY]RgUhnqiu'
           mysql database: 'h273779_lgb'
           mysql user: 'h273779_lgb'
-          mysql host: 'localhost'
           mysql password: 'iWY]RgUhnqiu'
 
       - name: Cache Composer packages

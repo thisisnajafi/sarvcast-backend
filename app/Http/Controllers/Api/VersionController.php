@@ -7,6 +7,7 @@ use App\Models\AppVersion;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\FlavorHelper;
 
 class VersionController extends Controller
 {
@@ -37,11 +38,18 @@ class VersionController extends Controller
         $platform = $request->input('platform');
         $currentVersion = $request->input('current_version');
         $currentBuildNumber = $request->input('current_build_number');
+        $flavor = FlavorHelper::getFlavor($request);
 
         $updateCheck = AppVersion::checkUpdateRequired($platform, $currentVersion, $currentBuildNumber);
 
         if ($updateCheck['update_required']) {
             $latestVersion = $updateCheck['latest_version'];
+            $links = [
+                'website' => $latestVersion->website_update_url,
+                'cafebazaar' => $latestVersion->cafebazaar_update_url,
+                'myket' => $latestVersion->myket_update_url,
+            ];
+            $currentFlavorLink = $links[$flavor] ?? $latestVersion->download_url;
 
             return response()->json([
                 'success' => true,
@@ -51,6 +59,9 @@ class VersionController extends Controller
                     'latest_version' => $latestVersion->version,
                     'latest_build_number' => $latestVersion->build_number,
                     'download_url' => $latestVersion->download_url,
+                    'update_links' => $links,
+                    'current_flavor' => $flavor,
+                    'current_flavor_link' => $currentFlavorLink,
                     'update_message' => $latestVersion->update_message,
                     'release_notes' => $latestVersion->release_notes,
                     'update_type' => $latestVersion->update_type,
@@ -120,6 +131,7 @@ class VersionController extends Controller
         }
 
         $platform = $request->input('platform');
+        $flavor = FlavorHelper::getFlavor($request);
         $latestVersion = AppVersion::getLatestForPlatform($platform);
 
         if (!$latestVersion) {
@@ -129,6 +141,13 @@ class VersionController extends Controller
             ], 404);
         }
 
+        $links = [
+            'website' => $latestVersion->website_update_url,
+            'cafebazaar' => $latestVersion->cafebazaar_update_url,
+            'myket' => $latestVersion->myket_update_url,
+        ];
+        $currentFlavorLink = $links[$flavor] ?? $latestVersion->download_url;
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -136,6 +155,9 @@ class VersionController extends Controller
                 'build_number' => $latestVersion->build_number,
                 'platform' => $latestVersion->platform,
                 'download_url' => $latestVersion->download_url,
+                'update_links' => $links,
+                'current_flavor' => $flavor,
+                'current_flavor_link' => $currentFlavorLink,
                 'update_message' => $latestVersion->update_message,
                 'release_notes' => $latestVersion->release_notes,
                 'update_type' => $latestVersion->update_type,
