@@ -61,7 +61,7 @@ class SubscriptionPlanController extends Controller
             'slug' => 'nullable|string|max:255|unique:subscription_plans,slug',
             'description' => 'nullable|string|max:1000',
             'price' => 'required|numeric|min:0', // Website price
-            'currency' => 'nullable|string|size:3|default:IRT',
+            'currency' => 'nullable|string|size:3',
             'duration_days' => 'required|integer|min:1',
             'discount_percentage' => 'nullable|integer|min:0|max:100',
             'features' => 'nullable|array',
