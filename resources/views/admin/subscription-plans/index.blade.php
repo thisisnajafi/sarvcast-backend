@@ -137,7 +137,13 @@
             ['title' => 'ویژگی‌ها', 'key' => 'features', 'render' => function($item) {
                 $features = [];
                 if ($item->features) {
-                    $features = json_decode($item->features, true) ?: [];
+                    // Features is already cast as array in the model, so check if it's already an array
+                    if (is_array($item->features)) {
+                        $features = $item->features;
+                    } elseif (is_string($item->features)) {
+                        // Fallback: if it's a string, decode it
+                        $features = json_decode($item->features, true) ?: [];
+                    }
                 }
                 $featureCount = count($features);
                 if ($featureCount > 0) {
