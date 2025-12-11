@@ -14,17 +14,24 @@ class SubscriptionPlan extends Model
         'slug',
         'description',
         'duration_days',
-        'price',
+        'price', // Website price (default)
         'currency',
         'discount_percentage',
         'is_active',
         'is_featured',
         'sort_order',
-        'features'
+        'features',
+        // Flavor-specific fields
+        'myket_price',
+        'myket_product_id',
+        'cafebazaar_price',
+        'cafebazaar_product_id'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'myket_price' => 'decimal:2',
+        'cafebazaar_price' => 'decimal:2',
         'discount_percentage' => 'integer',
         'duration_days' => 'integer',
         'is_active' => 'boolean',
@@ -107,5 +114,102 @@ class SubscriptionPlan extends Model
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class, 'type', 'slug');
+    }
+
+    /**
+     * Get price for a specific flavor
+     * 
+     * @param string $flavor 'website'|'myket'|'cafebazaar'
+     * @return float|null
+     */
+    public function getPriceForFlavor(string $flavor): ?float
+    {
+        return match($flavor) {
+            'website' => $this->price,
+            'myket' => $this->myket_price ?? $this->price, // Fallback to website price
+            'cafebazaar' => $this->cafebazaar_price ?? $this->price, // Fallback to website price
+            default => $this->price
+        };
+    }
+
+    /**
+     * Get product ID for a specific flavor
+     * 
+     * @param string $flavor 'website'|'myket'|'cafebazaar'
+     * @return string|null
+     */
+    public function getProductIdForFlavor(string $flavor): ?string
+    {
+        return match($flavor) {
+            'website' => $this->slug, // Use slug as product ID for website
+            'myket' => $this->myket_product_id,
+            'cafebazaar' => $this->cafebazaar_product_id,
+            default => null
+        };
+    }
+
+    /**
+     * Get final price (after discount) for a specific flavor
+     * 
+     * @param string $flavor 'website'|'myket'|'cafebazaar'
+     * @return float|null
+     */
+    public function getFinalPriceForFlavor(string $flavor): ?float
+    {
+        $price = $this->getPriceForFlavor($flavor);
+        if ($price === null) {
+            return null;
+        }
+        
+        if ($this->discount_percentage > 0) {
+            return $price * (1 - $this->discount_percentage / 100);
+        }
+        
+        return $price;
+    }
+
+    /**
+     * Check if plan is available for a specific flavor
+     * 
+     * @param string $flavor 'website'|'myket'|'cafebazaar'
+     * @return bool
+     */
+    public function isAvailableForFlavor(string $flavor): bool
+    {
+        if (!$this->is_active) {
+            return false;
+        }
+
+        $price = $this->getPriceForFlavor($flavor);
+        return $price !== null && $price > 0;
+    }
+
+    /**
+     * Get all flavor data as array
+     * 
+     * @return array
+     */
+    public function getFlavorData(): array
+    {
+        return [
+            'website' => [
+                'price' => $this->price,
+                'product_id' => $this->slug,
+                'final_price' => $this->final_price,
+                'available' => $this->is_active && $this->price > 0
+            ],
+            'myket' => [
+                'price' => $this->myket_price ?? $this->price,
+                'product_id' => $this->myket_product_id,
+                'final_price' => $this->getFinalPriceForFlavor('myket'),
+                'available' => $this->isAvailableForFlavor('myket')
+            ],
+            'cafebazaar' => [
+                'price' => $this->cafebazaar_price ?? $this->price,
+                'product_id' => $this->cafebazaar_product_id,
+                'final_price' => $this->getFinalPriceForFlavor('cafebazaar'),
+                'available' => $this->isAvailableForFlavor('cafebazaar')
+            ]
+        ];
     }
 }

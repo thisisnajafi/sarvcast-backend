@@ -42,9 +42,9 @@
 </div>
 
 <!-- Main Statistics Overview -->
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8">
     <!-- Total Users Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 sm:p-5 md:p-6 border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
         <div class="flex items-center justify-between min-w-0">
             <div>
                 <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">کل کاربران</p>
@@ -74,7 +74,7 @@
     </div>
 
     <!-- Total Stories Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 sm:p-5 md:p-6 border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
         <div class="flex items-center justify-between min-w-0">
             <div>
                 <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">کل داستان‌ها</p>
@@ -104,7 +104,7 @@
     </div>
 
     <!-- Revenue Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 sm:p-5 md:p-6 border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
         <div class="flex items-center justify-between min-w-0">
             <div>
                 <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">درآمد کل</p>
@@ -134,7 +134,7 @@
     </div>
 
     <!-- Engagement Card -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 dark:border-gray-700 min-w-0">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 sm:p-5 md:p-6 border border-gray-100 dark:border-gray-700 min-w-0 overflow-hidden">
         <div class="flex items-center justify-between min-w-0">
             <div>
                 <p class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-1 whitespace-normal leading-snug">تعامل کاربران</p>
@@ -165,7 +165,7 @@
 </div>
 
 <!-- Secondary Statistics Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8">
     <!-- Subscriptions -->
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 min-w-0">
         <div class="flex items-center justify-between mb-4">
@@ -258,7 +258,7 @@
 </div>
 
 <!-- Plan Sales Overview -->
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8">
     <!-- Plan Sales Today -->
     <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 sm:p-6 border border-blue-200 min-w-0">
         <div class="flex items-center justify-between gap-4">
@@ -312,7 +312,7 @@
 <div class="mb-8">
     <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100 min-w-0">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">عملیات سریع</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
             <a href="{{ route('admin.stories.create') }}" class="flex flex-col items-center justify-center min-h-[4.5rem] p-3 sm:p-4 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all duration-200 group">
                 <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,7 +378,7 @@
 </div>
 
 <!-- Content Grid -->
-<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8">
     <!-- Recent Stories -->
     <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b border-gray-200">
@@ -392,7 +392,7 @@
                 <div class="space-y-4">
                     @foreach($recentStories as $story)
                     <div class="flex items-center space-x-4 space-x-reverse p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                        <img src="{{ $story->image_url ?: '/images/placeholder-story.jpg' }}" alt="{{ $story->title }}" class="w-14 h-14 rounded-xl object-cover shadow-sm">
+                        <img src="{{ $story->image_url ?: '/images/placeholder-story.jpg' }}" alt="{{ $story->title }}" class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl object-cover shadow-sm flex-shrink-0" loading="lazy">
                         <div class="flex-1 min-w-0">
                             <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ $story->title }}</p>
                             <p class="text-sm text-gray-500">{{ $story->category->name ?? 'بدون دسته‌بندی' }}</p>
@@ -437,7 +437,7 @@
                     @foreach($recentUsers as $user)
                     <div class="flex items-center space-x-4 space-x-reverse p-3 rounded-lg hover:bg-gray-50 transition-colors">
                         <div class="relative">
-                            <img src="{{ $user->profile_image_url ?: '/images/placeholder-user.jpg' }}" alt="{{ $user->first_name }}" class="w-12 h-12 rounded-full object-cover shadow-sm">
+                            <img src="{{ $user->profile_image_url ?: '/images/placeholder-user.jpg' }}" alt="{{ $user->first_name }}" class="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm flex-shrink-0" loading="lazy">
                             <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white
                                 @if($user->status === 'active') bg-green-500
                                 @elseif($user->status === 'pending') bg-yellow-500
@@ -527,7 +527,7 @@
 </div>
 
 <!-- Plan Sales Details Section -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8">
     <!-- Top Selling Plans -->
     <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
         <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 border-b border-gray-200">
@@ -691,7 +691,7 @@
                     @foreach($topRatedStories as $story)
                     <div class="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors">
                         <div class="flex items-center space-x-4 space-x-reverse">
-                            <img src="{{ $story->image_url ?: '/images/placeholder-story.jpg' }}" alt="{{ $story->title }}" class="w-12 h-12 rounded-xl object-cover shadow-sm">
+                            <img src="{{ $story->image_url ?: '/images/placeholder-story.jpg' }}" alt="{{ $story->title }}" class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover shadow-sm flex-shrink-0" loading="lazy">
                             <div>
                                 <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ Str::limit($story->title, 30) }}</span>
                                 <p class="text-xs text-gray-500 mt-1">{{ $story->ratings_count }} امتیاز</p>
@@ -733,7 +733,7 @@
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آمار و تحلیل‌ها</h3>
     </div>
     <div class="p-4 sm:p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 mb-6 sm:mb-8">
             <!-- Conversion Rate -->
             <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
                 <div class="flex items-center justify-between">
@@ -825,7 +825,7 @@
 
 <!-- Recent Reports Section -->
 @if($recentReports->count() > 0)
-<div class="mt-8 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
+<div class="mt-6 sm:mt-8 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-w-0">
     <div class="px-6 py-4 bg-gradient-to-r from-red-50 to-red-100 border-b border-gray-200">
         <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آخرین گزارش‌ها</h3>

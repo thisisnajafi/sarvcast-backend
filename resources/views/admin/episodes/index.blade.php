@@ -55,25 +55,31 @@
 
     <!-- Episodes Table -->
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative" style="scrollbar-width: thin;">
+            <!-- Scroll indicator hint for mobile -->
+            <div class="md:hidden absolute top-0 right-0 bg-gradient-to-l from-gray-100 to-transparent w-8 h-full pointer-events-none z-10 flex items-center justify-end pr-2">
+                <svg class="w-4 h-4 text-gray-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تصویر</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عنوان</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">داستان</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">شماره اپیزود</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">مدت زمان</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تعداد پخش</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">وضعیت</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">نوع</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عملیات</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تصویر</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عنوان</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">داستان</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">شماره اپیزود</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">مدت زمان</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تعداد پخش</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">وضعیت</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">نوع</th>
+                            <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عملیات</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($episodes as $episode)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                                 @if($episode->cover_image_url)
                                     <img src="{{ $episode->cover_image_url }}" alt="{{ $episode->title }}" class="w-12 h-12 rounded-lg object-cover">
                                 @else
@@ -90,7 +96,7 @@
                                     <div class="text-sm text-gray-500 mt-1">{{ Str::limit($episode->description, 50) }}</div>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-900">{{ $episode->story->title }}</div>
                                 <div class="text-sm text-gray-500">{{ $episode->story->category->name }}</div>
                             </td>
@@ -103,7 +109,7 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {{ number_format($episode->play_count) }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                                 @if($episode->status == 'published')
                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                                         منتشر شده
@@ -118,7 +124,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                                 @if($episode->is_premium)
                                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
                                         پولی

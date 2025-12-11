@@ -31,6 +31,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="{{ asset('css/voice-actor-management.css') }}" rel="stylesheet">
     <link href="{{ asset('css/dark-mode-fixes.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/responsive-fixes.css') }}" rel="stylesheet">
     <style>
         body {
             font-family: 'IranSansWeb', 'IRANSans', 'Tahoma', sans-serif;
@@ -40,8 +41,11 @@
 </head>
 <body class="bg-gray-50 dark:bg-gray-900 font-iran transition-colors duration-300 overflow-x-hidden">
     <div class="flex min-h-screen">
+        <!-- Sidebar Backdrop (Mobile Only) -->
+        <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-40 transition-opacity duration-300 lg:hidden"></div>
+        
         <!-- Sidebar -->
-        <div id="sidebar" class="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-50 translate-x-full lg:translate-x-0">
+        <div id="sidebar" class="hidden lg:flex flex-col w-56 lg:w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-50 translate-x-full lg:translate-x-0">
             <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3 space-x-reverse">
@@ -56,8 +60,8 @@
                         </div>
                     </div>
                     <!-- Mobile sidebar close button -->
-                    <button id="sidebar-close" class="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button id="sidebar-close" class="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200" aria-label="بستن منو">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
@@ -557,10 +561,10 @@
         </div>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col lg:mr-64 mr-0 transition-all duration-300">
+        <div class="flex-1 flex flex-col lg:mr-56 xl:mr-64 mr-0 transition-all duration-300">
             <!-- Header -->
             <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
-                <div class="px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 md:gap-0">
+                <div class="px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3 md:gap-0 flex-wrap">
                     <div class="flex items-center space-x-3 space-x-reverse">
                         <!-- Sidebar Toggle Button -->
                         <button id="sidebar-toggle" class="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors duration-200">
@@ -576,17 +580,17 @@
                             <span>{{ \App\Helpers\JalaliHelper::now('Y/m/d') }}</span>
                         </div>
                     </div>
-                    <div class="flex items-center justify-between md:justify-end space-x-3 space-x-reverse">
+                    <div class="flex items-center justify-between md:justify-end space-x-3 space-x-reverse flex-wrap gap-2">
                         <!-- Search -->
                         <div class="relative hidden md:block">
-                            <input type="text" placeholder="جستجو..." class="w-64 px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <input type="text" placeholder="جستجو..." class="w-full md:w-48 lg:w-64 px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
                             <svg class="absolute left-3 top-3 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                         </div>
 
                         <!-- Dark Mode Toggle -->
-                        <button id="dark-mode-toggle" class="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                        <button id="dark-mode-toggle" class="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                             <svg id="sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                             </svg>
@@ -596,7 +600,7 @@
                         </button>
 
                         <!-- Notifications -->
-                        <button class="relative p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                        <button class="relative p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h6v-2H4v2zM4 11h6V9H4v2zM4 7h6V5H4v2z"></path>
                             </svg>
@@ -623,7 +627,7 @@
                             </button>
 
                             <!-- Dropdown Menu -->
-                            <div id="profile-dropdown-menu" class="hidden absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                            <div id="profile-dropdown-menu" class="hidden absolute right-0 lg:left-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[80vh] overflow-y-auto">
                                 <div class="py-2">
                                     <!-- Profile Info -->
                                     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -670,7 +674,7 @@
             </header>
 
             <!-- Page Content -->
-            <main class="flex-1 p-6">
+            <main class="flex-1 p-4 sm:p-5 md:p-6">
                 @if(session('success'))
                     <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                         <div class="flex">
@@ -714,9 +718,9 @@
 
     <!-- Loading Spinner -->
     <div id="loading-spinner" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="flex justify-center items-center h-full">
+        <div class="flex flex-col items-center justify-center min-h-full p-4">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span class="mr-2 text-gray-600">در حال بارگذاری...</span>
+            <span class="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-300">در حال بارگذاری...</span>
         </div>
     </div>
 
@@ -848,20 +852,39 @@
             const sidebarToggle = document.getElementById('sidebar-toggle');
             const sidebarClose = document.getElementById('sidebar-close');
             const sidebar = document.getElementById('sidebar');
+            const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+            const body = document.body;
 
             if (!sidebar || !sidebarToggle) {
                 return;
             }
 
+            let resizeTimeout;
+            let isUserOpened = false;
+
             const openSidebar = () => {
                 sidebar.classList.remove('hidden');
                 sidebar.classList.remove('translate-x-full');
+                if (window.innerWidth < 1024) {
+                    // Mobile: show backdrop and lock scroll
+                    if (sidebarBackdrop) {
+                        sidebarBackdrop.classList.remove('hidden');
+                    }
+                    body.style.overflow = 'hidden';
+                    isUserOpened = true;
+                }
             };
 
             const closeSidebar = () => {
                 sidebar.classList.add('translate-x-full');
-                if (window.innerWidth < 1024) { // lg breakpoint
+                if (window.innerWidth < 1024) {
+                    // Mobile: hide backdrop and unlock scroll
+                    if (sidebarBackdrop) {
+                        sidebarBackdrop.classList.add('hidden');
+                    }
+                    body.style.overflow = '';
                     sidebar.classList.add('hidden');
+                    isUserOpened = false;
                 }
             };
 
@@ -880,16 +903,43 @@
                 });
             }
 
-            // Keep sidebar state in sync with viewport size
-            window.addEventListener('resize', function() {
-                if (window.innerWidth >= 1024) {
-                    // On desktop, sidebar is always visible
-                    sidebar.classList.remove('hidden');
-                    sidebar.classList.remove('translate-x-full');
-                } else {
-                    // On mobile, keep it closed by default
+            // Close sidebar when clicking backdrop
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', function() {
                     closeSidebar();
+                });
+            }
+
+            // Close sidebar on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && window.innerWidth < 1024) {
+                    const isOpen = !sidebar.classList.contains('hidden') && !sidebar.classList.contains('translate-x-full');
+                    if (isOpen) {
+                        closeSidebar();
+                    }
                 }
+            });
+
+            // Keep sidebar state in sync with viewport size (with debounce)
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(function() {
+                    if (window.innerWidth >= 1024) {
+                        // On desktop, sidebar is always visible
+                        sidebar.classList.remove('hidden');
+                        sidebar.classList.remove('translate-x-full');
+                        if (sidebarBackdrop) {
+                            sidebarBackdrop.classList.add('hidden');
+                        }
+                        body.style.overflow = '';
+                        isUserOpened = false;
+                    } else {
+                        // On mobile, only close if user didn't open it
+                        if (!isUserOpened) {
+                            closeSidebar();
+                        }
+                    }
+                }, 150);
             });
         });
     </script>

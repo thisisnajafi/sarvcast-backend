@@ -22,12 +22,7 @@ class SubscriptionPlanController extends Controller
 
         // Filter by status
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by type
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
+            $query->where('is_active', $request->status === 'active');
         }
 
         // Date range filter
@@ -63,39 +58,41 @@ class SubscriptionPlanController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:subscription_plans,slug',
             'description' => 'nullable|string|max:1000',
-            'type' => 'required|in:monthly,yearly,lifetime',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric|min:0', // Website price
+            'currency' => 'nullable|string|size:3|default:IRT',
             'duration_days' => 'required|integer|min:1',
+            'discount_percentage' => 'nullable|integer|min:0|max:100',
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',
-            'max_stories' => 'nullable|integer|min:0',
-            'max_episodes' => 'nullable|integer|min:0',
-            'max_storage_gb' => 'nullable|numeric|min:0',
-            'priority_support' => 'boolean',
-            'custom_domain' => 'boolean',
-            'analytics_access' => 'boolean',
-            'api_access' => 'boolean',
-            'status' => 'required|in:active,inactive',
+            'is_active' => 'boolean',
+            'is_featured' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
+            // Flavor-specific fields
+            'myket_price' => 'nullable|numeric|min:0',
+            'myket_product_id' => 'nullable|string|max:255',
+            'cafebazaar_price' => 'nullable|numeric|min:0',
+            'cafebazaar_product_id' => 'nullable|string|max:255',
         ]);
 
         $plan = SubscriptionPlan::create([
             'name' => $request->name,
+            'slug' => $request->slug ?? \Illuminate\Support\Str::slug($request->name),
             'description' => $request->description,
-            'type' => $request->type,
             'price' => $request->price,
+            'currency' => $request->currency ?? 'IRT',
             'duration_days' => $request->duration_days,
-            'features' => $request->features ? json_encode($request->features) : null,
-            'max_stories' => $request->max_stories,
-            'max_episodes' => $request->max_episodes,
-            'max_storage_gb' => $request->max_storage_gb,
-            'priority_support' => $request->boolean('priority_support'),
-            'custom_domain' => $request->boolean('custom_domain'),
-            'analytics_access' => $request->boolean('analytics_access'),
-            'api_access' => $request->boolean('api_access'),
-            'status' => $request->status,
+            'discount_percentage' => $request->discount_percentage ?? 0,
+            'features' => $request->features,
+            'is_active' => $request->boolean('is_active', true),
+            'is_featured' => $request->boolean('is_featured', false),
             'sort_order' => $request->sort_order ?? 0,
+            // Flavor-specific fields
+            'myket_price' => $request->myket_price,
+            'myket_product_id' => $request->myket_product_id,
+            'cafebazaar_price' => $request->cafebazaar_price,
+            'cafebazaar_product_id' => $request->cafebazaar_product_id,
         ]);
 
         return redirect()->route('admin.subscription-plans.index')
@@ -116,39 +113,41 @@ class SubscriptionPlanController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:subscription_plans,slug,' . $subscriptionPlan->id,
             'description' => 'nullable|string|max:1000',
-            'type' => 'required|in:monthly,yearly,lifetime',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric|min:0', // Website price
+            'currency' => 'nullable|string|size:3',
             'duration_days' => 'required|integer|min:1',
+            'discount_percentage' => 'nullable|integer|min:0|max:100',
             'features' => 'nullable|array',
             'features.*' => 'string|max:255',
-            'max_stories' => 'nullable|integer|min:0',
-            'max_episodes' => 'nullable|integer|min:0',
-            'max_storage_gb' => 'nullable|numeric|min:0',
-            'priority_support' => 'boolean',
-            'custom_domain' => 'boolean',
-            'analytics_access' => 'boolean',
-            'api_access' => 'boolean',
-            'status' => 'required|in:active,inactive',
+            'is_active' => 'boolean',
+            'is_featured' => 'boolean',
             'sort_order' => 'nullable|integer|min:0',
+            // Flavor-specific fields
+            'myket_price' => 'nullable|numeric|min:0',
+            'myket_product_id' => 'nullable|string|max:255',
+            'cafebazaar_price' => 'nullable|numeric|min:0',
+            'cafebazaar_product_id' => 'nullable|string|max:255',
         ]);
 
         $subscriptionPlan->update([
             'name' => $request->name,
+            'slug' => $request->slug ?? $subscriptionPlan->slug,
             'description' => $request->description,
-            'type' => $request->type,
             'price' => $request->price,
+            'currency' => $request->currency ?? $subscriptionPlan->currency,
             'duration_days' => $request->duration_days,
-            'features' => $request->features ? json_encode($request->features) : null,
-            'max_stories' => $request->max_stories,
-            'max_episodes' => $request->max_episodes,
-            'max_storage_gb' => $request->max_storage_gb,
-            'priority_support' => $request->boolean('priority_support'),
-            'custom_domain' => $request->boolean('custom_domain'),
-            'analytics_access' => $request->boolean('analytics_access'),
-            'api_access' => $request->boolean('api_access'),
-            'status' => $request->status,
-            'sort_order' => $request->sort_order ?? 0,
+            'discount_percentage' => $request->discount_percentage ?? $subscriptionPlan->discount_percentage,
+            'features' => $request->features,
+            'is_active' => $request->boolean('is_active', $subscriptionPlan->is_active),
+            'is_featured' => $request->boolean('is_featured', $subscriptionPlan->is_featured),
+            'sort_order' => $request->sort_order ?? $subscriptionPlan->sort_order,
+            // Flavor-specific fields
+            'myket_price' => $request->myket_price,
+            'myket_product_id' => $request->myket_product_id,
+            'cafebazaar_price' => $request->cafebazaar_price,
+            'cafebazaar_product_id' => $request->cafebazaar_product_id,
         ]);
 
         return redirect()->route('admin.subscription-plans.index')
@@ -180,12 +179,12 @@ class SubscriptionPlanController extends Controller
                 break;
 
             case 'activate':
-                $plans->update(['status' => 'active']);
+                $plans->update(['is_active' => true]);
                 $message = 'پلن‌های اشتراک انتخاب شده با موفقیت فعال شدند.';
                 break;
 
             case 'deactivate':
-                $plans->update(['status' => 'inactive']);
+                $plans->update(['is_active' => false]);
                 $message = 'پلن‌های اشتراک انتخاب شده با موفقیت غیرفعال شدند.';
                 break;
         }
@@ -205,11 +204,7 @@ class SubscriptionPlanController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
+            $query->where('is_active', $request->status === 'active');
         }
 
         $plans = $query->orderBy('sort_order', 'asc')->get();
@@ -222,11 +217,8 @@ class SubscriptionPlanController extends Controller
     {
         $stats = [
             'total_plans' => SubscriptionPlan::count(),
-            'active_plans' => SubscriptionPlan::where('status', 'active')->count(),
-            'inactive_plans' => SubscriptionPlan::where('status', 'inactive')->count(),
-            'monthly_plans' => SubscriptionPlan::where('type', 'monthly')->count(),
-            'yearly_plans' => SubscriptionPlan::where('type', 'yearly')->count(),
-            'lifetime_plans' => SubscriptionPlan::where('type', 'lifetime')->count(),
+            'active_plans' => SubscriptionPlan::where('is_active', true)->count(),
+            'inactive_plans' => SubscriptionPlan::where('is_active', false)->count(),
             'average_price' => SubscriptionPlan::avg('price'),
             'total_revenue' => rand(1000000, 5000000), // This would come from actual subscription data
         ];

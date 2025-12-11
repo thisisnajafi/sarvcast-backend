@@ -12,13 +12,13 @@
         'icon' => '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>',
         'iconBg' => 'bg-blue-100',
         'iconColor' => 'text-blue-600',
-        'actions' => '<div class="flex space-x-2 space-x-reverse">
-            <select id="dateRange" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        'actions' => '<div class="flex flex-wrap gap-2 sm:gap-3 space-x-reverse">
+            <select id="dateRange" class="w-full sm:w-auto min-w-[120px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="7" ' . ($dateRange == 7 ? 'selected' : '') . '>7 روز گذشته</option>
                 <option value="30" ' . ($dateRange == 30 ? 'selected' : '') . '>30 روز گذشته</option>
                 <option value="90" ' . ($dateRange == 90 ? 'selected' : '') . '>90 روز گذشته</option>
             </select>
-            <button onclick="exportData()" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-lg font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
+            <button onclick="exportData()" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 min-h-[44px] bg-green-600 border border-transparent rounded-lg font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200">
                 <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 خروجی
             </button>

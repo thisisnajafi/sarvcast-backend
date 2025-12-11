@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\SubscriptionService;
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -134,22 +135,51 @@ class SubscriptionController extends Controller
     /**
      * Get available subscription plans
      */
-    public function plans(): JsonResponse
+    public function plans(Request $request): JsonResponse
     {
         try {
-            $plans = $this->subscriptionService->getAvailablePlans();
+            // Detect flavor from request
+            $flavor = \App\Helpers\FlavorHelper::getFlavor($request);
+            
+            // Get all active plans
+            $plans = SubscriptionPlan::active()->ordered()->get();
+            
+            // Format plans with flavor-specific data
+            $formattedPlans = $plans->map(function($plan) use ($flavor) {
+                return [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'slug' => $plan->slug,
+                    'description' => $plan->description,
+                    'duration_days' => $plan->duration_days,
+                    'duration_text' => $plan->duration_text,
+                    'currency' => $plan->currency,
+                    'discount_percentage' => $plan->discount_percentage,
+                    'is_featured' => $plan->is_featured,
+                    'features' => $plan->features ?? [],
+                    // Flavor-specific pricing
+                    'price' => $plan->getPriceForFlavor($flavor),
+                    'final_price' => $plan->getFinalPriceForFlavor($flavor),
+                    'product_id' => $plan->getProductIdForFlavor($flavor),
+                    'available' => $plan->isAvailableForFlavor($flavor),
+                    // All flavor data
+                    'flavors' => $plan->getFlavorData(),
+                ];
+            })->values();
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'plans' => $plans
+                    'plans' => $formattedPlans,
+                    'current_flavor' => $flavor,
                 ],
                 'message' => 'پلن‌های اشتراک دریافت شد'
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to get subscription plans', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([

@@ -187,25 +187,31 @@
     <!-- Monthly Performance -->
     <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 min-w-0">
         <h3 class="text-lg font-semibold text-gray-900 mb-6">عملکرد ماهانه</h3>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative" style="scrollbar-width: thin;">
+            <!-- Scroll indicator hint for mobile -->
+            <div class="md:hidden absolute top-0 right-0 bg-gradient-to-l from-gray-100 to-transparent w-8 h-full pointer-events-none z-10 flex items-center justify-end pr-2">
+                <svg class="w-4 h-4 text-gray-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
             <table class="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 sm:px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">ماه</th>
-                        <th class="px-4 sm:px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">شرکای جدید</th>
-                        <th class="px-4 sm:px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">کل کمیسیون</th>
-                        <th class="px-4 sm:px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">کمپین‌های فعال</th>
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">ماه</th>
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">شرکای جدید</th>
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">کل کمیسیون</th>
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">کمپین‌های فعال</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @foreach($monthlyPerformance as $month)
                     <tr>
-                        <td class="px-4 sm:px-6 py-3 whitespace-nowrap font-medium text-gray-900">{{ $month['month_name'] }}</td>
-                        <td class="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-900">{{ number_format($month['new_partners']) }}</td>
-                        <td class="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-900">
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 whitespace-nowrap font-medium text-gray-900">{{ $month['month_name'] }}</td>
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 whitespace-nowrap text-gray-900">{{ number_format($month['new_partners']) }}</td>
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 whitespace-nowrap text-gray-900">
                             {{ number_format($month['total_commissions']) }} تومان
                         </td>
-                        <td class="px-4 sm:px-6 py-3 whitespace-nowrap text-gray-900">{{ number_format($month['active_campaigns']) }}</td>
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 whitespace-nowrap text-gray-900">{{ number_format($month['active_campaigns']) }}</td>
                     </tr>
                     @endforeach
                 </tbody>

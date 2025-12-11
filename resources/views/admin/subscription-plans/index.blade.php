@@ -107,17 +107,29 @@
                     </div>
                 </div>';
             }],
-            ['title' => 'نوع', 'key' => 'type', 'render' => function($item) {
-                $types = [
-                    'monthly' => ['label' => 'ماهانه', 'class' => 'bg-blue-100 text-blue-800'],
-                    'yearly' => ['label' => 'سالانه', 'class' => 'bg-green-100 text-green-800'],
-                    'lifetime' => ['label' => 'مادام‌العمر', 'class' => 'bg-purple-100 text-purple-800']
-                ];
-                $type = $types[$item->type] ?? ['label' => $item->type, 'class' => 'bg-gray-100 text-gray-800'];
-                return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $type['class'] . '">' . $type['label'] . '</span>';
+            ['title' => 'مدت', 'key' => 'duration_days', 'render' => function($item) {
+                if ($item->duration_days >= 365) {
+                    $years = floor($item->duration_days / 365);
+                    return '<span class="text-sm text-gray-900">' . $years . ' سال</span>';
+                } elseif ($item->duration_days >= 30) {
+                    $months = floor($item->duration_days / 30);
+                    return '<span class="text-sm text-gray-900">' . $months . ' ماه</span>';
+                } else {
+                    return '<span class="text-sm text-gray-900">' . $item->duration_days . ' روز</span>';
+                }
             }],
-            ['title' => 'قیمت', 'key' => 'price', 'render' => function($item) {
-                return '<span class="text-sm font-medium text-gray-900">' . number_format($item->price) . ' تومان</span>';
+            ['title' => 'قیمت‌ها', 'key' => 'price', 'render' => function($item) {
+                $prices = [];
+                if ($item->price) {
+                    $prices[] = '<span class="text-xs text-blue-600">وب: ' . number_format($item->price) . '</span>';
+                }
+                if ($item->myket_price) {
+                    $prices[] = '<span class="text-xs text-green-600">مایکت: ' . number_format($item->myket_price) . '</span>';
+                }
+                if ($item->cafebazaar_price) {
+                    $prices[] = '<span class="text-xs text-orange-600">کافه: ' . number_format($item->cafebazaar_price) . '</span>';
+                }
+                return '<div class="flex flex-col gap-1">' . implode('', $prices) . '</div>';
             }],
             ['title' => 'مدت', 'key' => 'duration_days', 'render' => function($item) {
                 if ($item->duration_days >= 365) {
@@ -139,13 +151,12 @@
                     return '<span class="text-sm text-gray-500">بدون ویژگی</span>';
                 }
             }],
-            ['title' => 'وضعیت', 'key' => 'status', 'render' => function($item) {
-                $statuses = [
-                    'active' => ['label' => 'فعال', 'class' => 'bg-green-100 text-green-800'],
-                    'inactive' => ['label' => 'غیرفعال', 'class' => 'bg-red-100 text-red-800']
-                ];
-                $status = $statuses[$item->status] ?? ['label' => $item->status, 'class' => 'bg-gray-100 text-gray-800'];
-                return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . $status['class'] . '">' . $status['label'] . '</span>';
+            ['title' => 'وضعیت', 'key' => 'is_active', 'render' => function($item) {
+                if ($item->is_active) {
+                    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">فعال</span>';
+                } else {
+                    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">غیرفعال</span>';
+                }
             }],
             ['title' => 'ترتیب', 'key' => 'sort_order', 'render' => function($item) {
                 return '<span class="text-sm text-gray-900">' . $item->sort_order . '</span>';

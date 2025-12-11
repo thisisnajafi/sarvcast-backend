@@ -250,15 +250,21 @@
         </div>
         
         <!-- Table -->
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative" style="scrollbar-width: thin;">
+            <!-- Scroll indicator hint for mobile -->
+            <div class="md:hidden absolute top-0 right-0 bg-gradient-to-l from-gray-100 to-transparent w-8 h-full pointer-events-none z-10 flex items-center justify-end pr-2">
+                <svg class="w-4 h-4 text-gray-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             <input type="checkbox" class="rounded border-gray-300" onchange="selectAll(this)">
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تصویر</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">تصویر</th>
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort' => 'title', 'direction' => request('sort') == 'title' && request('direction') == 'asc' ? 'desc' : 'asc']) }}" class="hover:text-gray-700">
                                 عنوان
                                 @if(request('sort') == 'title')
@@ -266,8 +272,8 @@
                                 @endif
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">دسته‌بندی</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">دسته‌بندی</th>
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort' => 'status', 'direction' => request('sort') == 'status' && request('direction') == 'asc' ? 'desc' : 'asc']) }}" class="hover:text-gray-700">
                                 وضعیت
                                 @if(request('sort') == 'status')
@@ -275,7 +281,7 @@
                                 @endif
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort' => 'rating', 'direction' => request('sort') == 'rating' && request('direction') == 'asc' ? 'desc' : 'asc']) }}" class="hover:text-gray-700">
                                 امتیاز
                                 @if(request('sort') == 'rating')
@@ -283,7 +289,7 @@
                                 @endif
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                             <a href="{{ request()->fullUrlWithQuery(['sort' => 'play_count', 'direction' => request('sort') == 'play_count' && request('direction') == 'asc' ? 'desc' : 'asc']) }}" class="hover:text-gray-700">
                                 پخش‌ها
                                 @if(request('sort') == 'play_count')
@@ -291,16 +297,16 @@
                                 @endif
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عملیات</th>
+                        <th class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">عملیات</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     @forelse($stories as $story)
                     <tr class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                             <input type="checkbox" name="story_ids[]" value="{{ $story->id }}" class="rounded border-gray-300 story-checkbox">
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                             <img src="{{ $story->image_url ?: '/images/placeholder-story.jpg' }}" alt="{{ $story->title }}" class="w-12 h-12 rounded-lg object-cover">
                         </td>
                         <td class="px-6 py-4">
@@ -310,12 +316,12 @@
                                 {{ $story->total_episodes_count }} قسمت • {{ $story->formatted_duration }}
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 {{ $story->category->name ?? 'بدون دسته‌بندی' }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                                 @if($story->status === 'published') bg-green-100 text-green-800
                                 @elseif($story->status === 'pending') bg-yellow-100 text-yellow-800
@@ -346,14 +352,14 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <span class="text-yellow-500">★</span>
                                 <span class="text-sm text-gray-600 mr-1">{{ number_format($story->rating, 1) }}</span>
                                 <span class="text-xs text-gray-500">({{ $story->ratings()->count() }})</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-2 py-2 sm:px-4 sm:py-3 md:px-6 md:py-4 whitespace-nowrap">
                             <span class="text-sm text-gray-600">{{ number_format($story->play_count) }}</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">

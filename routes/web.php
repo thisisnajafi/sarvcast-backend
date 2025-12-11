@@ -729,6 +729,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])
         Route::get('/statistics', [\App\Http\Controllers\Admin\SubscriptionPlanController::class, 'statistics'])->name('statistics');
     });
 
+    // Flavor Analytics Routes
+    Route::prefix('analytics/flavors')->name('analytics.flavors.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'index'])->name('index');
+        Route::get('/separate', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'separate'])->name('separate');
+        Route::get('/combined', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'combined'])->name('combined');
+        Route::get('/comprehensive', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'comprehensive'])->name('comprehensive');
+        Route::get('/api', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'api'])->name('api');
+    });
+
     // Story / Episode JSON export & import
     Route::get('stories/export/json', [StoryExportController::class, 'exportJson'])->name('stories.export-json');
     Route::post('stories/import/json', [StoryExportController::class, 'importJson'])->name('stories.import-json');
