@@ -314,9 +314,16 @@ jobs:
             php artisan view:clear && \
             php artisan cache:clear && \
             echo '🔄 Running database migrations safely...' && \
-            if [ -f scripts/safe-migrate.sh ]; then \
+            if [ -f scripts/update-database.sh ]; then \
+              chmod +x scripts/update-database.sh && \
+              BACKUP_DIR=\"$APP_PATH/storage/backups\" LOG_FILE=\"/tmp/sarvcast-db-update.log\" ./scripts/update-database.sh || { \
+                echo '❌ Migration failed! Backup available at: ${BACKUP_FILE}' && \
+                echo 'To restore, run: scripts/restore-database.sh ${BACKUP_FILE}' && \
+                exit 1; \
+              }; \
+            elif [ -f scripts/safe-migrate.sh ]; then \
               chmod +x scripts/safe-migrate.sh && \
-              BACKUP_DIR=\"$APP_PATH/storage/backups\" ./scripts/safe-migrate.sh --rollback-on-failure || { \
+              BACKUP_DIR=\"$APP_PATH/storage/backups\" LOG_FILE=\"/tmp/sarvcast-db-update.log\" ./scripts/safe-migrate.sh --rollback-on-failure || { \
                 echo '❌ Migration failed! Backup available at: ${BACKUP_FILE}' && \
                 echo 'To restore, run: scripts/restore-database.sh ${BACKUP_FILE}' && \
                 exit 1; \
@@ -411,6 +418,13 @@ jobs:
             -o PubkeyAuthentication=no \
             -P ${{ secrets.SSH_PORT || 22 }} \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${APP_PATH}/storage/logs/laravel.log ./logs/laravel.log || true
+
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
+            -o StrictHostKeyChecking=no \
+            -o PasswordAuthentication=yes \
+            -o PubkeyAuthentication=no \
+            -P ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/tmp/sarvcast-db-update.log ./logs/sarvcast-db-update.log || true
 
           ls -la logs || true
 
