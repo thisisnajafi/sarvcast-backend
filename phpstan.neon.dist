@@ -1,0 +1,31 @@
+includes:
+    - vendor/nunomaduro/larastan/extension.neon
+    - vendor/nunomaduro/larastan/rules.neon
+
+parameters:
+    paths:
+        - app
+        - database
+        - routes
+        - config
+
+    level: 6
+    memoryLimit: 1G
+    checkMissingIterableValueType: false
+    inferPrivatePropertyTypeFromConstructor: true
+
+    excludePaths:
+        - vendor
+        - storage
+        - bootstrap
+        - node_modules
+
+    ignoreErrors:
+        # Allow dynamically added relation properties (common in Laravel)
+        - '#Access to an undefined property [A-Za-z0-9_\\\]+::\$[A-Za-z0-9_]+#'
+
+    # Larastan settings
+    larastan:
+        analyseModelFactories: true
+        noUnnecessaryCollectionCall: true
+

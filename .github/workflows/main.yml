@@ -46,6 +46,11 @@ jobs:
           PUSHER_APP_CLUSTER: mt1
         run: composer install
 
+      - name: Run PHPStan (Larastan)
+        run: |
+          echo "🔍 Running PHPStan (Larastan)..."
+          php -d memory_limit=1G vendor/bin/phpstan analyse --memory-limit=1G
+
       # - name: Copy .env
       #   env:
       #     BROADCAST_DRIVER: log
@@ -389,6 +394,35 @@ jobs:
           fi
 
           echo "POST_BACKUP_FILE=$POST_BACKUP_FILE" >> $GITHUB_ENV
+
+      - name: Collect Deployment Logs
+        run: |
+          echo "🪵 Collecting deployment logs..."
+          APP_PATH="/home/sarvca/public_html/my"
+          mkdir -p logs
+
+          # Fetch remote logs (best-effort)
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
+            -o StrictHostKeyChecking=no \
+            -o PasswordAuthentication=yes \
+            -o PubkeyAuthentication=no \
+            -P ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/tmp/sarvcast-*.log ./logs/ || true
+
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
+            -o StrictHostKeyChecking=no \
+            -o PasswordAuthentication=yes \
+            -o PubkeyAuthentication=no \
+            -P ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${APP_PATH}/storage/logs/laravel.log ./logs/laravel.log || true
+
+          ls -la logs || true
+
+      - name: Upload Deployment Logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-logs
+          path: logs
 
       - name: Cleanup
         if: always()
