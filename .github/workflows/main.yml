@@ -177,13 +177,8 @@ jobs:
         run: |
           echo "📤 Uploading deployment scripts to server..."
 
-          # Set APP_PATH with proper default
-          if [ -z "${{ secrets.APP_PATH }}" ]; then
-            APP_PATH="/public_html/my"
-          else
-            APP_PATH="${{ secrets.APP_PATH }}"
-          fi
-
+          # Static APP_PATH for SSH commands
+          APP_PATH="/home/sarvca/public_html/my"
           echo "📁 Application path: $APP_PATH"
 
           # Upload backup script
@@ -210,13 +205,8 @@ jobs:
         run: |
           echo "💾 Creating database backup before deployment..."
 
-          # Set APP_PATH with proper default
-          if [ -z "${{ secrets.APP_PATH }}" ]; then
-            APP_PATH="/public_html/my"
-          else
-            APP_PATH="${{ secrets.APP_PATH }}"
-          fi
-
+          # Static APP_PATH for SSH commands
+          APP_PATH="/home/sarvca/public_html/my"
           echo "📁 Application path: $APP_PATH"
 
           BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -292,13 +282,8 @@ jobs:
         run: |
           echo "🚀 Running post-deployment commands via SSH..."
 
-          # Set APP_PATH with proper default
-          if [ -z "${{ secrets.APP_PATH }}" ]; then
-            APP_PATH="/public_html/my"
-          else
-            APP_PATH="${{ secrets.APP_PATH }}"
-          fi
-
+          # Static APP_PATH for SSH commands
+          APP_PATH="/home/sarvca/public_html/my"
           BACKUP_FILE="${{ env.BACKUP_FILE }}"
 
           echo "📁 Application path: $APP_PATH"
