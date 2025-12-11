@@ -132,3 +132,16 @@ echo ""
 
 success "Safe migration process completed successfully!"
 
+# Clear Laravel caches after successful migration
+log "Clearing Laravel caches..."
+if command -v php >/dev/null 2>&1; then
+    log "Running Laravel cache clearing commands..."
+    php artisan cache:clear 2>>"$LOG_FILE" && success "Cache cleared" || warning "Cache clear failed"
+    php artisan config:clear 2>>"$LOG_FILE" && success "Config cache cleared" || warning "Config cache clear failed"
+    php artisan view:clear 2>>"$LOG_FILE" && success "View cache cleared" || warning "View cache clear failed"
+    php artisan route:clear 2>>"$LOG_FILE" && success "Route cache cleared" || warning "Route cache clear failed"
+    success "Laravel cache clearing completed"
+else
+    warning "PHP not found, skipping cache clearing"
+fi
+

@@ -97,25 +97,28 @@
     @include('admin.components.data-table', [
         'columns' => [
             ['title' => 'نام پلن', 'key' => 'name', 'render' => function($item) {
+                $name = $item->name ?? 'نامشخص';
+                $description = $item->description ?? 'بدون توضیحات';
                 return '<div class="flex items-center">
                     <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
-                        <span class="text-sm font-medium text-emerald-600">' . substr($item->name, 0, 1) . '</span>
+                        <span class="text-sm font-medium text-emerald-600">' . substr($name, 0, 1) . '</span>
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-gray-900">' . $item->name . '</p>
-                        <p class="text-xs text-gray-500">' . ($item->description ?: 'بدون توضیحات') . '</p>
+                        <p class="text-sm font-medium text-gray-900">' . htmlspecialchars($name) . '</p>
+                        <p class="text-xs text-gray-500">' . htmlspecialchars($description) . '</p>
                     </div>
                 </div>';
             }],
             ['title' => 'مدت', 'key' => 'duration_days', 'render' => function($item) {
-                if ($item->duration_days >= 365) {
-                    $years = floor($item->duration_days / 365);
+                $duration = $item->duration_days ?? 0;
+                if ($duration >= 365) {
+                    $years = floor($duration / 365);
                     return '<span class="text-sm text-gray-900">' . $years . ' سال</span>';
-                } elseif ($item->duration_days >= 30) {
-                    $months = floor($item->duration_days / 30);
+                } elseif ($duration >= 30) {
+                    $months = floor($duration / 30);
                     return '<span class="text-sm text-gray-900">' . $months . ' ماه</span>';
                 } else {
-                    return '<span class="text-sm text-gray-900">' . $item->duration_days . ' روز</span>';
+                    return '<span class="text-sm text-gray-900">' . $duration . ' روز</span>';
                 }
             }],
             ['title' => 'قیمت‌ها', 'key' => 'price', 'render' => function($item) {
@@ -129,10 +132,13 @@
                 if ($item->cafebazaar_price) {
                     $prices[] = '<span class="text-xs text-orange-600">کافه: ' . number_format($item->cafebazaar_price) . '</span>';
                 }
-                return '<div class="flex flex-col gap-1">' . implode('', $prices) . '</div>';
+                return '<div class="flex flex-col gap-1">' . (empty($prices) ? '<span class="text-xs text-gray-500">بدون قیمت</span>' : implode('', $prices)) . '</div>';
             }],
             ['title' => 'ویژگی‌ها', 'key' => 'features', 'render' => function($item) {
-                $features = json_decode($item->features, true) ?: [];
+                $features = [];
+                if ($item->features) {
+                    $features = json_decode($item->features, true) ?: [];
+                }
                 $featureCount = count($features);
                 if ($featureCount > 0) {
                     return '<span class="text-sm text-gray-900">' . $featureCount . ' ویژگی</span>';
@@ -141,20 +147,26 @@
                 }
             }],
             ['title' => 'وضعیت', 'key' => 'is_active', 'render' => function($item) {
-                if ($item->is_active) {
+                $isActive = $item->is_active ?? false;
+                if ($isActive) {
                     return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">فعال</span>';
                 } else {
                     return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">غیرفعال</span>';
                 }
             }],
             ['title' => 'ترتیب', 'key' => 'sort_order', 'render' => function($item) {
-                return '<span class="text-sm text-gray-900">' . $item->sort_order . '</span>';
+                $sortOrder = $item->sort_order ?? 0;
+                return '<span class="text-sm text-gray-900">' . $sortOrder . '</span>';
             }],
             ['title' => 'تاریخ ایجاد', 'key' => 'created_at', 'render' => function($item) {
-                return '<div>
-                    <p class="text-sm text-gray-900">' . $item->created_at->format('Y/m/d') . '</p>
-                    <p class="text-xs text-gray-500">' . $item->created_at->format('H:i') . '</p>
-                </div>';
+                if ($item->created_at) {
+                    return '<div>
+                        <p class="text-sm text-gray-900">' . $item->created_at->format('Y/m/d') . '</p>
+                        <p class="text-xs text-gray-500">' . $item->created_at->format('H:i') . '</p>
+                    </div>';
+                } else {
+                    return '<span class="text-sm text-gray-500">نامشخص</span>';
+                }
             }]
         ],
         'data' => $plans->items(),

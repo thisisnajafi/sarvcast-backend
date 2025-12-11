@@ -182,3 +182,16 @@ echo ""
 success "Database backup completed successfully!"
 echo "$BACKUP_FILE_COMPRESSED"
 
+# Clear Laravel caches after successful backup
+log "Clearing Laravel caches..."
+if command -v php >/dev/null 2>&1 && [ -f "artisan" ]; then
+    log "Running Laravel cache clearing commands..."
+    php artisan cache:clear 2>>"$LOG_FILE" && success "Cache cleared" || warning "Cache clear failed"
+    php artisan config:clear 2>>"$LOG_FILE" && success "Config cache cleared" || warning "Config cache clear failed"
+    php artisan view:clear 2>>"$LOG_FILE" && success "View cache cleared" || warning "View cache clear failed"
+    php artisan route:clear 2>>"$LOG_FILE" && success "Route cache cleared" || warning "Route cache clear failed"
+    success "Laravel cache clearing completed"
+else
+    warning "PHP or artisan not found, skipping cache clearing"
+fi
+

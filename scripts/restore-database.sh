@@ -148,9 +148,12 @@ fi
 # Clear Laravel caches
 log "Clearing Laravel caches..."
 if [ -f "artisan" ]; then
-    php artisan config:clear 2>/dev/null || true
-    php artisan cache:clear 2>/dev/null || true
-    success "Laravel caches cleared"
+    log "Clearing Laravel caches..."
+    php artisan cache:clear 2>/dev/null && success "Cache cleared" || warning "Cache clear failed"
+    php artisan config:clear 2>/dev/null && success "Config cache cleared" || warning "Config cache clear failed"
+    php artisan view:clear 2>/dev/null && success "View cache cleared" || warning "View cache clear failed"
+    php artisan route:clear 2>/dev/null && success "Route cache cleared" || warning "Route cache clear failed"
+    success "Laravel cache clearing completed"
 fi
 
 # Display summary
