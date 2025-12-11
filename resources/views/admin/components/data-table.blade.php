@@ -120,11 +120,15 @@
     <div class="px-6 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
         <div class="flex items-center justify-between">
             <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
-                نمایش {{ $pagination['from'] ?? 0 }} تا {{ $pagination['to'] ?? 0 }} از {{ $pagination['total'] ?? 0 }} نتیجه
+                @if(is_array($pagination))
+                    نمایش {{ $pagination['from'] ?? 0 }} تا {{ $pagination['to'] ?? 0 }} از {{ $pagination['total'] ?? 0 }} نتیجه
+                @elseif(is_object($pagination) && method_exists($pagination, 'firstItem'))
+                    نمایش {{ $pagination->firstItem() ?? 0 }} تا {{ $pagination->lastItem() ?? 0 }} از {{ $pagination->total() ?? 0 }} نتیجه
+                @endif
             </div>
-            
+
             <div class="flex items-center space-x-2 space-x-reverse">
-                @if(isset($pagination['links']))
+                @if(is_array($pagination) && isset($pagination['links']))
                     @foreach($pagination['links'] as $link)
                         @if($link['url'])
                         <a href="{{ $link['url'] }}" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 {{ $link['active'] ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-700 dark:text-gray-300' }}">
@@ -136,6 +140,8 @@
                         </span>
                         @endif
                     @endforeach
+                @elseif(is_object($pagination) && method_exists($pagination, 'links'))
+                    {!! $pagination->links() !!}
                 @endif
             </div>
         </div>

@@ -44,7 +44,10 @@ class SmsService
                 'isFlash' => false
             ];
 
-            // Send SMS exactly as documented
+            // Set timeout for Melipayamak library (if supported)
+            ini_set('default_socket_timeout', 30);
+
+            // Send SMS exactly as documented with timeout
             $response = $sms->send($to, $from, $message);
             $json = json_decode($response);
 
@@ -74,16 +77,19 @@ class SmsService
                 'isFlash' => false
             ];
 
-            Log::error('SMS sending failed', [
+            Log::error('SMS sending failed via Melipayamak library', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
                 'error' => $e->getMessage(),
+                'error_type' => get_class($e),
+                'timeout_possible' => strpos($e->getMessage(), 'timeout') !== false || strpos($e->getMessage(), 'Timeout') !== false,
                 'trace' => $e->getTraceAsString()
             ]);
 
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'method' => 'melipayamak_library'
             ];
         }
     }
@@ -480,13 +486,43 @@ class SmsService
             curl_setopt($handle, CURLOPT_POST, true);
             curl_setopt($handle, CURLOPT_POSTFIELDS, $post_data);
 
+            // Add timeout settings to prevent hanging
+            curl_setopt($handle, CURLOPT_TIMEOUT, 30); // 30 seconds total timeout
+            curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 10); // 10 seconds connection timeout
+
             $response = curl_exec($handle);
             $httpCode = curl_getinfo($handle, CURLINFO_HTTP_CODE);
             $curlError = curl_error($handle);
+            $totalTime = curl_getinfo($handle, CURLINFO_TOTAL_TIME);
             curl_close($handle);
 
+            Log::info('cURL request details', [
+                'phone' => $to,
+                'bodyId' => $bodyId,
+                'url' => 'https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber',
+                'http_code' => $httpCode,
+                'total_time' => $totalTime,
+                'response_length' => strlen($response ?? ''),
+                'has_error' => !empty($curlError)
+            ]);
+
             if ($curlError) {
+                Log::error('cURL Error in SMS sending', [
+                    'error' => $curlError,
+                    'phone' => $to,
+                    'bodyId' => $bodyId
+                ]);
                 throw new \Exception("cURL Error: " . $curlError);
+            }
+
+            if ($httpCode !== 200) {
+                Log::error('HTTP Error in SMS sending', [
+                    'http_code' => $httpCode,
+                    'response' => $response,
+                    'phone' => $to,
+                    'bodyId' => $bodyId
+                ]);
+                throw new \Exception("HTTP Error: {$httpCode}");
             }
 
             Log::info('Procedural PHP SMS response', [
