@@ -177,7 +177,14 @@ jobs:
         run: |
           echo "📤 Uploading deployment scripts to server..."
 
-          APP_PATH="${{ secrets.APP_PATH || '/public_html/my' }}"
+          # Set APP_PATH with proper default
+          if [ -z "${{ secrets.APP_PATH }}" ]; then
+            APP_PATH="/public_html/my"
+          else
+            APP_PATH="${{ secrets.APP_PATH }}"
+          fi
+
+          echo "📁 Application path: $APP_PATH"
 
           # Upload backup script
           sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
@@ -203,13 +210,26 @@ jobs:
         run: |
           echo "💾 Creating database backup before deployment..."
 
-          APP_PATH="${{ secrets.APP_PATH || '/public_html/my' }}"
+          # Set APP_PATH with proper default
+          if [ -z "${{ secrets.APP_PATH }}" ]; then
+            APP_PATH="/public_html/my"
+          else
+            APP_PATH="${{ secrets.APP_PATH }}"
+          fi
+
+          echo "📁 Application path: $APP_PATH"
+
           BACKUP_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
           # Determine backup directory (use secret or default to app-relative path)
           BACKUP_DIR_SECRET="${{ secrets.BACKUP_DIR }}"
-          DEFAULT_BACKUP_DIR="${APP_PATH}/storage/backups"
-          BACKUP_DIR_TO_USE="${BACKUP_DIR_SECRET:-${DEFAULT_BACKUP_DIR}}"
+          if [ -z "$BACKUP_DIR_SECRET" ]; then
+            BACKUP_DIR_TO_USE="${APP_PATH}/storage/backups"
+          else
+            BACKUP_DIR_TO_USE="$BACKUP_DIR_SECRET"
+          fi
+
+          echo "💾 Backup directory: $BACKUP_DIR_TO_USE"
 
           # Create backup on server
           BACKUP_OUTPUT=$(sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
@@ -219,9 +239,19 @@ jobs:
             -o ConnectTimeout=10 \
             -p ${{ secrets.SSH_PORT || 22 }} \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-            "cd ${APP_PATH} && \
-            BACKUP_DIR_VAR=\"${BACKUP_DIR_TO_USE}\" && \
+            "set -e && \
+            echo '🔍 Checking application path...' && \
+            if [ ! -d '$APP_PATH' ]; then \
+              echo '❌ ERROR: Application path does not exist: $APP_PATH' && \
+              echo 'Please check your APP_PATH GitHub secret or create the directory' && \
+              exit 1; \
+            fi && \
+            cd '$APP_PATH' && \
+            echo '✅ Changed to application directory: $APP_PATH' && \
+            BACKUP_DIR_VAR='$BACKUP_DIR_TO_USE' && \
+            echo '💾 Backup directory will be: '\$BACKUP_DIR_VAR && \
             if [ -f scripts/backup-database-ssh.sh ]; then \
+              echo '📜 Using backup script...' && \
               chmod +x scripts/backup-database-ssh.sh && \
               mkdir -p \"\${BACKUP_DIR_VAR}\" && \
               BACKUP_DIR=\"\${BACKUP_DIR_VAR}\" ./scripts/backup-database-ssh.sh pre_deployment_${BACKUP_TIMESTAMP} 2>&1; \
@@ -229,31 +259,50 @@ jobs:
               echo '⚠️  Backup script not found, creating manual backup...' && \
               mkdir -p \"\${BACKUP_DIR_VAR}\" && \
               if [ -f .env ]; then \
+                echo '📄 Loading database credentials from .env...' && \
                 export \$(grep -v '^#' .env | grep -E '^DB_' | xargs) && \
+                echo '💾 Creating database backup...' && \
                 mysqldump -h \${DB_HOST:-localhost} -P \${DB_PORT:-3306} -u \${DB_USERNAME} -p\${DB_PASSWORD} --single-transaction \${DB_DATABASE} | gzip > \"\${BACKUP_DIR_VAR}/pre_deployment_${BACKUP_TIMESTAMP}.sql.gz\" && \
                 echo \"\${BACKUP_DIR_VAR}/pre_deployment_${BACKUP_TIMESTAMP}.sql.gz\"; \
               else \
-                echo 'ERROR: .env file not found'; \
+                echo '❌ ERROR: .env file not found in $APP_PATH' && \
+                exit 1; \
               fi; \
             fi")
 
           # Extract backup file path from output
-          BACKUP_FILE=$(echo "$BACKUP_OUTPUT" | grep -E '^/backups/sarvcast/.*\.sql\.gz$' | tail -n 1 || echo "")
+          echo "📋 Backup output:"
+          echo "$BACKUP_OUTPUT"
+
+          # Try to extract backup file path (supports both /backups/sarvcast and app/storage/backups)
+          BACKUP_FILE=$(echo "$BACKUP_OUTPUT" | grep -E '(/backups/sarvcast|storage/backups)/.*\.sql\.gz$' | tail -n 1 || echo "")
 
           if [ -n "$BACKUP_FILE" ]; then
             echo "✅ Database backup created: $BACKUP_FILE"
             echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
           else
-            echo "⚠️  Could not determine backup file path, but backup may have been created"
-            echo "BACKUP_FILE=/backups/sarvcast/pre_deployment_${BACKUP_TIMESTAMP}.sql.gz" >> $GITHUB_ENV
+            # Fallback: construct expected backup path
+            BACKUP_FILE="${BACKUP_DIR_TO_USE}/pre_deployment_${BACKUP_TIMESTAMP}.sql.gz"
+            echo "⚠️  Could not extract backup file path from output"
+            echo "⚠️  Assuming backup is at: $BACKUP_FILE"
+            echo "BACKUP_FILE=$BACKUP_FILE" >> $GITHUB_ENV
           fi
 
       - name: Run Post-Deployment Commands via SSH
         run: |
           echo "🚀 Running post-deployment commands via SSH..."
 
-          APP_PATH="${{ secrets.APP_PATH || '/public_html/my' }}"
+          # Set APP_PATH with proper default
+          if [ -z "${{ secrets.APP_PATH }}" ]; then
+            APP_PATH="/public_html/my"
+          else
+            APP_PATH="${{ secrets.APP_PATH }}"
+          fi
+
           BACKUP_FILE="${{ env.BACKUP_FILE }}"
+
+          echo "📁 Application path: $APP_PATH"
+          echo "💾 Backup file: $BACKUP_FILE"
 
           sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
             -o StrictHostKeyChecking=no \
@@ -262,7 +311,14 @@ jobs:
             -o ConnectTimeout=10 \
             -p ${{ secrets.SSH_PORT || 22 }} \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
-            "cd ${APP_PATH} && \
+            "set -e && \
+            echo '🔍 Verifying application path...' && \
+            if [ ! -d '$APP_PATH' ]; then \
+              echo '❌ ERROR: Application path does not exist: $APP_PATH' && \
+              exit 1; \
+            fi && \
+            cd '$APP_PATH' && \
+            echo '✅ Changed to application directory' && \
             echo '🚀 Starting post-deployment setup...' && \
             echo '📦 Installing/updating Composer dependencies...' && \
             composer install --no-dev --optimize-autoloader --no-interaction && \
