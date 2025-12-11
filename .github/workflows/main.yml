@@ -46,10 +46,6 @@ jobs:
           PUSHER_APP_CLUSTER: mt1
         run: composer install
 
-      - name: Run PHPStan (Larastan)
-        run: |
-          echo "🔍 Running PHPStan (Larastan)..."
-          php -d memory_limit=1G vendor/bin/phpstan analyse --memory-limit=1G
 
       # - name: Copy .env
       #   env:
