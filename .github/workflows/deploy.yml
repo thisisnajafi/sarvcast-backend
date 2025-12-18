@@ -1,0 +1,102 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, bcmath, pdo, pdo_mysql, fileinfo, gd, zip, curl, intl, exif, imagick
+          coverage: none
+
+      - name: Copy .env
+        run: |
+          echo "Copying environment file..."
+          # This assumes you have secrets configured in GitHub
+          # For production, you should use GitHub Secrets for sensitive data
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          fi
+
+      - name: Install dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Generate application key
+        run: php artisan key:generate --force
+        continue-on-error: true
+
+      - name: Run migrations
+        run: php artisan migrate --force
+        continue-on-error: true
+        env:
+          DB_CONNECTION: ${{ secrets.DB_CONNECTION }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+      - name: Create storage symlink
+        run: php artisan storage:link --force
+
+      - name: Clear and cache config
+        run: |
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          php artisan cache:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: Set permissions
+        run: |
+          chmod -R 755 storage bootstrap/cache
+          chmod -R 755 public
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.SSH_DEPLOY_PATH }}
+            git pull origin main || git pull origin master
+            composer install --no-dev --optimize-autoloader --no-interaction
+            php artisan migrate --force
+            php artisan storage:link --force
+            php artisan config:clear
+            php artisan route:clear
+            php artisan view:clear
+            php artisan cache:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            chmod -R 755 storage bootstrap/cache
+            chmod -R 755 public
+            # Restart services if needed
+            # sudo systemctl restart php8.2-fpm
+            # sudo systemctl restart nginx
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Storage symlink created and verified"
+

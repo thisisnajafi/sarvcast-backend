@@ -1,0 +1,418 @@
+SARVCAST HOME PAGE API DOCUMENTATION
+=====================================
+
+OVERVIEW
+--------
+This document outlines the API routes and data requirements for the SarvCast home page. The home page displays categories, featured stories, recent stories, popular stories, and bedtime stories to provide users with a comprehensive overview of available content.
+
+BASE URL
+--------
+https://my.sarvcast.ir/api/v1
+
+API ROUTES
+==========
+
+1. CATEGORIES ENDPOINT
+----------------------
+Route: GET /categories
+Purpose: Fetch all available content categories
+Parameters:
+  - limit (optional): Number of categories to return (default: 10)
+  - page (optional): Page number for pagination
+  - sort_by (optional): Sort field (name, created_at, updated_at, order)
+  - sort_order (optional): Sort direction (asc, desc)
+
+Expected Response Format:
+{
+  "success": true,
+  "message": "Categories retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "name": "Adventure",
+      "slug": "adventure",
+      "description": "Exciting adventure stories",
+      "color": "#FF6B6B",
+      "status": "active",
+      "order": 1,
+      "story_count": 15,
+      "icon_path": "assets/icons/adventure.svg",
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-20T14:45:00Z"
+    }
+  ]
+}
+
+Required Fields:
+- id: Unique category identifier
+- name: Category display name
+- slug: URL-friendly category name
+- description: Category description
+- color: Hex color code for UI theming
+- status: Category status (active/inactive)
+- order: Display order for sorting
+- story_count: Number of stories in this category
+- icon_path: Path to category icon
+- created_at: ISO 8601 timestamp
+- updated_at: ISO 8601 timestamp
+
+2. FEATURED STORIES ENDPOINT
+----------------------------
+Route: GET /stories/featured
+Purpose: Fetch featured/promoted stories
+Parameters:
+  - limit (optional): Number of stories to return (default: 6)
+
+Expected Response Format:
+{
+  "success": true,
+  "message": "Featured stories retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "title": "The Magic Forest",
+      "subtitle": "An enchanting adventure",
+      "description": "A magical story about a forest",
+      "category_id": 1,
+      "age_group": "5-8",
+      "duration": 1800,
+      "status": "published",
+      "is_premium": false,
+      "is_completely_free": true,
+      "play_count": 1250,
+      "rating": 4.5,
+      "rating_count": 89,
+      "favorite_count": 45,
+      "episode_count": 3,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-20T14:45:00Z",
+      "category": {
+        "id": 1,
+        "name": "Adventure",
+        "slug": "adventure",
+        "description": "Exciting adventure stories",
+        "color": "#FF6B6B",
+        "status": "active",
+        "order": 1,
+        "story_count": 15,
+        "icon_path": "assets/icons/adventure.svg",
+        "created_at": "2024-01-15T10:30:00Z",
+        "updated_at": "2024-01-20T14:45:00Z"
+      },
+      "narrator": {
+        "id": 1,
+        "name": "John Doe",
+        "bio": "Experienced narrator",
+        "image_url": "https://example.com/avatar.jpg",
+        "roles": ["narrator", "voice_actor"],
+        "total_stories": 10,
+        "total_episodes": 50,
+        "average_rating": 4.5,
+        "is_verified": true,
+        "last_active_at": "2024-01-18T16:20:00Z",
+        "created_at": "2024-01-10T09:15:00Z"
+      },
+      "image_url": "https://example.com/story1.jpg",
+      "cover_image_url": "https://example.com/story1_cover.jpg",
+      "total_episodes": 3,
+      "free_episodes": 3,
+      "episode_ids": [1, 2, 3],
+      "is_favorite": false,
+      "progress": 0.0,
+      "tags": ["magic", "forest", "adventure"],
+      "language": "fa"
+    }
+  ]
+}
+
+Required Fields:
+- id: Unique story identifier
+- title: Story title
+- subtitle: Story subtitle
+- description: Story description
+- category_id: Associated category ID
+- age_group: Target age group
+- duration: Total duration in seconds
+- status: Story status (published/draft/archived)
+- is_premium: Whether story requires premium access
+- is_completely_free: Whether all episodes are free
+- play_count: Number of times played
+- rating: Average rating (0-5)
+- rating_count: Number of ratings
+- favorite_count: Number of favorites
+- episode_count: Number of episodes
+- created_at: ISO 8601 timestamp
+- updated_at: ISO 8601 timestamp
+- image_url: Story image URL
+- tags: Array of story tags
+- language: Story language code
+
+Optional Fields:
+- category: Full category object
+- narrator: Narrator information
+- cover_image_url: Cover image URL
+- total_episodes: Total episode count
+- free_episodes: Free episode count
+- episode_ids: Array of episode IDs
+- is_favorite: User's favorite status
+- progress: User's progress (0.0-1.0)
+
+3. RECENT STORIES ENDPOINT
+--------------------------
+Route: GET /stories/recent
+Purpose: Fetch recently added stories
+Parameters:
+  - limit (optional): Number of stories to return (default: 6)
+
+Expected Response Format:
+Same as Featured Stories endpoint
+
+4. POPULAR STORIES ENDPOINT
+---------------------------
+Route: GET /stories/popular
+Purpose: Fetch most popular stories
+Parameters:
+  - limit (optional): Number of stories to return (default: 6)
+  - period (optional): Time period for popularity (week, month, year)
+
+Expected Response Format:
+Same as Featured Stories endpoint
+
+5. CATEGORY STORIES ENDPOINT
+----------------------------
+Route: GET /categories/{id}/stories
+Purpose: Fetch stories from a specific category
+Parameters:
+  - id: Category ID (required)
+  - limit (optional): Number of stories to return (default: 6)
+
+Expected Response Format:
+Same as Featured Stories endpoint
+
+Special Case for Bedtime Stories:
+Route: GET /categories/2/stories
+Purpose: Fetch bedtime stories (category ID 2)
+
+DATA REQUIREMENTS
+=================
+
+CATEGORIES DATA
+---------------
+Minimum Required:
+- 5-10 categories for home page display
+- Each category should have at least 3-5 stories
+- Categories should be diverse (Adventure, Fantasy, Educational, etc.)
+
+Recommended Categories:
+1. Adventure (ID: 1)
+2. Bedtime Stories (ID: 2)
+3. Fantasy (ID: 3)
+4. Educational (ID: 4)
+5. Classic Tales (ID: 5)
+
+STORIES DATA
+------------
+Minimum Required:
+- 6 featured stories
+- 6 recent stories
+- 6 popular stories
+- 6 bedtime stories (from category 2)
+
+Story Requirements:
+- Each story should have at least 1 episode
+- Stories should be in Persian (fa) language
+- Age groups: 3-6, 5-8, 8-12, 12+
+- Duration: 5-60 minutes per story
+- Quality ratings: 3.5-5.0 stars
+
+CONTENT GUIDELINES
+==================
+
+STORY CONTENT
+-------------
+- Age-appropriate content for children
+- Educational value
+- Engaging narratives
+- Clear audio quality
+- Appropriate length for target age group
+
+CATEGORY ORGANIZATION
+---------------------
+- Logical grouping of similar content
+- Clear category names and descriptions
+- Consistent color coding
+- Appropriate icons for visual identification
+
+TECHNICAL REQUIREMENTS
+======================
+
+API PERFORMANCE
+---------------
+- Response time: < 2 seconds
+- Parallel requests support
+- Pagination for large datasets
+- Caching headers for static content
+
+DATA FORMAT
+-----------
+- All timestamps in ISO 8601 format with UTC timezone
+- JSON response format
+- Consistent field naming (snake_case)
+- Proper HTTP status codes
+
+ERROR HANDLING
+--------------
+- Graceful error responses
+- User-friendly error messages
+- Proper HTTP status codes
+- Fallback data when possible
+
+LOGGING REQUIREMENTS
+====================
+
+API CALL LOGGING
+----------------
+The home page provider logs the following information:
+
+Request Logging:
+- HTTP method (GET)
+- Endpoint URL
+- Request parameters
+- Timestamp
+
+Response Logging:
+- HTTP status code
+- Response data structure
+- Response time
+- Data count
+
+Example Log Output:
+```
+🏠 HomePage: 📶 Network: GET /categories (Status: 200)
+🏠 HomePage:    Request: {limit: 10}
+🏠 HomePage:    Response: [{id: 1, name: Adventure, slug: adventure, story_count: 15, created_at: 2024-01-15T10:30:00.000Z}]
+
+🏠 HomePage: 📶 Network: GET /stories/featured (Status: 200)
+🏠 HomePage:    Request: {limit: 6}
+🏠 HomePage:    Response: [{id: 1, title: The Magic Forest, category_id: 1, duration: 1800, rating: 4.5, play_count: 1250, created_at: 2024-01-15T10:30:00.000Z}]
+```
+
+PERFORMANCE MONITORING
+======================
+
+METRICS TO TRACK
+----------------
+- API response times
+- Data loading success rates
+- Error rates by endpoint
+- User engagement with different content types
+- Cache hit rates
+
+OPTIMIZATION RECOMMENDATIONS
+----------------------------
+- Implement response caching
+- Use CDN for image assets
+- Optimize database queries
+- Implement pagination for large datasets
+- Use compression for API responses
+
+SECURITY CONSIDERATIONS
+=======================
+
+AUTHENTICATION
+--------------
+- API key authentication
+- Rate limiting
+- CORS configuration
+- Input validation
+
+DATA PROTECTION
+---------------
+- HTTPS only
+- No sensitive user data in responses
+- Proper error handling without data leakage
+- Content filtering for inappropriate material
+
+TESTING REQUIREMENTS
+====================
+
+API TESTING
+-----------
+- Unit tests for all endpoints
+- Integration tests for data flow
+- Performance tests for response times
+- Error handling tests
+
+DATA VALIDATION
+---------------
+- Response format validation
+- Required field validation
+- Data type validation
+- Date format validation
+
+DEPLOYMENT CHECKLIST
+====================
+
+PRE-DEPLOYMENT
+--------------
+- [ ] All API endpoints tested
+- [ ] Data validation implemented
+- [ ] Error handling configured
+- [ ] Logging enabled
+- [ ] Performance monitoring set up
+- [ ] Security measures implemented
+
+POST-DEPLOYMENT
+---------------
+- [ ] Monitor API performance
+- [ ] Check error rates
+- [ ] Validate data accuracy
+- [ ] Test user experience
+- [ ] Monitor server resources
+
+MAINTENANCE
+===========
+
+REGULAR TASKS
+-------------
+- Monitor API performance
+- Update content regularly
+- Review and update categories
+- Optimize database queries
+- Update security measures
+
+CONTENT UPDATES
+---------------
+- Add new stories weekly
+- Update featured content monthly
+- Refresh popular stories daily
+- Maintain category organization
+- Update story metadata
+
+TROUBLESHOOTING
+===============
+
+COMMON ISSUES
+-------------
+1. Slow API responses
+   - Check database performance
+   - Review query optimization
+   - Implement caching
+
+2. Missing data
+   - Verify API endpoints
+   - Check data availability
+   - Review error logs
+
+3. Format errors
+   - Validate JSON structure
+   - Check date formats
+   - Verify required fields
+
+CONTACT INFORMATION
+===================
+For technical support or API issues, contact the development team.
+
+Document Version: 1.0
+Last Updated: 2024-01-28
+Next Review: 2024-02-28

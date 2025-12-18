@@ -1,0 +1,4837 @@
+{
+  "info": {
+    "name": "SarvCast API Collection",
+    "description": "Complete API collection for SarvCast application - Audio Story Platform",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://my.sarvcast.ir/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Send Verification Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"09123456789\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/send-verification-code",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "send-verification-code"]
+            }
+          }
+        },
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"09123456789\",\n  \"verification_code\": \"1234\",\n  \"first_name\": \"علی\",\n  \"last_name\": \"احمدی\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"09123456789\",\n  \"verification_code\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"09123456789\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/admin/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "admin", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stories",
+      "item": [
+        {
+          "name": "Get All Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories?per_page=20&sort=newest&category_id=5&age_group=3-5&is_premium=false&search=داستان",
+              "host": ["{{base_url}}"],
+              "path": ["stories"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Number of stories per page (default: 20)"
+                },
+                {
+                  "key": "sort",
+                  "value": "newest",
+                  "description": "Sort by: newest, oldest, popular, rating (default: newest)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (3-5, 6-8, 9-12, etc.)",
+                  "disabled": true
+                },
+                {
+                  "key": "is_premium",
+                  "value": "false",
+                  "description": "Filter by premium status (true/false)",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "داستان",
+                  "description": "Search in title, subtitle, description",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Story Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/1",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Story Episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/1/episodes",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1", "episodes"]
+            }
+          }
+        },
+        {
+          "name": "Add Story to Favorites",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/1/favorite",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1", "favorite"]
+            }
+          }
+        },
+        {
+          "name": "Rate Story",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"review\": \"عالی بود!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/stories/1/rating",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1", "rating"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Story Comments",
+      "item": [
+        {
+          "name": "Get Story Comments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/1/comments?page=1&per_page=20&sort_by=latest&include_replies=true",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1", "comments"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "latest",
+                  "description": "Sort order (latest, oldest, most_liked)"
+                },
+                {
+                  "key": "include_replies",
+                  "value": "true",
+                  "description": "Include replies"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Story Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"داستان بسیار زیبا و آموزنده بود\",\n  \"parent_id\": null,\n  \"metadata\": {\n    \"device\": \"mobile\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/stories/1/comments",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Add Comment Reply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"موافقم! داستان واقعاً جذاب بود\",\n  \"parent_id\": 1,\n  \"metadata\": {\n    \"device\": \"mobile\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/stories/1/comments",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Get Comment Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/1/comments/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "1", "comments", "statistics"]
+            }
+          }
+        },
+        {
+          "name": "Get My Comments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/comments/my-comments?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["comments", "my-comments"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete My Comment",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/comments/1",
+              "host": ["{{base_url}}"],
+              "path": ["comments", "1"]
+            }
+          }
+        },
+        {
+          "name": "Like/Unlike Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/comments/1/like",
+              "host": ["{{base_url}}"],
+              "path": ["comments", "1", "like"]
+            }
+          }
+        },
+        {
+          "name": "Get Comment Replies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/comments/1/replies?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["comments", "1", "replies"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Featured Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/featured?limit=6&category_id=5&age_group=3-5",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "featured"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "6",
+                  "description": "Number of featured stories to return (default: 6)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Popular Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/popular?limit=10&period=week&category_id=5&age_group=3-5",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "popular"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of popular stories to return (default: 10)"
+                },
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Time period: day, week, month, year (default: week)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Recent Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/recent?limit=10&category_id=5&age_group=3-5",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "recent"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recent stories to return (default: 10)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Story Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/stories/recommendations?limit=10&category_id=5&age_group=3-5",
+              "host": ["{{base_url}}"],
+              "path": ["stories", "recommendations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recommended stories to return (default: 10)"
+                },
+                {
+                  "key": "category_id",
+                  "value": "5",
+                  "description": "Filter by category ID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (optional)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Episodes",
+      "item": [
+        {
+          "name": "Get Episode Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Play Episode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/play",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "play"]
+            }
+          }
+        },
+        {
+          "name": "Bookmark Episode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/bookmark",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "bookmark"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Image Timeline",
+      "item": [
+        {
+          "name": "Get Episode Image Timeline",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/image-timeline",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "image-timeline"]
+            }
+          }
+        },
+        {
+          "name": "Get Image for Specific Time",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/image-for-time?time=120",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "image-for-time"],
+              "query": [
+                {
+                  "key": "time",
+                  "value": "120",
+                  "description": "Time in seconds"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Timeline with Voice Actors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/image-timeline-with-voice-actors",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "image-timeline-with-voice-actors"]
+            }
+          }
+        },
+        {
+          "name": "Get Timeline for Voice Actor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/image-timeline-for-voice-actor?voice_actor_id=1",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "image-timeline-for-voice-actor"],
+              "query": [
+                {
+                  "key": "voice_actor_id",
+                  "value": "1",
+                  "description": "Voice actor ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Key Frames",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/key-frames",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "key-frames"]
+            }
+          }
+        },
+        {
+          "name": "Get Timeline by Transition Type",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/timeline-by-transition-type?transition_type=fade",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "timeline-by-transition-type"],
+              "query": [
+                {
+                  "key": "transition_type",
+                  "value": "fade",
+                  "description": "Transition type (fade, slide, etc.)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Timeline Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/1/timeline-statistics",
+              "host": ["{{base_url}}"],
+              "path": ["episodes", "1", "timeline-statistics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search & Discovery",
+      "item": [
+        {
+          "name": "Search Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/stories?q=داستان&category_id=1&age_group=6-9&sort_by=rating&sort_order=desc&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["search", "stories"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "داستان",
+                  "description": "Search query"
+                },
+                {
+                  "key": "category_id",
+                  "value": "1",
+                  "description": "Filter by category"
+                },
+                {
+                  "key": "age_group",
+                  "value": "6-9",
+                  "description": "Filter by age group"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "rating",
+                  "description": "Sort by field"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc",
+                  "description": "Sort order"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/episodes?q=اپیزود&story_id=1&sort_by=episode_number&sort_order=asc",
+              "host": ["{{base_url}}"],
+              "path": ["search", "episodes"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "اپیزود",
+                  "description": "Search query"
+                },
+                {
+                  "key": "story_id",
+                  "value": "1",
+                  "description": "Filter by story"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "episode_number",
+                  "description": "Sort by episode number"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "asc",
+                  "description": "Sort order"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search People",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/people?q=نویسنده&role=narrator&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["search", "people"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "نویسنده",
+                  "description": "Search query"
+                },
+                {
+                  "key": "role",
+                  "value": "narrator",
+                  "description": "Filter by role"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Global Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/global?q=داستان&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["search", "global"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "داستان",
+                  "description": "Search query"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Results limit"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Search Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/suggestions?q=داس",
+              "host": ["{{base_url}}"],
+              "path": ["search", "suggestions"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "داس",
+                  "description": "Partial search query"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trending Content",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/trending?type=stories&period=week&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["search", "trending"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "stories",
+                  "description": "Content type"
+                },
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Time period"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Results limit"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Search Filters",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/filters",
+              "host": ["{{base_url}}"],
+              "path": ["search", "filters"]
+            }
+          }
+        },
+        {
+          "name": "Get Search Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/search/stats",
+              "host": ["{{base_url}}"],
+              "path": ["search", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommendations & Trending",
+      "item": [
+        {
+          "name": "Get Personalized Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/personalized?limit=10&type=stories",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "personalized"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recommendations"
+                },
+                {
+                  "key": "type",
+                  "value": "stories",
+                  "description": "Content type (stories, episodes)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trending Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/trending?period=week&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "trending"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Time period (day, week, month)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recommendations"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Similar Content",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/similar/1?type=story&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "similar", "1"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "story",
+                  "description": "Content type (story, episode)"
+                },
+                {
+                  "key": "limit",
+                  "value": "5",
+                  "description": "Number of similar items"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Category Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/category/1/recommendations?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "category", "1", "recommendations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recommendations"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mobile Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/recommendations?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "recommendations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recommendations"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mobile Trending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/trending?type=stories&period=week&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "trending"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "stories",
+                  "description": "Content type"
+                },
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Time period"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Social Trending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/trending?period=week&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["social", "trending"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Time period"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Recommendation Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/analytics",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "analytics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offline Content",
+      "item": [
+        {
+          "name": "Get Offline Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/offline/stories?limit=20&quality=high",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "offline", "stories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of stories"
+                },
+                {
+                  "key": "quality",
+                  "value": "high",
+                  "description": "Audio quality (low, medium, high)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Offline Episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/offline/episodes?story_id=1&limit=10&quality=high",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "offline", "episodes"],
+              "query": [
+                {
+                  "key": "story_id",
+                  "value": "1",
+                  "description": "Story ID"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of episodes"
+                },
+                {
+                  "key": "quality",
+                  "value": "high",
+                  "description": "Audio quality"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Download Access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"episode\",\n  \"content_id\": 1,\n  \"download_quality\": \"high\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/access/download",
+              "host": ["{{base_url}}"],
+              "path": ["access", "download"]
+            }
+          }
+        },
+        {
+          "name": "Track Download",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"episode\",\n  \"content_id\": 1,\n  \"download_size\": 1024000,\n  \"download_quality\": \"high\",\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\",\n    \"storage_available\": 5000000000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/track/download",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "track", "download"]
+            }
+          }
+        },
+        {
+          "name": "Get Download History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/downloads/history?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "downloads", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Download Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/downloads/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "downloads", "statistics"]
+            }
+          }
+        },
+        {
+          "name": "Delete Downloaded Content",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/downloads/1",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "downloads", "1"]
+            }
+          }
+        },
+        {
+          "name": "Clear All Downloads",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/downloads/clear",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "downloads", "clear"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parental Controls",
+      "item": [
+        {
+          "name": "Get Parental Controls",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/parental-controls",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "parental-controls"]
+            }
+          }
+        },
+        {
+          "name": "Update Parental Controls",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true,\n  \"age_limit\": 8,\n  \"content_filter\": \"moderate\",\n  \"time_restrictions\": {\n    \"enabled\": true,\n    \"start_time\": \"08:00\",\n    \"end_time\": \"20:00\"\n  },\n  \"category_restrictions\": [1, 2],\n  \"blocked_keywords\": [\"خشونت\", \"ترسناک\"],\n  \"require_password\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/parental-controls",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "parental-controls"]
+            }
+          }
+        },
+        {
+          "name": "Get Child Profiles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/profiles",
+              "host": ["{{base_url}}"],
+              "path": ["user", "profiles"]
+            }
+          }
+        },
+        {
+          "name": "Create Child Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"علی\",\n  \"age\": 7,\n  \"avatar_url\": \"https://example.com/avatar.jpg\",\n  \"preferences\": {\n    \"favorite_categories\": [1, 2],\n    \"language\": \"fa\",\n    \"audio_quality\": \"high\"\n  },\n  \"parental_settings\": {\n    \"age_limit\": 7,\n    \"content_filter\": \"strict\",\n    \"time_restrictions\": {\n      \"enabled\": true,\n      \"start_time\": \"09:00\",\n      \"end_time\": \"19:00\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/user/profiles",
+              "host": ["{{base_url}}"],
+              "path": ["user", "profiles"]
+            }
+          }
+        },
+        {
+          "name": "Update Child Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"علی احمدی\",\n  \"age\": 8,\n  \"preferences\": {\n    \"favorite_categories\": [1, 2, 3],\n    \"language\": \"fa\",\n    \"audio_quality\": \"high\"\n  },\n  \"parental_settings\": {\n    \"age_limit\": 8,\n    \"content_filter\": \"moderate\",\n    \"time_restrictions\": {\n      \"enabled\": true,\n      \"start_time\": \"08:00\",\n      \"end_time\": \"20:00\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/user/profiles/1",
+              "host": ["{{base_url}}"],
+              "path": ["user", "profiles", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Child Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/user/profiles/1",
+              "host": ["{{base_url}}"],
+              "path": ["user", "profiles", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Content Filter Options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/parental-controls/filter-options",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "parental-controls", "filter-options"]
+            }
+          }
+        },
+        {
+          "name": "Get Parental Control Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/parental-controls/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "parental-controls", "statistics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Preferences & Settings",
+      "item": [
+        {
+          "name": "Get User Preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Update User Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"audio\": {\n    \"quality\": \"high\",\n    \"auto_play\": true,\n    \"volume\": 0.8,\n    \"speed\": 1.0\n  },\n  \"notifications\": {\n    \"push_enabled\": true,\n    \"email_enabled\": false,\n    \"new_story_notifications\": true,\n    \"subscription_notifications\": true\n  },\n  \"language\": \"fa\",\n  \"timezone\": \"Asia/Tehran\",\n  \"theme\": \"light\",\n  \"accessibility\": {\n    \"high_contrast\": false,\n    \"large_text\": false,\n    \"screen_reader\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Get Recommendation Preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Learn User Preferences",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"interaction_type\": \"play\",\n  \"content_id\": 1,\n  \"content_type\": \"story\",\n  \"duration_played\": 300,\n  \"completion_rate\": 0.8,\n  \"rating\": 5,\n  \"context\": {\n    \"time_of_day\": \"evening\",\n    \"device_type\": \"mobile\",\n    \"location\": \"home\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/recommendations/learn-preferences",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "learn-preferences"]
+            }
+          }
+        },
+        {
+          "name": "Update Preferences from Interaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"interaction_type\": \"favorite\",\n  \"content_id\": 1,\n  \"content_type\": \"story\",\n  \"category_id\": 2,\n  \"metadata\": {\n    \"user_agent\": \"mobile_app\",\n    \"timestamp\": \"2024-01-01T12:00:00Z\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/recommendations/update-preferences",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "update-preferences"]
+            }
+          }
+        },
+        {
+          "name": "Get Content Personalization Preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Reset User Preferences",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reset_type\": \"all\",\n  \"confirm\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/preferences/reset",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "preferences", "reset"]
+            }
+          }
+        },
+        {
+          "name": "Export User Preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/preferences/export",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "preferences", "export"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Social Sharing & Tracking",
+      "item": [
+        {
+          "name": "Follow User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/follow/1",
+              "host": ["{{base_url}}"],
+              "path": ["social", "follow", "1"]
+            }
+          }
+        },
+        {
+          "name": "Unfollow User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/unfollow/1",
+              "host": ["{{base_url}}"],
+              "path": ["social", "unfollow", "1"]
+            }
+          }
+        },
+        {
+          "name": "Share Content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"story\",\n  \"content_id\": 1,\n  \"platform\": \"telegram\",\n  \"message\": \"Check out this amazing story!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/social/share",
+              "host": ["{{base_url}}"],
+              "path": ["social", "share"]
+            }
+          }
+        },
+        {
+          "name": "Get User Followers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/followers/1?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["social", "followers", "1"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Following",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/following/1?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["social", "following", "1"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Activity Feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/activity-feed?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["social", "activity-feed"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Playlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My Favorite Stories\",\n  \"description\": \"A collection of my favorite stories\",\n  \"is_public\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/social/playlists",
+              "host": ["{{base_url}}"],
+              "path": ["social", "playlists"]
+            }
+          }
+        },
+        {
+          "name": "Add to Playlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"story\",\n  \"content_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/social/playlists/1/add",
+              "host": ["{{base_url}}"],
+              "path": ["social", "playlists", "1", "add"]
+            }
+          }
+        },
+        {
+          "name": "Add Social Comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"story\",\n  \"content_id\": 1,\n  \"comment\": \"Great story! My kids loved it.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/social/comments",
+              "host": ["{{base_url}}"],
+              "path": ["social", "comments"]
+            }
+          }
+        },
+        {
+          "name": "Get User Social Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/stats/1",
+              "host": ["{{base_url}}"],
+              "path": ["social", "stats", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Social Trending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/trending?period=week&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["social", "trending"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Time period"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Follow Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/social/follow-status/1",
+              "host": ["{{base_url}}"],
+              "path": ["social", "follow-status", "1"]
+            }
+          }
+        },
+        {
+          "name": "Track Share Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"story\",\n  \"content_id\": 1,\n  \"share_platform\": \"whatsapp\",\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/track/share",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "track", "share"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mobile App Configuration",
+      "item": [
+        {
+          "name": "Get App Configuration",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/config",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "config"]
+            }
+          }
+        },
+        {
+          "name": "Get App Version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/version",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "version"]
+            }
+          }
+        },
+        {
+          "name": "Register Device",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_id\": \"unique_device_id_123\",\n  \"device_type\": \"android\",\n  \"device_model\": \"Samsung Galaxy S21\",\n  \"os_version\": \"Android 12\",\n  \"app_version\": \"1.0.0\",\n  \"fcm_token\": \"fcm_token_here\",\n  \"timezone\": \"Asia/Tehran\",\n  \"language\": \"fa\",\n  \"country\": \"IR\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/device/register",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "device", "register"]
+            }
+          }
+        },
+        {
+          "name": "Update FCM Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"new_fcm_token_here\",\n  \"device_id\": \"unique_device_id_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/device/token",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "device", "token"]
+            }
+          }
+        },
+        {
+          "name": "Unregister Device",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/device/unregister",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "device", "unregister"]
+            }
+          }
+        },
+        {
+          "name": "Get Mobile Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/search?q=داستان&type=stories&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "داستان",
+                  "description": "Search query"
+                },
+                {
+                  "key": "type",
+                  "value": "stories",
+                  "description": "Content type (stories, episodes, people)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of results"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mobile Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/recommendations?limit=10&type=personalized",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "recommendations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recommendations"
+                },
+                {
+                  "key": "type",
+                  "value": "personalized",
+                  "description": "Recommendation type"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Mobile Trending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mobile/trending?type=stories&period=week&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "trending"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "stories",
+                  "description": "Content type"
+                },
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Time period"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Track Play Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"episode_id\": 1,\n  \"action\": \"play\",\n  \"duration\": 300,\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/track/play",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "track", "play"]
+            }
+          }
+        },
+        {
+          "name": "Track Download Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"episode\",\n  \"content_id\": 1,\n  \"download_size\": 1024000,\n  \"download_quality\": \"high\",\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\",\n    \"storage_available\": 5000000000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/track/download",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "track", "download"]
+            }
+          }
+        },
+        {
+          "name": "Track Share Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"story\",\n  \"content_id\": 1,\n  \"share_platform\": \"whatsapp\",\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/track/share",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "track", "share"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rating & Review System",
+      "item": [
+        {
+          "name": "Get User Ratings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings?per_page=20&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["ratings"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Story Rating",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"story_id\": 1,\n  \"rating\": 5,\n  \"review\": \"داستان بسیار زیبا و آموزنده بود. فرزندم عاشق آن شد!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ratings/story",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "story"]
+            }
+          }
+        },
+        {
+          "name": "Submit Episode Rating",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"episode_id\": 1,\n  \"rating\": 4,\n  \"review\": \"قسمت خوبی بود اما کمی کوتاه بود.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ratings/episode",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "episode"]
+            }
+          }
+        },
+        {
+          "name": "Get Story Ratings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/story/1?per_page=20&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "story", "1"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Episode Ratings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/episode/1?per_page=20&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "episode", "1"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Story Rating",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/story/1/user",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "story", "1", "user"]
+            }
+          }
+        },
+        {
+          "name": "Get User Episode Rating",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/episode/1/user",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "episode", "1", "user"]
+            }
+          }
+        },
+        {
+          "name": "Get Highest Rated Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/highest-rated-stories?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "highest-rated-stories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of stories to return"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Highest Rated Episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/highest-rated-episodes?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "highest-rated-episodes"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of episodes to return"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Recent Reviews",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/recent-reviews?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "recent-reviews"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of reviews to return"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User Rating Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/user-stats",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "user-stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Rating Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/ratings/analytics?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["ratings", "analytics"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30",
+                  "description": "Number of days for analytics"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites Management",
+      "item": [
+        {
+          "name": "Get User Favorites",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/favorites?per_page=20&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["favorites"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Story to Favorites",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"story_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/favorites",
+              "host": ["{{base_url}}"],
+              "path": ["favorites"]
+            }
+          }
+        },
+        {
+          "name": "Remove Story from Favorites",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/favorites/1",
+              "host": ["{{base_url}}"],
+              "path": ["favorites", "1"]
+            }
+          }
+        },
+        {
+          "name": "Toggle Favorite Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"story_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/favorites/toggle",
+              "host": ["{{base_url}}"],
+              "path": ["favorites", "toggle"]
+            }
+          }
+        },
+        {
+          "name": "Check Favorite Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/favorites/check/1",
+              "host": ["{{base_url}}"],
+              "path": ["favorites", "check", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Most Favorited Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/favorites/most-favorited?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["favorites", "most-favorited"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of stories to return"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Favorite Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/favorites/stats",
+              "host": ["{{base_url}}"],
+              "path": ["favorites", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Add Favorites",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"add\",\n  \"story_ids\": [1, 2, 3, 4, 5]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/favorites/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["favorites", "bulk"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Remove Favorites",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"remove\",\n  \"story_ids\": [1, 2, 3]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/favorites/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["favorites", "bulk"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Play History & Analytics",
+      "item": [
+        {
+          "name": "Get Play History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history?page=1&per_page=20&sort_by=recent",
+              "host": ["{{base_url}}"],
+              "path": ["play-history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "recent",
+                  "description": "Sort by (recent, duration, completion)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record Play History",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"episode_id\": 1,\n  \"story_id\": 1,\n  \"duration_played\": 300,\n  \"total_duration\": 900,\n  \"completion_rate\": 0.33,\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\",\n    \"device_model\": \"Samsung Galaxy S21\"\n  },\n  \"context\": {\n    \"time_of_day\": \"evening\",\n    \"location\": \"home\",\n    \"network_type\": \"wifi\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/play-history/record",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "record"]
+            }
+          }
+        },
+        {
+          "name": "Update Play Progress",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duration_played\": 450,\n  \"completion_rate\": 0.5,\n  \"is_completed\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/play-history/1/progress",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "1", "progress"]
+            }
+          }
+        },
+        {
+          "name": "Get Recent Play History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/recent?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "recent"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of recent items"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Completed Episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/completed?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "completed"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get In-Progress Episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/in-progress?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "in-progress"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Play Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/stats",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Episode Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/episode/1/stats",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "episode", "1", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Story Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/story/1/stats",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "story", "1", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Most Played Episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/most-played?limit=10&period=month",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "most-played"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items"
+                },
+                {
+                  "key": "period",
+                  "value": "month",
+                  "description": "Time period (week, month, year)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Most Played Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/most-played-stories?limit=10&period=month",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "most-played-stories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of items"
+                },
+                {
+                  "key": "period",
+                  "value": "month",
+                  "description": "Time period"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Play Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/play-history/analytics?period=month&group_by=day",
+              "host": ["{{base_url}}"],
+              "path": ["play-history", "analytics"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "month",
+                  "description": "Time period"
+                },
+                {
+                  "key": "group_by",
+                  "value": "day",
+                  "description": "Group by (day, week, month)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Track Play Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"episode_id\": 1,\n  \"action\": \"play\",\n  \"duration\": 300,\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/track/play",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "track", "play"]
+            }
+          }
+        },
+        {
+          "name": "Track Share Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content_type\": \"story\",\n  \"content_id\": 1,\n  \"share_platform\": \"whatsapp\",\n  \"device_info\": {\n    \"platform\": \"android\",\n    \"version\": \"1.0.0\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/mobile/track/share",
+              "host": ["{{base_url}}"],
+              "path": ["mobile", "track", "share"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/categories?limit=20&page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["categories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of categories to return (default: 10)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Enable pagination (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page when paginated (default: 20)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Category Stories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/categories/5/stories?limit=10&sort=popular&age_group=3-5&is_premium=false&page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["categories", "5", "stories"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of stories to return (default: 6)"
+                },
+                {
+                  "key": "sort",
+                  "value": "popular",
+                  "description": "Sort by: newest, oldest, popular, rating (default: newest)"
+                },
+                {
+                  "key": "age_group",
+                  "value": "3-5",
+                  "description": "Filter by age group (3-5, 6-8, 9-12, etc.)",
+                  "disabled": true
+                },
+                {
+                  "key": "is_premium",
+                  "value": "false",
+                  "description": "Filter by premium status (true/false)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Enable pagination (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page when paginated (default: 20)",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        {
+          "name": "Get Subscription Plans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscriptions/plans",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "plans"]
+            }
+          }
+        },
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": 1,\n  \"payment_method\": \"zarinpal\",\n  \"coupon_code\": \"WELCOME20\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions"]
+            }
+          }
+        },
+        {
+          "name": "Get Current Subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscriptions/current",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "current"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscriptions/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Calculate Subscription Price (with plan_id)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": 1,\n  \"coupon_code\": \"WELCOME20\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/calculate-price",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "calculate-price"]
+            }
+          }
+        },
+        {
+          "name": "Calculate Subscription Price (with plan_slug)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_slug\": \"1month\",\n  \"coupon_code\": \"WELCOME20\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/calculate-price",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "calculate-price"]
+            }
+          }
+        },
+        {
+          "name": "Upgrade Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_plan_slug\": \"3months\",\n  \"payment_method\": \"zarinpal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/1/upgrade",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "1", "upgrade"]
+            }
+          }
+        },
+        {
+          "name": "Renew Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"zarinpal\",\n  \"auto_renew\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/1/renew",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "1", "renew"]
+            }
+          }
+        },
+        {
+          "name": "Create Trial Subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trial_days\": 7,\n  \"plan_slug\": \"1month\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/trial",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "trial"]
+            }
+          }
+        },
+        {
+          "name": "Get Subscription Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscriptions/1",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Subscription Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscriptions/stats",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initiate Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/initiate",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authority\": \"A00000000000000000000000000000000000000000000\",\n  \"status\": \"OK\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/payments/verify",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Get Payment History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/history",
+              "host": ["{{base_url}}"],
+              "path": ["payments", "history"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupons",
+      "item": [
+        {
+          "name": "Validate Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME20\",\n  \"amount\": 50000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/coupons/validate",
+              "host": ["{{base_url}}"],
+              "path": ["coupons", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Use Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME20\",\n  \"subscription_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/coupons/use",
+              "host": ["{{base_url}}"],
+              "path": ["coupons", "use"]
+            }
+          }
+        },
+        {
+          "name": "Get My Coupons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/coupons/my-coupons",
+              "host": ["{{base_url}}"],
+              "path": ["coupons", "my-coupons"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/1/read",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "1", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "read-all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Version Management",
+      "item": [
+        {
+          "name": "Get Latest Version Code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/version/check",
+              "host": ["{{base_url}}"],
+              "path": ["version", "check"]
+            }
+          }
+        },
+        {
+          "name": "Check for Updates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_version\": \"1.0.0\",\n  \"platform\": \"android\",\n  \"build_number\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/version/check",
+              "host": ["{{base_url}}"],
+              "path": ["version", "check"]
+            }
+          }
+        },
+        {
+          "name": "Get Latest Version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/version/latest",
+              "host": ["{{base_url}}"],
+              "path": ["version", "latest"]
+            }
+          }
+        },
+        {
+          "name": "Get App Config",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/version/config",
+              "host": ["{{base_url}}"],
+              "path": ["version", "config"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Health Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/health/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["health", "metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "People",
+      "item": [
+        {
+          "name": "Get All People",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["people"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Person Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/1",
+              "host": ["{{base_url}}"],
+              "path": ["people", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Stories by Person",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/1/stories?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["people", "1", "stories"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search People",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/search?query=علی&role=narrator&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["people", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "علی"
+                },
+                {
+                  "key": "role",
+                  "value": "narrator"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get People by Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/role/narrator",
+              "host": ["{{base_url}}"],
+              "path": ["people", "role", "narrator"]
+            }
+          }
+        },
+        {
+          "name": "Get Person Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/people/1/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["people", "1", "statistics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin APIs",
+      "item": [
+        {
+          "name": "Admin Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/stats",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get All Coupons (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/coupons",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "coupons"]
+            }
+          }
+        },
+        {
+          "name": "Create Coupon (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NEWUSER20\",\n  \"type\": \"percentage\",\n  \"value\": 20,\n  \"description\": \"تخفیف ویژه کاربران جدید\",\n  \"usage_limit\": 100,\n  \"expires_at\": \"2024-12-31T23:59:59Z\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/coupons",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "coupons"]
+            }
+          }
+        },
+        {
+          "name": "Create Story (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"داستان جدید\",\n  \"description\": \"توضیحات داستان جدید\",\n  \"category_id\": 1,\n  \"cover_image_url\": \"https://example.com/cover.jpg\",\n  \"status\": \"draft\",\n  \"is_premium\": false,\n  \"age_rating\": \"all\",\n  \"tags\": [\"کودک\", \"آموزشی\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/stories",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "stories"]
+            }
+          }
+        },
+        {
+          "name": "Create Episode (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"story_id\": 1,\n  \"title\": \"اپیزود اول\",\n  \"description\": \"توضیحات اپیزود اول\",\n  \"episode_number\": 1,\n  \"duration\": 300,\n  \"audio_file_url\": \"https://example.com/audio.mp3\",\n  \"status\": \"draft\",\n  \"is_premium\": false,\n  \"age_rating\": \"all\",\n  \"tags\": [\"کودک\", \"آموزشی\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/episodes",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "episodes"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

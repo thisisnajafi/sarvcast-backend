@@ -1,0 +1,525 @@
+/* Quiz Frontend Styles */
+
+/* Quiz Container */
+.quiz-container {
+    @apply max-w-4xl mx-auto;
+}
+
+/* Question Cards */
+.question-card {
+    @apply bg-white rounded-lg shadow-md p-6 transition-all duration-300;
+    border-left: 4px solid transparent;
+}
+
+.question-card:hover {
+    @apply shadow-lg transform translateY(-2px);
+}
+
+.question-card.answered {
+    border-left-color: #10b981;
+    @apply bg-green-50;
+}
+
+.question-card.correct {
+    border-left-color: #10b981;
+    @apply bg-green-50;
+}
+
+.question-card.incorrect {
+    border-left-color: #ef4444;
+    @apply bg-red-50;
+}
+
+/* Option Buttons */
+.option-button {
+    @apply w-full p-4 text-right border border-gray-300 rounded-lg transition-all duration-300 cursor-pointer;
+    @apply hover:bg-gray-50 hover:border-gray-400;
+}
+
+.option-button:focus {
+    @apply outline-none ring-2 ring-blue-500 ring-opacity-50;
+}
+
+.option-button.selected {
+    @apply bg-blue-100 border-blue-500 text-blue-700;
+    @apply shadow-md transform scale-105;
+}
+
+.option-button.correct {
+    @apply bg-green-100 border-green-500 text-green-700;
+    @apply shadow-md;
+}
+
+.option-button.incorrect {
+    @apply bg-red-100 border-red-500 text-red-700;
+    @apply shadow-md;
+}
+
+.option-button.disabled {
+    @apply cursor-not-allowed opacity-50;
+    @apply hover:bg-gray-50 hover:border-gray-300 hover:transform-none;
+}
+
+/* Progress Bar */
+.progress-bar {
+    @apply w-full bg-gray-200 rounded-full h-3 overflow-hidden;
+}
+
+.progress-fill {
+    @apply bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500;
+    @apply shadow-sm;
+}
+
+.progress-pulse {
+    animation: progressPulse 2s infinite;
+}
+
+@keyframes progressPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Quiz Actions */
+.quiz-actions {
+    @apply bg-white rounded-lg shadow-md p-6;
+    @apply border-t-4 border-blue-500;
+}
+
+/* Result Modal */
+.result-modal {
+    @apply fixed inset-0 bg-gray-600 bg-opacity-50 z-50;
+    @apply flex items-center justify-center min-h-screen p-4;
+    backdrop-filter: blur(4px);
+}
+
+.result-content {
+    @apply bg-white rounded-lg max-w-md w-full p-6;
+    @apply shadow-2xl transform transition-all duration-300;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Result Icons */
+.result-icon {
+    @apply w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center;
+    @apply shadow-lg;
+}
+
+.result-icon.success {
+    @apply bg-green-100 text-green-600;
+    animation: successPulse 1s ease-in-out;
+}
+
+.result-icon.warning {
+    @apply bg-yellow-100 text-yellow-600;
+    animation: warningShake 0.5s ease-in-out;
+}
+
+.result-icon.error {
+    @apply bg-red-100 text-red-600;
+    animation: errorShake 0.5s ease-in-out;
+}
+
+@keyframes successPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes warningShake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-5px);
+    }
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+@keyframes errorShake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-5px);
+    }
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+/* Statistics Cards */
+.statistics-card {
+    @apply bg-white rounded-lg shadow-md p-6 transition-all duration-300;
+    @apply hover:shadow-lg hover:transform hover:translateY(-2px);
+}
+
+.statistics-icon {
+    @apply w-12 h-12 rounded-full flex items-center justify-center;
+    @apply shadow-md;
+}
+
+.statistics-icon.blue {
+    @apply bg-blue-100 text-blue-600;
+}
+
+.statistics-icon.green {
+    @apply bg-green-100 text-green-600;
+}
+
+.statistics-icon.yellow {
+    @apply bg-yellow-100 text-yellow-600;
+}
+
+.statistics-icon.purple {
+    @apply bg-purple-100 text-purple-600;
+}
+
+/* Quiz History Table */
+.quiz-history-table {
+    @apply w-full divide-y divide-gray-200;
+}
+
+.quiz-history-table th {
+    @apply px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider;
+    @apply bg-gray-50;
+}
+
+.quiz-history-table td {
+    @apply px-6 py-4 whitespace-nowrap;
+}
+
+/* Score Badges */
+.score-badge {
+    @apply inline-flex px-2 py-1 text-xs font-semibold rounded-full;
+}
+
+.score-badge.excellent {
+    @apply bg-green-100 text-green-800;
+}
+
+.score-badge.good {
+    @apply bg-blue-100 text-blue-800;
+}
+
+.score-badge.average {
+    @apply bg-yellow-100 text-yellow-800;
+}
+
+.score-badge.poor {
+    @apply bg-red-100 text-red-800;
+}
+
+/* Episode Performance */
+.episode-performance-item {
+    @apply flex items-center justify-between p-4 bg-gray-50 rounded-lg;
+    @apply transition-all duration-300 hover:bg-gray-100;
+}
+
+.episode-performance-progress {
+    @apply w-full bg-gray-200 rounded-full h-2 mt-2;
+}
+
+.episode-performance-fill {
+    @apply bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500;
+}
+
+/* Recent Activity */
+.activity-item {
+    @apply flex items-center p-3 bg-gray-50 rounded-lg;
+    @apply transition-all duration-300 hover:bg-gray-100;
+}
+
+.activity-icon {
+    @apply w-10 h-10 rounded-full flex items-center justify-center;
+    @apply shadow-sm;
+}
+
+.activity-icon.quiz {
+    @apply bg-blue-100 text-blue-600;
+}
+
+.activity-icon.achievement {
+    @apply bg-yellow-100 text-yellow-600;
+}
+
+.activity-icon.coin {
+    @apply bg-green-100 text-green-600;
+}
+
+/* Achievements */
+.achievement-card {
+    @apply bg-white border border-gray-200 rounded-lg p-4 text-center;
+    @apply transition-all duration-300 hover:shadow-md hover:transform hover:scale-105;
+}
+
+.achievement-card.unlocked {
+    @apply border-green-500 bg-green-50;
+    @apply shadow-md;
+}
+
+.achievement-card.locked {
+    @apply border-gray-300 bg-gray-50 opacity-60;
+}
+
+.achievement-icon {
+    @apply w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center;
+    @apply shadow-sm;
+}
+
+.achievement-icon.unlocked {
+    @apply bg-green-100 text-green-600;
+    animation: achievementGlow 2s infinite;
+}
+
+.achievement-icon.locked {
+    @apply bg-gray-100 text-gray-400;
+}
+
+@keyframes achievementGlow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.8);
+    }
+}
+
+/* Coin Animation */
+.coin-animation {
+    animation: coinFlip 0.6s ease-in-out;
+}
+
+@keyframes coinFlip {
+    0% {
+        transform: rotateY(0deg);
+    }
+    50% {
+        transform: rotateY(180deg);
+    }
+    100% {
+        transform: rotateY(360deg);
+    }
+}
+
+/* Loading States */
+.loading-spinner {
+    @apply inline-block w-8 h-8 border-3 border-gray-300 border-t-blue-600 rounded-full;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-skeleton {
+    @apply bg-gray-200 rounded animate-pulse;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .question-card {
+        @apply p-4;
+    }
+    
+    .option-button {
+        @apply p-3 text-sm;
+    }
+    
+    .result-content {
+        @apply p-4 m-4;
+    }
+    
+    .statistics-card {
+        @apply p-4;
+    }
+    
+    .quiz-history-table th,
+    .quiz-history-table td {
+        @apply px-3 py-2 text-sm;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .question-card,
+    .statistics-card,
+    .achievement-card,
+    .result-content {
+        @apply bg-gray-800 text-white;
+    }
+    
+    .option-button {
+        @apply bg-gray-700 border-gray-600 text-gray-200;
+        @apply hover:bg-gray-600;
+    }
+    
+    .option-button.selected {
+        @apply bg-blue-800 border-blue-600 text-blue-200;
+    }
+    
+    .option-button.correct {
+        @apply bg-green-800 border-green-600 text-green-200;
+    }
+    
+    .option-button.incorrect {
+        @apply bg-red-800 border-red-600 text-red-200;
+    }
+    
+    .progress-bar {
+        @apply bg-gray-700;
+    }
+    
+    .episode-performance-item,
+    .activity-item {
+        @apply bg-gray-700 hover:bg-gray-600;
+    }
+}
+
+/* Animations */
+.fade-in {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Tooltips */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #1f2937;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 8px 12px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 12px;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Quiz Timer */
+.quiz-timer {
+    @apply bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium;
+    animation: timerPulse 1s infinite;
+}
+
+@keyframes timerPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Success Celebration */
+.celebration {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #f59e0b;
+    animation: confettiFall 3s linear infinite;
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}

@@ -1,0 +1,529 @@
+/* Dark Mode Color Fixes for SarvCast Admin Panel */
+
+/* Global Dark Mode Overrides */
+.dark .bg-white {
+    @apply bg-gray-800;
+}
+
+.dark .text-gray-900 {
+    @apply text-white;
+}
+
+.dark .text-gray-600 {
+    @apply text-gray-300;
+}
+
+.dark .text-gray-500 {
+    @apply text-gray-400;
+}
+
+.dark .text-gray-400 {
+    @apply text-gray-500;
+}
+
+.dark .border-gray-200 {
+    @apply border-gray-700;
+}
+
+.dark .border-gray-300 {
+    @apply border-gray-600;
+}
+
+.dark .bg-gray-50 {
+    @apply bg-gray-900;
+}
+
+.dark .bg-gray-100 {
+    @apply bg-gray-700;
+}
+
+.dark .hover\:bg-gray-50:hover {
+    @apply hover:bg-gray-700;
+}
+
+.dark .hover\:bg-gray-100:hover {
+    @apply hover:bg-gray-600;
+}
+
+/* Card and Container Fixes */
+.dark .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.dark .shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.dark .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* Form Elements */
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="search"],
+.dark textarea,
+.dark select {
+    @apply bg-gray-700 border-gray-600 text-white;
+}
+
+.dark input[type="text"]:focus,
+.dark input[type="email"]:focus,
+.dark input[type="password"]:focus,
+.dark input[type="search"]:focus,
+.dark textarea:focus,
+.dark select:focus {
+    @apply border-blue-500 ring-blue-500;
+}
+
+/* Checkbox and Radio */
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+    @apply border-gray-600 bg-gray-700;
+}
+
+.dark input[type="checkbox"]:checked,
+.dark input[type="radio"]:checked {
+    @apply bg-blue-600 border-blue-600;
+}
+
+/* Button Fixes */
+.dark .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white;
+}
+
+.dark .btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-700 text-white;
+}
+
+.dark .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white;
+}
+
+.dark .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white;
+}
+
+.dark .btn-warning {
+    @apply bg-yellow-600 hover:bg-yellow-700 text-white;
+}
+
+/* Status Badges */
+.dark .badge-success {
+    @apply bg-green-800 text-green-200;
+}
+
+.dark .badge-warning {
+    @apply bg-yellow-800 text-yellow-200;
+}
+
+.dark .badge-danger {
+    @apply bg-red-800 text-red-200;
+}
+
+.dark .badge-info {
+    @apply bg-blue-800 text-blue-200;
+}
+
+.dark .badge-secondary {
+    @apply bg-gray-600 text-gray-200;
+}
+
+/* Table Fixes */
+.dark table {
+    @apply border-gray-700;
+}
+
+.dark th {
+    @apply bg-gray-700 text-gray-300 border-gray-600;
+}
+
+.dark td {
+    @apply border-gray-700 text-gray-100;
+}
+
+.dark tr:hover {
+    @apply bg-gray-700;
+}
+
+/* Modal Fixes */
+.dark .modal-content {
+    @apply bg-gray-800 border-gray-700;
+}
+
+.dark .modal-header {
+    @apply border-gray-700;
+}
+
+.dark .modal-footer {
+    @apply border-gray-700;
+}
+
+/* Dropdown Fixes */
+.dark .dropdown-menu {
+    @apply bg-gray-800 border-gray-700;
+}
+
+.dark .dropdown-item {
+    @apply text-gray-300 hover:bg-gray-700;
+}
+
+.dark .dropdown-item:hover {
+    @apply text-white;
+}
+
+/* Navigation Fixes */
+.dark .nav-link {
+    @apply text-gray-300 hover:text-white;
+}
+
+.dark .nav-link.active {
+    @apply text-white bg-gray-700;
+}
+
+/* Breadcrumb Fixes */
+.dark .breadcrumb {
+    @apply text-gray-400;
+}
+
+.dark .breadcrumb a {
+    @apply text-gray-400 hover:text-gray-200;
+}
+
+.dark .breadcrumb .active {
+    @apply text-gray-200;
+}
+
+/* Pagination Fixes */
+.dark .pagination .page-link {
+    @apply bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white;
+}
+
+.dark .pagination .page-item.active .page-link {
+    @apply bg-blue-600 border-blue-600 text-white;
+}
+
+.dark .pagination .page-item.disabled .page-link {
+    @apply bg-gray-800 border-gray-600 text-gray-500;
+}
+
+/* Alert Fixes */
+.dark .alert-success {
+    @apply bg-green-900 border-green-700 text-green-200;
+}
+
+.dark .alert-warning {
+    @apply bg-yellow-900 border-yellow-700 text-yellow-200;
+}
+
+.dark .alert-danger {
+    @apply bg-red-900 border-red-700 text-red-200;
+}
+
+.dark .alert-info {
+    @apply bg-blue-900 border-blue-700 text-blue-200;
+}
+
+/* Progress Bar Fixes */
+.dark .progress {
+    @apply bg-gray-700;
+}
+
+.dark .progress-bar {
+    @apply bg-blue-600;
+}
+
+/* Tooltip Fixes */
+.dark .tooltip {
+    @apply bg-gray-800 text-gray-200;
+}
+
+/* Custom Scrollbar for Dark Mode */
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #6b7280;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Icon Background Fixes */
+.dark .bg-blue-100 {
+    @apply bg-blue-900;
+}
+
+.dark .bg-green-100 {
+    @apply bg-green-900;
+}
+
+.dark .bg-yellow-100 {
+    @apply bg-yellow-900;
+}
+
+.dark .bg-red-100 {
+    @apply bg-red-900;
+}
+
+.dark .bg-purple-100 {
+    @apply bg-purple-900;
+}
+
+.dark .bg-indigo-100 {
+    @apply bg-indigo-900;
+}
+
+.dark .bg-pink-100 {
+    @apply bg-pink-900;
+}
+
+.dark .bg-orange-100 {
+    @apply bg-orange-900;
+}
+
+/* Icon Color Fixes */
+.dark .text-blue-600 {
+    @apply text-blue-400;
+}
+
+.dark .text-green-600 {
+    @apply text-green-400;
+}
+
+.dark .text-yellow-600 {
+    @apply text-yellow-400;
+}
+
+.dark .text-red-600 {
+    @apply text-red-400;
+}
+
+.dark .text-purple-600 {
+    @apply text-purple-400;
+}
+
+.dark .text-indigo-600 {
+    @apply text-indigo-400;
+}
+
+.dark .text-pink-600 {
+    @apply text-pink-400;
+}
+
+.dark .text-orange-600 {
+    @apply text-orange-400;
+}
+
+/* Gradient Background Fixes */
+.dark .bg-gradient-to-r {
+    background-image: linear-gradient(to right, var(--tw-gradient-stops));
+}
+
+.dark .from-blue-50 {
+    --tw-gradient-from: #1e3a8a;
+    --tw-gradient-to: rgba(30, 58, 138, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .to-blue-100 {
+    --tw-gradient-to: #1e40af;
+}
+
+.dark .from-green-50 {
+    --tw-gradient-from: #14532d;
+    --tw-gradient-to: rgba(20, 83, 45, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .to-green-100 {
+    --tw-gradient-to: #166534;
+}
+
+.dark .from-purple-50 {
+    --tw-gradient-from: #581c87;
+    --tw-gradient-to: rgba(88, 28, 135, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .to-purple-100 {
+    --tw-gradient-to: #7c3aed;
+}
+
+.dark .from-yellow-50 {
+    --tw-gradient-from: #713f12;
+    --tw-gradient-to: rgba(113, 63, 18, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .to-yellow-100 {
+    --tw-gradient-to: #a16207;
+}
+
+.dark .from-red-50 {
+    --tw-gradient-from: #7f1d1d;
+    --tw-gradient-to: rgba(127, 29, 29, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .to-red-100 {
+    --tw-gradient-to: #dc2626;
+}
+
+/* Hover State Fixes */
+.dark .hover\:from-blue-50:hover {
+    --tw-gradient-from: #1e3a8a;
+    --tw-gradient-to: rgba(30, 58, 138, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .hover\:to-blue-100:hover {
+    --tw-gradient-to: #1e40af;
+}
+
+.dark .hover\:from-green-50:hover {
+    --tw-gradient-from: #14532d;
+    --tw-gradient-to: rgba(20, 83, 45, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .hover\:to-green-100:hover {
+    --tw-gradient-to: #166534;
+}
+
+.dark .hover\:from-purple-50:hover {
+    --tw-gradient-from: #581c87;
+    --tw-gradient-to: rgba(88, 28, 135, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .hover\:to-purple-100:hover {
+    --tw-gradient-to: #7c3aed;
+}
+
+.dark .hover\:from-yellow-50:hover {
+    --tw-gradient-from: #713f12;
+    --tw-gradient-to: rgba(113, 63, 18, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .hover\:to-yellow-100:hover {
+    --tw-gradient-to: #a16207;
+}
+
+.dark .hover\:from-red-50:hover {
+    --tw-gradient-from: #7f1d1d;
+    --tw-gradient-to: rgba(127, 29, 29, 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.dark .hover\:to-red-100:hover {
+    --tw-gradient-to: #dc2626;
+}
+
+/* Text Color Hover Fixes */
+.dark .hover\:text-blue-700:hover {
+    @apply hover:text-blue-300;
+}
+
+.dark .hover\:text-green-700:hover {
+    @apply hover:text-green-300;
+}
+
+.dark .hover\:text-purple-700:hover {
+    @apply hover:text-purple-300;
+}
+
+.dark .hover\:text-yellow-700:hover {
+    @apply hover:text-yellow-300;
+}
+
+.dark .hover\:text-red-700:hover {
+    @apply hover:text-red-300;
+}
+
+.dark .hover\:text-indigo-700:hover {
+    @apply hover:text-indigo-300;
+}
+
+.dark .hover\:text-pink-700:hover {
+    @apply hover:text-pink-300;
+}
+
+.dark .hover\:text-orange-700:hover {
+    @apply hover:text-orange-300;
+}
+
+/* Border Color Fixes */
+.dark .border-blue-500 {
+    @apply border-blue-400;
+}
+
+.dark .border-green-500 {
+    @apply border-green-400;
+}
+
+.dark .border-purple-500 {
+    @apply border-purple-400;
+}
+
+.dark .border-yellow-500 {
+    @apply border-yellow-400;
+}
+
+.dark .border-red-500 {
+    @apply border-red-400;
+}
+
+.dark .border-indigo-500 {
+    @apply border-indigo-400;
+}
+
+.dark .border-pink-500 {
+    @apply border-pink-400;
+}
+
+.dark .border-orange-500 {
+    @apply border-orange-400;
+}
+
+/* Focus Ring Fixes */
+.dark .focus\:ring-blue-500:focus {
+    @apply focus:ring-blue-400;
+}
+
+.dark .focus\:ring-green-500:focus {
+    @apply focus:ring-green-400;
+}
+
+.dark .focus\:ring-purple-500:focus {
+    @apply focus:ring-purple-400;
+}
+
+.dark .focus\:ring-yellow-500:focus {
+    @apply focus:ring-yellow-400;
+}
+
+.dark .focus\:ring-red-500:focus {
+    @apply focus:ring-red-400;
+}
+
+.dark .focus\:ring-indigo-500:focus {
+    @apply focus:ring-indigo-400;
+}
+
+.dark .focus\:ring-pink-500:focus {
+    @apply focus:ring-pink-400;
+}
+
+.dark .focus\:ring-orange-500:focus {
+    @apply focus:ring-orange-400;
+}
+
+/* Transition Fixes */
+.dark * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

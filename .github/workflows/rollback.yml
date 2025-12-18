@@ -1,0 +1,66 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_file:
+        description: 'Backup file path to restore from'
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup SSH Authentication
+        run: |
+          echo "🔑 Setting up SSH authentication..."
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} -p ${{ secrets.SSH_PORT || 22 }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod 644 ~/.ssh/known_hosts
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+      
+      - name: Upload Restore Script
+        run: |
+          APP_PATH="${{ secrets.APP_PATH || '/public_html/my' }}"
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
+            -o StrictHostKeyChecking=no \
+            -P ${{ secrets.SSH_PORT || 22 }} \
+            scripts/restore-database.sh \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:${APP_PATH}/scripts/restore-database.sh
+      
+      - name: Restore Database
+        run: |
+          APP_PATH="${{ secrets.APP_PATH || '/public_html/my' }}"
+          BACKUP_FILE="${{ github.event.inputs.backup_file }}"
+          
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -o PasswordAuthentication=yes \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} \
+            "cd ${APP_PATH} && \
+            chmod +x scripts/restore-database.sh && \
+            echo 'yes' | ./scripts/restore-database.sh ${BACKUP_FILE} && \
+            php artisan config:clear && \
+            php artisan cache:clear && \
+            php artisan optimize && \
+            echo '✅ Rollback completed successfully!'"
+      
+      - name: Notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
+          TELEGRAM_CHAT_ID: -1002796302613_97
+        run: |
+          MESSAGE="🔄 <b>Rollback Completed</b>\n\n📦 <b>Backup:</b> ${{ github.event.inputs.backup_file }}\n\n👤 <b>User:</b> ${{ github.actor }}"
+          curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
+            -d chat_id=${TELEGRAM_CHAT_ID} \
+            -d text="${MESSAGE}" \
+            -d parse_mode="HTML"
+

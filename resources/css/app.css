@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+/* IranSansWeb Font Face */
+@font-face {
+    font-family: 'IranSansWeb';
+    src: url('/assets/IranSans/IRANSansWeb.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IranSansWeb';
+    src: url('/assets/IranSans/IRANSansWeb_Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IranSansWeb';
+    src: url('/assets/IranSans/IRANSansWeb_Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IranSansWeb';
+    src: url('/assets/IranSans/IRANSansWeb_Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IranSansWeb';
+    src: url('/assets/IranSans/IRANSansWeb_Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IranSansWeb';
+    src: url('/assets/IranSans/IRANSansWeb_UltraLight.ttf') format('truetype');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@theme {
+    --font-sans: 'IranSansWeb', 'IRANSans', 'Tahoma', ui-sans-serif, system-ui, sans-serif;
+    --font-family: 'IranSansWeb', 'IRANSans', 'Tahoma', ui-sans-serif, system-ui, sans-serif;
+}

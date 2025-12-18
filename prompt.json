@@ -1,0 +1,46 @@
+{
+  "categories": [
+    {
+      "name": "adventure",
+      "prompt": "A vibrant, cartoon-style adventure scene with a young child explorer wearing a colorful backpack and hat, standing on a rainbow bridge over a magical forest with floating islands, bright blue sky with fluffy white clouds, cute animals peeking from behind trees, sparkles and stars floating around, soft pastel colors, children's book illustration style, no text, high quality, detailed"
+    },
+    {
+      "name": "educational",
+      "prompt": "A cheerful, colorful educational scene with floating numbers and letters in bright rainbow colors, a smiling child sitting at a colorful desk with books and pencils, friendly cartoon characters representing different subjects (math, science, reading), bright primary colors, soft lighting, children's learning environment, no text, high quality, detailed"
+    },
+    {
+      "name": "fantasy",
+      "prompt": "A magical fantasy world with a young wizard child wearing a sparkly robe and pointy hat, surrounded by floating magical creatures (unicorns, dragons, fairies), rainbow-colored castle in the background, glowing mushrooms, floating crystals, soft pastel colors with bright accents, dreamy atmosphere, children's fantasy illustration style, no text, high quality, detailed"
+    },
+    {
+      "name": "moral",
+      "prompt": "A heartwarming scene showing children helping each other, with a diverse group of kids holding hands in a circle, surrounded by hearts and flowers, bright cheerful colors, soft lighting, friendship and kindness theme, cartoon style, no text, high quality, detailed"
+    },
+    {
+      "name": "classic_tales",
+      "prompt": "A whimsical scene with classic storybook elements - a cozy cottage with a thatched roof, a winding path leading to a magical forest, friendly animals (bears, rabbits, foxes) in Victorian-style clothing, warm golden lighting, vintage children's book illustration style, soft watercolor colors, no text, high quality, detailed"
+    }
+  ],
+  "stories": [
+    {
+      "name": "magical_forest_adventure",
+      "prompt": "A magical forest scene with a young boy explorer wearing a green explorer hat and brown vest, standing in a glowing forest with bioluminescent plants, colorful butterflies, talking trees with friendly faces, rainbow-colored mushrooms, soft magical lighting, children's adventure book style, bright vibrant colors, no text, high quality, detailed"
+    },
+    {
+      "name": "prince_and_friendly_dragon",
+      "prompt": "A heartwarming scene of a young prince in royal blue clothing sitting next to a large, friendly dragon with soft scales in pastel colors, they're sharing a picnic under a flowering tree, castle towers visible in the background, warm golden lighting, children's friendship story style, soft colors, no text, high quality, detailed"
+    },
+    {
+      "name": "space_adventure",
+      "prompt": "A colorful space scene with a rocket ship piloted by a child astronaut, surrounded by colorful planets with different patterns, stars and nebulas in bright colors, friendly alien creatures waving, cosmic dust and sparkles, vibrant space colors, children's space adventure style, no text, high quality, detailed"
+    },
+    {
+      "name": "forest_animal_friendship",
+      "prompt": "A peaceful forest clearing with various cute animals (bears, rabbits, foxes, deer) sitting in a circle sharing food, surrounded by colorful flowers and trees, soft natural lighting, friendship theme, children's animal story style, warm earth tones with bright accents, no text, high quality, detailed"
+    },
+    {
+      "name": "colorful_numbers_learning",
+      "prompt": "A bright, cheerful learning scene with giant colorful numbers floating in the air, a child reaching up to touch them, educational toys scattered around, rainbow colors, friendly cartoon characters representing different numbers, soft classroom lighting, children's educational style, no text, high quality, detailed"
+    }
+  ]
+}
