@@ -1,0 +1,36 @@
+[18-Dec-2025 10:08:19 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:19 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:19 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/sarvca/public_html/my/vendor/composer/autoload_real.php:41
+Stack trace:
+#0 /home/sarvca/public_html/my/vendor/composer/autoload_real.php(45): {closure}()
+#1 /home/sarvca/public_html/my/vendor/autoload.php(22): ComposerAutoloaderInit1590e1f57e624174c3464e2a4f536f63::getLoader()
+#2 /home/sarvca/public_html/my/public/index.php(14): require('/home/sarvca/pu...')
+#3 {main}
+  thrown in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:19 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:19 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:19 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/sarvca/public_html/my/vendor/composer/autoload_real.php:41
+Stack trace:
+#0 /home/sarvca/public_html/my/vendor/composer/autoload_real.php(45): {closure}()
+#1 /home/sarvca/public_html/my/vendor/autoload.php(22): ComposerAutoloaderInit1590e1f57e624174c3464e2a4f536f63::getLoader()
+#2 /home/sarvca/public_html/my/public/index.php(14): require('/home/sarvca/pu...')
+#3 {main}
+  thrown in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:29 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:29 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:29 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/sarvca/public_html/my/vendor/composer/autoload_real.php:41
+Stack trace:
+#0 /home/sarvca/public_html/my/vendor/composer/autoload_real.php(45): {closure}()
+#1 /home/sarvca/public_html/my/vendor/autoload.php(22): ComposerAutoloaderInit1590e1f57e624174c3464e2a4f536f63::getLoader()
+#2 /home/sarvca/public_html/my/public/index.php(14): require('/home/sarvca/pu...')
+#3 {main}
+  thrown in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:39 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:39 Europe/London] PHP Warning:  require(/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php): Failed to open stream: No such file or directory in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41
+[18-Dec-2025 10:08:39 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/sarvca/public_html/my/vendor/composer/../myclabs/deep-copy/src/DeepCopy/deep_copy.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/sarvca/public_html/my/vendor/composer/autoload_real.php:41
+Stack trace:
+#0 /home/sarvca/public_html/my/vendor/composer/autoload_real.php(45): {closure}()
+#1 /home/sarvca/public_html/my/vendor/autoload.php(22): ComposerAutoloaderInit1590e1f57e624174c3464e2a4f536f63::getLoader()
+#2 /home/sarvca/public_html/my/public/index.php(14): require('/home/sarvca/pu...')
+#3 {main}
+  thrown in /home/sarvca/public_html/my/vendor/composer/autoload_real.php on line 41

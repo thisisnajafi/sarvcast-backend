@@ -1,0 +1,10 @@
+{
+    "backup_name": "post_deployment_20251211_082724",
+    "timestamp": "2025-12-11T08:25:51+00:00",
+    "database": "sarvca_st",
+    "host": "127.0.0.1",
+    "size": "72K",
+    "file": "post_deployment_20251211_082724.sql.gz",
+    "git_commit": "c92be8724e227a3bf94d323fac3509324c938fbc",
+    "git_branch": "main"
+}

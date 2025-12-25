@@ -1,0 +1,8 @@
+# Laravel .htaccess Configuration
+# This file provides comprehensive security, performance, and routing configuration
+
+# Enable URL rewriting and redirect all requests to public directory
+<IfModule mod_rewrite.c>
+   RewriteEngine On
+   RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
