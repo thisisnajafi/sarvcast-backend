@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Episode;
 use App\Models\PlayHistory;
+use App\Models\Story;
 use App\Services\AccessControlService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -608,5 +609,164 @@ class EpisodeController extends Controller
                 'message' => 'خطا در حذف قسمت: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get next episode with fallback logic:
+     * 1. Next episode in the same story
+     * 2. Next episode in the next story in the same category
+     * 3. Next episode in the next story in any other category
+     * 
+     * @param Request $request
+     * @param Episode $episode
+     * @return JsonResponse
+     */
+    public function getNextEpisode(Request $request, Episode $episode)
+    {
+        $user = $request->user();
+        
+        // Load story and category
+        $episode->load(['story.category']);
+        
+        if (!$episode->story) {
+            return $this->errorResponse('Story not found for this episode', 'STORY_NOT_FOUND', 404);
+        }
+
+        $currentStory = $episode->story;
+        $currentCategoryId = $currentStory->category_id;
+        $currentEpisodeNumber = $episode->episode_number;
+
+        // 1. Try to find next episode in the same story
+        $nextEpisode = Episode::where('story_id', $currentStory->id)
+            ->where('episode_number', '>', $currentEpisodeNumber)
+            ->published()
+            ->orderBy('episode_number', 'asc')
+            ->first();
+
+        if ($nextEpisode) {
+            // Check access if user is authenticated
+            if ($user) {
+                $accessInfo = $this->accessControlService->canAccessEpisode($user->id, $nextEpisode->id);
+                if ($accessInfo['has_access']) {
+                    return $this->successResponse($nextEpisode);
+                }
+            } else {
+                // For non-authenticated users, only return free episodes
+                if (!$nextEpisode->is_premium) {
+                    return $this->successResponse($nextEpisode);
+                }
+            }
+        }
+
+        // 2. Try to find next episode in the next story in the same category
+        $nextStory = Story::where('category_id', $currentCategoryId)
+            ->where('id', '>', $currentStory->id)
+            ->published()
+            ->orderBy('id', 'asc')
+            ->first();
+
+        if ($nextStory) {
+            $nextEpisode = Episode::where('story_id', $nextStory->id)
+                ->published()
+                ->orderBy('episode_number', 'asc')
+                ->first();
+
+            if ($nextEpisode) {
+                // Check access if user is authenticated
+                if ($user) {
+                    $accessInfo = $this->accessControlService->canAccessEpisode($user->id, $nextEpisode->id);
+                    if ($accessInfo['has_access']) {
+                        return $this->successResponse($nextEpisode);
+                    }
+                } else {
+                    // For non-authenticated users, only return free episodes
+                    if (!$nextEpisode->is_premium) {
+                        return $this->successResponse($nextEpisode);
+                    }
+                }
+            }
+        }
+
+        // 3. Try to find next episode in the next story in any other category
+        $nextStory = Story::where('category_id', '!=', $currentCategoryId)
+            ->where('id', '>', $currentStory->id)
+            ->published()
+            ->orderBy('id', 'asc')
+            ->first();
+
+        if ($nextStory) {
+            $nextEpisode = Episode::where('story_id', $nextStory->id)
+                ->published()
+                ->orderBy('episode_number', 'asc')
+                ->first();
+
+            if ($nextEpisode) {
+                // Check access if user is authenticated
+                if ($user) {
+                    $accessInfo = $this->accessControlService->canAccessEpisode($user->id, $nextEpisode->id);
+                    if ($accessInfo['has_access']) {
+                        return $this->successResponse($nextEpisode);
+                    }
+                } else {
+                    // For non-authenticated users, only return free episodes
+                    if (!$nextEpisode->is_premium) {
+                        return $this->successResponse($nextEpisode);
+                    }
+                }
+            }
+        }
+
+        // No next episode found
+        return $this->errorResponse('No next episode available', 'NO_NEXT_EPISODE', 404);
+    }
+
+    /**
+     * Get previous episode from play history (last episode listened to)
+     * 
+     * @param Request $request
+     * @param Episode $episode
+     * @return JsonResponse
+     */
+    public function getPreviousEpisode(Request $request, Episode $episode)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED', 401);
+        }
+
+        // Get the current episode's play history timestamp (if exists)
+        $currentEpisodeHistory = PlayHistory::where('user_id', $user->id)
+            ->where('episode_id', $episode->id)
+            ->latest('played_at')
+            ->first();
+
+        $beforeTimestamp = $currentEpisodeHistory 
+            ? $currentEpisodeHistory->played_at 
+            : now();
+
+        // Get the most recent play history entry before the current episode
+        $previousHistory = PlayHistory::where('user_id', $user->id)
+            ->where('episode_id', '!=', $episode->id)
+            ->where('played_at', '<', $beforeTimestamp)
+            ->with('episode')
+            ->latest('played_at')
+            ->first();
+
+        if ($previousHistory && $previousHistory->episode) {
+            $previousEpisode = $previousHistory->episode;
+            
+            // Check if episode is still published
+            if ($previousEpisode->status === 'published') {
+                // Check access
+                $accessInfo = $this->accessControlService->canAccessEpisode($user->id, $previousEpisode->id);
+                if ($accessInfo['has_access']) {
+                    return $this->successResponse($previousEpisode);
+                }
+            }
+        }
+
+        // No previous episode found
+        return $this->errorResponse('No previous episode available', 'NO_PREVIOUS_EPISODE', 404);
     }
 }

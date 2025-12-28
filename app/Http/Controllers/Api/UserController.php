@@ -180,18 +180,21 @@ class UserController extends Controller
     {
         $user = User::findOrFail($userId);
 
-        // Get stories as author/writer
+        // Get published stories as author/writer
         $storiesAsAuthor = Story::whereAuthor($userId)
+            ->published()
             ->with(['category', 'characters.voiceActor'])
             ->get();
 
-        // Get stories as narrator
+        // Get published stories as narrator
         $storiesAsNarrator = Story::whereNarrator($userId)
+            ->published()
             ->with(['category', 'author', 'characters.voiceActor'])
             ->get();
 
-        // Get stories as voice actor (through characters)
+        // Get published stories as voice actor (through characters)
         $storiesAsVoiceActor = Story::whereVoiceActor($userId)
+            ->published()
             ->with(['category', 'author', 'narrator', 'characters.voiceActor'])
             ->get();
 

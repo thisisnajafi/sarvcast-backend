@@ -233,6 +233,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('{episode}/play', [EpisodeController::class, 'play']);
         Route::post('{episode}/bookmark', [EpisodeController::class, 'bookmark']);
 
+        // Episode navigation (next/previous)
+        Route::get('{episode}/next', [EpisodeController::class, 'getNextEpisode']);
+        Route::get('{episode}/previous', [EpisodeController::class, 'getPreviousEpisode'])->middleware('auth:sanctum');
+
         // Episode play count (authenticated)
         Route::get('{episode}/play/history', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'userHistory']);
         Route::post('{episode}/play/completed', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'markCompleted']);
