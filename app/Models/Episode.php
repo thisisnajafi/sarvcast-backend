@@ -31,6 +31,7 @@ class Episode extends Model
         'use_image_timeline',
         'has_multiple_voice_actors',
         'voice_actor_count',
+        'script_file_url',
     ];
 
     /**
@@ -66,6 +67,7 @@ class Episode extends Model
             'use_image_timeline' => ['boolean'],
             'has_multiple_voice_actors' => ['boolean'],
             'voice_actor_count' => ['integer', 'min:0', 'max:20'],
+            'script_file_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 

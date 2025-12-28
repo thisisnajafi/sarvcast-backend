@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\UserProfile;
 use App\Models\Favorite;
 use App\Models\PlayHistory;
+use App\Models\Story;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -164,6 +166,60 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile deleted successfully'
+        ]);
+    }
+
+    /**
+     * Get all stories where a user has a role (author, narrator, or voice actor)
+     * 
+     * @param Request $request
+     * @param int $userId
+     * @return JsonResponse
+     */
+    public function getUserStories(Request $request, int $userId)
+    {
+        $user = User::findOrFail($userId);
+
+        // Get stories as author/writer
+        $storiesAsAuthor = Story::whereAuthor($userId)
+            ->with(['category', 'characters.voiceActor'])
+            ->get();
+
+        // Get stories as narrator
+        $storiesAsNarrator = Story::whereNarrator($userId)
+            ->with(['category', 'author', 'characters.voiceActor'])
+            ->get();
+
+        // Get stories as voice actor (through characters)
+        $storiesAsVoiceActor = Story::whereVoiceActor($userId)
+            ->with(['category', 'author', 'narrator', 'characters.voiceActor'])
+            ->get();
+
+        // Calculate statistics
+        $writerCount = $storiesAsAuthor->count();
+        $narratorCount = $storiesAsNarrator->count();
+        $voiceActorCount = $storiesAsVoiceActor->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'profile_image_url' => $user->profile_image_url,
+                    'bio' => $user->bio,
+                    'role' => $user->role,
+                ],
+                'statistics' => [
+                    'writer_count' => $writerCount,
+                    'narrator_count' => $narratorCount,
+                    'voice_actor_count' => $voiceActorCount,
+                ],
+                'stories_as_author' => $storiesAsAuthor,
+                'stories_as_narrator' => $storiesAsNarrator,
+                'stories_as_voice_actor' => $storiesAsVoiceActor,
+            ]
         ]);
     }
 }

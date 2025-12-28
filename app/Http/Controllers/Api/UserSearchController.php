@@ -15,6 +15,14 @@ class UserSearchController extends Controller
      */
     public function searchUsers(Request $request): JsonResponse
     {
+        // Log the incoming request
+        \Log::info('🔍 UserSearchController.searchUsers - Request received', [
+            'query' => $request->input('query'),
+            'limit' => $request->input('limit'),
+            'exclude_teachers' => $request->input('exclude_teachers'),
+            'all_params' => $request->all(),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'query' => 'required|string|min:2|max:100',
             'limit' => 'sometimes|integer|min:1|max:50',
@@ -22,6 +30,9 @@ class UserSearchController extends Controller
         ]);
 
         if ($validator->fails()) {
+            \Log::warning('❌ UserSearchController.searchUsers - Validation failed', [
+                'errors' => $validator->errors()->toArray(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'اطلاعات ورودی نامعتبر است',
@@ -40,11 +51,10 @@ class UserSearchController extends Controller
             $usersQuery->whereDoesntHave('teacherAccount');
         }
 
-        // Search by name, email, or phone
+        // Search by name, or phone
         $usersQuery->where(function ($q) use ($query) {
             $q->where('first_name', 'like', "%{$query}%")
               ->orWhere('last_name', 'like', "%{$query}%")
-              ->orWhere('email', 'like', "%{$query}%")
               ->orWhere('phone_number', 'like', "%{$query}%")
               ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
         });
@@ -56,7 +66,6 @@ class UserSearchController extends Controller
             'id',
             'first_name',
             'last_name',
-            'email',
             'phone_number',
             'profile_image_url',
             'created_at'
@@ -70,10 +79,14 @@ class UserSearchController extends Controller
         $formattedUsers = $users->map(function ($user) {
             return [
                 'id' => $user->id,
-                'name' => $user->first_name . ' ' . $user->last_name,
-                'email' => $user->email,
-                'phone' => $user->phone_number,
-                'avatar' => $user->profile_image_url,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'name' => $user->first_name . ' ' . $user->last_name, // Keep for backward compatibility
+                'phone_number' => $user->phone_number,
+                'phone' => $user->phone_number, // Keep for backward compatibility
+                'profile_image_url' => $user->profile_image_url,
+                'avatar' => $user->profile_image_url, // Keep for backward compatibility
+                'role' => $user->role ?? 'basic', // Include role field
                 'is_teacher' => $user->teacherAccount ? true : false,
                 'teacher_status' => $user->teacherAccount ? $user->teacherAccount->status : null,
                 'institution_name' => $user->teacherAccount ? $user->teacherAccount->institution_name : null,
@@ -81,14 +94,23 @@ class UserSearchController extends Controller
             ];
         });
 
-        return response()->json([
+        $response = [
             'success' => true,
             'data' => [
                 'users' => $formattedUsers,
                 'total' => $formattedUsers->count(),
                 'query' => $query,
             ],
+        ];
+
+        // Log the response
+        \Log::info('✅ UserSearchController.searchUsers - Response sent', [
+            'query' => $query,
+            'users_found' => $formattedUsers->count(),
+            'response' => $response,
         ]);
+
+        return response()->json($response);
     }
 
     /**
@@ -123,7 +145,6 @@ class UserSearchController extends Controller
         $userData = [
             'id' => $user->id,
             'name' => $user->first_name . ' ' . $user->last_name,
-            'email' => $user->email,
             'phone' => $user->phone,
             'avatar' => $user->avatar,
             'is_verified' => $user->is_verified,
@@ -187,7 +208,6 @@ class UserSearchController extends Controller
             $teachersQuery->where(function ($q) use ($query) {
                 $q->where('first_name', 'like', "%{$query}%")
                   ->orWhere('last_name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%")
                   ->orWhere('phone_number', 'like', "%{$query}%")
                   ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$query}%"]);
             });
@@ -195,8 +215,8 @@ class UserSearchController extends Controller
 
         $teachers = $teachersQuery->with(['teacherAccount' => function ($query) use ($institutionType, $teachingSubject) {
             $query->select([
-                'id', 'user_id', 'institution_name', 'institution_type', 
-                'teaching_subject', 'years_of_experience', 'discount_rate', 
+                'id', 'user_id', 'institution_name', 'institution_type',
+                'teaching_subject', 'years_of_experience', 'discount_rate',
                 'commission_rate', 'coupon_code', 'status', 'is_verified'
             ]);
 
@@ -208,17 +228,16 @@ class UserSearchController extends Controller
                 $query->where('teaching_subject', $teachingSubject);
             }
         }])
-        ->select(['id', 'first_name', 'last_name', 'email', 'phone_number', 'profile_image_url'])
+        ->select(['id', 'first_name', 'last_name', 'phone_number', 'profile_image_url'])
         ->limit($limit)
         ->get();
 
         $formattedTeachers = $teachers->map(function ($user) {
             $teacherAccount = $user->teacherAccount;
-            
+
             return [
                 'id' => $user->id,
                 'name' => $user->first_name . ' ' . $user->last_name,
-                'email' => $user->email,
                 'phone' => $user->phone_number,
                 'avatar' => $user->profile_image_url,
                 'teacher_account' => [

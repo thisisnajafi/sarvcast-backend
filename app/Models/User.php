@@ -17,6 +17,16 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasApiTokens, UserAnalytics, HasImageUrl;
 
     /**
+     * Role constants
+     */
+    const ROLE_SUPER_ADMIN = 'super_admin';
+    const ROLE_ADMIN = 'admin';
+    const ROLE_VOICE_ACTOR = 'voice_actor';
+    const ROLE_PARENT = 'parent';
+    const ROLE_CHILD = 'child';
+    const ROLE_BASIC = 'basic';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -27,6 +37,7 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'profile_image_url',
+        'bio',
         'role',
         'status',
         'requires_2fa',
@@ -305,11 +316,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Scope for admin users.
+     * Scope for super admin users.
+     */
+    public function scopeSuperAdmins($query)
+    {
+        return $query->where('role', self::ROLE_SUPER_ADMIN);
+    }
+
+    /**
+     * Scope for admin users (includes super admins).
      */
     public function scopeAdmins($query)
     {
-        return $query->where('role', 'admin');
+        return $query->whereIn('role', [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN]);
+    }
+
+    /**
+     * Scope for voice actor users.
+     */
+    public function scopeVoiceActors($query)
+    {
+        return $query->where('role', self::ROLE_VOICE_ACTOR);
     }
 
     /**
@@ -317,7 +344,7 @@ class User extends Authenticatable
      */
     public function scopeParents($query)
     {
-        return $query->where('role', 'parent');
+        return $query->where('role', self::ROLE_PARENT);
     }
 
     /**
@@ -325,7 +352,7 @@ class User extends Authenticatable
      */
     public function scopeChildren($query)
     {
-        return $query->where('role', 'child');
+        return $query->where('role', self::ROLE_CHILD);
     }
 
     /**
@@ -414,8 +441,17 @@ class User extends Authenticatable
         return $this->belongsToMany(Permission::class, 'user_permissions');
     }
 
+    /**
+     * Check if user has a specific role (checks both role field and role relationship)
+     */
     public function hasRole(string $role): bool
     {
+        // Check direct role field first
+        if ($this->role === $role) {
+            return true;
+        }
+        
+        // Check role relationship
         return $this->roles()->where('name', $role)->exists();
     }
 
@@ -435,8 +471,17 @@ class User extends Authenticatable
         return $hasRolePermission || $hasDirectPermission;
     }
 
+    /**
+     * Check if user has any of the given roles (checks both role field and role relationship)
+     */
     public function hasAnyRole(array $roles): bool
     {
+        // Check direct role field
+        if (in_array($this->role, $roles)) {
+            return true;
+        }
+        
+        // Check role relationship
         return $this->roles()->whereIn('name', $roles)->exists();
     }
 
@@ -462,14 +507,29 @@ class User extends Authenticatable
         $this->roles()->sync($roles);
     }
 
+    /**
+     * Check if user is super admin (checks both role field and role relationship)
+     */
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole('super_admin');
+        return $this->role === self::ROLE_SUPER_ADMIN || $this->hasRole('super_admin');
     }
 
+    /**
+     * Check if user is admin (includes super admin)
+     */
     public function isAdmin(): bool
     {
-        return $this->hasAnyRole(['super_admin', 'admin']) || in_array($this->role, ['admin', 'super_admin']);
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN]) 
+            || $this->hasAnyRole(['super_admin', 'admin']);
+    }
+
+    /**
+     * Check if user is voice actor
+     */
+    public function isVoiceActor(): bool
+    {
+        return $this->role === self::ROLE_VOICE_ACTOR || $this->hasRole('voice_actor');
     }
 
     /**
@@ -501,8 +561,8 @@ class User extends Authenticatable
                 $user->timezone = 'Asia/Tehran';
             }
             
-            // Enable 2FA for admin users
-            if (in_array($user->role, ['admin', 'super_admin'])) {
+            // Enable 2FA for admin and super admin users
+            if (in_array($user->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN])) {
                 $user->requires_2fa = true;
             }
         });
@@ -515,7 +575,7 @@ class User extends Authenticatable
         // Update 2FA requirement when role changes
         static::updating(function ($user) {
             if ($user->isDirty('role')) {
-                if (in_array($user->role, ['admin', 'super_admin'])) {
+                if (in_array($user->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN])) {
                     $user->requires_2fa = true;
                 } else {
                     $user->requires_2fa = false;

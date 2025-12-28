@@ -17,10 +17,20 @@ use App\Models\Rating;
 use App\Models\StoryRating;
 use App\Models\PlayHistory;
 use App\Models\User;
+use App\Models\Character;
 
 class Story extends Model
 {
     use HasFactory, HasImageUrl;
+
+    /**
+     * Workflow status constants
+     */
+    const WORKFLOW_WRITTEN = 'written';
+    const WORKFLOW_CHARACTERS_MADE = 'characters_made';
+    const WORKFLOW_RECORDED = 'recorded';
+    const WORKFLOW_TIMELINE_CREATED = 'timeline_created';
+    const WORKFLOW_PUBLISHED = 'published';
 
     /**
      * The attributes that are mass assignable.
@@ -77,6 +87,8 @@ class Story extends Model
         'trending_since',
         'analytics_data',
         'use_image_timeline',
+        'workflow_status',
+        'script_file_url',
     ];
 
     /**
@@ -93,8 +105,28 @@ class Story extends Model
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'director_id' => ['nullable', 'integer', 'exists:people,id'],
             'writer_id' => ['nullable', 'integer', 'exists:people,id'],
-            'author_id' => ['nullable', 'integer', 'exists:people,id'],
-            'narrator_id' => ['nullable', 'integer', 'exists:people,id'],
+            'author_id' => [
+                'nullable',
+                'integer',
+                'exists:users,id',
+            ],
+            'narrator_id' => [
+                'nullable',
+                'integer',
+                'exists:users,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $user = User::find($value);
+                        if ($user && !in_array($user->role, [
+                            User::ROLE_VOICE_ACTOR,
+                            User::ROLE_ADMIN,
+                            User::ROLE_SUPER_ADMIN
+                        ])) {
+                            $fail('راوی باید نقش صداپیشه، ادمین یا ادمین کل داشته باشد.');
+                        }
+                    }
+                },
+            ],
             'age_group' => ['required', 'string', 'max:20'],
             'language' => ['required', 'string', 'max:10'],
             'duration' => ['required', 'integer', 'min:1', 'max:10080'], // 1 minute to 1 week
@@ -112,6 +144,8 @@ class Story extends Model
             'content_warnings' => ['nullable', 'array'],
             'content_warnings.*' => ['string', 'max:100'],
             'use_image_timeline' => ['boolean'],
+            'workflow_status' => ['nullable', 'in:written,characters_made,recorded,timeline_created,published'],
+            'script_file_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -215,19 +249,35 @@ class Story extends Model
     }
 
     /**
-     * Get the author of the story.
+     * Get the author of the story (user).
      */
     public function author()
     {
-        return $this->belongsTo(Person::class, 'author_id');
+        return $this->belongsTo(User::class, 'author_id');
     }
 
     /**
-     * Get the narrator of the story.
+     * Get the narrator of the story (user).
      */
     public function narrator()
     {
-        return $this->belongsTo(Person::class, 'narrator_id');
+        return $this->belongsTo(User::class, 'narrator_id');
+    }
+
+    /**
+     * Get the characters for the story.
+     */
+    public function characters()
+    {
+        return $this->hasMany(Character::class);
+    }
+
+    /**
+     * Get the characters with their voice actors for the story.
+     */
+    public function charactersWithVoiceActors()
+    {
+        return $this->hasMany(Character::class)->with('voiceActor');
     }
 
     /**
@@ -329,14 +379,6 @@ class Story extends Model
     }
 
     /**
-     * Get the characters for the story.
-     */
-    public function characters()
-    {
-        return $this->hasMany(StoryCharacter::class);
-    }
-
-    /**
      * Get the scenes for the story.
      */
     public function scenes()
@@ -406,6 +448,141 @@ class Story extends Model
     public function scopeInCategory($query, $categoryId)
     {
         return $query->where('category_id', $categoryId);
+    }
+
+    /**
+     * Scope a query to get stories where a user is the author.
+     */
+    public function scopeWhereAuthor($query, $userId)
+    {
+        return $query->where('author_id', $userId);
+    }
+
+    /**
+     * Scope a query to get stories where a user is the narrator.
+     */
+    public function scopeWhereNarrator($query, $userId)
+    {
+        return $query->where('narrator_id', $userId);
+    }
+
+    /**
+     * Scope a query to get stories where a user is a voice actor (through characters).
+     */
+    public function scopeWhereVoiceActor($query, $userId)
+    {
+        return $query->whereHas('characters', function ($q) use ($userId) {
+            $q->where('voice_actor_id', $userId);
+        });
+    }
+
+    /**
+     * Get all stories where a user has a role (author, narrator, or voice actor).
+     */
+    public static function getStoriesByUserRole(int $userId)
+    {
+        return [
+            'as_author' => self::whereAuthor($userId)->get(),
+            'as_narrator' => self::whereNarrator($userId)->get(),
+            'as_voice_actor' => self::whereVoiceActor($userId)->get(),
+        ];
+    }
+
+    /**
+     * Scope a query to filter by workflow status.
+     */
+    public function scopeWorkflowStatus($query, $status)
+    {
+        return $query->where('workflow_status', $status);
+    }
+
+    /**
+     * Scope a query to only include written stories.
+     */
+    public function scopeWritten($query)
+    {
+        return $query->where('workflow_status', self::WORKFLOW_WRITTEN);
+    }
+
+    /**
+     * Scope a query to only include stories with characters made.
+     */
+    public function scopeCharactersMade($query)
+    {
+        return $query->where('workflow_status', self::WORKFLOW_CHARACTERS_MADE);
+    }
+
+    /**
+     * Scope a query to only include recorded stories.
+     */
+    public function scopeRecorded($query)
+    {
+        return $query->where('workflow_status', self::WORKFLOW_RECORDED);
+    }
+
+    /**
+     * Scope a query to only include stories with timeline created.
+     */
+    public function scopeTimelineCreated($query)
+    {
+        return $query->where('workflow_status', self::WORKFLOW_TIMELINE_CREATED);
+    }
+
+    /**
+     * Scope a query to only include published stories (workflow).
+     */
+    public function scopeWorkflowPublished($query)
+    {
+        return $query->where('workflow_status', self::WORKFLOW_PUBLISHED);
+    }
+
+    /**
+     * Transition workflow status to the next stage.
+     * 
+     * @param string $newStatus
+     * @return bool
+     */
+    public function transitionWorkflowStatus(string $newStatus): bool
+    {
+        $validTransitions = [
+            self::WORKFLOW_WRITTEN => [self::WORKFLOW_CHARACTERS_MADE],
+            self::WORKFLOW_CHARACTERS_MADE => [self::WORKFLOW_RECORDED],
+            self::WORKFLOW_RECORDED => [self::WORKFLOW_TIMELINE_CREATED],
+            self::WORKFLOW_TIMELINE_CREATED => [self::WORKFLOW_PUBLISHED],
+            self::WORKFLOW_PUBLISHED => [], // Published is final
+        ];
+
+        $currentStatus = $this->workflow_status ?? self::WORKFLOW_WRITTEN;
+
+        if (!in_array($newStatus, $validTransitions[$currentStatus] ?? [])) {
+            return false;
+        }
+
+        $this->workflow_status = $newStatus;
+        return $this->save();
+    }
+
+    /**
+     * Check if story is at a specific workflow stage.
+     */
+    public function isWorkflowStatus(string $status): bool
+    {
+        return $this->workflow_status === $status;
+    }
+
+    /**
+     * Get workflow status label in Persian.
+     */
+    public function getWorkflowStatusLabelAttribute(): string
+    {
+        return match($this->workflow_status) {
+            self::WORKFLOW_WRITTEN => 'نوشته شده',
+            self::WORKFLOW_CHARACTERS_MADE => 'شخصیت‌ها ساخته شده',
+            self::WORKFLOW_RECORDED => 'ضبط شده',
+            self::WORKFLOW_TIMELINE_CREATED => 'تایم‌لاین ایجاد شده',
+            self::WORKFLOW_PUBLISHED => 'منتشر شده',
+            default => 'نامشخص',
+        };
     }
 
     /**

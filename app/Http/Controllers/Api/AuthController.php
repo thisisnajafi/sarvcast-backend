@@ -8,6 +8,7 @@ use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -413,6 +414,90 @@ class AuthController extends Controller
                 'preferences' => $user->preferences,
             ]
         ]);
+    }
+
+    /**
+     * Upload profile photo
+     */
+    public function uploadProfilePhoto(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', // 2MB max
+        ], [
+            'photo.required' => 'تصویر پروفایل الزامی است',
+            'photo.image' => 'فایل باید یک تصویر باشد',
+            'photo.mimes' => 'فرمت تصویر باید یکی از موارد زیر باشد: jpeg, png, jpg, webp',
+            'photo.max' => 'حجم تصویر نمی‌تواند بیش از 2 مگابایت باشد',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اطلاعات وارد شده نامعتبر است',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $file = $request->file('photo');
+            $filename = time() . '_' . $user->id . '_profile.' . $file->getClientOriginalExtension();
+            
+            // Ensure directory exists
+            $directory = public_path('images/users/profiles');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            
+            // Delete old profile photo if exists
+            if ($user->profile_image_url && !filter_var($user->profile_image_url, FILTER_VALIDATE_URL)) {
+                $oldImagePath = public_path('images/' . $user->profile_image_url);
+                if (file_exists($oldImagePath)) {
+                    @unlink($oldImagePath);
+                }
+            }
+            
+            // Move image to public/images/users/profiles
+            $file->move($directory, $filename);
+            
+            // Store relative path
+            $imagePath = 'users/profiles/' . $filename;
+            $user->update(['profile_image_url' => $imagePath]);
+            
+            // Get full URL using HasImageUrl trait
+            $updatedUser = $user->fresh();
+            $url = $updatedUser->profile_image_url;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تصویر پروفایل با موفقیت آپلود شد.',
+                'data' => [
+                    'profile_image_url' => $url,
+                    'user' => [
+                        'id' => $updatedUser->id,
+                        'phone_number' => $updatedUser->phone_number,
+                        'first_name' => $updatedUser->first_name,
+                        'last_name' => $updatedUser->last_name,
+                        'role' => $updatedUser->role,
+                        'status' => $updatedUser->status,
+                        'profile_image_url' => $url,
+                        'timezone' => $updatedUser->timezone,
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Profile photo upload failed', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در آپلود تصویر پروفایل: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'premium.access' => \App\Http\Middleware\CheckPremiumAccess::class,
             'content.access' => \App\Http\Middleware\CheckContentAccess::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'role' => \App\Http\Middleware\CheckRole::class,
             '2fa' => \App\Http\Middleware\RequireTwoFactorAuth::class,
         ]);
     })

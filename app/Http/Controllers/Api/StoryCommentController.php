@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\StoryComment;
 use App\Models\Story;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -367,6 +368,47 @@ class StoryCommentController extends Controller
                     'message' => 'نمی‌توانید نظرات قدیمی‌تر از 2 ساعت را حذف کنید'
                 ], 403);
             }
+
+            // If this is a reply, decrement parent's replies count
+            if ($comment->parent_id) {
+                $parentComment = StoryComment::find($comment->parent_id);
+                if ($parentComment) {
+                    $parentComment->decrementRepliesCount();
+                }
+            }
+
+            $comment->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'نظر با موفقیت حذف شد'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در حذف نظر: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Admin delete comment (admins can delete any comment)
+     */
+    public function adminDeleteComment(Request $request, int $commentId): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            // Check if user is admin or super admin
+            if (!$user->isAdmin() && !$user->isSuperAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'دسترسی غیرمجاز. شما مجوز حذف نظرات را ندارید.'
+                ], 403);
+            }
+
+            $comment = StoryComment::findOrFail($commentId);
 
             // If this is a reply, decrement parent's replies count
             if ($comment->parent_id) {

@@ -29,6 +29,9 @@ use App\Http\Controllers\Api\SchoolController;
 use App\Http\Controllers\Api\CorporateController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\UserSearchController;
+use App\Http\Controllers\Api\AdminPanelController;
+use App\Http\Controllers\Api\CharacterController;
+use App\Http\Controllers\Api\VoiceActorPanelController;
 use App\Http\Controllers\Admin\PersonController;
 
 /*
@@ -118,6 +121,41 @@ Route::prefix('v1')->middleware('security')->group(function () {
         Route::post('search', [UserSearchController::class, 'searchUsers']);
         Route::get('details', [UserSearchController::class, 'getUserDetails']);
         Route::get('teachers/available', [UserSearchController::class, 'getAvailableTeachers']);
+        Route::get('{user}/stories', [UserController::class, 'getUserStories']);
+    });
+
+    // Admin Panel routes
+    Route::prefix('admin-panel')->middleware('role:admin,super_admin')->group(function () {
+        // Stats (super admin only)
+        Route::get('stats', [AdminPanelController::class, 'getStats'])->middleware('role:super_admin');
+
+        // Stories management (admin & super admin)
+        Route::get('stories', [AdminPanelController::class, 'getStories']);
+
+        // Episodes management (admin & super admin)
+        Route::get('episodes', [AdminPanelController::class, 'getEpisodes']);
+
+        // Users management (super admin only)
+        Route::prefix('users')->middleware('role:super_admin')->group(function () {
+            Route::get('/', [AdminPanelController::class, 'getUsers']);
+            Route::post('{user}/assign-voice-actor-role', [AdminPanelController::class, 'assignVoiceActorRole']);
+        });
+
+        // Voice actors search (admin & super admin)
+        Route::get('voice-actors/search', [CharacterController::class, 'searchVoiceActors']);
+    });
+
+    // Character management routes (admin & super admin)
+    Route::prefix('stories/{storyId}')->middleware('role:admin,super_admin')->group(function () {
+        Route::get('characters', [CharacterController::class, 'index']);
+        Route::post('characters', [CharacterController::class, 'store']);
+    });
+
+    Route::prefix('characters')->middleware('role:admin,super_admin')->group(function () {
+        Route::get('{character}', [CharacterController::class, 'show']);
+        Route::put('{character}', [CharacterController::class, 'update']);
+        Route::delete('{character}', [CharacterController::class, 'destroy']);
+        Route::post('{character}/assign-voice-actor', [CharacterController::class, 'assignVoiceActor']);
     });
 });
 
@@ -142,6 +180,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('profiles', [UserController::class, 'profiles']);
         Route::put('profiles/{profile}', [UserController::class, 'updateProfile']);
         Route::delete('profiles/{profile}', [UserController::class, 'deleteProfile']);
+        Route::post('profile/photo', [\App\Http\Controllers\Api\AuthController::class, 'uploadProfilePhoto']);
     });
 
     // Favorites routes (outside mobile group for easier access)
@@ -156,6 +195,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('/bulk', [\App\Http\Controllers\Api\FavoriteController::class, 'bulk']);
     });
 
+    // Voice Actor Panel routes (voice actor, admin & super admin)
+    Route::prefix('voice-actor-panel')->middleware('role:voice_actor,admin,super_admin')->group(function () {
+        Route::get('stories', [VoiceActorPanelController::class, 'getStories']);
+        Route::get('stories/{story}', [VoiceActorPanelController::class, 'getStoryDetails']);
+        Route::get('stories/{story}/episodes/{episode}/script', [VoiceActorPanelController::class, 'getEpisodeScript']);
+    });
+
     // Story routes
     Route::prefix('stories')->group(function () {
         Route::post('{story}/favorite', [StoryController::class, 'addFavorite']);
@@ -166,6 +212,20 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('{story}/ratings/my', [\App\Http\Controllers\Api\StoryRatingController::class, 'show']);
         Route::post('{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'store']);
         Route::delete('{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'destroy']);
+
+        // Story script retrieval (voice actor, admin, super admin)
+        Route::middleware('role:voice_actor,admin,super_admin')->group(function () {
+            Route::get('{story}/script', [StoryController::class, 'getScript']);
+        });
+
+        // Story management (admin & super admin)
+        Route::middleware('role:admin,super_admin')->group(function () {
+            Route::post('/', [StoryController::class, 'store']);
+            Route::post('{story}/assign-narrator', [StoryController::class, 'assignNarrator']);
+            Route::post('{story}/assign-author', [StoryController::class, 'assignAuthor']);
+            Route::put('{story}/workflow-status', [StoryController::class, 'updateWorkflowStatus']);
+            Route::post('{story}/upload-script', [StoryController::class, 'uploadScript']);
+        });
     });
 
     // Episode routes
@@ -177,6 +237,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('{episode}/play/history', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'userHistory']);
         Route::post('{episode}/play/completed', [\App\Http\Controllers\Api\EpisodePlayCountController::class, 'markCompleted']);
         Route::delete('{episode}/bookmark', [EpisodeController::class, 'removeBookmark']);
+
+        // Episode script retrieval (voice actor, admin, super admin)
+        Route::middleware('role:voice_actor,admin,super_admin')->group(function () {
+            Route::get('{episode}/script', [EpisodeController::class, 'getScript']);
+        });
+
+        // Episode management (admin & super admin)
+        Route::middleware('role:admin,super_admin')->group(function () {
+            Route::post('/', [EpisodeController::class, 'store']);
+            Route::put('{episode}', [EpisodeController::class, 'update']);
+            Route::delete('{episode}', [EpisodeController::class, 'destroy']);
+            Route::post('{episode}/upload-script', [EpisodeController::class, 'uploadScript']);
+        });
     });
 
     // Myket subscription routes (root level)
@@ -196,7 +269,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('debug/subscription', [SubscriptionController::class, 'debugSubscription']);
             Route::post('debug/subscription/{subscriptionId}/activate', [SubscriptionController::class, 'manuallyActivateSubscription']);
             Route::get('debug/zarinpal', [SubscriptionController::class, 'debugZarinPal']);
-            
+
             // CafeBazaar subscription routes (flavor-aware)
             Route::prefix('cafebazaar')->group(function () {
                 Route::post('verify', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'verifySubscription']);
@@ -218,12 +291,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('initiate', [PaymentController::class, 'initiate']);
         Route::post('verify', [PaymentController::class, 'verify']);
         Route::get('history', [PaymentController::class, 'history']);
-        
+
         // In-app purchase verification
         Route::post('cafebazaar/verify', [\App\Http\Controllers\Api\InAppPurchaseController::class, 'verifyCafeBazaarPurchase']);
         Route::post('myket/verify', [\App\Http\Controllers\Api\InAppPurchaseController::class, 'verifyMyketPurchase']);
     });
-    
+
     // Billing platform configuration
     Route::get('billing/platform-config', [\App\Http\Controllers\Api\InAppPurchaseController::class, 'getPlatformConfig']);
 
@@ -503,6 +576,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::delete('{commentId}', [StoryCommentController::class, 'deleteComment']);
         Route::post('{commentId}/like', [StoryCommentController::class, 'toggleLike']);
         Route::get('{commentId}/replies', [StoryCommentController::class, 'getReplies']);
+
+        // Admin delete comment (admins can delete any comment)
+        Route::middleware('role:admin,super_admin')->group(function () {
+            Route::delete('{commentId}/admin', [StoryCommentController::class, 'adminDeleteComment']);
+        });
     });
 
     // Coin System routes

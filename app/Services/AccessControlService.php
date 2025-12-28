@@ -23,6 +23,15 @@ class AccessControlService
                 return false;
             }
 
+            // Voice actors and admins have access to all premium content
+            if ($user->isVoiceActor() || $user->isAdmin() || $user->isSuperAdmin()) {
+                Log::info('hasPremiumAccess: User has role-based premium access', [
+                    'user_id' => $userId,
+                    'role' => $user->role
+                ]);
+                return true;
+            }
+
             // Preferred: use the same logic as User model's activeSubscription relationship
             $activeSubscription = $user->activeSubscription;
 
@@ -105,6 +114,16 @@ class AccessControlService
                 ];
             }
 
+            // Check if user has role-based access (voice_actor, admin, super_admin)
+            $user = User::find($userId);
+            if ($user && ($user->isVoiceActor() || $user->isAdmin() || $user->isSuperAdmin())) {
+                return [
+                    'has_access' => true,
+                    'reason' => 'role_based_access',
+                    'message' => 'دسترسی بر اساس نقش کاربری'
+                ];
+            }
+
             // Check if story is premium
             if (!$story->is_premium) {
                 return [
@@ -171,6 +190,16 @@ class AccessControlService
             }
 
             $story = $episode->story;
+
+            // Check if user has role-based access (voice_actor, admin, super_admin)
+            $user = User::find($userId);
+            if ($user && ($user->isVoiceActor() || $user->isAdmin() || $user->isSuperAdmin())) {
+                return [
+                    'has_access' => true,
+                    'reason' => 'role_based_access',
+                    'message' => 'دسترسی بر اساس نقش کاربری'
+                ];
+            }
 
             // Free episodes are accessible to everyone
             if (!$episode->is_premium) {
