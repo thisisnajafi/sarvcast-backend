@@ -52,8 +52,9 @@ class UserSearchController extends Controller
         }
 
         // Filter by roles if requested (for author search: super_admin, admin, voice_actor)
+        // If roles not provided, return all users (for super admin search)
         $roles = $request->input('roles');
-        if ($roles && is_array($roles)) {
+        if ($roles && is_array($roles) && count($roles) > 0) {
             $usersQuery->whereIn('role', $roles);
         }
 
