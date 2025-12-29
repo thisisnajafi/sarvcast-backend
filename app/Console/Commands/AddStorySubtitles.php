@@ -65,23 +65,32 @@ class AddStorySubtitles extends Command
             $this->warn('⚠️  DRY RUN MODE - No changes will be made');
         }
         
-        // Find stories without subtitles
-        $storiesWithoutSubtitle = Story::whereNull('subtitle')
-            ->orWhere('subtitle', '')
+        // Find stories without subtitles OR with English subtitles (need to replace)
+        $storiesWithoutSubtitle = Story::where(function($query) {
+            $query->whereNull('subtitle')
+                  ->orWhere('subtitle', '');
+        })->get();
+        
+        // Also find stories with English subtitles (contain Latin characters)
+        $storiesWithEnglishSubtitle = Story::whereNotNull('subtitle')
+            ->where('subtitle', '!=', '')
+            ->whereRaw('subtitle REGEXP "[a-zA-Z]"')
             ->get();
         
-        if ($storiesWithoutSubtitle->isEmpty()) {
-            $this->info('✅ All stories already have subtitles.');
+        $allStories = $storiesWithoutSubtitle->merge($storiesWithEnglishSubtitle);
+        
+        if ($allStories->isEmpty()) {
+            $this->info('✅ All stories already have Persian subtitles.');
             return 0;
         }
         
-        $this->info("📊 Found {$storiesWithoutSubtitle->count()} stories without subtitles");
+        $this->info("📊 Found {$allStories->count()} stories to update (missing or English subtitles)");
         
         $updated = 0;
         $skipped = 0;
         $errors = 0;
         
-        foreach ($storiesWithoutSubtitle as $story) {
+        foreach ($allStories as $story) {
             // Find markdown file for this story
             $mdFile = $this->findMarkdownFileForStory($story);
             
@@ -187,39 +196,50 @@ class AddStorySubtitles extends Command
     }
     
     /**
-     * Extract subtitle from markdown file or directory name
+     * Extract Persian subtitle from markdown file
      */
     protected function extractSubtitleFromMarkdown($filePath)
     {
         $content = file_get_contents($filePath);
         
-        // Method 1: Extract from title with parentheses (e.g., "# دوست تنها (Lonely Friend)")
-        if (preg_match('/^#\s+(.+)$/m', $content, $matches)) {
-            $title = trim($matches[1]);
-            // Extract English part in parentheses as subtitle
-            if (preg_match('/^(.+?)\s*\(([^)]+)\)\s*$/', $title, $titleMatch)) {
-                return trim($titleMatch[2]); // English part as subtitle
-            }
-        }
-        
-        // Method 2: Extract from second heading (e.g., "## Little Kitchen")
-        if (preg_match('/^##\s+(.+)$/m', $content, $matches)) {
-            $subtitle = trim($matches[1]);
-            // Check if it's English (contains Latin characters)
-            if (preg_match('/[a-zA-Z]/', $subtitle)) {
+        // Method 1: Extract from "پیام اصلی" (main message) - this is the best Persian subtitle
+        if (preg_match('/\*\*پیام اصلی\*\*:\s*(.+?)(?:\n|$)/', $content, $matches)) {
+            $message = trim($matches[1]);
+            // Use first sentence or first 100 characters as subtitle
+            if (preg_match('/^([^\.]+\.?)/', $message, $sentenceMatch)) {
+                $subtitle = trim($sentenceMatch[1]);
+                // Limit to 200 characters for subtitle field
+                if (mb_strlen($subtitle) > 200) {
+                    $subtitle = mb_substr($subtitle, 0, 197) . '...';
+                }
                 return $subtitle;
             }
+            // If no sentence break, use first 200 characters
+            if (mb_strlen($message) > 200) {
+                return mb_substr($message, 0, 197) . '...';
+            }
+            return $message;
         }
         
-        // Method 3: Try to extract from directory name (e.g., "27 - jealous toys")
+        // Method 2: Extract from episode directory name (e.g., "episode 1 - دوست تنها")
         $dir = dirname($filePath);
+        $episodeDirName = basename($dir);
+        
+        if (preg_match('/episode\s*\d+\s*-\s*(.+)/i', $episodeDirName, $matches)) {
+            $persianName = trim($matches[1]);
+            // Check if it contains Persian characters
+            if (preg_match('/[\x{0600}-\x{06FF}]/u', $persianName)) {
+                return $persianName;
+            }
+        }
+        
+        // Method 3: Extract from story directory name (e.g., "77 - lonely friend")
         $parentDir = dirname($dir);
         $dirName = basename($parentDir);
         
-        if (preg_match('/^\d+\s*-\s*(.+)$/', $dirName, $matches)) {
-            $englishName = trim($matches[1]);
-            // Convert to title case
-            return ucwords(str_replace(['-', '_'], ' ', $englishName));
+        // Try to find Persian text in directory name
+        if (preg_match('/[\x{0600}-\x{06FF}]+/u', $dirName, $persianMatches)) {
+            return $persianMatches[0];
         }
         
         return null;
