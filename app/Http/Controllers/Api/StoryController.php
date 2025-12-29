@@ -144,10 +144,22 @@ class StoryController extends Controller
      */
     public function episodes(Story $story, Request $request)
     {
-        $query = $story->episodes()->published();
+        $user = Auth::user();
+        $includeDraft = $request->boolean('include_draft', false);
+
+        // For admins/super admins, include all episodes (draft, pending, published, etc.)
+        // For regular users, only show published episodes (unless include_draft is explicitly requested)
+        if ($user && ($user->isAdmin() || $user->isSuperAdmin())) {
+            $query = $story->episodes();
+        } elseif ($includeDraft) {
+            // Allow including draft episodes if explicitly requested (for testing)
+            $query = $story->episodes();
+        } else {
+            $query = $story->episodes()->published();
+        }
 
         // Filter by premium status if user doesn't have active subscription
-        if (Auth::check() && !Auth::user()->hasActiveSubscription()) {
+        if ($user && !$user->hasActiveSubscription()) {
             $query->where('is_premium', false);
         }
 
@@ -534,10 +546,10 @@ class StoryController extends Controller
 
             // Set default language (all stories are in Persian)
             $validated['language'] = 'persian';
-            
+
             // Set default workflow status
             $validated['workflow_status'] = 'written';
-            
+
             // Ensure duration has a default value if not provided
             if (!isset($validated['duration']) || empty($validated['duration'])) {
                 $validated['duration'] = 0;
@@ -547,22 +559,22 @@ class StoryController extends Controller
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
                 $imageName = time() . '_' . Str::slug($request->title) . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                
+
                 // Ensure directory exists
                 $directory = public_path('images/stories');
                 if (!file_exists($directory)) {
                     mkdir($directory, 0755, true);
                 }
-                
+
                 $image->move($directory, $imageName);
                 $validated['image_url'] = 'stories/' . $imageName;
             }
-            
+
             // Handle cover image upload
             if ($request->hasFile('cover_image')) {
                 $coverImage = $request->file('cover_image');
                 $coverImageName = time() . '_cover_' . Str::slug($request->title) . '_' . uniqid() . '.' . $coverImage->getClientOriginalExtension();
-                
+
                 $coverImage->move($directory, $coverImageName);
                 $validated['cover_image_url'] = 'stories/' . $coverImageName;
             }
@@ -600,7 +612,7 @@ class StoryController extends Controller
         try {
             // Extract path from URL
             $path = str_replace('/storage/', '', parse_url($story->script_file_url, PHP_URL_PATH));
-            
+
             if (!Storage::disk('public')->exists($path)) {
                 return response()->json([
                     'success' => false,
