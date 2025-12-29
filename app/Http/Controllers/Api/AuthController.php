@@ -239,7 +239,7 @@ class AuthController extends Controller
 
         // Check if admin or super admin user exists
         $user = User::where('phone_number', $phoneNumber)
-                   ->whereIn('role', ['admin', 'super_admin'])
+                   ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
                    ->first();
 
         if (!$user) {
@@ -306,7 +306,7 @@ class AuthController extends Controller
 
         // Find admin or super admin user by phone number
         $user = User::where('phone_number', $phoneNumber)
-                   ->whereIn('role', ['admin', 'super_admin'])
+                   ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
                    ->first();
 
         if (!$user) {
