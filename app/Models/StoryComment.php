@@ -14,6 +14,7 @@ class StoryComment extends Model
         'user_id',
         'parent_id',
         'content',
+        'rating',
         'is_approved',
         'is_visible',
         'is_pinned',
@@ -25,6 +26,7 @@ class StoryComment extends Model
     ];
 
     protected $casts = [
+        'rating' => 'integer',
         'is_approved' => 'boolean',
         'is_visible' => 'boolean',
         'is_pinned' => 'boolean',
@@ -320,6 +322,7 @@ class StoryComment extends Model
         return [
             'id' => $this->id,
             'content' => $this->content,
+            'rating' => $this->rating,
             'is_approved' => $this->is_approved,
             'is_visible' => $this->is_visible,
             'is_pinned' => $this->is_pinned,

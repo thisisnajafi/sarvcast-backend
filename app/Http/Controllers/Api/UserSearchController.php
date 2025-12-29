@@ -51,6 +51,12 @@ class UserSearchController extends Controller
             $usersQuery->whereDoesntHave('teacherAccount');
         }
 
+        // Filter by roles if requested (for author search: super_admin, admin, voice_actor)
+        $roles = $request->input('roles');
+        if ($roles && is_array($roles)) {
+            $usersQuery->whereIn('role', $roles);
+        }
+
         // Search by name, or phone
         $usersQuery->where(function ($q) use ($query) {
             $q->where('first_name', 'like', "%{$query}%")

@@ -44,7 +44,8 @@ class AdminPanelController extends Controller
      */
     public function getStories(Request $request): JsonResponse
     {
-        $query = Story::with(['category', 'author', 'narrator', 'characters.voiceActor']);
+        $query = Story::with(['category', 'author', 'narrator', 'characters.voiceActor'])
+            ->withCount('comments');
 
         // Apply filters
         if ($request->filled('status')) {
@@ -233,6 +234,64 @@ class AdminPanelController extends Controller
             'message' => 'نقش صداپیشه با موفقیت به کاربر اختصاص داده شد.',
             'data' => [
                 'user' => $user->fresh()
+            ]
+        ]);
+    }
+
+    /**
+     * Demote user role
+     * Super admin can demote admins and voice actors
+     * Admins can demote voice actors
+     */
+    public function demoteUserRole(Request $request, int $userId): JsonResponse
+    {
+        $request->validate([
+            'target_role' => 'required|string|in:parent,basic',
+        ]);
+
+        $currentUser = $request->user();
+        $targetUser = User::findOrFail($userId);
+
+        // Check permissions
+        if ($currentUser->role === User::ROLE_SUPER_ADMIN) {
+            // Super admin can demote admins and voice actors
+            if (!in_array($targetUser->role, [User::ROLE_ADMIN, User::ROLE_VOICE_ACTOR])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فقط می‌توانید نقش مدیر یا صداپیشه را کاهش دهید.'
+                ], 403);
+            }
+        } elseif ($currentUser->role === User::ROLE_ADMIN) {
+            // Admin can only demote voice actors
+            if ($targetUser->role !== User::ROLE_VOICE_ACTOR) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فقط می‌توانید نقش صداپیشه را کاهش دهید.'
+                ], 403);
+            }
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'شما دسترسی به این عملیات را ندارید.'
+            ], 403);
+        }
+
+        // Prevent demoting yourself
+        if ($targetUser->id === $currentUser->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نمی‌توانید نقش خود را کاهش دهید.'
+            ], 400);
+        }
+
+        // Demote to target role
+        $targetUser->update(['role' => $request->input('target_role')]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'نقش کاربر با موفقیت کاهش یافت.',
+            'data' => [
+                'user' => $targetUser->fresh()
             ]
         ]);
     }

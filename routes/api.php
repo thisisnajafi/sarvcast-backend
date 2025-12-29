@@ -142,6 +142,11 @@ Route::prefix('v1')->middleware('security')->group(function () {
             Route::post('{user}/assign-voice-actor-role', [AdminPanelController::class, 'assignVoiceActorRole']);
         });
 
+        // User role management (admin & super admin)
+        Route::prefix('users')->middleware('role:admin,super_admin')->group(function () {
+            Route::post('{user}/demote-role', [AdminPanelController::class, 'demoteUserRole']);
+        });
+
         // Voice actors search (admin & super admin)
         Route::get('voice-actors/search', [CharacterController::class, 'searchVoiceActors']);
     });

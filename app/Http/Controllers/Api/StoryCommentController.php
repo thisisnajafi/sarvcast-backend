@@ -106,16 +106,27 @@ class StoryCommentController extends Controller
     public function addComment(Request $request, int $storyId): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'content' => 'required|string|min:1|max:1000',
+            'content' => 'nullable|string|max:1000',
             'parent_id' => 'nullable|integer|exists:story_comments,id',
+            'rating' => 'nullable|integer|min:1|max:5',
             'metadata' => 'nullable|array'
         ], [
-            'content.required' => 'متن نظر الزامی است',
             'content.string' => 'متن نظر باید رشته باشد',
-            'content.min' => 'متن نظر نمی‌تواند خالی باشد',
             'content.max' => 'متن نظر نمی‌تواند بیشتر از 1000 کاراکتر باشد',
-            'parent_id.exists' => 'نظر والد یافت نشد'
+            'parent_id.exists' => 'نظر والد یافت نشد',
+            'rating.integer' => 'امتیاز باید عدد باشد',
+            'rating.min' => 'امتیاز نمی‌تواند کمتر از 1 باشد',
+            'rating.max' => 'امتیاز نمی‌تواند بیشتر از 5 باشد'
         ]);
+
+        // Content or rating must be provided
+        if (empty($request->get('content')) && empty($request->get('rating'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حداقل یکی از فیلدهای نظر یا امتیاز باید پر شود',
+                'errors' => ['content' => ['متن نظر یا امتیاز الزامی است']]
+            ], 422);
+        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -159,15 +170,39 @@ class StoryCommentController extends Controller
                 }
             }
 
+            // Rating can only be set on top-level comments (not replies)
+            $rating = null;
+            if (!$parentId && $request->has('rating') && $request->get('rating') !== null) {
+                $rating = $request->get('rating');
+            }
+
             $comment = StoryComment::create([
                 'story_id' => $storyId,
                 'user_id' => $user->id,
                 'parent_id' => $parentId,
-                'content' => $request->get('content'),
+                'content' => $request->get('content', ''),
+                'rating' => $rating,
                 'is_approved' => true, // Auto-approve for now
                 'is_visible' => true,
                 'metadata' => $request->get('metadata', [])
             ]);
+
+            // If rating is provided, create/update StoryRating
+            if ($rating !== null) {
+                $storyRating = \App\Models\StoryRating::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'story_id' => $storyId,
+                    ],
+                    [
+                        'rating' => $rating,
+                        'review' => $request->get('content'),
+                    ]
+                );
+
+                // Update story's average rating
+                $this->updateStoryRatingStats($story);
+            }
 
             // If this is a reply, increment parent's replies count
             if ($parentId) {
@@ -490,5 +525,19 @@ class StoryCommentController extends Controller
                 'message' => 'خطا در دریافت پاسخ‌ها: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Update story rating statistics
+     */
+    private function updateStoryRatingStats(Story $story): void
+    {
+        $totalRatings = \App\Models\StoryRating::where('story_id', $story->id)->count();
+        $averageRating = \App\Models\StoryRating::where('story_id', $story->id)->avg('rating') ?? 0;
+
+        $story->update([
+            'total_ratings' => $totalRatings,
+            'avg_rating' => round($averageRating, 2)
+        ]);
     }
 }
