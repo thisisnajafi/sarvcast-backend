@@ -212,6 +212,13 @@ class EpisodeController extends Controller
         // Update episode play count
         $episode->increment('play_count');
 
+        // Update story play count (sum of all episode play counts)
+        $story = $episode->story;
+        if ($story) {
+            $totalPlayCount = $story->episodes()->sum('play_count');
+            $story->update(['play_count' => $totalPlayCount]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Episode play recorded',

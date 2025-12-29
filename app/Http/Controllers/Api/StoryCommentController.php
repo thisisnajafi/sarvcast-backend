@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class StoryCommentController extends Controller
 {
@@ -17,12 +18,17 @@ class StoryCommentController extends Controller
      */
     public function getComments(Request $request, int $storyId): JsonResponse
     {
+        Log::info('Getting comments for story', [
+            'story_id' => $storyId,
+            'request_data' => $request->all(),
+            'user_id' => $request->user()?->id,
+        ]);
+
         $validator = Validator::make($request->all(), [
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
             'include_pending' => 'nullable|boolean',
             'sort_by' => 'nullable|in:latest,oldest,most_liked',
-            'include_replies' => 'nullable|boolean'
         ], [
             'page.integer' => 'شماره صفحه باید عدد باشد',
             'page.min' => 'شماره صفحه باید حداقل 1 باشد',
@@ -33,6 +39,10 @@ class StoryCommentController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::warning('Comment validation failed', [
+                'story_id' => $storyId,
+                'errors' => $validator->errors()->toArray(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'داده‌های ورودی نامعتبر',
@@ -44,10 +54,20 @@ class StoryCommentController extends Controller
             $story = Story::findOrFail($storyId);
             $page = $request->get('page', 1);
             $perPage = $request->get('per_page', 20);
-            $includePending = $request->get('include_pending', false);
+            $includePending = $request->boolean('include_pending', false);
             $sortBy = $request->get('sort_by', 'latest');
-            $includeReplies = $request->get('include_replies', true);
+            // Always include replies in the response (removed from query params)
+            $includeReplies = true;
             $userId = $request->user()?->id;
+
+            Log::info('Story found, querying comments', [
+                'story_id' => $storyId,
+                'page' => $page,
+                'per_page' => $perPage,
+                'sort_by' => $sortBy,
+                'include_pending' => $includePending,
+                'include_replies' => $includeReplies,
+            ]);
 
             $query = $story->comments()
                 ->with(['user', 'replies.user'])
@@ -76,6 +96,12 @@ class StoryCommentController extends Controller
                 return $comment->toApiResponse($userId);
             });
 
+            Log::info('Comments retrieved successfully', [
+                'story_id' => $storyId,
+                'comments_count' => $comments->count(),
+                'total_comments' => $comments->total(),
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'نظرات داستان دریافت شد',
@@ -93,6 +119,13 @@ class StoryCommentController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Error getting comments', [
+                'story_id' => $storyId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در دریافت نظرات: ' . $e->getMessage()
@@ -105,6 +138,13 @@ class StoryCommentController extends Controller
      */
     public function addComment(Request $request, int $storyId): JsonResponse
     {
+        Log::info('Adding comment to story', [
+            'story_id' => $storyId,
+            'request_data' => $request->all(),
+            'request_headers' => $request->headers->all(),
+            'user_id' => $request->user()?->id,
+        ]);
+
         $validator = Validator::make($request->all(), [
             'content' => 'nullable|string|max:1000',
             'parent_id' => 'nullable|integer|exists:story_comments,id',
@@ -121,6 +161,10 @@ class StoryCommentController extends Controller
 
         // Content or rating must be provided
         if (empty($request->get('content')) && empty($request->get('rating'))) {
+            Log::warning('Comment submission failed: content and rating both empty', [
+                'story_id' => $storyId,
+                'request_data' => $request->all(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'حداقل یکی از فیلدهای نظر یا امتیاز باید پر شود',
@@ -129,6 +173,11 @@ class StoryCommentController extends Controller
         }
 
         if ($validator->fails()) {
+            Log::warning('Comment validation failed', [
+                'story_id' => $storyId,
+                'errors' => $validator->errors()->toArray(),
+                'request_data' => $request->all(),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'داده‌های ورودی نامعتبر',
@@ -137,8 +186,30 @@ class StoryCommentController extends Controller
         }
 
         try {
+            Log::info('Validating story and user', [
+                'story_id' => $storyId,
+                'user_id' => $request->user()?->id,
+            ]);
+
             $story = Story::findOrFail($storyId);
             $user = $request->user();
+
+            if (!$user) {
+                Log::error('User not authenticated', [
+                    'story_id' => $storyId,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'کاربر احراز هویت نشده است'
+                ], 401);
+            }
+
+            Log::info('Story and user validated', [
+                'story_id' => $storyId,
+                'story_title' => $story->title,
+                'user_id' => $user->id,
+                'user_name' => $user->first_name . ' ' . $user->last_name,
+            ]);
 
             // Check if user has already commented on this story recently (rate limiting)
             $recentComment = StoryComment::where('story_id', $storyId)
@@ -147,6 +218,11 @@ class StoryCommentController extends Controller
                 ->first();
 
             if ($recentComment) {
+                Log::info('Rate limit hit for user comment', [
+                    'story_id' => $storyId,
+                    'user_id' => $user->id,
+                    'recent_comment_id' => $recentComment->id,
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'شما نمی‌توانید در کمتر از 2 دقیقه نظر جدیدی ارسال کنید'
@@ -155,6 +231,16 @@ class StoryCommentController extends Controller
 
             // If this is a reply, validate parent comment
             $parentId = $request->get('parent_id');
+            Log::info('Processing comment data', [
+                'story_id' => $storyId,
+                'user_id' => $user->id,
+                'parent_id' => $parentId,
+                'has_content' => !empty($request->get('content')),
+                'content_length' => strlen($request->get('content', '')),
+                'has_rating' => $request->has('rating'),
+                'rating_value' => $request->get('rating'),
+            ]);
+
             if ($parentId) {
                 $parentComment = StoryComment::where('id', $parentId)
                     ->where('story_id', $storyId)
@@ -163,53 +249,147 @@ class StoryCommentController extends Controller
                     ->first();
 
                 if (!$parentComment) {
+                    Log::warning('Parent comment not found or not approved', [
+                        'story_id' => $storyId,
+                        'parent_id' => $parentId,
+                        'user_id' => $user->id,
+                    ]);
                     return response()->json([
                         'success' => false,
                         'message' => 'نظر والد یافت نشد یا تایید نشده است'
                     ], 404);
                 }
+                Log::info('Parent comment validated', [
+                    'parent_id' => $parentId,
+                    'parent_comment_id' => $parentComment->id,
+                ]);
             }
 
             // Rating can only be set on top-level comments (not replies)
             $rating = null;
             if (!$parentId && $request->has('rating') && $request->get('rating') !== null) {
-                $rating = $request->get('rating');
+                $rating = (int) $request->get('rating');
+                Log::info('Rating provided for top-level comment', [
+                    'rating' => $rating,
+                    'rating_type' => gettype($rating),
+                ]);
             }
 
-            $comment = StoryComment::create([
+            $content = $request->get('content', '');
+            // Ensure content is a string, even if empty
+            if ($content === null) {
+                $content = '';
+            }
+
+            Log::info('Creating comment', [
                 'story_id' => $storyId,
                 'user_id' => $user->id,
                 'parent_id' => $parentId,
-                'content' => $request->get('content', ''),
+                'content_length' => strlen($content),
+                'content_preview' => substr($content, 0, 50),
                 'rating' => $rating,
+                'metadata' => $request->get('metadata', []),
+            ]);
+
+            $commentData = [
+                'story_id' => $storyId,
+                'user_id' => $user->id,
+                'parent_id' => $parentId,
+                'content' => $content,
                 'is_approved' => true, // Auto-approve for now
                 'is_visible' => true,
                 'metadata' => $request->get('metadata', [])
+            ];
+
+            // Only add rating if it's not null
+            if ($rating !== null) {
+                $commentData['rating'] = $rating;
+            }
+
+            Log::info('Comment data prepared', [
+                'comment_data' => $commentData,
+            ]);
+
+            $comment = StoryComment::create($commentData);
+
+            Log::info('Comment created successfully', [
+                'comment_id' => $comment->id,
+                'story_id' => $storyId,
+                'user_id' => $user->id,
             ]);
 
             // If rating is provided, create/update StoryRating
             if ($rating !== null) {
-                $storyRating = \App\Models\StoryRating::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'story_id' => $storyId,
-                    ],
-                    [
-                        'rating' => $rating,
-                        'review' => $request->get('content'),
-                    ]
-                );
+                Log::info('Creating/updating story rating', [
+                    'story_id' => $storyId,
+                    'user_id' => $user->id,
+                    'rating' => $rating,
+                ]);
 
-                // Update story's average rating
-                $this->updateStoryRatingStats($story);
+                try {
+                    $storyRating = \App\Models\StoryRating::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'story_id' => $storyId,
+                        ],
+                        [
+                            'rating' => (float) $rating, // Convert to float for decimal column
+                            'review' => $content,
+                        ]
+                    );
+
+                    Log::info('Story rating created/updated', [
+                        'story_rating_id' => $storyRating->id,
+                        'story_id' => $storyId,
+                        'user_id' => $user->id,
+                    ]);
+
+                    // Update story's average rating
+                    $this->updateStoryRatingStats($story);
+
+                    Log::info('Story rating stats updated', [
+                        'story_id' => $storyId,
+                    ]);
+                } catch (\Exception $ratingError) {
+                    Log::error('Error creating/updating story rating', [
+                        'story_id' => $storyId,
+                        'user_id' => $user->id,
+                        'rating' => $rating,
+                        'error' => $ratingError->getMessage(),
+                        'trace' => $ratingError->getTraceAsString(),
+                    ]);
+                    // Don't fail the comment creation if rating fails
+                }
             }
 
             // If this is a reply, increment parent's replies count
             if ($parentId) {
-                $parentComment->incrementRepliesCount();
+                try {
+                    $parentComment->incrementRepliesCount();
+                    Log::info('Parent comment replies count incremented', [
+                        'parent_id' => $parentId,
+                    ]);
+                } catch (\Exception $replyError) {
+                    Log::error('Error incrementing parent replies count', [
+                        'parent_id' => $parentId,
+                        'error' => $replyError->getMessage(),
+                    ]);
+                    // Don't fail the comment creation if increment fails
+                }
             }
 
+            Log::info('Loading comment relationships', [
+                'comment_id' => $comment->id,
+            ]);
+
             $comment->load(['user', 'parent']);
+
+            Log::info('Comment submission successful', [
+                'comment_id' => $comment->id,
+                'story_id' => $storyId,
+                'user_id' => $user->id,
+                'is_reply' => $parentId !== null,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -220,6 +400,16 @@ class StoryCommentController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
+            Log::error('Error adding comment', [
+                'story_id' => $storyId,
+                'user_id' => $request->user()?->id,
+                'request_data' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'exception_class' => get_class($e),
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در ارسال نظر: ' . $e->getMessage()
@@ -532,12 +722,39 @@ class StoryCommentController extends Controller
      */
     private function updateStoryRatingStats(Story $story): void
     {
-        $totalRatings = \App\Models\StoryRating::where('story_id', $story->id)->count();
-        $averageRating = \App\Models\StoryRating::where('story_id', $story->id)->avg('rating') ?? 0;
+        try {
+            Log::info('Updating story rating stats', [
+                'story_id' => $story->id,
+            ]);
 
-        $story->update([
-            'total_ratings' => $totalRatings,
-            'avg_rating' => round($averageRating, 2)
-        ]);
+            $totalRatings = \App\Models\StoryRating::where('story_id', $story->id)->count();
+            $averageRating = \App\Models\StoryRating::where('story_id', $story->id)->avg('rating') ?? 0;
+
+            Log::info('Story rating stats calculated', [
+                'story_id' => $story->id,
+                'total_ratings' => $totalRatings,
+                'average_rating' => $averageRating,
+            ]);
+
+            $story->update([
+                'total_ratings' => $totalRatings,
+                'avg_rating' => round($averageRating, 2)
+            ]);
+
+            Log::info('Story rating stats updated successfully', [
+                'story_id' => $story->id,
+                'total_ratings' => $totalRatings,
+                'avg_rating' => round($averageRating, 2),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating story rating stats', [
+                'story_id' => $story->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            throw $e;
+        }
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\SmsService;
+use App\Events\NewUserRegistrationEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -128,6 +129,9 @@ class AuthController extends Controller
             'status' => 'active',
             'phone_verified_at' => now(),
         ]);
+
+        // Dispatch new user registration event for Telegram notification
+        event(new NewUserRegistrationEvent($user));
 
         $token = $user->createToken('auth-token')->plainTextToken;
 

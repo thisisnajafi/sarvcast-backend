@@ -45,7 +45,8 @@ class AdminPanelController extends Controller
     public function getStories(Request $request): JsonResponse
     {
         $query = Story::with(['category', 'author', 'narrator', 'characters.voiceActor'])
-            ->withCount('comments');
+            ->withCount('comments')
+            ->withSum('episodes', 'play_count');
 
         // Apply filters
         if ($request->filled('status')) {

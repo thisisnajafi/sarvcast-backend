@@ -29,6 +29,14 @@ class StoryController extends Controller
         foreach ($stories as $story) {
             // Duration is already in seconds in database, no conversion needed
             // The API response should match the Flutter documentation format
+
+            // Use calculated play_count from episodes_sum_play_count if available
+            if (isset($story->episodes_sum_play_count)) {
+                $story->play_count = (int) $story->episodes_sum_play_count;
+            } else {
+                // Recalculate if not using withSum
+                $story->play_count = $story->episodes()->sum('play_count') ?? $story->play_count ?? 0;
+            }
         }
         return $stories;
     }
@@ -38,6 +46,7 @@ class StoryController extends Controller
     public function index(Request $request)
     {
         $query = Story::with(['category', 'director', 'narrator'])
+            ->withSum('episodes', 'play_count')
             ->published();
 
         // Apply filters
@@ -68,7 +77,7 @@ class StoryController extends Controller
                 $query->oldest();
                 break;
             case 'popular':
-                $query->orderBy('play_count', 'desc');
+                $query->orderBy('episodes_sum_play_count', 'desc');
                 break;
             case 'rating':
                 $query->orderBy('rating', 'desc');
@@ -94,6 +103,9 @@ class StoryController extends Controller
     public function show(Request $request, Story $story)
     {
         $user = $request->user();
+
+        // Recalculate play_count from episodes
+        $story->recalculatePlayCount();
 
         // For admins, super admins, and voice actors, load all episodes (including draft)
         // For regular users, only load published episodes
@@ -241,6 +253,7 @@ class StoryController extends Controller
         $limit = $request->get('limit', 10);
 
         $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+            ->withSum('episodes', 'play_count')
             ->published()
             ->where('is_featured', true)
             ->orderBy('featured_order', 'asc')
@@ -263,6 +276,7 @@ class StoryController extends Controller
         $period = $request->get('period', 'all'); // daily, weekly, monthly, all
 
         $query = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+            ->withSum('episodes', 'play_count')
             ->published();
 
         // Apply time period filter
@@ -276,7 +290,7 @@ class StoryController extends Controller
             $query->where('created_at', '>=', now()->subDays($days));
         }
 
-        $stories = $query->orderBy('play_count', 'desc')
+        $stories = $query->orderBy('episodes_sum_play_count', 'desc')
             ->orderBy('rating', 'desc')
             ->limit($limit)
             ->get();
@@ -296,6 +310,7 @@ class StoryController extends Controller
         $limit = $request->get('limit', 10);
 
         $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+            ->withSum('episodes', 'play_count')
             ->published()
             ->latest()
             ->limit($limit)
@@ -319,13 +334,15 @@ class StoryController extends Controller
         if (!$user) {
             // Return popular stories for non-authenticated users
             $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+                ->withSum('episodes', 'play_count')
                 ->published()
-                ->orderBy('play_count', 'desc')
+                ->orderBy('episodes_sum_play_count', 'desc')
                 ->limit($limit)
                 ->get();
         } else {
             // Get personalized recommendations based on user preferences
             $stories = Story::with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+                ->withSum('episodes', 'play_count')
                 ->published()
                 ->whereNotIn('id', function($query) use ($user) {
                     $query->select('story_id')

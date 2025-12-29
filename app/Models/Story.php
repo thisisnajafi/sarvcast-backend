@@ -926,6 +926,15 @@ class Story extends Model
     }
 
     /**
+     * Recalculate and update play count from episodes
+     */
+    public function recalculatePlayCount(): void
+    {
+        $totalPlayCount = $this->episodes()->sum('play_count') ?? 0;
+        $this->update(['play_count' => $totalPlayCount]);
+    }
+
+    /**
      * Get the image URL for the story
      */
     public function getImageUrlAttribute()
