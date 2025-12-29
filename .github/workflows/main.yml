@@ -76,6 +76,12 @@ jobs:
       - name: Directory Permissions
         run: chmod -R 777 storage bootstrap/cache
 
+      - name: Link Storage
+        run: |
+          echo "🔗 Creating storage symbolic link..."
+          php artisan storage:link || echo "⚠️ Storage link may already exist"
+          echo "✅ Storage link created successfully"
+
       - name: Create Public Images Directories
         run: |
           echo "📁 Creating public images directories..."
