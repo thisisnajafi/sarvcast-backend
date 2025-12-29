@@ -93,10 +93,19 @@ class StoryController extends Controller
      */
     public function show(Request $request, Story $story)
     {
-        $story->load(['category', 'director', 'writer', 'author', 'narrator', 'episodes', 'people', 'characters.voiceActor']);
+        $user = $request->user();
+
+        // For admins, super admins, and voice actors, load all episodes (including draft)
+        // For regular users, only load published episodes
+        if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
+            $story->load(['category', 'director', 'writer', 'author', 'narrator', 'episodes', 'people', 'characters.voiceActor']);
+        } else {
+            $story->load(['category', 'director', 'writer', 'author', 'narrator', 'episodes' => function($query) {
+                $query->published();
+            }, 'people', 'characters.voiceActor']);
+        }
 
         // Check access control
-        $user = $request->user();
         $accessInfo = $this->accessControlService->canAccessStory($user ? $user->id : 0, $story->id);
 
         // Check if user has favorited this story
@@ -117,12 +126,20 @@ class StoryController extends Controller
         }
 
         // Filter episodes based on access
+        // For admins and voice actors, show all episodes (including draft)
+        // For regular users, only show accessible published episodes
         $accessibleEpisodes = [];
-        if ($accessInfo['has_access']) {
+        if ($accessInfo['has_access'] || ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor()))) {
             foreach ($story->episodes as $episode) {
-                $episodeAccess = $this->accessControlService->canAccessEpisode($user ? $user->id : 0, $episode->id);
-                if ($episodeAccess['has_access']) {
+                // Admins and voice actors can see all episodes
+                if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
                     $accessibleEpisodes[] = $episode;
+                } else {
+                    // Regular users need access check
+                    $episodeAccess = $this->accessControlService->canAccessEpisode($user ? $user->id : 0, $episode->id);
+                    if ($episodeAccess['has_access']) {
+                        $accessibleEpisodes[] = $episode;
+                    }
                 }
             }
         }
@@ -147,9 +164,9 @@ class StoryController extends Controller
         $user = Auth::user();
         $includeDraft = $request->boolean('include_draft', false);
 
-        // For admins/super admins, include all episodes (draft, pending, published, etc.)
+        // For admins, super admins, and voice actors, include all episodes (draft, pending, published, etc.)
         // For regular users, only show published episodes (unless include_draft is explicitly requested)
-        if ($user && ($user->isAdmin() || $user->isSuperAdmin())) {
+        if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
             $query = $story->episodes();
         } elseif ($includeDraft) {
             // Allow including draft episodes if explicitly requested (for testing)
