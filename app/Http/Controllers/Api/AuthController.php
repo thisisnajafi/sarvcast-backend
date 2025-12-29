@@ -219,13 +219,12 @@ class AuthController extends Controller
     }
 
     /**
-     * Admin login with phone number and password
+     * Send OTP code to admin phone number (API)
      */
-    public function adminLogin(Request $request)
+    public function sendAdminOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
-            'password' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -237,18 +236,17 @@ class AuthController extends Controller
         }
 
         $phoneNumber = $request->phone_number;
-        $password = $request->password;
 
-        // Find admin user by phone number
+        // Check if admin user exists
         $user = User::where('phone_number', $phoneNumber)
                    ->where('role', 'admin')
                    ->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (!$user) {
             return response()->json([
                 'success' => false,
-                'message' => 'شماره تلفن یا رمز عبور اشتباه است'
-            ], 401);
+                'message' => 'شماره تلفن مدیر یافت نشد'
+            ], 404);
         }
 
         if ($user->status !== 'active') {
@@ -256,6 +254,83 @@ class AuthController extends Controller
                 'success' => false,
                 'message' => 'حساب کاربری شما غیرفعال است'
             ], 403);
+        }
+
+        // Check rate limiting
+        if ($this->smsService->hasTooManyAttempts($phoneNumber, 'admin_login')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً کمی صبر کنید.'
+            ], 429);
+        }
+
+        // Send OTP code
+        $result = $this->smsService->sendOtp($phoneNumber, 'admin_login');
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'کد تایید به شماره شما ارسال شد',
+                'data' => [
+                    'expires_in' => 300, // 5 minutes
+                ]
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ارسال کد تایید. لطفاً مجدداً تلاش کنید.'
+            ], 400);
+        }
+    }
+
+    /**
+     * Admin login with phone number and OTP verification (API)
+     */
+    public function adminLogin(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
+            'verification_code' => 'required|string|size:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اطلاعات وارد شده نامعتبر است',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $phoneNumber = $request->phone_number;
+        $verificationCode = $request->verification_code;
+
+        // Find admin user by phone number
+        $user = User::where('phone_number', $phoneNumber)
+                   ->where('role', 'admin')
+                   ->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شماره تلفن مدیر یافت نشد'
+            ], 404);
+        }
+
+        if ($user->status !== 'active') {
+            return response()->json([
+                'success' => false,
+                'message' => 'حساب کاربری شما غیرفعال است'
+            ], 403);
+        }
+
+        // Verify OTP code
+        $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'admin_login');
+        
+        if (!$verification) {
+            return response()->json([
+                'success' => false,
+                'message' => 'کد تایید نامعتبر یا منقضی شده است'
+            ], 400);
         }
 
         // Update last login

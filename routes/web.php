@@ -57,6 +57,7 @@ Route::get('/audio/episodes/{path}', [AudioController::class, 'serve'])
 // Admin Authentication Routes
 Route::prefix('admin/auth')->name('admin.auth.')->group(function () {
     Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('send-otp', [AdminAuthController::class, 'sendOtp'])->name('send-otp');
     Route::post('login', [AdminAuthController::class, 'login'])->name('login.post');
     Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
 });

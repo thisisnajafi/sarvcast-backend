@@ -57,7 +57,8 @@ Route::prefix('v1')->middleware('security')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
 
-        // Admin authentication (phone + password)
+        // Admin authentication (OTP-based)
+        Route::post('admin/send-otp', [AuthController::class, 'sendAdminOtp']);
         Route::post('admin/login', [AuthController::class, 'adminLogin']);
     });
 

@@ -19,7 +19,7 @@ class UserController extends Controller
     public function favorites(Request $request)
     {
         $user = Auth::user();
-        
+
         $favorites = $user->favorites()
             ->with(['story', 'episode'])
             ->latest()
@@ -45,7 +45,7 @@ class UserController extends Controller
     public function history(Request $request)
     {
         $user = Auth::user();
-        
+
         $history = $user->playHistories()
             ->with(['episode.story'])
             ->latest('played_at')
@@ -79,7 +79,7 @@ class UserController extends Controller
         ]);
 
         $user = Auth::user();
-        
+
         if (!$user->isParent()) {
             return response()->json([
                 'success' => false,
@@ -120,7 +120,7 @@ class UserController extends Controller
     public function updateProfile(Request $request, UserProfile $profile)
     {
         $user = Auth::user();
-        
+
         if ($profile->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
@@ -153,7 +153,7 @@ class UserController extends Controller
     public function deleteProfile(UserProfile $profile)
     {
         $user = Auth::user();
-        
+
         if ($profile->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
@@ -171,7 +171,7 @@ class UserController extends Controller
 
     /**
      * Get all stories where a user has a role (author, narrator, or voice actor)
-     * 
+     *
      * @param Request $request
      * @param int $userId
      * @return JsonResponse
