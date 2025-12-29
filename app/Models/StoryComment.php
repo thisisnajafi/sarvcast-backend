@@ -335,7 +335,7 @@ class StoryComment extends Model
             'time_since_created' => $this->time_since_created,
             'user' => [
                 'id' => $this->user->id,
-                'name' => $this->user->name,
+                'name' => trim(($this->user->first_name ?? '') . ' ' . ($this->user->last_name ?? '')) ?: null,
                 'avatar' => $this->user->avatar ?? null
             ],
             'approved_at' => $this->approved_at?->toISOString(),

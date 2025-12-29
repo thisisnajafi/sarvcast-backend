@@ -949,4 +949,94 @@ class Story extends Model
     {
         return $this->getImageUrlFromPath($this->attributes['cover_image_url'] ?? null);
     }
+
+    /**
+     * Get author_user attribute (alias for author relationship)
+     * This is used for API compatibility with Flutter app
+     */
+    public function getAuthorUserAttribute()
+    {
+        if (!$this->relationLoaded('author')) {
+            $this->load('author');
+        }
+        
+        if (!$this->author) {
+            return null;
+        }
+
+        return [
+            'id' => $this->author->id,
+            'first_name' => $this->author->first_name,
+            'last_name' => $this->author->last_name,
+            'name' => $this->author->name ?? trim(($this->author->first_name ?? '') . ' ' . ($this->author->last_name ?? '')),
+            'profile_image_url' => $this->author->profile_image_url,
+            'role' => $this->author->role,
+        ];
+    }
+
+    /**
+     * Get narrator_user attribute (alias for narrator relationship)
+     * This is used for API compatibility with Flutter app
+     */
+    public function getNarratorUserAttribute()
+    {
+        if (!$this->relationLoaded('narrator')) {
+            $this->load('narrator');
+        }
+        
+        if (!$this->narrator) {
+            return null;
+        }
+
+        return [
+            'id' => $this->narrator->id,
+            'first_name' => $this->narrator->first_name,
+            'last_name' => $this->narrator->last_name,
+            'name' => $this->narrator->name ?? trim(($this->narrator->first_name ?? '') . ' ' . ($this->narrator->last_name ?? '')),
+            'profile_image_url' => $this->narrator->profile_image_url,
+            'role' => $this->narrator->role,
+        ];
+    }
+
+    /**
+     * Convert the model instance to an array with author_user and narrator_user
+     */
+    public function toArray()
+    {
+        $array = parent::toArray();
+        
+        // Add author_user if author relationship is loaded and exists
+        if ($this->relationLoaded('author')) {
+            if ($this->author) {
+                $array['author_user'] = [
+                    'id' => $this->author->id,
+                    'first_name' => $this->author->first_name,
+                    'last_name' => $this->author->last_name,
+                    'name' => trim(($this->author->first_name ?? '') . ' ' . ($this->author->last_name ?? '')),
+                    'profile_image_url' => $this->author->profile_image_url,
+                    'role' => $this->author->role,
+                ];
+            } else {
+                $array['author_user'] = null;
+            }
+        }
+        
+        // Add narrator_user if narrator relationship is loaded and exists
+        if ($this->relationLoaded('narrator')) {
+            if ($this->narrator) {
+                $array['narrator_user'] = [
+                    'id' => $this->narrator->id,
+                    'first_name' => $this->narrator->first_name,
+                    'last_name' => $this->narrator->last_name,
+                    'name' => trim(($this->narrator->first_name ?? '') . ' ' . ($this->narrator->last_name ?? '')),
+                    'profile_image_url' => $this->narrator->profile_image_url,
+                    'role' => $this->narrator->role,
+                ];
+            } else {
+                $array['narrator_user'] = null;
+            }
+        }
+        
+        return $array;
+    }
 }
