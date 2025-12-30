@@ -116,7 +116,12 @@ class StorySearchController extends Controller
             'response' => $response,
         ]);
 
-        return response()->json($response);
+        $jsonResponse = response()->json($response);
+        // Disable caching for search results - they need to be retrieved immediately
+        $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $jsonResponse->headers->set('Pragma', 'no-cache');
+        $jsonResponse->headers->set('Expires', '0');
+        return $jsonResponse;
     }
 }
 

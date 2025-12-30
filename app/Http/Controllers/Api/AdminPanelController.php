@@ -15,7 +15,7 @@ class AdminPanelController extends Controller
 {
     /**
      * Get dashboard statistics (super admin only)
-     * 
+     *
      * @return JsonResponse
      */
     public function getStats(): JsonResponse
@@ -38,7 +38,7 @@ class AdminPanelController extends Controller
 
     /**
      * Get all stories with pagination and filters (admin & super admin)
-     * 
+     *
      * @param Request $request
      * @return JsonResponse
      */
@@ -103,7 +103,7 @@ class AdminPanelController extends Controller
 
     /**
      * Get all episodes with pagination and filters (admin & super admin)
-     * 
+     *
      * @param Request $request
      * @return JsonResponse
      */
@@ -161,7 +161,7 @@ class AdminPanelController extends Controller
 
     /**
      * Get all users with pagination and filters (super admin only)
-     * 
+     *
      * @param Request $request
      * @return JsonResponse
      */
@@ -202,15 +202,20 @@ class AdminPanelController extends Controller
         $perPage = min($request->get('per_page', 20), 100); // Max 100 per page
         $users = $query->paginate($perPage);
 
-        return response()->json([
+        $jsonResponse = response()->json([
             'success' => true,
             'data' => $users
         ]);
+        // Disable caching for user lists - role assignments can change
+        $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $jsonResponse->headers->set('Pragma', 'no-cache');
+        $jsonResponse->headers->set('Expires', '0');
+        return $jsonResponse;
     }
 
     /**
      * Assign voice_actor role to a user (super admin only)
-     * 
+     *
      * @param Request $request
      * @param int $userId
      * @return JsonResponse
@@ -230,13 +235,18 @@ class AdminPanelController extends Controller
         // Assign voice_actor role
         $user->update(['role' => User::ROLE_VOICE_ACTOR]);
 
-        return response()->json([
+        $jsonResponse = response()->json([
             'success' => true,
             'message' => 'نقش صداپیشه با موفقیت به کاربر اختصاص داده شد.',
             'data' => [
                 'user' => $user->fresh()
             ]
         ]);
+        // Disable caching for role assignments - they need to be retrieved immediately
+        $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $jsonResponse->headers->set('Pragma', 'no-cache');
+        $jsonResponse->headers->set('Expires', '0');
+        return $jsonResponse;
     }
 
     /**
@@ -288,12 +298,17 @@ class AdminPanelController extends Controller
         // Demote to target role
         $targetUser->update(['role' => $request->input('target_role')]);
 
-        return response()->json([
+        $jsonResponse = response()->json([
             'success' => true,
             'message' => 'نقش کاربر با موفقیت کاهش یافت.',
             'data' => [
                 'user' => $targetUser->fresh()
             ]
         ]);
+        // Disable caching for role assignments - they need to be retrieved immediately
+        $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $jsonResponse->headers->set('Pragma', 'no-cache');
+        $jsonResponse->headers->set('Expires', '0');
+        return $jsonResponse;
     }
 }

@@ -284,9 +284,14 @@ class CharacterController extends Controller
             ->limit(20)
             ->get();
 
-        return response()->json([
+        $jsonResponse = response()->json([
             'success' => true,
             'data' => $voiceActors
         ]);
+        // Disable caching for search results - they need to be retrieved immediately
+        $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $jsonResponse->headers->set('Pragma', 'no-cache');
+        $jsonResponse->headers->set('Expires', '0');
+        return $jsonResponse;
     }
 }

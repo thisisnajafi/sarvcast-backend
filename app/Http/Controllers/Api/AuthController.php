@@ -41,7 +41,7 @@ class AuthController extends Controller
         }
 
         $phoneNumber = $request->phone_number;
-        
+
         // Check rate limiting
         if ($this->smsService->hasTooManyAttempts($phoneNumber, 'login')) {
             return response()->json([
@@ -102,7 +102,7 @@ class AuthController extends Controller
 
         // Verify SMS code
         $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'login');
-        
+
         if (!$verification) {
             return response()->json([
                 'success' => false,
@@ -175,7 +175,7 @@ class AuthController extends Controller
 
         // Verify SMS code
         $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'login');
-        
+
         if (!$verification) {
             return response()->json([
                 'success' => false,
@@ -329,7 +329,7 @@ class AuthController extends Controller
 
         // Verify OTP code
         $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'admin_login');
-        
+
         if (!$verification) {
             return response()->json([
                 'success' => false,
@@ -381,14 +381,14 @@ class AuthController extends Controller
 
         // Get premium information with enhanced debugging
         $activeSubscription = $user->activeSubscription;
-        
+
         // Enhanced premium detection with fallback
         $isPremium = false;
         $subscriptionStatus = 'none';
         $subscriptionType = null;
         $subscriptionEndDate = null;
         $daysRemaining = 0;
-        
+
         if ($activeSubscription) {
             $isPremium = true;
             $subscriptionStatus = 'active';
@@ -401,14 +401,14 @@ class AuthController extends Controller
                 ->where('status', 'active')
                 ->where('end_date', '>', now())
                 ->first();
-                
+
             if ($manualActiveSubscription) {
                 $isPremium = true;
                 $subscriptionStatus = 'active';
                 $subscriptionType = $manualActiveSubscription->type;
                 $subscriptionEndDate = $manualActiveSubscription->end_date;
                 $daysRemaining = max(0, now()->diffInDays($manualActiveSubscription->end_date, false));
-                
+
                 // Log the issue for debugging
                 \Log::warning('Premium detection fallback used', [
                     'user_id' => $user->id,
@@ -417,7 +417,7 @@ class AuthController extends Controller
                 ]);
             }
         }
-        
+
         $premiumInfo = [
             'is_premium' => $isPremium,
             'subscription_status' => $subscriptionStatus,
@@ -426,7 +426,7 @@ class AuthController extends Controller
             'days_remaining' => $daysRemaining,
         ];
 
-        return response()->json([
+        $jsonResponse = response()->json([
             'success' => true,
             'data' => [
                 'id' => $user->id,
@@ -445,6 +445,11 @@ class AuthController extends Controller
                 'premium' => $premiumInfo,
             ]
         ]);
+        // Disable caching for user profile - it needs to be retrieved immediately
+        $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $jsonResponse->headers->set('Pragma', 'no-cache');
+        $jsonResponse->headers->set('Expires', '0');
+        return $jsonResponse;
     }
 
     /**
@@ -478,7 +483,7 @@ class AuthController extends Controller
             'preferences'
         ]));
 
-        return response()->json([
+        $jsonResponse = response()->json([
             'success' => true,
             'message' => 'پروفایل با موفقیت به‌روزرسانی شد',
             'data' => [
@@ -493,6 +498,11 @@ class AuthController extends Controller
                 'preferences' => $user->preferences,
             ]
         ]);
+        // Disable caching for profile updates - they need to be retrieved immediately
+        $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $jsonResponse->headers->set('Pragma', 'no-cache');
+        $jsonResponse->headers->set('Expires', '0');
+        return $jsonResponse;
     }
 
     /**
@@ -522,13 +532,13 @@ class AuthController extends Controller
         try {
             $file = $request->file('photo');
             $filename = time() . '_' . $user->id . '_profile.' . $file->getClientOriginalExtension();
-            
+
             // Ensure directory exists
             $directory = public_path('images/users/profiles');
             if (!file_exists($directory)) {
                 mkdir($directory, 0755, true);
             }
-            
+
             // Delete old profile photo if exists
             if ($user->profile_image_url && !filter_var($user->profile_image_url, FILTER_VALIDATE_URL)) {
                 $oldImagePath = public_path('images/' . $user->profile_image_url);
@@ -536,19 +546,19 @@ class AuthController extends Controller
                     @unlink($oldImagePath);
                 }
             }
-            
+
             // Move image to public/images/users/profiles
             $file->move($directory, $filename);
-            
+
             // Store relative path
             $imagePath = 'users/profiles/' . $filename;
             $user->update(['profile_image_url' => $imagePath]);
-            
+
             // Get full URL using HasImageUrl trait
             $updatedUser = $user->fresh();
             $url = $updatedUser->profile_image_url;
 
-            return response()->json([
+            $jsonResponse = response()->json([
                 'success' => true,
                 'message' => 'تصویر پروفایل با موفقیت آپلود شد.',
                 'data' => [
@@ -565,6 +575,11 @@ class AuthController extends Controller
                     ]
                 ]
             ]);
+            // Disable caching for profile photo uploads - they need to be retrieved immediately
+            $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+            $jsonResponse->headers->set('Pragma', 'no-cache');
+            $jsonResponse->headers->set('Expires', '0');
+            return $jsonResponse;
 
         } catch (\Exception $e) {
             \Log::error('Profile photo upload failed', [
@@ -630,27 +645,27 @@ class AuthController extends Controller
     public function debugPremium(Request $request)
     {
         $user = $request->user();
-        
+
         // Get all subscriptions for debugging
         $allSubscriptions = \App\Models\Subscription::where('user_id', $user->id)->get();
-        
+
         // Test activeSubscription relationship
         $activeSubscription = $user->activeSubscription;
-        
+
         // Test hasActiveSubscription method
         $hasActiveSubscription = $user->hasActiveSubscription();
-        
+
         // Manual query for active subscriptions
         $manualActiveSubscriptions = \App\Models\Subscription::where('user_id', $user->id)
             ->where('status', 'active')
             ->where('end_date', '>', now())
             ->get();
-            
+
         // Test AccessControlService
         $accessControlService = app(\App\Services\AccessControlService::class);
         $hasPremiumAccess = $accessControlService->hasPremiumAccess($user->id);
         $accessLevel = $accessControlService->getUserAccessLevel($user->id);
-        
+
         $debugInfo = [
             'user_id' => $user->id,
             'current_time' => now(),
@@ -689,7 +704,7 @@ class AuthController extends Controller
                 'access_level' => $accessLevel
             ]
         ];
-        
+
         return response()->json([
             'success' => true,
             'debug_info' => $debugInfo
@@ -702,10 +717,10 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         $user = $request->user();
-        
+
         // Revoke current token
         $request->user()->currentAccessToken()->delete();
-        
+
         // Create new token
         $token = $user->createToken('auth-token')->plainTextToken;
 
