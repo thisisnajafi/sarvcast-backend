@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\SchoolController;
 use App\Http\Controllers\Api\CorporateController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\UserSearchController;
+use App\Http\Controllers\Api\StorySearchController;
 use App\Http\Controllers\Api\AdminPanelController;
 use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\VoiceActorPanelController;
@@ -132,6 +133,7 @@ Route::prefix('v1')->middleware('security')->group(function () {
 
         // Stories management (admin & super admin)
         Route::get('stories', [AdminPanelController::class, 'getStories']);
+        Route::post('stories/search', [StorySearchController::class, 'searchStories']);
 
         // Episodes management (admin & super admin)
         Route::get('episodes', [AdminPanelController::class, 'getEpisodes']);
