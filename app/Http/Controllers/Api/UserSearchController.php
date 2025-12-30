@@ -77,6 +77,7 @@ class UserSearchController extends Controller
             'last_name',
             'phone_number',
             'profile_image_url',
+            'role',
             'created_at'
         ])
         ->with(['teacherAccount' => function ($query) {
