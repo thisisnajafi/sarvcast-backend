@@ -304,4 +304,54 @@ class UserController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get team members by phone numbers (public endpoint)
+     */
+    public function getTeamMembers(Request $request)
+    {
+        $phoneNumbers = [
+            '09025472668', // روانشناس کودک
+            '09131397003', // کارگردان، مدرس
+            '09136708883', // برنامه نویس اپلیکیشن
+            '09138333293', // مدیر تولید و برنامه ریزی
+            '09393676109', // تهیه و تدوین
+        ];
+
+        $teamRoles = [
+            '09025472668' => 'روانشناس کودک',
+            '09131397003' => 'کارگردان، مدرس',
+            '09136708883' => 'برنامه نویس اپلیکیشن',
+            '09138333293' => 'مدیر تولید و برنامه ریزی',
+            '09393676109' => 'تهیه و تدوین',
+        ];
+
+        $users = User::whereIn('phone_number', $phoneNumbers)
+            ->select([
+                'id',
+                'first_name',
+                'last_name',
+                'phone_number',
+                'profile_image_url',
+                'bio',
+            ])
+            ->get();
+
+        $teamMembers = $users->map(function ($user) use ($teamRoles) {
+            return [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'phone_number' => $user->phone_number,
+                'profile_image_url' => $user->profile_image_url,
+                'bio' => $user->bio,
+                'role' => $teamRoles[$user->phone_number] ?? 'عضو تیم',
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $teamMembers
+        ]);
+    }
 }

@@ -49,6 +49,11 @@ use App\Http\Controllers\Admin\PersonController;
 // Public routes
 Route::prefix('v1')->middleware('security')->group(function () {
 
+    // Public routes (no auth required)
+    Route::prefix('public')->group(function () {
+        Route::get('team-members', [UserController::class, 'getTeamMembers']);
+    });
+
     // Authentication routes
     Route::prefix('auth')->group(function () {
         // SMS verification
