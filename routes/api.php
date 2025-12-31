@@ -124,6 +124,8 @@ Route::prefix('v1')->middleware('security')->group(function () {
         Route::get('details', [UserSearchController::class, 'getUserDetails']);
         Route::get('teachers/available', [UserSearchController::class, 'getAvailableTeachers']);
         Route::get('{user}/stories', [UserController::class, 'getUserStories']);
+        Route::post('{user}/track-view', [UserController::class, 'trackProfileView']);
+        Route::get('{user}/view-count', [UserController::class, 'getProfileViewCount']);
     });
 
     // Admin Panel routes
@@ -189,6 +191,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::put('profiles/{profile}', [UserController::class, 'updateProfile']);
         Route::delete('profiles/{profile}', [UserController::class, 'deleteProfile']);
         Route::post('profile/photo', [\App\Http\Controllers\Api\AuthController::class, 'uploadProfilePhoto']);
+        Route::post('profile/background-photo', [\App\Http\Controllers\Api\AuthController::class, 'uploadBackgroundPhoto']);
     });
 
     // Favorites routes (outside mobile group for easier access)

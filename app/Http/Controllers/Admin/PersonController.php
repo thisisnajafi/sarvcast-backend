@@ -55,7 +55,7 @@ class PersonController extends Controller
      */
     public function create()
     {
-        $roles = ['voice_actor', 'director', 'writer', 'producer', 'author', 'narrator'];
+        $roles = ['voice_actor', 'director', 'producer', 'author', 'narrator'];
         return view('admin.people.create', compact('roles'));
     }
 
@@ -69,7 +69,7 @@ class PersonController extends Controller
             'bio' => 'nullable|string|max:1000',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'roles' => 'required|array|min:1',
-            'roles.*' => 'string|in:voice_actor,director,writer,producer,author,narrator',
+            'roles.*' => 'string|in:voice_actor,director,producer,author,narrator',
             'is_verified' => 'boolean'
         ], [
             'name.required' => 'نام الزامی است',
@@ -122,7 +122,7 @@ class PersonController extends Controller
      */
     public function edit(Person $person)
     {
-        $roles = ['voice_actor', 'director', 'writer', 'producer', 'author', 'narrator'];
+        $roles = ['voice_actor', 'director', 'producer', 'author', 'narrator'];
         return view('admin.people.edit', compact('person', 'roles'));
     }
 
@@ -136,7 +136,7 @@ class PersonController extends Controller
             'bio' => 'nullable|string|max:1000',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'roles' => 'sometimes|required|array|min:1',
-            'roles.*' => 'string|in:voice_actor,director,writer,producer,author,narrator',
+            'roles.*' => 'string|in:voice_actor,director,producer,author,narrator',
             'is_verified' => 'boolean'
         ], [
             'name.required' => 'نام الزامی است',

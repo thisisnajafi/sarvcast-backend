@@ -191,7 +191,6 @@ class StoryController extends Controller
             'category_id' => 'required|exists:categories,id',
             'age_group' => 'required|string',
             'director_id' => 'nullable|exists:people,id',
-            'writer_id' => 'nullable|exists:people,id',
             'author_id' => 'nullable|exists:people,id',
             'narrator_id' => 'nullable|exists:people,id',
             'duration' => 'nullable|integer|min:0',
@@ -253,7 +252,7 @@ class StoryController extends Controller
      */
     public function show(Story $story)
     {
-        $story->load(['category', 'director', 'writer', 'author', 'narrator', 'episodes.narrator', 'people']);
+        $story->load(['category', 'director', 'author', 'narrator', 'episodes.narrator', 'people']);
         
         return view('admin.stories.show', compact('story'));
     }
@@ -290,7 +289,6 @@ class StoryController extends Controller
             'category_id' => 'required|exists:categories,id',
             'age_group' => 'required|string',
             'director_id' => 'nullable|exists:people,id',
-            'writer_id' => 'nullable|exists:people,id',
             'author_id' => 'nullable|exists:people,id',
             'narrator_id' => 'nullable|exists:people,id',
             'duration' => 'nullable|integer|min:0',
@@ -584,7 +582,6 @@ class StoryController extends Controller
                 $story->free_episodes,
                 $story->director->name ?? '',
                 $story->narrator->name ?? '',
-                $story->writer->name ?? '',
                 $story->author->name ?? '',
                 $story->status,
                 $story->is_premium ? 'بله' : 'خیر',

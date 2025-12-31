@@ -146,7 +146,7 @@ class SearchController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'q' => 'nullable|string|max:255',
-            'role' => 'nullable|string|in:director,writer,author,narrator,voice_actor',
+            'role' => 'nullable|string|in:director,author,narrator,voice_actor',
             'sort_by' => 'nullable|string|in:name,created_at',
             'sort_order' => 'nullable|string|in:asc,desc',
             'per_page' => 'nullable|integer|min:1|max:100'

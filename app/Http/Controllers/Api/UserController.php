@@ -8,6 +8,7 @@ use App\Models\Favorite;
 use App\Models\PlayHistory;
 use App\Models\Story;
 use App\Models\User;
+use App\Models\ProfileView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -180,7 +181,7 @@ class UserController extends Controller
     {
         $user = User::findOrFail($userId);
 
-        // Get published stories as author/writer
+        // Get published stories as author
         $storiesAsAuthor = Story::whereAuthor($userId)
             ->published()
             ->with(['category', 'characters.voiceActor'])
@@ -199,9 +200,12 @@ class UserController extends Controller
             ->get();
 
         // Calculate statistics
-        $writerCount = $storiesAsAuthor->count();
+        $authorCount = $storiesAsAuthor->count();
         $narratorCount = $storiesAsNarrator->count();
         $voiceActorCount = $storiesAsVoiceActor->count();
+
+        // Get profile view count
+        $viewCount = ProfileView::where('viewed_user_id', $userId)->count();
 
         return response()->json([
             'success' => true,
@@ -211,18 +215,93 @@ class UserController extends Controller
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
                     'profile_image_url' => $user->profile_image_url,
+                    'background_photo_url' => $user->background_photo_url,
                     'bio' => $user->bio,
                     'role' => $user->role,
                 ],
                 'statistics' => [
-                    'writer_count' => $writerCount,
+                    'author_count' => $authorCount,
                     'narrator_count' => $narratorCount,
                     'voice_actor_count' => $voiceActorCount,
+                    'view_count' => $viewCount,
                 ],
                 'stories_as_author' => $storiesAsAuthor,
                 'stories_as_narrator' => $storiesAsNarrator,
                 'stories_as_voice_actor' => $storiesAsVoiceActor,
             ]
+        ]);
+    }
+
+    /**
+     * Track a profile view
+     *
+     * @param Request $request
+     * @param int $userId
+     * @return JsonResponse
+     */
+    public function trackProfileView(Request $request, int $userId)
+    {
+        $viewedUser = User::findOrFail($userId);
+        $viewer = $request->user(); // Can be null for anonymous users
+
+        // Don't track if user views their own profile
+        if ($viewer && $viewer->id === $userId) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Self-view not tracked',
+            ]);
+        }
+
+        // Check if already viewed today by same user (prevent spam)
+        $today = now()->startOfDay();
+        $existingView = ProfileView::where('viewed_user_id', $userId)
+            ->where('viewer_id', $viewer?->id)
+            ->where('created_at', '>=', $today)
+            ->first();
+
+        if ($existingView) {
+            return response()->json([
+                'success' => true,
+                'message' => 'View already tracked today',
+            ]);
+        }
+
+        // Create new view record
+        ProfileView::create([
+            'viewed_user_id' => $userId,
+            'viewer_id' => $viewer?->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        // Get updated view count
+        $viewCount = ProfileView::where('viewed_user_id', $userId)->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile view tracked',
+            'data' => [
+                'view_count' => $viewCount,
+            ],
+        ]);
+    }
+
+    /**
+     * Get profile view count
+     *
+     * @param Request $request
+     * @param int $userId
+     * @return JsonResponse
+     */
+    public function getProfileViewCount(Request $request, int $userId)
+    {
+        $viewCount = ProfileView::where('viewed_user_id', $userId)->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'view_count' => $viewCount,
+            ],
         ]);
     }
 }

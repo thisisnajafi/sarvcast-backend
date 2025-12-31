@@ -25,7 +25,6 @@ class StoryExportController extends Controller
         $query = Story::with([
             'category',
             'director',
-            'writer',
             'author',
             'narrator',
             'people',

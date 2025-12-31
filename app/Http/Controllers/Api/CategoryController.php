@@ -88,7 +88,7 @@ class CategoryController extends Controller
      */
     public function stories(Category $category, Request $request)
     {
-        $query = $category->stories()->with(['category', 'narrator', 'author', 'director', 'writer', 'people'])->published();
+        $query = $category->stories()->with(['category', 'narrator', 'author', 'director', 'people'])->published();
 
         // Apply filters
         if ($request->filled('age_group')) {

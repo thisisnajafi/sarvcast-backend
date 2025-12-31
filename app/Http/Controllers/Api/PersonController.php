@@ -89,7 +89,7 @@ class PersonController extends Controller
                 'bio' => 'nullable|string|max:1000',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
                 'roles' => 'required|array|min:1',
-                'roles.*' => 'string|in:voice_actor,director,writer,producer,author,narrator',
+                'roles.*' => 'string|in:voice_actor,director,producer,author,narrator',
                 'is_verified' => 'boolean'
             ], [
                 'name.required' => 'نام الزامی است',
@@ -187,7 +187,7 @@ class PersonController extends Controller
                 'bio' => 'nullable|string|max:1000',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
                 'roles' => 'sometimes|required|array|min:1',
-                'roles.*' => 'string|in:voice_actor,director,writer,producer,author,narrator',
+                'roles.*' => 'string|in:voice_actor,director,producer,author,narrator',
                 'is_verified' => 'boolean'
             ], [
                 'name.required' => 'نام الزامی است',
@@ -339,7 +339,7 @@ class PersonController extends Controller
     public function getByRole(Request $request, string $role): JsonResponse
     {
         try {
-            $validRoles = ['voice_actor', 'director', 'writer', 'producer', 'author', 'narrator'];
+            $validRoles = ['voice_actor', 'director', 'producer', 'author', 'narrator'];
             
             if (!in_array($role, $validRoles)) {
                 return response()->json([
@@ -376,7 +376,7 @@ class PersonController extends Controller
     public function stories(Person $person, Request $request): JsonResponse
     {
         try {
-            $query = $person->stories()->with(['category', 'narrator', 'author', 'director', 'writer', 'people'])
+            $query = $person->stories()->with(['category', 'narrator', 'author', 'director', 'people'])
                 ->published();
 
             // Apply pagination

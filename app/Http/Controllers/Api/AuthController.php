@@ -463,6 +463,8 @@ class AuthController extends Controller
             'first_name' => 'sometimes|required|string|max:100',
             'last_name' => 'sometimes|required|string|max:100',
             'profile_image_url' => 'sometimes|nullable|url|max:500',
+            'background_photo_url' => 'sometimes|nullable|url|max:500',
+            'bio' => 'sometimes|nullable|string|max:500',
             'timezone' => 'sometimes|string|max:50',
             'preferences' => 'sometimes|nullable|array',
         ]);
@@ -479,6 +481,8 @@ class AuthController extends Controller
             'first_name',
             'last_name',
             'profile_image_url',
+            'background_photo_url',
+            'bio',
             'timezone',
             'preferences'
         ]));
@@ -494,6 +498,8 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'status' => $user->status,
                 'profile_image_url' => $user->profile_image_url,
+                'background_photo_url' => $user->background_photo_url,
+                'bio' => $user->bio,
                 'timezone' => $user->timezone,
                 'preferences' => $user->preferences,
             ]
@@ -590,6 +596,184 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در آپلود تصویر پروفایل: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload background photo
+     */
+    public function uploadBackgroundPhoto(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', // 2MB max
+        ], [
+            'photo.required' => 'تصویر پس‌زمینه الزامی است',
+            'photo.image' => 'فایل باید یک تصویر باشد',
+            'photo.mimes' => 'فرمت تصویر باید یکی از موارد زیر باشد: jpeg, png, jpg, webp',
+            'photo.max' => 'حجم تصویر نمی‌تواند بیش از 2 مگابایت باشد',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اطلاعات وارد شده نامعتبر است',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $file = $request->file('photo');
+            $filename = time() . '_' . $user->id . '_background.' . $file->getClientOriginalExtension();
+
+            // Ensure directory exists
+            $directory = public_path('images/users/backgrounds');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            // Delete old background photo if exists
+            if ($user->background_photo_url && !filter_var($user->background_photo_url, FILTER_VALIDATE_URL)) {
+                $oldImagePath = public_path('images/' . $user->background_photo_url);
+                if (file_exists($oldImagePath)) {
+                    @unlink($oldImagePath);
+                }
+            }
+
+            // Move image to public/images/users/backgrounds
+            $file->move($directory, $filename);
+
+            // Store relative path
+            $imagePath = 'users/backgrounds/' . $filename;
+            $user->update(['background_photo_url' => $imagePath]);
+
+            // Get full URL using HasImageUrl trait
+            $updatedUser = $user->fresh();
+            $url = $updatedUser->background_photo_url;
+
+            $jsonResponse = response()->json([
+                'success' => true,
+                'message' => 'تصویر پس‌زمینه با موفقیت آپلود شد.',
+                'data' => [
+                    'background_photo_url' => $url,
+                    'user' => [
+                        'id' => $updatedUser->id,
+                        'phone_number' => $updatedUser->phone_number,
+                        'first_name' => $updatedUser->first_name,
+                        'last_name' => $updatedUser->last_name,
+                        'role' => $updatedUser->role,
+                        'status' => $updatedUser->status,
+                        'background_photo_url' => $url,
+                        'timezone' => $updatedUser->timezone,
+                    ]
+                ]
+            ]);
+            // Disable caching for background photo uploads - they need to be retrieved immediately
+            $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+            $jsonResponse->headers->set('Pragma', 'no-cache');
+            $jsonResponse->headers->set('Expires', '0');
+            return $jsonResponse;
+
+        } catch (\Exception $e) {
+            \Log::error('Background photo upload failed', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در آپلود تصویر پروفایل: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload background photo
+     */
+    public function uploadBackgroundPhoto(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', // 2MB max
+        ], [
+            'photo.required' => 'تصویر پس‌زمینه الزامی است',
+            'photo.image' => 'فایل باید یک تصویر باشد',
+            'photo.mimes' => 'فرمت تصویر باید یکی از موارد زیر باشد: jpeg, png, jpg, webp',
+            'photo.max' => 'حجم تصویر نمی‌تواند بیش از 2 مگابایت باشد',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'اطلاعات وارد شده نامعتبر است',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $file = $request->file('photo');
+            $filename = time() . '_' . $user->id . '_background.' . $file->getClientOriginalExtension();
+
+            // Ensure directory exists
+            $directory = public_path('images/users/backgrounds');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            // Delete old background photo if exists
+            if ($user->background_photo_url && !filter_var($user->background_photo_url, FILTER_VALIDATE_URL)) {
+                $oldImagePath = public_path('images/' . $user->background_photo_url);
+                if (file_exists($oldImagePath)) {
+                    @unlink($oldImagePath);
+                }
+            }
+
+            // Move image to public/images/users/backgrounds
+            $file->move($directory, $filename);
+
+            // Store relative path
+            $imagePath = 'users/backgrounds/' . $filename;
+            $user->update(['background_photo_url' => $imagePath]);
+
+            // Get full URL using HasImageUrl trait
+            $updatedUser = $user->fresh();
+            $url = $updatedUser->background_photo_url;
+
+            $jsonResponse = response()->json([
+                'success' => true,
+                'message' => 'تصویر پس‌زمینه با موفقیت آپلود شد.',
+                'data' => [
+                    'background_photo_url' => $url,
+                    'user' => [
+                        'id' => $updatedUser->id,
+                        'phone_number' => $updatedUser->phone_number,
+                        'first_name' => $updatedUser->first_name,
+                        'last_name' => $updatedUser->last_name,
+                        'role' => $updatedUser->role,
+                        'status' => $updatedUser->status,
+                        'background_photo_url' => $url,
+                        'timezone' => $updatedUser->timezone,
+                    ]
+                ]
+            ]);
+            // Disable caching for background photo uploads - they need to be retrieved immediately
+            $jsonResponse->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+            $jsonResponse->headers->set('Pragma', 'no-cache');
+            $jsonResponse->headers->set('Expires', '0');
+            return $jsonResponse;
+
+        } catch (\Exception $e) {
+            \Log::error('Background photo upload failed', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در آپلود تصویر پس‌زمینه: ' . $e->getMessage()
             ], 500);
         }
     }

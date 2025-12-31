@@ -45,7 +45,6 @@ class Story extends Model
         'cover_image_url',
         'category_id',
         'director_id',
-        'writer_id',
         'author_id',
         'narrator_id',
         'age_group',
@@ -104,7 +103,6 @@ class Story extends Model
             'cover_image_url' => ['nullable', 'string', 'max:500'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'director_id' => ['nullable', 'integer', 'exists:people,id'],
-            'writer_id' => ['nullable', 'integer', 'exists:people,id'],
             'author_id' => [
                 'nullable',
                 'integer',
@@ -238,14 +236,6 @@ class Story extends Model
     public function director()
     {
         return $this->belongsTo(Person::class, 'director_id');
-    }
-
-    /**
-     * Get the writer of the story.
-     */
-    public function writer()
-    {
-        return $this->belongsTo(Person::class, 'writer_id');
     }
 
     /**

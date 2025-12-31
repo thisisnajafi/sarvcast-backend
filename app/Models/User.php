@@ -10,6 +10,7 @@ use App\Events\NewUserRegistrationEvent;
 use App\UserAnalytics;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Models\TeacherAccount;
+use App\Models\ProfileView;
 use App\Traits\HasImageUrl;
 
 class User extends Authenticatable
@@ -37,6 +38,7 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'profile_image_url',
+        'background_photo_url',
         'bio',
         'role',
         'status',
@@ -166,6 +168,14 @@ class User extends Authenticatable
     public function notifications()
     {
         return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get profile views for this user
+     */
+    public function profileViews()
+    {
+        return $this->hasMany(ProfileView::class, 'viewed_user_id');
     }
 
     /**
