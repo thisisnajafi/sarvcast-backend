@@ -635,8 +635,9 @@ class AuthController extends Controller
             }
 
             // Delete old background photo if exists
-            if ($user->background_photo_url && !filter_var($user->background_photo_url, FILTER_VALIDATE_URL)) {
-                $oldImagePath = public_path('images/' . $user->background_photo_url);
+            $oldBackgroundPath = $user->getAttributes()['background_photo_url'] ?? null;
+            if ($oldBackgroundPath && !filter_var($oldBackgroundPath, FILTER_VALIDATE_URL)) {
+                $oldImagePath = public_path('images/' . $oldBackgroundPath);
                 if (file_exists($oldImagePath)) {
                     @unlink($oldImagePath);
                 }

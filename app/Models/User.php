@@ -601,4 +601,12 @@ class User extends Authenticatable
     {
         return $this->getImageUrlFromPath($this->attributes['profile_image_url'] ?? null);
     }
+
+    /**
+     * Get the background photo URL for the user
+     */
+    public function getBackgroundPhotoUrlAttribute()
+    {
+        return $this->getImageUrlFromPath($this->attributes['background_photo_url'] ?? null);
+    }
 }
