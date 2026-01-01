@@ -75,47 +75,51 @@ class DashboardController extends Controller
             'total_revenue' => Payment::where('status', 'completed')->sum('amount'),
             'pending_payments' => Payment::where('status', 'pending')->count(),
             'failed_payments' => Payment::where('status', 'failed')->count(),
-            'total_commissions' => Commission::sum('amount'),
-            'paid_commissions' => CommissionPayment::sum('amount'),
-            'pending_commissions' => Commission::where('status', 'pending')->sum('amount'),
+            'revenue_today' => Payment::where('status', 'completed')->whereDate('created_at', today())->sum('amount'),
+            'revenue_this_week' => Payment::where('status', 'completed')->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->sum('amount'),
+            'revenue_this_month' => Payment::where('status', 'completed')->whereMonth('created_at', now()->month)->sum('amount'),
+            'revenue_this_year' => Payment::where('status', 'completed')->whereYear('created_at', now()->year)->sum('amount'),
             
             // Engagement Statistics
             'total_comments' => StoryComment::count() + UserComment::count(),
+            'approved_comments' => StoryComment::where('is_approved', true)->count() + UserComment::where('is_approved', true)->count(),
+            'pending_comments' => StoryComment::where('is_approved', false)->count() + UserComment::where('is_approved', false)->count(),
             'total_ratings' => Rating::count(),
             'average_rating' => Rating::avg('rating') ?? 0,
             'total_favorites' => Favorite::count(),
+            
+            // Play History Statistics (Story Listens)
             'total_play_history' => PlayHistory::count(),
-            'total_content_shares' => ContentShare::count(),
+            'play_history_today' => PlayHistory::whereDate('created_at', today())->count(),
+            'play_history_this_week' => PlayHistory::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+            'play_history_this_month' => PlayHistory::whereMonth('created_at', now()->month)->count(),
+            'play_history_this_year' => PlayHistory::whereYear('created_at', now()->year)->count(),
             
-            // Partnership Statistics
-            'total_affiliate_partners' => AffiliatePartner::count(),
-            'active_affiliate_partners' => AffiliatePartner::where('status', 'active')->count(),
-            'total_corporate_sponsorships' => CorporateSponsorship::count(),
-            'active_corporate_sponsorships' => CorporateSponsorship::where('status', 'active')->count(),
-            'total_school_partnerships' => SchoolPartnership::count(),
-            'active_school_partnerships' => SchoolPartnership::where('status', 'active')->count(),
-            
-            // Marketing Statistics
-            'total_coupon_codes' => CouponCode::count(),
-            'active_coupon_codes' => CouponCode::where('is_active', true)->count(),
-            'total_coupon_usage' => CouponUsage::count(),
-            'total_notifications_sent' => Notification::count(),
-            'total_sms_sent' => SmsLog::count(),
-            'total_referrals' => Referral::count(),
-            
-            // User Activity Statistics
-            'total_user_activities' => UserActivity::count(),
-            
-            // Campaign Statistics
-            'total_influencer_campaigns' => InfluencerCampaign::count(),
-            'active_influencer_campaigns' => InfluencerCampaign::where('status', 'active')->count(),
-            'total_sponsored_content' => SponsoredContent::count(),
-            'active_sponsored_content' => SponsoredContent::where('status', 'active')->count(),
-            
-            // Reports and Issues
-            'total_reports' => Report::count(),
-            'pending_reports' => Report::where('status', 'pending')->count(),
-            'resolved_reports' => Report::where('status', 'resolved')->count(),
+            // Story Listens by Story (Top Stories)
+            'top_stories_today' => PlayHistory::whereDate('created_at', today())
+                ->select('story_id', DB::raw('count(*) as listens'))
+                ->groupBy('story_id')
+                ->orderBy('listens', 'desc')
+                ->limit(10)
+                ->get(),
+            'top_stories_this_week' => PlayHistory::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->select('story_id', DB::raw('count(*) as listens'))
+                ->groupBy('story_id')
+                ->orderBy('listens', 'desc')
+                ->limit(10)
+                ->get(),
+            'top_stories_this_month' => PlayHistory::whereMonth('created_at', now()->month)
+                ->select('story_id', DB::raw('count(*) as listens'))
+                ->groupBy('story_id')
+                ->orderBy('listens', 'desc')
+                ->limit(10)
+                ->get(),
+            'top_stories_this_year' => PlayHistory::whereYear('created_at', now()->year)
+                ->select('story_id', DB::raw('count(*) as listens'))
+                ->groupBy('story_id')
+                ->orderBy('listens', 'desc')
+                ->limit(10)
+                ->get(),
             
             // Plan Sales Statistics
             'total_plans' => SubscriptionPlan::count(),

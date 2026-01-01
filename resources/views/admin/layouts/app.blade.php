@@ -43,7 +43,7 @@
     <div class="flex min-h-screen">
         <!-- Sidebar Backdrop (Mobile Only) -->
         <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-40 transition-opacity duration-300 lg:hidden"></div>
-        
+
         <!-- Sidebar -->
         <div id="sidebar" class="hidden lg:flex flex-col w-56 lg:w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-50 translate-x-full lg:translate-x-0">
             <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
@@ -245,6 +245,16 @@
                     <span class="font-medium">کاربران</span>
                 </a>
 
+                <!-- Voice Actors Management -->
+                <a href="{{ route('admin.voice-actors.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-pink-50 hover:to-pink-100 dark:hover:from-pink-900 dark:hover:to-pink-800 hover:text-pink-700 dark:hover:text-pink-300 transition-all duration-200 {{ request()->routeIs('admin.voice-actors.*') ? 'bg-gradient-to-r from-pink-50 to-pink-100 dark:from-pink-900 dark:to-pink-800 text-pink-700 dark:text-pink-300 border-l-2 border-pink-500' : '' }}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.voice-actors.*') ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                    </div>
+                    <span class="font-medium">صداپیشه‌ها</span>
+                </a>
+
                 <a href="{{ route('admin.subscriptions.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 {{ request()->routeIs('admin.subscriptions.*') ? 'bg-gray-100 dark:bg-gray-700 text-primary dark:text-primary border-l-2 border-primary' : '' }}">
                     <svg class="w-5 h-5 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
@@ -271,94 +281,6 @@
                     <span class="font-medium">کدهای کوپن</span>
                 </a>
 
-                <!-- Commission Payments -->
-                <a href="{{ route('admin.commission-payments.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-purple-50 hover:to-purple-100 dark:hover:from-purple-900 dark:hover:to-purple-800 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 {{ request()->routeIs('admin.commission-payments.*') ? 'bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 text-purple-700 dark:text-purple-300 border-l-2 border-purple-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.commission-payments.*') ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">پرداخت کمیسیون</span>
-                </a>
-
-                <!-- Affiliate Management -->
-                <a href="{{ route('admin.affiliate.dashboard') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900 dark:hover:to-blue-800 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-200 {{ request()->routeIs('admin.affiliate.*') ? 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 text-blue-700 dark:text-blue-300 border-l-2 border-blue-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.affiliate.*') ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">مدیریت شرکا</span>
-                </a>
-
-                <!-- Analytics Section -->
-                <div class="mt-6 mb-2">
-                    <h3 class="px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">آمار و تحلیل</h3>
-                </div>
-
-                <a href="{{ route('admin.analytics.coin') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-yellow-100 dark:hover:from-yellow-900 dark:hover:to-yellow-800 hover:text-yellow-700 dark:hover:text-yellow-300 transition-all duration-200 {{ request()->routeIs('admin.analytics.coin') ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 text-yellow-700 dark:text-yellow-300 border-l-2 border-yellow-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.analytics.coin') ? 'bg-yellow-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">آمار سکه</span>
-                </a>
-
-                <a href="{{ route('admin.analytics.referral') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 dark:hover:from-green-900 dark:hover:to-green-800 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 {{ request()->routeIs('admin.analytics.referral') ? 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 text-green-700 dark:text-green-300 border-l-2 border-green-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.analytics.referral') ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">آمار ارجاع</span>
-                </a>
-
-                <!-- Partnership Programs Section -->
-                <div class="mt-6 mb-2">
-                    <h3 class="px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">برنامه‌های مشارکت</h3>
-                </div>
-
-                <!-- Teacher Program -->
-                <a href="{{ route('admin.teachers.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900 dark:hover:to-blue-800 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-200 {{ request()->routeIs('admin.teachers.*') ? 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 text-blue-700 dark:text-blue-300 border-l-2 border-blue-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.teachers.*') ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">برنامه معلمان</span>
-                </a>
-
-                <!-- Influencer Program -->
-                <a href="{{ route('admin.influencers.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-purple-50 hover:to-purple-100 dark:hover:from-purple-900 dark:hover:to-purple-800 hover:text-purple-700 dark:hover:text-purple-300 transition-all duration-200 {{ request()->routeIs('admin.influencers.*') ? 'bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-800 text-purple-700 dark:text-purple-300 border-l-2 border-purple-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.influencers.*') ? 'bg-purple-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V3a1 1 0 011 1v16a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1h8zM9 8h6m-6 4h6m-6 4h4"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">برنامه اینفلوئنسرها</span>
-                </a>
-
-                <!-- School Partnership -->
-                <a href="{{ route('admin.schools.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 dark:hover:from-green-900 dark:hover:to-green-800 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 {{ request()->routeIs('admin.schools.*') ? 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 text-green-700 dark:text-green-300 border-l-2 border-green-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.schools.*') ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">مشارکت مدارس</span>
-                </a>
-
-                <!-- Corporate Sponsorship -->
-                <a href="{{ route('admin.corporate.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 dark:hover:from-orange-900 dark:hover:to-orange-800 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 {{ request()->routeIs('admin.corporate.*') ? 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 text-orange-700 dark:text-orange-300 border-l-2 border-orange-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.corporate.*') ? 'bg-orange-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">حمایت شرکتی</span>
-                </a>
-
                 <!-- Interactive Features Section -->
                 <div class="mt-6 mb-2">
                     <h3 class="px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ویژگی‌های تعاملی</h3>
@@ -372,16 +294,6 @@
                         </svg>
                     </div>
                     <span class="font-medium">سیستم آزمون</span>
-                </a>
-
-                <!-- Referral System -->
-                <a href="{{ route('admin.referrals.index') }}" class="flex items-center px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-teal-50 hover:to-teal-100 dark:hover:from-teal-900 dark:hover:to-teal-800 hover:text-teal-700 dark:hover:text-teal-300 transition-all duration-200 {{ request()->routeIs('admin.referrals.*') ? 'bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900 dark:to-teal-800 text-teal-700 dark:text-teal-300 border-l-2 border-teal-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.referrals.*') ? 'bg-teal-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">سیستم ارجاع</span>
                 </a>
 
                 <!-- Gamification - DISABLED -->
@@ -429,15 +341,6 @@
                     <span class="font-medium">مدیریت صدا</span>
                 </a>
 
-                <!-- Timeline Management -->
-                <a href="{{ route('admin.timeline.index') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-purple-50 hover:to-purple-100 hover:text-purple-700 transition-all duration-200 {{ request()->routeIs('admin.timeline.*') ? 'bg-gradient-to-r from-purple-50 to-purple-100 text-purple-700 border-l-2 border-purple-500' : '' }}">
-                    <div class="w-8 h-8 rounded-lg flex items-center justify-center ml-4 {{ request()->routeIs('admin.timeline.*') ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <span class="font-medium">مدیریت تایم‌لاین</span>
-                </a>
 
                 <!-- File Upload -->
                 <a href="{{ route('admin.files.upload') }}" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 hover:text-green-700 transition-all duration-200 {{ request()->routeIs('admin.files.*') ? 'bg-gradient-to-r from-green-50 to-green-100 text-green-700 border-l-2 border-green-500' : '' }}">

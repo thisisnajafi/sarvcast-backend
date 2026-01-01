@@ -11,6 +11,8 @@ use App\UserAnalytics;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Models\TeacherAccount;
 use App\Models\ProfileView;
+use App\Models\Character;
+use App\Models\Story;
 use App\Traits\HasImageUrl;
 
 class User extends Authenticatable
@@ -218,6 +220,30 @@ class User extends Authenticatable
     public function teacherAccount()
     {
         return $this->hasOne(TeacherAccount::class);
+    }
+
+    /**
+     * Get characters assigned to this user as voice actor
+     */
+    public function characters()
+    {
+        return $this->hasMany(Character::class, 'voice_actor_id');
+    }
+
+    /**
+     * Get stories where this user is the narrator
+     */
+    public function storiesAsNarrator()
+    {
+        return $this->hasMany(Story::class, 'narrator_id');
+    }
+
+    /**
+     * Get stories where this user is the author
+     */
+    public function storiesAsAuthor()
+    {
+        return $this->hasMany(Story::class, 'author_id');
     }
 
 

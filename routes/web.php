@@ -186,8 +186,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
         return view('admin.files.upload');
     })->name('files.upload');
 
-    // Timeline Management
-    Route::get('timeline', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'index'])->name('timeline.index');
 
     // Audio Management
     Route::get('audio', function () {
