@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\StorySearchController;
 use App\Http\Controllers\Api\AdminPanelController;
 use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\VoiceActorPanelController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Admin\PersonController;
 
 /*
@@ -52,6 +53,7 @@ Route::prefix('v1')->middleware('security')->group(function () {
     // Public routes (no auth required)
     Route::prefix('public')->group(function () {
         Route::get('team-members', [UserController::class, 'getTeamMembers']);
+        Route::post('contact', [ContactController::class, 'submit']);
     });
 
     // Authentication routes
