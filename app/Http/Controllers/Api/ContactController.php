@@ -127,12 +127,7 @@ class ContactController extends Controller
      */
     private function formatJalaliDate($date): string
     {
-        if (class_exists(\App\Helpers\JalaliHelper::class)) {
-            return \App\Helpers\JalaliHelper::formatForDisplay($date, 'Y/m/d H:i');
-        }
-        
-        // Fallback to Gregorian date if JalaliHelper is not available
-        return $date->format('Y/m/d H:i');
+        return \App\Helpers\JalaliHelper::formatForDisplay($date, 'Y/m/d H:i');
     }
 }
 
