@@ -71,7 +71,7 @@ Route::prefix('admin/2fa')->name('admin.2fa.')->middleware(['auth:web', 'admin']
 });
 
 // Admin Routes
-Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin', '2fa'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     // Dashboard Routes
