@@ -6,6 +6,7 @@ use App\Http\Controllers\BaseController;
 use App\Models\Episode;
 use App\Models\Story;
 use App\Models\Person;
+use App\Models\User;
 use App\Services\InAppNotificationService;
 use App\Services\AudioProcessingService;
 use App\Services\ImageProcessingService;
@@ -179,10 +180,19 @@ class EpisodeController extends BaseController
     public function create()
     {
         $stories = Story::with('category')->orderBy('title', 'asc')->get();
-        $narrators = Person::whereJsonContains('roles', 'narrator')->get();
         $people = Person::orderBy('name', 'asc')->get();
+        
+        // Get users who can be narrators (voice_actor, admin, super_admin)
+        $eligibleUsers = User::whereIn('role', [
+            User::ROLE_VOICE_ACTOR,
+            User::ROLE_ADMIN,
+            User::ROLE_SUPER_ADMIN
+        ])->where('status', 'active')
+          ->orderBy('first_name')
+          ->orderBy('last_name')
+          ->get();
 
-        return view('admin.episodes.create', compact('stories', 'narrators', 'people'));
+        return view('admin.episodes.create', compact('stories', 'people', 'eligibleUsers'));
     }
 
     /**
@@ -198,7 +208,23 @@ class EpisodeController extends BaseController
             'duration' => 'required|integer|min:1',
             'audio_file' => 'required|file|mimes:mp3,wav,m4a,aac,ogg|max:102400', // 100MB max
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
-            'narrator_id' => 'nullable|exists:people,id',
+            'narrator_id' => [
+                'nullable',
+                'exists:users,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $user = User::find($value);
+                        if ($user && !in_array($user->role, [
+                            User::ROLE_VOICE_ACTOR,
+                            User::ROLE_ADMIN,
+                            User::ROLE_SUPER_ADMIN
+                        ])) {
+                            $fail('راوی باید نقش صداپیشه، ادمین یا ادمین کل داشته باشد.');
+                        }
+                    }
+                },
+            ],
+            'script_file' => 'nullable|file|mimes:md,txt,doc,docx|max:10240', // 10MB max
             'is_premium' => 'boolean',
             'status' => 'required|in:draft,published,archived',
             'release_date' => 'nullable|date',
@@ -280,6 +306,22 @@ class EpisodeController extends BaseController
                         ]);
                     }
                 }
+            }
+
+            // Handle script file upload
+            if ($request->hasFile('script_file')) {
+                $scriptFile = $request->file('script_file');
+                $scriptDir = public_path('scripts/episodes');
+                
+                // Ensure directory exists
+                if (!file_exists($scriptDir)) {
+                    mkdir($scriptDir, 0755, true);
+                }
+                
+                $scriptFileName = time() . '_' . $scriptFile->getClientOriginalName();
+                $scriptFile->move($scriptDir, $scriptFileName);
+                // Store only the relative path
+                $data['script_file_url'] = 'scripts/episodes/' . $scriptFileName;
             }
 
             // Handle cover image upload and processing

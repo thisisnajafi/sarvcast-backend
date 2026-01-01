@@ -99,18 +99,19 @@
 
                 <!-- Narrator -->
                 <div>
-                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی</label>
+                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی (کاربر)</label>
                     <select name="narrator_id" id="narrator_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
                         <option value="">انتخاب راوی</option>
-                        @foreach($narrators as $narrator)
-                            <option value="{{ $narrator->id }}" {{ old('narrator_id') == $narrator->id ? 'selected' : '' }}>
-                                {{ $narrator->name }}
+                        @foreach($eligibleUsers as $user)
+                            <option value="{{ $user->id }}" {{ old('narrator_id') == $user->id ? 'selected' : '' }}>
+                                {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
                             </option>
                         @endforeach
                     </select>
                     @error('narrator_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                    <p class="text-xs text-gray-500 mt-1">فقط کاربران با نقش صداپیشه، ادمین یا ادمین کل</p>
                 </div>
 
                 <!-- Episode Number -->
@@ -161,6 +162,17 @@
                     @error('description')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
+                </div>
+
+                <!-- Script File -->
+                <div class="md:col-span-2">
+                    <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت</label>
+                    <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('script_file') border-red-500 @enderror">
+                    @error('script_file')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <p class="text-xs text-gray-500 mt-1">حداکثر 10 مگابایت، فرمت‌های مجاز: MD, TXT, DOC, DOCX</p>
                 </div>
             </div>
         </div>

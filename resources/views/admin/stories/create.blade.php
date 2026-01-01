@@ -127,36 +127,38 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Author -->
                 <div>
-                    <label for="author_id" class="block text-sm font-medium text-gray-700 mb-2">مؤلف</label>
+                    <label for="author_id" class="block text-sm font-medium text-gray-700 mb-2">مؤلف (کاربر)</label>
                     <select name="author_id" id="author_id" 
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('author_id') border-red-500 @enderror">
                         <option value="">انتخاب مؤلف</option>
-                        @foreach($people as $person)
-                            <option value="{{ $person->id }}" {{ old('author_id') == $person->id ? 'selected' : '' }}>
-                                {{ $person->name }}
+                        @foreach($eligibleUsers as $user)
+                            <option value="{{ $user->id }}" {{ old('author_id') == $user->id ? 'selected' : '' }}>
+                                {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
                             </option>
                         @endforeach
                     </select>
                     @error('author_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
+                    <p class="text-xs text-gray-500 mt-1">فقط کاربران با نقش صداپیشه، ادمین یا ادمین کل</p>
                 </div>
 
                 <!-- Narrator -->
                 <div>
-                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی</label>
+                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی (کاربر)</label>
                     <select name="narrator_id" id="narrator_id" 
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
                         <option value="">انتخاب راوی</option>
-                        @foreach($people as $person)
-                            <option value="{{ $person->id }}" {{ old('narrator_id') == $person->id ? 'selected' : '' }}>
-                                {{ $person->name }}
+                        @foreach($eligibleUsers as $user)
+                            <option value="{{ $user->id }}" {{ old('narrator_id') == $user->id ? 'selected' : '' }}>
+                                {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
                             </option>
                         @endforeach
                     </select>
                     @error('narrator_id')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
+                    <p class="text-xs text-gray-500 mt-1">فقط کاربران با نقش صداپیشه، ادمین یا ادمین کل</p>
                 </div>
             </div>
 
@@ -250,6 +252,37 @@
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                 @enderror
                 <p class="text-sm text-gray-500 mt-1">مثال: ماجراجویی، دوستی، خانواده</p>
+            </div>
+
+            <!-- Script File and Workflow Status -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Script File -->
+                <div>
+                    <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت</label>
+                    <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('script_file') border-red-500 @enderror">
+                    @error('script_file')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                    <p class="text-sm text-gray-500 mt-1">حداکثر 10 مگابایت، فرمت‌های مجاز: MD, TXT, DOC, DOCX</p>
+                </div>
+
+                <!-- Workflow Status -->
+                <div>
+                    <label for="workflow_status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت گردش کار</label>
+                    <select name="workflow_status" id="workflow_status" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('workflow_status') border-red-500 @enderror">
+                        <option value="">انتخاب وضعیت</option>
+                        <option value="written" {{ old('workflow_status') == 'written' ? 'selected' : '' }}>نوشته شده</option>
+                        <option value="characters_made" {{ old('workflow_status') == 'characters_made' ? 'selected' : '' }}>شخصیت‌ها ساخته شده</option>
+                        <option value="recorded" {{ old('workflow_status') == 'recorded' ? 'selected' : '' }}>ضبط شده</option>
+                        <option value="timeline_created" {{ old('workflow_status') == 'timeline_created' ? 'selected' : '' }}>تایم‌لاین ایجاد شده</option>
+                        <option value="published" {{ old('workflow_status') == 'published' ? 'selected' : '' }}>منتشر شده</option>
+                    </select>
+                    @error('workflow_status')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             <!-- Status and Options -->

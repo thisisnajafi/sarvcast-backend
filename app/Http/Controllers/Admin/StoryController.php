@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Story;
 use App\Models\Category;
 use App\Models\Person;
+use App\Models\User;
 use App\Models\Episode;
 use App\Services\InAppNotificationService;
 use Illuminate\Http\Request;
@@ -167,7 +168,17 @@ class StoryController extends Controller
         $categories = Category::where('is_active', true)->get();
         $people = Person::all();
         
-        return view('admin.stories.create', compact('categories', 'people'));
+        // Get users who can be authors/narrators (voice_actor, admin, super_admin)
+        $eligibleUsers = User::whereIn('role', [
+            User::ROLE_VOICE_ACTOR,
+            User::ROLE_ADMIN,
+            User::ROLE_SUPER_ADMIN
+        ])->where('status', 'active')
+          ->orderBy('first_name')
+          ->orderBy('last_name')
+          ->get();
+        
+        return view('admin.stories.create', compact('categories', 'people', 'eligibleUsers'));
     }
 
     /**
@@ -191,16 +202,48 @@ class StoryController extends Controller
             'category_id' => 'required|exists:categories,id',
             'age_group' => 'required|string',
             'director_id' => 'nullable|exists:people,id',
-            'author_id' => 'nullable|exists:people,id',
-            'narrator_id' => 'nullable|exists:people,id',
+            'author_id' => [
+                'nullable',
+                'exists:users,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $user = User::find($value);
+                        if ($user && !in_array($user->role, [
+                            User::ROLE_VOICE_ACTOR,
+                            User::ROLE_ADMIN,
+                            User::ROLE_SUPER_ADMIN
+                        ])) {
+                            $fail('مؤلف باید نقش صداپیشه، ادمین یا ادمین کل داشته باشد.');
+                        }
+                    }
+                },
+            ],
+            'narrator_id' => [
+                'nullable',
+                'exists:users,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $user = User::find($value);
+                        if ($user && !in_array($user->role, [
+                            User::ROLE_VOICE_ACTOR,
+                            User::ROLE_ADMIN,
+                            User::ROLE_SUPER_ADMIN
+                        ])) {
+                            $fail('راوی باید نقش صداپیشه، ادمین یا ادمین کل داشته باشد.');
+                        }
+                    }
+                },
+            ],
             'duration' => 'nullable|integer|min:0',
             'total_episodes' => 'nullable|integer|min:1',
             'free_episodes' => 'nullable|integer|min:0',
             'is_premium' => 'boolean',
             'is_completely_free' => 'boolean',
             'status' => 'required|in:draft,pending,approved,rejected,published',
+            'workflow_status' => 'nullable|in:written,characters_made,recorded,timeline_created,published',
             'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'script_file' => 'nullable|file|mimes:md,txt,doc,docx|max:10240', // 10MB max
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
             'people' => 'nullable|array',
@@ -230,6 +273,22 @@ class StoryController extends Controller
             $coverImage->move(public_path('images/stories'), $coverImageName);
             // Store only the relative path
             $validated['cover_image_url'] = 'stories/' . $coverImageName;
+        }
+
+        // Handle script file upload
+        if ($request->hasFile('script_file')) {
+            $scriptFile = $request->file('script_file');
+            $scriptDir = public_path('scripts/stories');
+            
+            // Ensure directory exists
+            if (!file_exists($scriptDir)) {
+                mkdir($scriptDir, 0755, true);
+            }
+            
+            $scriptFileName = time() . '_' . $scriptFile->getClientOriginalName();
+            $scriptFile->move($scriptDir, $scriptFileName);
+            // Store only the relative path
+            $validated['script_file_url'] = 'scripts/stories/' . $scriptFileName;
         }
 
         $story = Story::create($validated);
