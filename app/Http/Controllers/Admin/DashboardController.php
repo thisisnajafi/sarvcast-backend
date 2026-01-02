@@ -43,11 +43,11 @@ class DashboardController extends Controller
         $dateRange = $request->get('date_range', '30days');
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
-        
+
         // Calculate date range
         $startDate = $this->getStartDate($dateRange, $dateFrom);
         $endDate = $dateTo ? Carbon::parse($dateTo)->endOfDay() : now();
-        
+
         // Generate cache key based on parameters
         $cacheKey = 'dashboard_' . md5(json_encode([
             'date_range' => $dateRange,
@@ -56,35 +56,35 @@ class DashboardController extends Controller
             'compare' => $request->get('compare', false),
             'user_id' => auth()->id()
         ]));
-        
+
         // Cache duration: 5 minutes for dashboard data
         $cacheDuration = 300;
-        
+
         // Try to get cached data
         $cachedData = Cache::get($cacheKey);
-        
+
         if ($cachedData && !$request->has('refresh')) {
             // Return cached data
             return view('admin.dashboard', $cachedData);
         }
-        
+
         // Comparison period (if enabled)
         $compareMode = $request->get('compare', false);
         $comparePeriod = $request->get('compare_period', 'previous');
         $compareDateFrom = $request->get('compare_date_from');
         $compareDateTo = $request->get('compare_date_to');
-        
+
         $comparisonData = null;
         if ($compareMode) {
             $comparisonData = $this->getComparisonData($startDate, $endDate, $comparePeriod, $compareDateFrom, $compareDateTo);
         }
-        
+
         // Get alerts and notifications (not cached - always fresh)
         $alerts = $this->getDashboardAlerts();
-        
+
         // Get system health status (not cached - always fresh)
         $systemHealth = $this->getSystemHealth();
-        
+
         // Get recent activity feed (cached separately)
         $recentActivity = Cache::remember(
             'dashboard_recent_activity_' . md5($startDate . $endDate),
@@ -93,7 +93,7 @@ class DashboardController extends Controller
                 return $this->getRecentActivity($startDate, $endDate);
             }
         );
-        
+
         // Basic Statistics (cached)
         $stats = Cache::remember(
             'dashboard_stats_' . md5($startDate . $endDate),
@@ -102,7 +102,7 @@ class DashboardController extends Controller
                 return $this->getBasicStatistics($startDate, $endDate);
             }
         );
-        
+
         // Get chart data (cached separately)
         $monthlyRevenue = Cache::remember(
             'dashboard_monthly_revenue_' . md5($startDate . $endDate),
@@ -111,7 +111,7 @@ class DashboardController extends Controller
                 return $this->getMonthlyRevenue($startDate, $endDate);
             }
         );
-        
+
         $dailyUserRegistrations = Cache::remember(
             'dashboard_daily_users_' . md5($startDate . $endDate),
             $cacheDuration,
@@ -119,7 +119,7 @@ class DashboardController extends Controller
                 return $this->getDailyUserRegistrations($startDate, $endDate);
             }
         );
-        
+
         $dailyPlayHistory = Cache::remember(
             'dashboard_daily_plays_' . md5($startDate . $endDate),
             $cacheDuration,
@@ -127,7 +127,7 @@ class DashboardController extends Controller
                 return $this->getDailyPlayHistory($startDate, $endDate);
             }
         );
-        
+
         // Recent Activity (with eager loading to prevent N+1)
         $recentStories = Story::with(['category', 'director', 'narrator'])
             ->latest()
@@ -232,7 +232,34 @@ class DashboardController extends Controller
                     ->get();
             }
         );
-        
+
+        // Get Voice Actors Analytics (cached)
+        $voiceActorsAnalytics = Cache::remember(
+            'dashboard_voice_actors_' . md5($startDate . $endDate),
+            $cacheDuration,
+            function() use ($startDate, $endDate) {
+                return $this->getVoiceActorsAnalytics($startDate, $endDate);
+            }
+        );
+
+        // Get Content Moderation Analytics (cached - shorter cache for real-time data)
+        $moderationAnalytics = Cache::remember(
+            'dashboard_moderation_' . md5($startDate . $endDate),
+            60, // 1 minute cache for moderation data
+            function() use ($startDate, $endDate) {
+                return $this->getModerationAnalytics($startDate, $endDate);
+            }
+        );
+
+        // Get Device & Platform Analytics (cached)
+        $devicePlatformAnalytics = Cache::remember(
+            'dashboard_device_platform_' . md5($startDate . $endDate),
+            $cacheDuration,
+            function() use ($startDate, $endDate) {
+                return $this->getDevicePlatformAnalytics($startDate, $endDate);
+            }
+        );
+
         // Prepare view data
         $viewData = [
             'stats' => $stats,
@@ -256,15 +283,16 @@ class DashboardController extends Controller
             'systemHealth' => $systemHealth,
             'recentActivity' => $recentActivity,
             'voiceActorsAnalytics' => $voiceActorsAnalytics,
-            'moderationAnalytics' => $moderationAnalytics
+            'moderationAnalytics' => $moderationAnalytics,
+            'devicePlatformAnalytics' => $devicePlatformAnalytics
         ];
-        
+
         // Cache the view data
         Cache::put($cacheKey, $viewData, $cacheDuration);
-        
+
         return view('admin.dashboard', $viewData);
     }
-    
+
     /**
      * Get basic statistics (extracted for caching)
      */
@@ -279,7 +307,7 @@ class DashboardController extends Controller
             'new_users_today' => User::whereDate('created_at', today())->count(),
             'new_users_this_week' => User::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
             'new_users_this_month' => User::whereMonth('created_at', now()->month)->count(),
-            
+
             // Content Statistics
             'total_stories' => Story::count(),
             'published_stories' => Story::where('status', 'published')->count(),
@@ -289,18 +317,18 @@ class DashboardController extends Controller
             'published_episodes' => Episode::where('status', 'published')->count(),
             'pending_episodes' => Episode::where('status', 'pending')->count(),
             'draft_episodes' => Episode::where('status', 'draft')->count(),
-            
+
             // Category Statistics
             'total_categories' => Category::count(),
             'active_categories' => Category::where('is_active', true)->count(),
             'inactive_categories' => Category::where('is_active', false)->count(),
-            
+
             // Subscription Statistics
             'total_subscriptions' => Subscription::count(),
             'active_subscriptions' => Subscription::where('status', 'active')->count(),
             'expired_subscriptions' => Subscription::where('status', 'expired')->count(),
             'cancelled_subscriptions' => Subscription::where('status', 'cancelled')->count(),
-            
+
             // Financial Statistics
             'total_payments' => Payment::count(),
             'total_revenue' => Payment::where('status', 'completed')->sum('amount'),
@@ -310,7 +338,7 @@ class DashboardController extends Controller
             'revenue_this_week' => Payment::where('status', 'completed')->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->sum('amount'),
             'revenue_this_month' => Payment::where('status', 'completed')->whereMonth('created_at', now()->month)->sum('amount'),
             'revenue_this_year' => Payment::where('status', 'completed')->whereYear('created_at', now()->year)->sum('amount'),
-            
+
             // Engagement Statistics
             'total_comments' => StoryComment::count() + UserComment::count(),
             'approved_comments' => StoryComment::where('is_approved', true)->count() + UserComment::where('is_approved', true)->count(),
@@ -318,14 +346,14 @@ class DashboardController extends Controller
             'total_ratings' => Rating::count(),
             'average_rating' => Rating::avg('rating') ?? 0,
             'total_favorites' => Favorite::count(),
-            
+
             // Play History Statistics (Story Listens)
             'total_play_history' => PlayHistory::count(),
             'play_history_today' => PlayHistory::whereDate('created_at', today())->count(),
             'play_history_this_week' => PlayHistory::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
             'play_history_this_month' => PlayHistory::whereMonth('created_at', now()->month)->count(),
             'play_history_this_year' => PlayHistory::whereYear('created_at', now()->year)->count(),
-            
+
             // Story Listens by Story (Top Stories)
             'top_stories_today' => PlayHistory::whereDate('created_at', today())
                 ->select('story_id', DB::raw('count(*) as listens'))
@@ -351,7 +379,7 @@ class DashboardController extends Controller
                 ->orderBy('listens', 'desc')
                 ->limit(10)
                 ->get(),
-            
+
             // Plan Sales Statistics
             'total_plans' => SubscriptionPlan::count(),
             'active_plans' => SubscriptionPlan::where('is_active', true)->count(),
@@ -360,7 +388,7 @@ class DashboardController extends Controller
             'plan_sales_last_month' => Subscription::whereMonth('created_at', now()->subMonth()->month)->count(),
             'plan_sales_today' => Subscription::whereDate('created_at', today())->count(),
             'plan_sales_this_week' => Subscription::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-            
+
             // Performance Metrics
             'avg_completion_rate' => $this->calculateAvgCompletionRate(),
             'avg_listening_duration' => $this->calculateAvgListeningDuration(),
@@ -382,17 +410,17 @@ class DashboardController extends Controller
             User::whereMonth('created_at', now()->subMonth()->month)->count(),
             User::whereMonth('created_at', now()->month)->count()
         );
-        
+
         $stats['story_growth_rate'] = $this->calculateGrowthRate(
             Story::whereMonth('created_at', now()->subMonth()->month)->count(),
             Story::whereMonth('created_at', now()->month)->count()
         );
-        
+
         $stats['revenue_growth_rate'] = $this->calculateGrowthRate(
             Payment::where('status', 'completed')->whereMonth('created_at', now()->subMonth()->month)->sum('amount'),
             Payment::where('status', 'completed')->whereMonth('created_at', now()->month)->sum('amount')
         );
-        
+
         $stats['plan_sales_growth_rate'] = $this->calculateGrowthRate(
             Subscription::whereMonth('created_at', now()->subMonth()->month)->count(),
             Subscription::whereMonth('created_at', now()->month)->count()
@@ -507,7 +535,7 @@ class DashboardController extends Controller
                 return $this->getDailyEngagement($startDate, $endDate);
             }
         );
-        
+
         // Plan sales data (cached)
         $planSalesData = Cache::remember(
             'dashboard_plan_sales_' . md5($startDate . $endDate),
@@ -516,7 +544,7 @@ class DashboardController extends Controller
                 return $this->getPlanSalesData($startDate, $endDate);
             }
         );
-        
+
         $topSellingPlans = Cache::remember(
             'dashboard_top_selling_plans',
             600, // 10 minutes
@@ -527,16 +555,16 @@ class DashboardController extends Controller
                     ->get();
             }
         );
-        
+
         $recentReports = collect(); // Placeholder for reports
 
         return view('admin.dashboard', compact(
-            'stats', 
-            'recentStories', 
-            'recentUsers', 
+            'stats',
+            'recentStories',
+            'recentUsers',
             'recentPayments',
             'recentComments',
-            'topCategories', 
+            'topCategories',
             'topRatedStories',
             'mostPopularStories',
             'recentReports',
@@ -571,7 +599,7 @@ class DashboardController extends Controller
             ->orderBy('month', 'asc')
             ->get();
     }
-    
+
     /**
      * Get daily user registrations
      */
@@ -583,7 +611,7 @@ class DashboardController extends Controller
             ->orderBy('date', 'asc')
             ->get();
     }
-    
+
     /**
      * Get daily play history
      */
@@ -591,7 +619,7 @@ class DashboardController extends Controller
     {
         $daysDiff = $startDate->diffInDays($endDate);
         $daysForChart = min(max($daysDiff, 7), 90); // Between 7 and 90 days
-        
+
         return collect(range(0, $daysForChart - 1))->map(function($day) use ($endDate) {
             $date = $endDate->copy()->subDays($day);
             return [
@@ -600,7 +628,7 @@ class DashboardController extends Controller
             ];
         })->reverse()->values();
     }
-    
+
     /**
      * Get daily engagement data
      */
@@ -608,19 +636,19 @@ class DashboardController extends Controller
     {
         $daysDiff = $startDate->diffInDays($endDate);
         $daysForChart = min(max($daysDiff, 7), 90);
-        
+
         return collect(range(0, $daysForChart - 1))->map(function($day) use ($endDate) {
             $date = $endDate->copy()->subDays($day);
             return [
                 'date' => $date->format('Y-m-d'),
-                'comments' => StoryComment::whereDate('created_at', $date->format('Y-m-d'))->count() + 
+                'comments' => StoryComment::whereDate('created_at', $date->format('Y-m-d'))->count() +
                              UserComment::whereDate('created_at', $date->format('Y-m-d'))->count(),
                 'ratings' => Rating::whereDate('created_at', $date->format('Y-m-d'))->count(),
                 'favorites' => Favorite::whereDate('created_at', $date->format('Y-m-d'))->count()
             ];
         })->reverse()->values();
     }
-    
+
     /**
      * Get plan sales data
      */
@@ -638,7 +666,7 @@ class DashboardController extends Controller
         if ($previous == 0) {
             return $current > 0 ? 100 : 0;
         }
-        
+
         return round((($current - $previous) / $previous) * 100, 1);
     }
 
@@ -674,7 +702,7 @@ class DashboardController extends Controller
     {
         $totalPlays = PlayHistory::count();
         if ($totalPlays == 0) return 0;
-        
+
         $completedPlays = PlayHistory::where('completed', true)->count();
         return round(($completedPlays / $totalPlays) * 100, 1);
     }
@@ -721,13 +749,13 @@ class DashboardController extends Controller
             now()->subWeek()->startOfWeek(),
             now()->subWeek()->endOfWeek()
         ])->pluck('id');
-        
+
         if ($lastWeekUsers->count() == 0) return 0;
-        
+
         $retainedUsers = User::whereIn('id', $lastWeekUsers)
             ->where('last_login_at', '>=', now()->startOfWeek())
             ->count();
-        
+
         return round(($retainedUsers / $lastWeekUsers->count()) * 100, 1);
     }
 
@@ -739,15 +767,15 @@ class DashboardController extends Controller
         $activeLastMonth = User::where('last_login_at', '>=', now()->subMonth()->startOfMonth())
             ->where('last_login_at', '<', now()->startOfMonth())
             ->count();
-        
+
         $totalLastMonth = User::where('created_at', '<', now()->startOfMonth())->count();
-        
+
         if ($totalLastMonth == 0) return 0;
-        
+
         $churnedUsers = $totalLastMonth - User::where('last_login_at', '>=', now()->startOfMonth())
             ->where('created_at', '<', now()->startOfMonth())
             ->count();
-        
+
         return round(($churnedUsers / $totalLastMonth) * 100, 1);
     }
 
@@ -758,7 +786,7 @@ class DashboardController extends Controller
     {
         $totalUsers = User::count();
         if ($totalUsers == 0) return 0;
-        
+
         $totalRevenue = Payment::where('status', 'completed')->sum('amount');
         return round($totalRevenue / $totalUsers, 0);
     }
@@ -771,14 +799,14 @@ class DashboardController extends Controller
         $avgMonthlyRevenue = Payment::where('status', 'completed')
             ->where('created_at', '>=', now()->subMonths(3))
             ->sum('amount') / 3;
-        
+
         $avgMonthlyUsers = User::where('created_at', '>=', now()->subMonths(3))->count() / 3;
-        
+
         if ($avgMonthlyUsers == 0) return 0;
-        
+
         $avgRevenuePerUserPerMonth = $avgMonthlyRevenue / max($avgMonthlyUsers, 1);
         $avgLifespanMonths = 12; // Estimated average user lifespan
-        
+
         return round($avgRevenuePerUserPerMonth * $avgLifespanMonths, 0);
     }
 
@@ -798,7 +826,7 @@ class DashboardController extends Controller
     {
         $totalUsers = User::where('status', 'active')->count();
         if ($totalUsers == 0) return 0;
-        
+
         $totalStoriesListened = PlayHistory::distinct('user_id')->count('user_id');
         return round($totalStoriesListened / $totalUsers, 1);
     }
@@ -810,7 +838,7 @@ class DashboardController extends Controller
     {
         $totalUsers = User::where('status', 'active')->count();
         if ($totalUsers == 0) return 0;
-        
+
         $totalEpisodesListened = PlayHistory::distinct('user_id')->count('user_id');
         return round($totalEpisodesListened / $totalUsers, 1);
     }
@@ -822,15 +850,15 @@ class DashboardController extends Controller
     {
         $totalUsers = User::count();
         if ($totalUsers == 0) return 0;
-        
+
         $returnUsers = User::where('last_login_at', '>=', now()->subDays(30))
             ->where('created_at', '<', now()->subDays(30))
             ->count();
-        
+
         $oldUsers = User::where('created_at', '<', now()->subDays(30))->count();
-        
+
         if ($oldUsers == 0) return 0;
-        
+
         return round(($returnUsers / $oldUsers) * 100, 1);
     }
 
@@ -842,25 +870,25 @@ class DashboardController extends Controller
         $dateRange = $request->get('date_range', '30days');
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
-        
+
         $startDate = $this->getStartDate($dateRange, $dateFrom);
         $endDate = $dateTo ? Carbon::parse($dateTo)->endOfDay() : now();
-        
+
         // Get all stats
         $stats = $this->getStats($startDate, $endDate);
-        
+
         $filename = 'dashboard_export_' . now()->format('Y-m-d_H-i-s') . '.csv';
-        
+
         $callback = function() use ($stats, $startDate, $endDate) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fwrite($file, "\xEF\xBB\xBF");
-            
+
             // Header
             fputcsv($file, ['گزارش داشبورد - ' . $startDate->format('Y/m/d') . ' تا ' . $endDate->format('Y/m/d')]);
             fputcsv($file, []);
-            
+
             // Statistics Section
             fputcsv($file, ['آمار کلی']);
             fputcsv($file, ['عنوان', 'مقدار']);
@@ -873,7 +901,7 @@ class DashboardController extends Controller
             fputcsv($file, ['کل نظرات', $stats['total_comments']]);
             fputcsv($file, ['کل تاریخچه پخش', $stats['total_play_history']]);
             fputcsv($file, []);
-            
+
             // Performance Metrics
             fputcsv($file, ['معیارهای عملکرد']);
             fputcsv($file, ['عنوان', 'مقدار']);
@@ -887,21 +915,21 @@ class DashboardController extends Controller
             fputcsv($file, ['درآمد به ازای هر کاربر (ARPU)', number_format($stats['arpu'] ?? 0) . ' تومان']);
             fputcsv($file, ['ارزش طول عمر کاربر (LTV)', number_format($stats['ltv'] ?? 0) . ' تومان']);
             fputcsv($file, []);
-            
+
             // Revenue Breakdown
             fputcsv($file, ['درآمد امروز', number_format($stats['revenue_today'] ?? 0, 0) . ' تومان']);
             fputcsv($file, ['درآمد این هفته', number_format($stats['revenue_this_week'] ?? 0, 0) . ' تومان']);
             fputcsv($file, ['درآمد این ماه', number_format($stats['revenue_this_month'] ?? 0, 0) . ' تومان']);
             fputcsv($file, ['درآمد امسال', number_format($stats['revenue_this_year'] ?? 0, 0) . ' تومان']);
             fputcsv($file, []);
-            
+
             // Play History
             fputcsv($file, ['تاریخچه پخش']);
             fputcsv($file, ['امروز', $stats['play_history_today'] ?? 0]);
             fputcsv($file, ['این هفته', $stats['play_history_this_week'] ?? 0]);
             fputcsv($file, ['این ماه', $stats['play_history_this_month'] ?? 0]);
             fputcsv($file, ['امسال', $stats['play_history_this_year'] ?? 0]);
-            
+
             fclose($file);
         };
 
@@ -953,22 +981,22 @@ class DashboardController extends Controller
     {
         $compareStartDate = null;
         $compareEndDate = null;
-        
+
         $daysDiff = $startDate->diffInDays($endDate);
-        
+
         switch ($comparePeriod) {
             case 'previous':
                 // Previous period of same duration
                 $compareEndDate = $startDate->copy()->subDay();
                 $compareStartDate = $compareEndDate->copy()->subDays($daysDiff);
                 break;
-                
+
             case 'lastYear':
                 // Same period last year
                 $compareStartDate = $startDate->copy()->subYear();
                 $compareEndDate = $endDate->copy()->subYear();
                 break;
-                
+
             case 'custom':
                 if ($compareDateFrom && $compareDateTo) {
                     $compareStartDate = Carbon::parse($compareDateFrom)->startOfDay();
@@ -976,11 +1004,11 @@ class DashboardController extends Controller
                 }
                 break;
         }
-        
+
         if (!$compareStartDate || !$compareEndDate) {
             return null;
         }
-        
+
         return [
             'start_date' => $compareStartDate,
             'end_date' => $compareEndDate,
@@ -1008,18 +1036,18 @@ class DashboardController extends Controller
     private function getDashboardAlerts()
     {
         $alerts = [];
-        
+
         // Check for low revenue (less than 50% of last month)
         $lastMonthRevenue = Payment::where('status', 'completed')
             ->whereMonth('created_at', now()->subMonth()->month)
             ->whereYear('created_at', now()->subMonth()->year)
             ->sum('amount');
-        
+
         $thisMonthRevenue = Payment::where('status', 'completed')
             ->whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->sum('amount');
-        
+
         if ($lastMonthRevenue > 0 && $thisMonthRevenue < ($lastMonthRevenue * 0.5)) {
             $alerts[] = [
                 'type' => 'warning',
@@ -1029,7 +1057,7 @@ class DashboardController extends Controller
                 'action' => route('admin.payments.index')
             ];
         }
-        
+
         // Check for high churn rate (more than 10%)
         $churnRate = $this->calculateChurnRate();
         if ($churnRate > 10) {
@@ -1041,12 +1069,12 @@ class DashboardController extends Controller
                 'action' => route('admin.users.index')
             ];
         }
-        
+
         // Check for pending payments
         $pendingPayments = Payment::where('status', 'pending')
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
-        
+
         if ($pendingPayments > 10) {
             $alerts[] = [
                 'type' => 'info',
@@ -1056,7 +1084,7 @@ class DashboardController extends Controller
                 'action' => route('admin.payments.index', ['status' => 'pending'])
             ];
         }
-        
+
         // Check for low completion rate (less than 50%)
         $completionRate = $this->calculateAvgCompletionRate();
         if ($completionRate < 50) {
@@ -1068,12 +1096,12 @@ class DashboardController extends Controller
                 'action' => route('admin.stories.index')
             ];
         }
-        
+
         // Check for pending comments
         $pendingComments = StoryComment::where('is_approved', false)
             ->where('is_visible', true)
             ->count();
-        
+
         if ($pendingComments > 0) {
             $alerts[] = [
                 'type' => 'info',
@@ -1083,13 +1111,13 @@ class DashboardController extends Controller
                 'action' => route('admin.comments.pending')
             ];
         }
-        
+
         // Check for inactive users (not logged in for 30+ days)
         $inactiveUsers = User::where('status', 'active')
             ->where('last_login_at', '<', now()->subDays(30))
             ->orWhereNull('last_login_at')
             ->count();
-        
+
         if ($inactiveUsers > 100) {
             $alerts[] = [
                 'type' => 'warning',
@@ -1099,12 +1127,12 @@ class DashboardController extends Controller
                 'action' => route('admin.users.index')
             ];
         }
-        
+
         // Check for system health (if we have error logs)
         $recentErrors = \DB::table('failed_jobs')
             ->where('failed_at', '>=', now()->subDays(1))
             ->count();
-        
+
         if ($recentErrors > 10) {
             $alerts[] = [
                 'type' => 'danger',
@@ -1114,7 +1142,7 @@ class DashboardController extends Controller
                 'action' => null
             ];
         }
-        
+
         return $alerts;
     }
 
@@ -1127,7 +1155,7 @@ class DashboardController extends Controller
             'overall' => 'healthy',
             'checks' => []
         ];
-        
+
         // Database connection check
         try {
             \DB::connection()->getPdo();
@@ -1146,14 +1174,14 @@ class DashboardController extends Controller
                 'color' => 'red'
             ];
         }
-        
+
         // Cache check
         try {
             $testKey = 'health_check_' . time();
             \Cache::put($testKey, 'test', 10);
             $value = \Cache::get($testKey);
             \Cache::forget($testKey);
-            
+
             if ($value === 'test') {
                 $health['checks']['cache'] = [
                     'status' => 'healthy',
@@ -1179,7 +1207,7 @@ class DashboardController extends Controller
                 'color' => 'yellow'
             ];
         }
-        
+
         // Storage check
         try {
             $disk = \Storage::disk('public');
@@ -1187,7 +1215,7 @@ class DashboardController extends Controller
             $disk->put($testFile, 'test');
             $exists = $disk->exists($testFile);
             $disk->delete($testFile);
-            
+
             if ($exists) {
                 $health['checks']['storage'] = [
                     'status' => 'healthy',
@@ -1213,7 +1241,7 @@ class DashboardController extends Controller
                 'color' => 'yellow'
             ];
         }
-        
+
         // Queue check
         try {
             $queueDriver = config('queue.default');
@@ -1232,12 +1260,12 @@ class DashboardController extends Controller
                 'color' => 'yellow'
             ];
         }
-        
+
         // Failed jobs check
         $failedJobs = \DB::table('failed_jobs')
             ->where('failed_at', '>=', now()->subDays(1))
             ->count();
-        
+
         if ($failedJobs > 0) {
             $health['overall'] = $health['overall'] === 'unhealthy' ? 'unhealthy' : 'warning';
             $health['checks']['failed_jobs'] = [
@@ -1255,13 +1283,13 @@ class DashboardController extends Controller
                 'color' => 'green'
             ];
         }
-        
+
         // Disk space check (if on Linux)
         if (PHP_OS_FAMILY === 'Linux') {
             $diskFree = disk_free_space(base_path());
             $diskTotal = disk_total_space(base_path());
             $diskUsedPercent = (($diskTotal - $diskFree) / $diskTotal) * 100;
-            
+
             if ($diskUsedPercent > 90) {
                 $health['overall'] = 'unhealthy';
                 $health['checks']['disk_space'] = [
@@ -1290,13 +1318,13 @@ class DashboardController extends Controller
                 ];
             }
         }
-        
+
         // Memory usage check
         $memoryUsage = memory_get_usage(true);
         $memoryLimit = ini_get('memory_limit');
         $memoryLimitBytes = $this->convertToBytes($memoryLimit);
         $memoryPercent = ($memoryUsage / $memoryLimitBytes) * 100;
-        
+
         if ($memoryPercent > 80) {
             $health['overall'] = $health['overall'] === 'unhealthy' ? 'unhealthy' : 'warning';
             $health['checks']['memory'] = [
@@ -1315,7 +1343,7 @@ class DashboardController extends Controller
                 'percent' => round($memoryPercent, 1)
             ];
         }
-        
+
         return $health;
     }
 
@@ -1327,7 +1355,7 @@ class DashboardController extends Controller
         $value = trim($value);
         $last = strtolower($value[strlen($value) - 1]);
         $value = (int) $value;
-        
+
         switch ($last) {
             case 'g':
                 $value *= 1024;
@@ -1336,7 +1364,7 @@ class DashboardController extends Controller
             case 'k':
                 $value *= 1024;
         }
-        
+
         return $value;
     }
 
@@ -1346,7 +1374,7 @@ class DashboardController extends Controller
     private function getRecentActivity($startDate, $endDate)
     {
         $activities = collect();
-        
+
         // Recent user registrations
         $recentUsers = User::whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
@@ -1363,9 +1391,9 @@ class DashboardController extends Controller
                     'url' => route('admin.users.show', $user->id)
                 ];
             });
-        
+
         $activities = $activities->merge($recentUsers);
-        
+
         // Recent story creations
         $recentStories = Story::whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
@@ -1382,9 +1410,9 @@ class DashboardController extends Controller
                     'url' => route('admin.stories.show', $story->id)
                 ];
             });
-        
+
         $activities = $activities->merge($recentStories);
-        
+
         // Recent payments
         $recentPayments = Payment::where('status', 'completed')
             ->whereBetween('created_at', [$startDate, $endDate])
@@ -1403,9 +1431,9 @@ class DashboardController extends Controller
                     'url' => route('admin.payments.show', $payment->id)
                 ];
             });
-        
+
         $activities = $activities->merge($recentPayments);
-        
+
         // Recent comments
         $recentComments = StoryComment::whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
@@ -1423,9 +1451,9 @@ class DashboardController extends Controller
                     'url' => route('admin.comments.index')
                 ];
             });
-        
+
         $activities = $activities->merge($recentComments);
-        
+
         // Sort by time and limit to 20 most recent
         return $activities->sortByDesc('time')->take(20)->values();
     }
@@ -1436,21 +1464,21 @@ class DashboardController extends Controller
     public function globalSearch(Request $request)
     {
         $query = $request->get('q', '');
-        
+
         if (strlen($query) < 2) {
             return response()->json([
                 'success' => false,
                 'message' => 'حداقل ۲ کاراکتر وارد کنید'
             ], 400);
         }
-        
+
         $results = [
             'stories' => [],
             'episodes' => [],
             'users' => [],
             'payments' => []
         ];
-        
+
         // Search stories
         $stories = Story::where('title', 'like', "%{$query}%")
             ->orWhere('subtitle', 'like', "%{$query}%")
@@ -1465,9 +1493,9 @@ class DashboardController extends Controller
                     'category' => $story->category
                 ];
             });
-        
+
         $results['stories'] = $stories;
-        
+
         // Search episodes
         $episodes = Episode::where('title', 'like', "%{$query}%")
             ->orWhere('description', 'like', "%{$query}%")
@@ -1481,9 +1509,9 @@ class DashboardController extends Controller
                     'story' => $episode->story
                 ];
             });
-        
+
         $results['episodes'] = $episodes;
-        
+
         // Search users
         $users = User::where('first_name', 'like', "%{$query}%")
             ->orWhere('last_name', 'like', "%{$query}%")
@@ -1500,9 +1528,9 @@ class DashboardController extends Controller
                     'email' => $user->email
                 ];
             });
-        
+
         $results['users'] = $users;
-        
+
         // Search payments
         $payments = Payment::whereHas('user', function($q) use ($query) {
                 $q->where('first_name', 'like', "%{$query}%")
@@ -1520,9 +1548,9 @@ class DashboardController extends Controller
                     'user' => $payment->user
                 ];
             });
-        
+
         $results['payments'] = $payments;
-        
+
         return response()->json([
             'success' => true,
             'data' => $results
@@ -1574,7 +1602,7 @@ class DashboardController extends Controller
                 ->count();
 
             // Calculate engagement rate (favorites + ratings + comments per story)
-            $totalEngagement = $totalFavorites + 
+            $totalEngagement = $totalFavorites +
                 Rating::whereHas('story', function($q) use ($actor) {
                     $q->where('narrator_id', $actor->id);
                 })->whereBetween('created_at', [$startDate, $endDate])->count() +
@@ -1582,8 +1610,8 @@ class DashboardController extends Controller
                     $q->where('narrator_id', $actor->id);
                 })->whereBetween('created_at', [$startDate, $endDate])->count();
 
-            $engagementRate = $narratedStories->count() > 0 
-                ? round($totalEngagement / $narratedStories->count(), 2) 
+            $engagementRate = $narratedStories->count() > 0
+                ? round($totalEngagement / $narratedStories->count(), 2)
                 : 0;
 
             $analytics[] = [
@@ -1621,28 +1649,28 @@ class DashboardController extends Controller
         $pendingComments = StoryComment::where('is_approved', false)
             ->whereNull('approved_at')
             ->count();
-        
+
         $approvedComments = StoryComment::where('is_approved', true)
             ->whereBetween('approved_at', [$startDate, $endDate])
             ->count();
-        
+
         $rejectedComments = StoryComment::where('is_approved', false)
             ->where('is_visible', false)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->count();
-        
+
         $totalComments = StoryComment::whereBetween('created_at', [$startDate, $endDate])->count();
-        
+
         // Calculate approval/rejection rates
         $processedComments = $approvedComments + $rejectedComments;
-        $approvalRate = $processedComments > 0 
-            ? round(($approvedComments / $processedComments) * 100, 1) 
+        $approvalRate = $processedComments > 0
+            ? round(($approvedComments / $processedComments) * 100, 1)
             : 0;
-        
-        $rejectionRate = $processedComments > 0 
-            ? round(($rejectedComments / $processedComments) * 100, 1) 
+
+        $rejectionRate = $processedComments > 0
+            ? round(($rejectedComments / $processedComments) * 100, 1)
             : 0;
-        
+
         // Stories moderation
         $pendingStories = Story::where('moderation_status', 'pending')
             ->orWhere(function($q) {
@@ -1650,23 +1678,23 @@ class DashboardController extends Controller
                   ->where('status', 'pending');
             })
             ->count();
-        
+
         $approvedStories = Story::where('moderation_status', 'approved')
             ->whereBetween('moderated_at', [$startDate, $endDate])
             ->count();
-        
+
         $rejectedStories = Story::where('moderation_status', 'rejected')
             ->whereBetween('moderated_at', [$startDate, $endDate])
             ->count();
-        
+
         $flaggedStories = Story::where('moderation_status', 'flagged')
             ->orWhere('flag_type', '!=', null)
             ->count();
-        
+
         // Episodes moderation
         $pendingEpisodes = Episode::where('status', 'pending')
             ->count();
-        
+
         // Recent pending items (for queue)
         $recentPendingComments = StoryComment::where('is_approved', false)
             ->whereNull('approved_at')
@@ -1685,7 +1713,7 @@ class DashboardController extends Controller
                     'url' => route('admin.comments.show', $comment->id)
                 ];
             });
-        
+
         $recentPendingStories = Story::where(function($q) {
                 $q->where('moderation_status', 'pending')
                   ->orWhere(function($q2) {
@@ -1705,13 +1733,13 @@ class DashboardController extends Controller
                     'url' => route('admin.stories.show', $story->id)
                 ];
             });
-        
+
         // Combine moderation queue
         $moderationQueue = $recentPendingComments->merge($recentPendingStories)
             ->sortBy('created_at')
             ->take(10)
             ->values();
-        
+
         // Moderation activity over time (last 30 days)
         $moderationActivity = collect(range(0, 29))->map(function($day) {
             $date = now()->subDays($day);
@@ -1730,7 +1758,7 @@ class DashboardController extends Controller
                     ->count()
             ];
         })->reverse()->values();
-        
+
         return [
             'comments' => [
                 'pending' => $pendingComments,
@@ -1751,6 +1779,257 @@ class DashboardController extends Controller
             ],
             'queue' => $moderationQueue,
             'activity' => $moderationActivity
+        ];
+    }
+
+    /**
+     * Get device and platform analytics
+     */
+    private function getDevicePlatformAnalytics($startDate, $endDate)
+    {
+        // Device Type Distribution (from users table)
+        $deviceTypeStats = User::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('device_type, COUNT(*) as count')
+            ->whereNotNull('device_type')
+            ->groupBy('device_type')
+            ->get()
+            ->pluck('count', 'device_type')
+            ->toArray();
+
+        // Platform Distribution (Android, iOS, Web)
+        $platformStats = User::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('
+                CASE
+                    WHEN os LIKE "%Android%" OR device_type = "android" THEN "Android"
+                    WHEN os LIKE "%iOS%" OR os LIKE "%iPhone%" OR device_type = "ios" THEN "iOS"
+                    WHEN registration_source = "web" OR device_type = "desktop" THEN "Web"
+                    ELSE "Unknown"
+                END as platform,
+                COUNT(*) as count
+            ')
+            ->groupBy('platform')
+            ->get()
+            ->pluck('count', 'platform')
+            ->toArray();
+
+        // OS Version Distribution
+        $osVersionStats = User::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('os, COUNT(*) as count')
+            ->whereNotNull('os')
+            ->where('os', '!=', '')
+            ->groupBy('os')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'os' => $item->os,
+                    'count' => $item->count
+                ];
+            });
+
+        // Browser Distribution
+        $browserStats = User::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('browser, COUNT(*) as count')
+            ->whereNotNull('browser')
+            ->where('browser', '!=', '')
+            ->groupBy('browser')
+            ->orderByDesc('count')
+            ->limit(10)
+            ->get()
+            ->map(function($item) {
+                return [
+                    'browser' => $item->browser,
+                    'count' => $item->count
+                ];
+            });
+
+        // Check if user_devices table exists and get device data
+        $deviceModelStats = [];
+        $appVersionStats = [];
+        try {
+            if (DB::getSchemaBuilder()->hasTable('user_devices')) {
+                // Device Model Distribution
+                $deviceModelStats = DB::table('user_devices')
+                    ->selectRaw('device_model, COUNT(*) as count')
+                    ->whereNotNull('device_model')
+                    ->where('device_model', '!=', '')
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->groupBy('device_model')
+                    ->orderByDesc('count')
+                    ->limit(10)
+                    ->get()
+                    ->map(function($item) {
+                        return [
+                            'model' => $item->device_model,
+                            'count' => $item->count
+                        ];
+                    });
+
+                // App Version Distribution
+                $appVersionStats = DB::table('user_devices')
+                    ->selectRaw('app_version, COUNT(*) as count')
+                    ->whereNotNull('app_version')
+                    ->where('app_version', '!=', '')
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->groupBy('app_version')
+                    ->orderByDesc('count')
+                    ->limit(10)
+                    ->get()
+                    ->map(function($item) {
+                        return [
+                            'version' => $item->app_version,
+                            'count' => $item->count
+                        ];
+                    });
+
+                // Active Devices (devices active in the last 30 days)
+                $activeDevices = DB::table('user_devices')
+                    ->where('last_active', '>=', now()->subDays(30))
+                    ->count();
+            } else {
+                $activeDevices = 0;
+            }
+        } catch (\Exception $e) {
+            $activeDevices = 0;
+        }
+
+        // Platform-specific Engagement
+        $platformEngagement = User::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('
+                CASE
+                    WHEN os LIKE "%Android%" OR device_type = "android" THEN "Android"
+                    WHEN os LIKE "%iOS%" OR os LIKE "%iPhone%" OR device_type = "ios" THEN "iOS"
+                    WHEN registration_source = "web" OR device_type = "desktop" THEN "Web"
+                    ELSE "Unknown"
+                END as platform,
+                COUNT(DISTINCT users.id) as user_count,
+                SUM(total_sessions) as total_sessions,
+                SUM(total_play_time) as total_play_time,
+                SUM(total_favorites) as total_favorites,
+                SUM(total_ratings) as total_ratings
+            ')
+            ->groupBy('platform')
+            ->get()
+            ->map(function($item) {
+                return [
+                    'platform' => $item->platform,
+                    'user_count' => $item->user_count,
+                    'total_sessions' => $item->total_sessions ?? 0,
+                    'total_play_time' => $item->total_play_time ?? 0,
+                    'total_favorites' => $item->total_favorites ?? 0,
+                    'total_ratings' => $item->total_ratings ?? 0,
+                    'avg_sessions' => $item->user_count > 0 ? round(($item->total_sessions ?? 0) / $item->user_count, 2) : 0,
+                    'avg_play_time' => $item->user_count > 0 ? round(($item->total_play_time ?? 0) / $item->user_count, 2) : 0
+                ];
+            });
+
+        // Platform-specific Revenue
+        $platformRevenue = Payment::whereBetween('created_at', [$startDate, $endDate])
+            ->where('status', 'completed')
+            ->join('users', 'payments.user_id', '=', 'users.id')
+            ->selectRaw('
+                CASE
+                    WHEN users.os LIKE "%Android%" OR users.device_type = "android" THEN "Android"
+                    WHEN users.os LIKE "%iOS%" OR users.os LIKE "%iPhone%" OR users.device_type = "ios" THEN "iOS"
+                    WHEN users.registration_source = "web" OR users.device_type = "desktop" THEN "Web"
+                    ELSE "Unknown"
+                END as platform,
+                SUM(payments.amount) as total_revenue,
+                COUNT(DISTINCT payments.user_id) as paying_users,
+                COUNT(*) as transaction_count
+            ')
+            ->groupBy('platform')
+            ->get()
+            ->map(function($item) {
+                return [
+                    'platform' => $item->platform,
+                    'total_revenue' => $item->total_revenue ?? 0,
+                    'paying_users' => $item->paying_users ?? 0,
+                    'transaction_count' => $item->transaction_count ?? 0,
+                    'arpu' => $item->paying_users > 0 ? round(($item->total_revenue ?? 0) / $item->paying_users, 2) : 0
+                ];
+            });
+
+        // Platform-specific User Retention (users active in last 7 days)
+        $platformRetention = User::where('last_activity_at', '>=', now()->subDays(7))
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('
+                CASE
+                    WHEN os LIKE "%Android%" OR device_type = "android" THEN "Android"
+                    WHEN os LIKE "%iOS%" OR os LIKE "%iPhone%" OR device_type = "ios" THEN "iOS"
+                    WHEN registration_source = "web" OR device_type = "desktop" THEN "Web"
+                    ELSE "Unknown"
+                END as platform,
+                COUNT(*) as active_users
+            ')
+            ->groupBy('platform')
+            ->get()
+            ->pluck('active_users', 'platform')
+            ->toArray();
+
+        // Total users by platform for retention calculation
+        $totalUsersByPlatform = User::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('
+                CASE
+                    WHEN os LIKE "%Android%" OR device_type = "android" THEN "Android"
+                    WHEN os LIKE "%iOS%" OR os LIKE "%iPhone%" OR device_type = "ios" THEN "iOS"
+                    WHEN registration_source = "web" OR device_type = "desktop" THEN "Web"
+                    ELSE "Unknown"
+                END as platform,
+                COUNT(*) as total_users
+            ')
+            ->groupBy('platform')
+            ->get()
+            ->pluck('total_users', 'platform')
+            ->toArray();
+
+        // Calculate retention rates
+        $retentionRates = [];
+        foreach ($totalUsersByPlatform as $platform => $total) {
+            $active = $platformRetention[$platform] ?? 0;
+            $retentionRates[$platform] = $total > 0 ? round(($active / $total) * 100, 1) : 0;
+        }
+
+        // Platform growth over time (last 30 days)
+        $platformGrowth = collect(range(0, 29))->map(function($day) {
+            $date = now()->subDays($day);
+            return [
+                'date' => $date->format('Y-m-d'),
+                'android' => User::whereDate('created_at', $date)
+                    ->where(function($q) {
+                        $q->where('os', 'like', '%Android%')
+                          ->orWhere('device_type', 'android');
+                    })
+                    ->count(),
+                'ios' => User::whereDate('created_at', $date)
+                    ->where(function($q) {
+                        $q->where('os', 'like', '%iOS%')
+                          ->orWhere('os', 'like', '%iPhone%')
+                          ->orWhere('device_type', 'ios');
+                    })
+                    ->count(),
+                'web' => User::whereDate('created_at', $date)
+                    ->where(function($q) {
+                        $q->where('registration_source', 'web')
+                          ->orWhere('device_type', 'desktop');
+                    })
+                    ->count()
+            ];
+        })->reverse()->values();
+
+        return [
+            'device_types' => $deviceTypeStats,
+            'platforms' => $platformStats,
+            'os_versions' => $osVersionStats,
+            'browsers' => $browserStats,
+            'device_models' => $deviceModelStats,
+            'app_versions' => $appVersionStats,
+            'active_devices' => $activeDevices,
+            'engagement' => $platformEngagement,
+            'revenue' => $platformRevenue,
+            'retention_rates' => $retentionRates,
+            'growth' => $platformGrowth
         ];
     }
 }

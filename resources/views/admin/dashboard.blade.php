@@ -1563,6 +1563,193 @@
         </div>
         @endif
 
+        <!-- Device & Platform Analytics Section -->
+        @if(isset($devicePlatformAnalytics))
+        <div id="widget-devicePlatformAnalytics" class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">آمار دستگاه و پلتفرم</h3>
+                </div>
+            </div>
+            <div class="p-6">
+                <!-- Platform Distribution Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    @php
+                        $platforms = $devicePlatformAnalytics['platforms'] ?? [];
+                        $totalPlatformUsers = array_sum($platforms);
+                    @endphp
+                    @foreach(['Android', 'iOS', 'Web', 'Unknown'] as $platform)
+                        @php
+                            $count = $platforms[$platform] ?? 0;
+                            $percentage = $totalPlatformUsers > 0 ? round(($count / $totalPlatformUsers) * 100, 1) : 0;
+                            $colors = [
+                                'Android' => ['bg' => 'green', 'text' => 'green'],
+                                'iOS' => ['bg' => 'blue', 'text' => 'blue'],
+                                'Web' => ['bg' => 'purple', 'text' => 'purple'],
+                                'Unknown' => ['bg' => 'gray', 'text' => 'gray']
+                            ];
+                            $color = $colors[$platform] ?? $colors['Unknown'];
+                        @endphp
+                        <div class="bg-{{ $color['bg'] }}-50 dark:bg-{{ $color['bg'] }}-900/20 rounded-lg p-4 border border-{{ $color['bg'] }}-200 dark:border-{{ $color['bg'] }}-800">
+                            <div class="text-sm text-{{ $color['text'] }}-600 dark:text-{{ $color['text'] }}-400 mb-1">{{ $platform }}</div>
+                            <div class="text-2xl font-bold text-{{ $color['text'] }}-900 dark:text-{{ $color['text'] }}-100">{{ number_format($count) }}</div>
+                            <div class="text-xs text-{{ $color['text'] }}-500 dark:text-{{ $color['text'] }}-400 mt-1">{{ $percentage }}%</div>
+                        </div>
+                    @endforeach
+                </div>
+                
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Platform Distribution Chart -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">توزیع پلتفرم</h4>
+                        <canvas id="platformDistributionChart" height="200"></canvas>
+                    </div>
+                    
+                    <!-- Platform Growth Chart -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">رشد پلتفرم (۳۰ روز گذشته)</h4>
+                        <canvas id="platformGrowthChart" height="200"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Platform Engagement & Revenue -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Platform Engagement Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">تعامل پلتفرم</h4>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">پلتفرم</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">کاربران</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">میانگین جلسات</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">میانگین زمان پخش</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    @foreach($devicePlatformAnalytics['engagement'] ?? [] as $engagement)
+                                    <tr>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $engagement['platform'] }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900 dark:text-white">{{ number_format($engagement['user_count']) }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900 dark:text-white">{{ number_format($engagement['avg_sessions'], 1) }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900 dark:text-white">{{ number_format($engagement['avg_play_time'] / 60, 1) }} دقیقه</div>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Platform Revenue Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">درآمد پلتفرم</h4>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">پلتفرم</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">درآمد کل</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">کاربران پرداخت‌کننده</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ARPU</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    @foreach($devicePlatformAnalytics['revenue'] ?? [] as $revenue)
+                                    <tr>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $revenue['platform'] }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($revenue['total_revenue']) }} ریال</div>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900 dark:text-white">{{ number_format($revenue['paying_users']) }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900 dark:text-white">{{ number_format($revenue['arpu']) }} ریال</div>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Device Types -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">نوع دستگاه</h4>
+                        <div class="space-y-2">
+                            @foreach($devicePlatformAnalytics['device_types'] ?? [] as $type => $count)
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ $type ?? 'نامشخص' }}</span>
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($count) }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    
+                    <!-- Top OS Versions -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">نسخه‌های سیستم عامل</h4>
+                        <div class="space-y-2 max-h-48 overflow-y-auto">
+                            @foreach(array_slice($devicePlatformAnalytics['os_versions'] ?? [], 0, 5) as $os)
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600 dark:text-gray-400 truncate">{{ $os['os'] }}</span>
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($os['count']) }}</span>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    
+                    <!-- Retention Rates -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">نرخ نگهداری (۷ روزه)</h4>
+                        <div class="space-y-3">
+                            @foreach($devicePlatformAnalytics['retention_rates'] ?? [] as $platform => $rate)
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ $platform }}</span>
+                                    <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ number_format($rate, 1) }}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ $rate }}%"></div>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                
+                @if(isset($devicePlatformAnalytics['active_devices']) && $devicePlatformAnalytics['active_devices'] > 0)
+                <div class="mt-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-indigo-600 dark:text-indigo-400 mb-1">دستگاه‌های فعال (۳۰ روز گذشته)</div>
+                            <div class="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{{ number_format($devicePlatformAnalytics['active_devices']) }}</div>
+                        </div>
+                        <svg class="w-12 h-12 text-indigo-300 dark:text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+        @endif
+
         <!-- System Health Section -->
         @if(isset($systemHealth))
         <div id="widget-systemHealth" class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
@@ -1822,6 +2009,8 @@ let revenueBreakdownChartInstance = null;
 let engagementChartInstance = null;
 let voiceActorsChartInstance = null;
 let moderationActivityChartInstance = null;
+let platformDistributionChartInstance = null;
+let platformGrowthChartInstance = null;
 
 // Auto-refresh variables
 let autoRefreshInterval = null;
@@ -2861,6 +3050,163 @@ document.addEventListener('DOMContentLoaded', function() {
                             data: pendingData,
                             borderColor: 'rgb(251, 191, 36)',
                             backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    family: 'IranSansWeb, IRANSans, Tahoma, sans-serif'
+                                },
+                                color: getTextColor()
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + new Intl.NumberFormat('fa-IR').format(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('fa-IR').format(value);
+                                },
+                                color: getTickColor()
+                            },
+                            grid: {
+                                color: getGridColor()
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: getTickColor(),
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                color: getGridColor()
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        @endif
+    }
+
+    // Platform Distribution Chart
+    const platformDistributionCtx = document.getElementById('platformDistributionChart');
+    if (platformDistributionCtx) {
+        @if(isset($devicePlatformAnalytics['platforms']))
+        const platformData = @json($devicePlatformAnalytics['platforms']);
+        if (platformData && Object.keys(platformData).length > 0) {
+            const platformLabels = Object.keys(platformData);
+            const platformCounts = Object.values(platformData);
+            const platformColors = {
+                'Android': 'rgb(34, 197, 94)',
+                'iOS': 'rgb(59, 130, 246)',
+                'Web': 'rgb(139, 92, 246)',
+                'Unknown': 'rgb(107, 114, 128)'
+            };
+
+            platformDistributionChartInstance = new Chart(platformDistributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: platformLabels,
+                    datasets: [{
+                        data: platformCounts,
+                        backgroundColor: platformLabels.map(label => platformColors[label] || 'rgb(107, 114, 128)'),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    family: 'IranSansWeb, IRANSans, Tahoma, sans-serif'
+                                },
+                                color: getTextColor(),
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return label + ': ' + new Intl.NumberFormat('fa-IR').format(value) + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        @endif
+    }
+
+    // Platform Growth Chart
+    const platformGrowthCtx = document.getElementById('platformGrowthChart');
+    if (platformGrowthCtx) {
+        @if(isset($devicePlatformAnalytics['growth']))
+        const growthData = @json($devicePlatformAnalytics['growth']);
+        if (growthData && growthData.length > 0) {
+            const growthLabels = growthData.map(item => {
+                const date = new Date(item.date);
+                return date.toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' });
+            });
+            const androidData = growthData.map(item => parseInt(item.android || 0));
+            const iosData = growthData.map(item => parseInt(item.ios || 0));
+            const webData = growthData.map(item => parseInt(item.web || 0));
+
+            platformGrowthChartInstance = new Chart(platformGrowthCtx, {
+                type: 'line',
+                data: {
+                    labels: growthLabels,
+                    datasets: [
+                        {
+                            label: 'Android',
+                            data: androidData,
+                            borderColor: 'rgb(34, 197, 94)',
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'iOS',
+                            data: iosData,
+                            borderColor: 'rgb(59, 130, 246)',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Web',
+                            data: webData,
+                            borderColor: 'rgb(139, 92, 246)',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
                             tension: 0.4,
                             fill: true
                         }
