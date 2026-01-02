@@ -87,98 +87,68 @@
                 </div>
             </div>
 
-            <!-- People -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Director -->
-                <div>
-                    <label for="director_id" class="block text-sm font-medium text-gray-700 mb-2">کارگردان</label>
-                    <select name="director_id" id="director_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('director_id') border-red-500 @enderror">
-                        <option value="">انتخاب کارگردان</option>
-                        @foreach($people as $person)
-                            <option value="{{ $person->id }}" {{ old('director_id') == $person->id ? 'selected' : '' }}>
-                                {{ $person->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('director_id')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Writer -->
-                <div>
-                    <label for="writer_id" class="block text-sm font-medium text-gray-700 mb-2">نویسنده</label>
-                    <select name="writer_id" id="writer_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('writer_id') border-red-500 @enderror">
-                        <option value="">انتخاب نویسنده</option>
-                        @foreach($people as $person)
-                            <option value="{{ $person->id }}" {{ old('writer_id') == $person->id ? 'selected' : '' }}>
-                                {{ $person->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('writer_id')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Author -->
-                <div>
-                    <label for="author_id" class="block text-sm font-medium text-gray-700 mb-2">مؤلف (کاربر)</label>
-                    <select name="author_id" id="author_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('author_id') border-red-500 @enderror">
-                        <option value="">انتخاب مؤلف</option>
-                        @foreach($eligibleUsers as $user)
-                            <option value="{{ $user->id }}" {{ old('author_id') == $user->id ? 'selected' : '' }}>
-                                {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('author_id')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-xs text-gray-500 mt-1">فقط کاربران با نقش صداپیشه، ادمین یا ادمین کل</p>
-                </div>
-
-                <!-- Narrator -->
-                <div>
-                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی (کاربر)</label>
-                    <select name="narrator_id" id="narrator_id"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
-                        <option value="">انتخاب راوی</option>
-                        @foreach($eligibleUsers as $user)
-                            <option value="{{ $user->id }}" {{ old('narrator_id') == $user->id ? 'selected' : '' }}>
-                                {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('narrator_id')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-xs text-gray-500 mt-1">فقط کاربران با نقش صداپیشه، ادمین یا ادمین کل</p>
-                </div>
-            </div>
-
-            <!-- Additional People -->
+            <!-- People (Optional - Collapsible) -->
             <div class="mb-6">
-                <label for="people" class="block text-sm font-medium text-gray-700 mb-2">افراد اضافی</label>
-                <select name="people[]" id="people" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('people') border-red-500 @enderror" size="6">
-                    @foreach($people as $person)
-                        <option value="{{ $person->id }}" {{ in_array($person->id, old('people', [])) ? 'selected' : '' }}>
-                            {{ $person->name }}
-                            @if($person->roles)
-                                ({{ implode(', ', $person->roles) }})
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-                @error('people')
-                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                @enderror
-                <p class="text-sm text-gray-500 mt-1">برای انتخاب چند نفر، کلید Ctrl را نگه دارید</p>
+                <button type="button" onclick="toggleSection('people-section')" class="flex items-center text-sm font-medium text-gray-700 mb-2 hover:text-primary">
+                    <span id="people-section-icon">▼</span>
+                    <span class="mr-2">اطلاعات افراد (اختیاری)</span>
+                </button>
+                <div id="people-section" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+                        <!-- Director -->
+                        <div>
+                            <label for="director_id" class="block text-sm font-medium text-gray-700 mb-2">کارگردان</label>
+                            <select name="director_id" id="director_id"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('director_id') border-red-500 @enderror">
+                                <option value="">انتخاب کارگردان</option>
+                                @foreach($people as $person)
+                                    <option value="{{ $person->id }}" {{ old('director_id') == $person->id ? 'selected' : '' }}>
+                                        {{ $person->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('director_id')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <!-- Author -->
+                        <div>
+                            <label for="author_id" class="block text-sm font-medium text-gray-700 mb-2">مؤلف (کاربر)</label>
+                            <select name="author_id" id="author_id"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('author_id') border-red-500 @enderror">
+                                <option value="">انتخاب مؤلف</option>
+                                @foreach($eligibleUsers as $user)
+                                    <option value="{{ $user->id }}" {{ old('author_id') == $user->id ? 'selected' : '' }}>
+                                        {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('author_id')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Narrator -->
+                        <div>
+                            <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی (کاربر)</label>
+                            <select name="narrator_id" id="narrator_id"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
+                                <option value="">انتخاب راوی</option>
+                                @foreach($eligibleUsers as $user)
+                                    <option value="{{ $user->id }}" {{ old('narrator_id') == $user->id ? 'selected' : '' }}>
+                                        {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('narrator_id')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Images -->
@@ -211,18 +181,19 @@
                 <!-- Duration -->
                 <div>
                     <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">مدت زمان (دقیقه)</label>
-                    <input type="number" name="duration" id="duration" value="{{ old('duration') }}" min="1"
+                    <input type="number" name="duration" id="duration" value="{{ old('duration', 0) }}" min="0"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror"
-                           placeholder="مدت زمان کل داستان" required>
+                           placeholder="مدت زمان کل داستان">
                     @error('duration')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                     @enderror
+                    <p class="text-xs text-gray-500 mt-1">در صورت خالی بودن، مقدار پیش‌فرض 0 خواهد بود</p>
                 </div>
 
                 <!-- Total Episodes -->
                 <div>
                     <label for="total_episodes" class="block text-sm font-medium text-gray-700 mb-2">تعداد اپیزودها</label>
-                    <input type="number" name="total_episodes" id="total_episodes" value="{{ old('total_episodes') }}" min="1"
+                    <input type="number" name="total_episodes" id="total_episodes" value="{{ old('total_episodes') }}" min="0"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('total_episodes') border-red-500 @enderror"
                            placeholder="تعداد کل اپیزودها">
                     @error('total_episodes')
@@ -242,46 +213,53 @@
                 </div>
             </div>
 
-            <!-- Tags -->
+            <!-- Script File and Workflow Status (Optional) -->
             <div class="mb-6">
-                <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">برچسب‌ها</label>
-                <input type="text" name="tags" id="tags" value="{{ is_array(old('tags')) ? implode(', ', old('tags')) : old('tags') }}"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('tags') border-red-500 @enderror"
-                       placeholder="برچسب‌ها را با کاما جدا کنید">
-                @error('tags')
-                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                @enderror
-                <p class="text-sm text-gray-500 mt-1">مثال: ماجراجویی، دوستی، خانواده</p>
-            </div>
+                <button type="button" onclick="toggleSection('advanced-section')" class="flex items-center text-sm font-medium text-gray-700 mb-2 hover:text-primary">
+                    <span id="advanced-section-icon">▼</span>
+                    <span class="mr-2">گزینه‌های پیشرفته (اختیاری)</span>
+                </button>
+                <div id="advanced-section" class="hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+                        <!-- Script File -->
+                        <div>
+                            <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت</label>
+                            <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('script_file') border-red-500 @enderror">
+                            @error('script_file')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                            <p class="text-xs text-gray-500 mt-1">حداکثر 10 مگابایت، فرمت‌های مجاز: MD, TXT, DOC, DOCX</p>
+                        </div>
 
-            <!-- Script File and Workflow Status -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Script File -->
-                <div>
-                    <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت</label>
-                    <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('script_file') border-red-500 @enderror">
-                    @error('script_file')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-sm text-gray-500 mt-1">حداکثر 10 مگابایت، فرمت‌های مجاز: MD, TXT, DOC, DOCX</p>
-                </div>
+                        <!-- Workflow Status -->
+                        <div>
+                            <label for="workflow_status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت گردش کار</label>
+                            <select name="workflow_status" id="workflow_status"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('workflow_status') border-red-500 @enderror">
+                                <option value="written" {{ old('workflow_status', 'written') == 'written' ? 'selected' : '' }}>نوشته شده</option>
+                                <option value="characters_made" {{ old('workflow_status') == 'characters_made' ? 'selected' : '' }}>شخصیت‌ها ساخته شده</option>
+                                <option value="recorded" {{ old('workflow_status') == 'recorded' ? 'selected' : '' }}>ضبط شده</option>
+                                <option value="timeline_created" {{ old('workflow_status') == 'timeline_created' ? 'selected' : '' }}>تایم‌لاین ایجاد شده</option>
+                                <option value="published" {{ old('workflow_status') == 'published' ? 'selected' : '' }}>منتشر شده</option>
+                            </select>
+                            @error('workflow_status')
+                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
 
-                <!-- Workflow Status -->
-                <div>
-                    <label for="workflow_status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت گردش کار</label>
-                    <select name="workflow_status" id="workflow_status"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('workflow_status') border-red-500 @enderror">
-                        <option value="">انتخاب وضعیت</option>
-                        <option value="written" {{ old('workflow_status') == 'written' ? 'selected' : '' }}>نوشته شده</option>
-                        <option value="characters_made" {{ old('workflow_status') == 'characters_made' ? 'selected' : '' }}>شخصیت‌ها ساخته شده</option>
-                        <option value="recorded" {{ old('workflow_status') == 'recorded' ? 'selected' : '' }}>ضبط شده</option>
-                        <option value="timeline_created" {{ old('workflow_status') == 'timeline_created' ? 'selected' : '' }}>تایم‌لاین ایجاد شده</option>
-                        <option value="published" {{ old('workflow_status') == 'published' ? 'selected' : '' }}>منتشر شده</option>
-                    </select>
-                    @error('workflow_status')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
+                    <!-- Tags -->
+                    <div class="mb-4">
+                        <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">برچسب‌ها</label>
+                        <input type="text" name="tags" id="tags" value="{{ is_array(old('tags')) ? implode(', ', old('tags')) : old('tags') }}"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('tags') border-red-500 @enderror"
+                               placeholder="برچسب‌ها را با کاما جدا کنید">
+                        @error('tags')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                        <p class="text-xs text-gray-500 mt-1">مثال: ماجراجویی، دوستی، خانواده</p>
+                    </div>
                 </div>
             </div>
 
@@ -303,35 +281,27 @@
                     @enderror
                 </div>
 
-                <!-- Published At -->
+                <!-- Premium Options -->
                 <div>
-                    <label for="published_at" class="block text-sm font-medium text-gray-700 mb-2">تاریخ انتشار</label>
-                    <input type="datetime-local" name="published_at" id="published_at" value="{{ old('published_at') }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('published_at') border-red-500 @enderror">
-                    @error('published_at')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">گزینه‌های دسترسی</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" name="is_premium" id="is_premium" value="1"
+                                   class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                                   {{ old('is_premium') ? 'checked' : '' }}>
+                            <label for="is_premium" class="mr-2 text-sm text-gray-700">داستان پولی</label>
+                        </div>
 
-            <!-- Checkboxes -->
-            <div class="mb-6">
-                <div class="space-y-3">
-                    <div class="flex items-center">
-                        <input type="checkbox" name="is_premium" id="is_premium" value="1"
-                               class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                               {{ old('is_premium') ? 'checked' : '' }}>
-                        <label for="is_premium" class="mr-2 text-sm text-gray-700">داستان پولی</label>
-                    </div>
-
-                    <div class="flex items-center">
-                        <input type="checkbox" name="is_completely_free" id="is_completely_free" value="1"
-                               class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                               {{ old('is_completely_free') ? 'checked' : '' }}>
-                        <label for="is_completely_free" class="mr-2 text-sm text-gray-700">کاملاً رایگان</label>
+                        <div class="flex items-center">
+                            <input type="checkbox" name="is_completely_free" id="is_completely_free" value="1"
+                                   class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
+                                   {{ old('is_completely_free') ? 'checked' : '' }}>
+                            <label for="is_completely_free" class="mr-2 text-sm text-gray-700">کاملاً رایگان</label>
+                        </div>
                     </div>
                 </div>
             </div>
+
 
             <!-- Submit Button -->
             <div class="flex justify-between items-center">
@@ -403,6 +373,21 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('image').addEventListener('change', function() {
         previewImage(this, 'image_preview');
     });
+});
+
+// Toggle collapsible sections
+function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    const icon = document.getElementById(sectionId + '-icon');
+
+    if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        icon.textContent = '▲';
+    } else {
+        section.classList.add('hidden');
+        icon.textContent = '▼';
+    }
+}
 </script>
 <script src="{{ asset('js/form-state-manager.js') }}"></script>
 
@@ -531,7 +516,7 @@ function validateStoryForm() {
     const errors = [];
 
     // Required field validation
-    const requiredFields = ['title', 'description', 'category_id', 'age_group', 'duration'];
+    const requiredFields = ['title', 'description', 'category_id', 'age_group'];
     requiredFields.forEach(fieldName => {
         const field = form.querySelector(`[name="${fieldName}"]`);
         if (field && !field.value.trim()) {

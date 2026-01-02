@@ -256,9 +256,19 @@ class StoryController extends Controller
         // Set default language (all stories are in Persian)
         $validated['language'] = 'persian';
         
+        // Set default workflow status if not provided
+        if (!isset($validated['workflow_status']) || empty($validated['workflow_status'])) {
+            $validated['workflow_status'] = 'written';
+        }
+        
         // Ensure duration has a default value if not provided
         if (!isset($validated['duration']) || empty($validated['duration'])) {
             $validated['duration'] = 0;
+        }
+        
+        // Ensure free_episodes has a default value if not provided
+        if (!isset($validated['free_episodes']) || empty($validated['free_episodes'])) {
+            $validated['free_episodes'] = 0;
         }
 
         // Handle file uploads

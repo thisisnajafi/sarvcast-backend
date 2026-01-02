@@ -186,6 +186,11 @@ class EpisodeController extends BaseController
         $stories = Story::with('category')->orderBy('title', 'asc')->get();
         $people = Person::orderBy('name', 'asc')->get();
         
+        // Get narrators (Person model) for voice actors dropdown
+        $narrators = Person::whereJsonContains('roles', 'narrator')
+            ->orderBy('name', 'asc')
+            ->get();
+        
         // Get users who can be narrators (voice_actor, admin, super_admin)
         $eligibleUsers = User::whereIn('role', [
             User::ROLE_VOICE_ACTOR,
@@ -196,7 +201,7 @@ class EpisodeController extends BaseController
           ->orderBy('last_name')
           ->get();
 
-        return view('admin.episodes.create', compact('stories', 'people', 'eligibleUsers'));
+        return view('admin.episodes.create', compact('stories', 'people', 'eligibleUsers', 'narrators'));
     }
 
     /**
