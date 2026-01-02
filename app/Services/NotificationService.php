@@ -33,7 +33,7 @@ class NotificationService
         try {
             // Get user's FCM tokens
             $fcmTokens = $this->getUserFcmTokens($user);
-            
+
             if (empty($fcmTokens)) {
                 return false;
             }
@@ -58,7 +58,7 @@ class NotificationService
         try {
             // Get OAuth2 access token
             $accessToken = $this->firebaseAuthService->getAccessToken();
-            
+
             if (!$accessToken) {
                 Log::error('Failed to get Firebase access token');
                 return false;
@@ -83,6 +83,8 @@ class NotificationService
                             'notification' => [
                                 'sound' => 'default',
                                 'channel_id' => 'sarvcast_notifications',
+                                'icon' => 'ic_notification',
+                                'color' => '#00BCD4',
                             ],
                         ],
                         'apns' => [
@@ -134,7 +136,7 @@ class NotificationService
     protected function sendPushNotificationLegacy(array $fcmTokens, string $title, string $body, array $data, User $user): bool
     {
         $serverKey = config('notification.firebase.server_key');
-        
+
         if (!$serverKey) {
             Log::error('Firebase server key not configured for legacy API');
             return false;
@@ -221,10 +223,10 @@ class NotificationService
 
             if ($response->successful()) {
                 $result = $response->json();
-                
+
                 // Log notification
                 $this->logNotification($user, 'sms', 'SMS', $message, $result);
-                
+
                 return $result['status'] === 'success';
             }
 
@@ -263,13 +265,13 @@ class NotificationService
     public function sendBulkNotification(array $userIds, string $title, string $message, string $type = 'info', array $channels = ['in_app']): array
     {
         $results = [];
-        
+
         foreach ($userIds as $userId) {
             $user = User::find($userId);
             if (!$user) continue;
 
             $userResults = [];
-            
+
             foreach ($channels as $channel) {
                 switch ($channel) {
                     case 'push':
@@ -286,7 +288,7 @@ class NotificationService
                         break;
                 }
             }
-            
+
             $results[$userId] = $userResults;
         }
 
@@ -336,10 +338,10 @@ class NotificationService
         }
 
         $notification = $notifications[$event];
-        
+
         // Send in-app notification
         $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $data);
-        
+
         // Send push notification
         $this->sendPushNotification($user, $notification['title'], $notification['message'], $data);
 
@@ -374,10 +376,10 @@ class NotificationService
         }
 
         $notification = $notifications[$event];
-        
+
         // Send in-app notification
         $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $data);
-        
+
         // Send push notification
         $this->sendPushNotification($user, $notification['title'], $notification['message'], $data);
 
@@ -392,10 +394,10 @@ class NotificationService
         try {
             // Send in-app notification
             $this->sendInAppNotification($user, $title, $message, 'promotion', $data);
-            
+
             // Send push notification
             $this->sendPushNotification($user, $title, $message, $data);
-            
+
             // Send SMS for marketing (if enabled and user has phone)
             if ($sendSms && $user->phone_number) {
                 $this->sendSmsNotification($user, $message);
@@ -414,7 +416,7 @@ class NotificationService
     public function sendBulkMarketingNotification(array $userIds, string $title, string $message, array $data = [], bool $sendSms = true): array
     {
         $results = [];
-        
+
         foreach ($userIds as $userId) {
             $user = User::find($userId);
             if (!$user) continue;
@@ -437,7 +439,7 @@ class NotificationService
                 ->where('fcm_token', '!=', '')
                 ->pluck('fcm_token')
                 ->toArray();
-            
+
             return array_filter($tokens); // Remove any empty values
         } catch (\Exception $e) {
             Log::error('Failed to get user FCM tokens: ' . $e->getMessage());
@@ -539,14 +541,14 @@ class NotificationService
         }
 
         $notification = $notifications[$assignmentType];
-        
+
         // Prepare deep link data
         $pushData = [
             'type' => 'voice_actor_assignment',
             'assignment_type' => $assignmentType,
             'action' => 'assigned'
         ];
-        
+
         if (isset($data['story_id'])) {
             $pushData['story_id'] = $data['story_id'];
         }
@@ -556,15 +558,15 @@ class NotificationService
         if (isset($data['character_id'])) {
             $pushData['character_id'] = $data['character_id'];
         }
-        
+
         $pushData = array_merge($pushData, $data);
-        
+
         // Send in-app notification
         $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
-        
+
         // Send push notification
         $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
-        
+
         // Send email notification
         $this->sendEmailNotification($user, $notification['title'], 'emails.voice_actor_assignment', [
             'user' => $user,
@@ -603,26 +605,26 @@ class NotificationService
         }
 
         $notification = $notifications[$assignmentType];
-        
+
         // Prepare deep link data
         $pushData = [
             'type' => 'voice_actor_assignment',
             'assignment_type' => $assignmentType,
             'action' => 'removed'
         ];
-        
+
         if (isset($data['story_id'])) {
             $pushData['story_id'] = $data['story_id'];
         }
         if (isset($data['episode_id'])) {
             $pushData['episode_id'] = $data['episode_id'];
         }
-        
+
         $pushData = array_merge($pushData, $data);
-        
+
         // Send in-app notification
         $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
-        
+
         // Send push notification
         $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
 
@@ -670,10 +672,10 @@ class NotificationService
 
         // Send in-app notification
         $this->sendInAppNotification($user, $title, $message, 'info', $pushData);
-        
+
         // Send push notification
         $this->sendPushNotification($user, $title, $message, $pushData);
-        
+
         // Send email for important status changes
         if (in_array($newStatus, ['characters_made', 'recorded', 'published'])) {
             $this->sendEmailNotification($user, $title, 'emails.workflow_status_change', [
@@ -725,13 +727,13 @@ class NotificationService
         }
 
         $notification = $notifications[$contentType][$role];
-        
+
         $pushData = [
             'type' => 'content_published',
             'content_type' => $contentType,
             'role' => $role
         ];
-        
+
         if (isset($data['story_id'])) {
             $pushData['story_id'] = $data['story_id'];
         }
@@ -741,15 +743,15 @@ class NotificationService
         if (isset($data['character_id'])) {
             $pushData['character_id'] = $data['character_id'];
         }
-        
+
         $pushData = array_merge($pushData, $data);
-        
+
         // Send in-app notification
         $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
-        
+
         // Send push notification
         $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
-        
+
         // Send email for published content
         $this->sendEmailNotification($user, $notification['title'], 'emails.content_published', [
             'user' => $user,
@@ -783,27 +785,27 @@ class NotificationService
         }
 
         $notification = $notifications[$contentType];
-        
+
         $pushData = [
             'type' => 'script_ready',
             'content_type' => $contentType
         ];
-        
+
         if (isset($data['story_id'])) {
             $pushData['story_id'] = $data['story_id'];
         }
         if (isset($data['episode_id'])) {
             $pushData['episode_id'] = $data['episode_id'];
         }
-        
+
         $pushData = array_merge($pushData, $data);
-        
+
         // Send in-app notification
         $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
-        
+
         // Send push notification
         $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
-        
+
         // Send email notification
         $this->sendEmailNotification($user, $notification['title'], 'emails.script_ready', [
             'user' => $user,

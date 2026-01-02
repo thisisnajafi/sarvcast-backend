@@ -14,7 +14,7 @@ class TestPushNotification extends Command
      *
      * @var string
      */
-    protected $signature = 'push:test {phone : Phone number to send test notification to} {--title= : Notification title} {--body= : Notification body}';
+    protected $signature = 'push:test {phone : Phone number to send test notification to} {--title= : Notification title} {--body= : Notification body} {--device-id= : Specific device ID to check}';
 
     /**
      * The console command description.
@@ -67,6 +67,37 @@ class TestPushNotification extends Command
         }
 
         $this->info("📱 Found " . count($fcmTokens) . " registered device(s)");
+
+        // Check for specific device if provided
+        $deviceId = $this->option('device-id');
+        if ($deviceId) {
+            $this->newLine();
+            $this->info("🔍 Checking for device ID: {$deviceId}");
+            $device = DB::table('user_devices')
+                ->where('user_id', $user->id)
+                ->where('device_id', $deviceId)
+                ->first();
+
+            if ($device) {
+                $this->info("   ✅ Device found!");
+                $this->line("   Type: {$device->device_type}");
+                $this->line("   Model: {$device->device_model}");
+                $this->line("   Has FCM Token: " . (!empty($device->fcm_token) ? 'Yes' : 'No'));
+                if (!empty($device->fcm_token)) {
+                    $this->line("   Token Preview: " . substr($device->fcm_token, 0, 30) . '...');
+                }
+            } else {
+                $this->warn("   ⚠️  Device ID '{$deviceId}' not found for this user");
+                $this->line("   Available device IDs:");
+                $allDevices = DB::table('user_devices')
+                    ->where('user_id', $user->id)
+                    ->pluck('device_id');
+                foreach ($allDevices as $id) {
+                    $this->line("     - {$id}");
+                }
+            }
+        }
+
         $this->newLine();
 
         // Send notification
