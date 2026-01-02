@@ -52,13 +52,6 @@ class InAppNotificationService
         'promotion' => 'تبلیغات'
     ];
 
-    protected $notificationService;
-
-    public function __construct(NotificationService $notificationService = null)
-    {
-        $this->notificationService = $notificationService ?? app(NotificationService::class);
-    }
-
     /**
      * Create a new notification
      */
@@ -94,7 +87,7 @@ class InAppNotificationService
                         $pushData['payment_id'] = $options['payment_id'];
                         $pushData['type'] = 'payment';
                     }
-                    
+
                     // Send push notification
                     $this->notificationService->sendPushNotification($user, $title, $message, $pushData);
                 } catch (\Exception $e) {
