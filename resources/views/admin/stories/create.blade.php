@@ -14,13 +14,13 @@
     <div class="bg-white rounded-lg shadow-sm p-6">
         <form method="POST" action="{{ route('admin.stories.store') }}" enctype="multipart/form-data">
             @csrf
-            
+
             <!-- Basic Information -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Title -->
                 <div>
                     <label for="title" class="block text-sm font-medium text-gray-700 mb-2">عنوان داستان</label>
-                    <input type="text" name="title" id="title" value="{{ old('title') }}" 
+                    <input type="text" name="title" id="title" value="{{ old('title') }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('title') border-red-500 @enderror"
                            placeholder="عنوان داستان را وارد کنید" required>
                     @error('title')
@@ -31,7 +31,7 @@
                 <!-- Subtitle -->
                 <div>
                     <label for="subtitle" class="block text-sm font-medium text-gray-700 mb-2">زیرعنوان</label>
-                    <input type="text" name="subtitle" id="subtitle" value="{{ old('subtitle') }}" 
+                    <input type="text" name="subtitle" id="subtitle" value="{{ old('subtitle') }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('subtitle') border-red-500 @enderror"
                            placeholder="زیرعنوان داستان را وارد کنید">
                     @error('subtitle')
@@ -43,7 +43,7 @@
             <!-- Description -->
             <div class="mb-6">
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">توضیحات</label>
-                <textarea name="description" id="description" rows="4" 
+                <textarea name="description" id="description" rows="4"
                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('description') border-red-500 @enderror"
                           placeholder="توضیحات داستان را وارد کنید" required>{{ old('description') }}</textarea>
                 @error('description')
@@ -56,7 +56,7 @@
                 <!-- Category -->
                 <div>
                     <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">دسته‌بندی</label>
-                    <select name="category_id" id="category_id" 
+                    <select name="category_id" id="category_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('category_id') border-red-500 @enderror" required>
                         <option value="">انتخاب دسته‌بندی</option>
                         @foreach($categories as $category)
@@ -73,7 +73,7 @@
                 <!-- Age Group -->
                 <div>
                     <label for="age_group" class="block text-sm font-medium text-gray-700 mb-2">گروه سنی</label>
-                    <select name="age_group" id="age_group" 
+                    <select name="age_group" id="age_group"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('age_group') border-red-500 @enderror" required>
                         <option value="">انتخاب گروه سنی</option>
                         <option value="3-5" {{ old('age_group') == '3-5' ? 'selected' : '' }}>3-5 سال</option>
@@ -92,7 +92,7 @@
                 <!-- Director -->
                 <div>
                     <label for="director_id" class="block text-sm font-medium text-gray-700 mb-2">کارگردان</label>
-                    <select name="director_id" id="director_id" 
+                    <select name="director_id" id="director_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('director_id') border-red-500 @enderror">
                         <option value="">انتخاب کارگردان</option>
                         @foreach($people as $person)
@@ -109,7 +109,7 @@
                 <!-- Writer -->
                 <div>
                     <label for="writer_id" class="block text-sm font-medium text-gray-700 mb-2">نویسنده</label>
-                    <select name="writer_id" id="writer_id" 
+                    <select name="writer_id" id="writer_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('writer_id') border-red-500 @enderror">
                         <option value="">انتخاب نویسنده</option>
                         @foreach($people as $person)
@@ -128,7 +128,7 @@
                 <!-- Author -->
                 <div>
                     <label for="author_id" class="block text-sm font-medium text-gray-700 mb-2">مؤلف (کاربر)</label>
-                    <select name="author_id" id="author_id" 
+                    <select name="author_id" id="author_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('author_id') border-red-500 @enderror">
                         <option value="">انتخاب مؤلف</option>
                         @foreach($eligibleUsers as $user)
@@ -146,7 +146,7 @@
                 <!-- Narrator -->
                 <div>
                     <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی (کاربر)</label>
-                    <select name="narrator_id" id="narrator_id" 
+                    <select name="narrator_id" id="narrator_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
                         <option value="">انتخاب راوی</option>
                         @foreach($eligibleUsers as $user)
@@ -168,7 +168,7 @@
                 <select name="people[]" id="people" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('people') border-red-500 @enderror" size="6">
                     @foreach($people as $person)
                         <option value="{{ $person->id }}" {{ in_array($person->id, old('people', [])) ? 'selected' : '' }}>
-                            {{ $person->name }} 
+                            {{ $person->name }}
                             @if($person->roles)
                                 ({{ implode(', ', $person->roles) }})
                             @endif
@@ -186,7 +186,7 @@
                 <!-- Cover Image -->
                 <div>
                     <label for="cover_image" class="block text-sm font-medium text-gray-700 mb-2">تصویر جلد</label>
-                    <input type="file" name="cover_image" id="cover_image" accept="image/*" 
+                    <input type="file" name="cover_image" id="cover_image" accept="image/*"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('cover_image') border-red-500 @enderror">
                     @error('cover_image')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -197,7 +197,7 @@
                 <!-- Story Image -->
                 <div>
                     <label for="image" class="block text-sm font-medium text-gray-700 mb-2">تصویر داستان</label>
-                    <input type="file" name="image" id="image" accept="image/*" 
+                    <input type="file" name="image" id="image" accept="image/*"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('image') border-red-500 @enderror">
                     @error('image')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -211,7 +211,7 @@
                 <!-- Duration -->
                 <div>
                     <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">مدت زمان (دقیقه)</label>
-                    <input type="number" name="duration" id="duration" value="{{ old('duration') }}" min="1" 
+                    <input type="number" name="duration" id="duration" value="{{ old('duration') }}" min="1"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror"
                            placeholder="مدت زمان کل داستان" required>
                     @error('duration')
@@ -222,7 +222,7 @@
                 <!-- Total Episodes -->
                 <div>
                     <label for="total_episodes" class="block text-sm font-medium text-gray-700 mb-2">تعداد اپیزودها</label>
-                    <input type="number" name="total_episodes" id="total_episodes" value="{{ old('total_episodes') }}" min="1" 
+                    <input type="number" name="total_episodes" id="total_episodes" value="{{ old('total_episodes') }}" min="1"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('total_episodes') border-red-500 @enderror"
                            placeholder="تعداد کل اپیزودها">
                     @error('total_episodes')
@@ -233,7 +233,7 @@
                 <!-- Free Episodes -->
                 <div>
                     <label for="free_episodes" class="block text-sm font-medium text-gray-700 mb-2">اپیزودهای رایگان</label>
-                    <input type="number" name="free_episodes" id="free_episodes" value="{{ old('free_episodes', 0) }}" min="0" 
+                    <input type="number" name="free_episodes" id="free_episodes" value="{{ old('free_episodes', 0) }}" min="0"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('free_episodes') border-red-500 @enderror"
                            placeholder="تعداد اپیزودهای رایگان">
                     @error('free_episodes')
@@ -245,7 +245,7 @@
             <!-- Tags -->
             <div class="mb-6">
                 <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">برچسب‌ها</label>
-                <input type="text" name="tags" id="tags" value="{{ is_array(old('tags')) ? implode(', ', old('tags')) : old('tags') }}" 
+                <input type="text" name="tags" id="tags" value="{{ is_array(old('tags')) ? implode(', ', old('tags')) : old('tags') }}"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('tags') border-red-500 @enderror"
                        placeholder="برچسب‌ها را با کاما جدا کنید">
                 @error('tags')
@@ -259,7 +259,7 @@
                 <!-- Script File -->
                 <div>
                     <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت</label>
-                    <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx" 
+                    <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('script_file') border-red-500 @enderror">
                     @error('script_file')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -270,7 +270,7 @@
                 <!-- Workflow Status -->
                 <div>
                     <label for="workflow_status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت گردش کار</label>
-                    <select name="workflow_status" id="workflow_status" 
+                    <select name="workflow_status" id="workflow_status"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('workflow_status') border-red-500 @enderror">
                         <option value="">انتخاب وضعیت</option>
                         <option value="written" {{ old('workflow_status') == 'written' ? 'selected' : '' }}>نوشته شده</option>
@@ -290,7 +290,7 @@
                 <!-- Status -->
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت</label>
-                    <select name="status" id="status" 
+                    <select name="status" id="status"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('status') border-red-500 @enderror" required>
                         <option value="draft" {{ old('status', 'draft') == 'draft' ? 'selected' : '' }}>پیش‌نویس</option>
                         <option value="pending" {{ old('status') == 'pending' ? 'selected' : '' }}>در انتظار بررسی</option>
@@ -306,7 +306,7 @@
                 <!-- Published At -->
                 <div>
                     <label for="published_at" class="block text-sm font-medium text-gray-700 mb-2">تاریخ انتشار</label>
-                    <input type="datetime-local" name="published_at" id="published_at" value="{{ old('published_at') }}" 
+                    <input type="datetime-local" name="published_at" id="published_at" value="{{ old('published_at') }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('published_at') border-red-500 @enderror">
                     @error('published_at')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -318,14 +318,14 @@
             <div class="mb-6">
                 <div class="space-y-3">
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_premium" id="is_premium" value="1" 
+                        <input type="checkbox" name="is_premium" id="is_premium" value="1"
                                class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                                {{ old('is_premium') ? 'checked' : '' }}>
                         <label for="is_premium" class="mr-2 text-sm text-gray-700">داستان پولی</label>
                     </div>
-                    
+
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_completely_free" id="is_completely_free" value="1" 
+                        <input type="checkbox" name="is_completely_free" id="is_completely_free" value="1"
                                class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                                {{ old('is_completely_free') ? 'checked' : '' }}>
                         <label for="is_completely_free" class="mr-2 text-sm text-gray-700">کاملاً رایگان</label>
@@ -358,26 +358,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-calculate free episodes based on total episodes
     const totalEpisodesInput = document.getElementById('total_episodes');
     const freeEpisodesInput = document.getElementById('free_episodes');
-    
+
     totalEpisodesInput.addEventListener('input', function() {
         const total = parseInt(this.value) || 0;
         const currentFree = parseInt(freeEpisodesInput.value) || 0;
-        
+
         if (currentFree > total) {
             freeEpisodesInput.value = Math.min(currentFree, total);
         }
     });
-    
+
     // Validate free episodes
     freeEpisodesInput.addEventListener('input', function() {
         const total = parseInt(totalEpisodesInput.value) || 0;
         const free = parseInt(this.value) || 0;
-        
+
         if (free > total) {
             this.value = total;
         }
     });
-    
+
     // Preview image uploads
     function previewImage(input, previewId) {
         if (input.files && input.files[0]) {
@@ -395,14 +395,15 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsDataURL(input.files[0]);
         }
     }
-    
+
     document.getElementById('cover_image').addEventListener('change', function() {
         previewImage(this, 'cover_preview');
     });
-    
+
     document.getElementById('image').addEventListener('change', function() {
         previewImage(this, 'image_preview');
     });
+</script>
 <script src="{{ asset('js/form-state-manager.js') }}"></script>
 
 <script>
@@ -412,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.storyFormManager) {
         console.log('Story form state management initialized');
     }
-    
+
     // Handle form submission with better error handling
     const form = document.querySelector('form[action*="stories"]');
     if (form) {
@@ -422,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalText = submitButton.textContent;
             submitButton.textContent = 'در حال ایجاد...';
             submitButton.disabled = true;
-            
+
             // Re-enable button after 10 seconds (in case of timeout)
             setTimeout(() => {
                 submitButton.textContent = originalText;
@@ -430,10 +431,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 10000);
         });
     }
-    
+
     // Add auto-save indicator
     addAutoSaveIndicator();
-    
+
     // Enhanced image preview with persistence
     enhanceImagePreview();
 });
@@ -444,7 +445,7 @@ function addAutoSaveIndicator() {
     indicator.className = 'fixed bottom-4 left-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 transition-opacity duration-300';
     indicator.textContent = '✓ ذخیره خودکار';
     document.body.appendChild(indicator);
-    
+
     // Show indicator when form is saved
     const form = document.querySelector('form[action*="stories"]');
     if (form) {
@@ -462,14 +463,14 @@ function enhanceImagePreview() {
     function previewImage(input, previewId) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
-            
+
             // Validate file size (5MB max)
             if (file.size > 5 * 1024 * 1024) {
                 showNotification('حجم فایل نمی‌تواند بیشتر از 5 مگابایت باشد', 'error');
                 input.value = '';
                 return;
             }
-            
+
             // Validate file type
             const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
             if (!allowedTypes.includes(file.type)) {
@@ -477,7 +478,7 @@ function enhanceImagePreview() {
                 input.value = '';
                 return;
             }
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 let preview = document.getElementById(previewId);
@@ -488,19 +489,19 @@ function enhanceImagePreview() {
                     input.parentNode.appendChild(preview);
                 }
                 preview.src = e.target.result;
-                
+
                 // Save file info for restoration
                 saveImageFileInfo(input.id, file);
             };
             reader.readAsDataURL(file);
         }
     }
-    
+
     // Attach enhanced preview to image inputs
     document.getElementById('cover_image').addEventListener('change', function() {
         previewImage(this, 'cover_preview');
     });
-    
+
     document.getElementById('image').addEventListener('change', function() {
         previewImage(this, 'image_preview');
     });
@@ -525,10 +526,10 @@ function saveImageFileInfo(inputId, file) {
 function validateStoryForm() {
     const form = document.querySelector('form[action*="stories"]');
     if (!form) return false;
-    
+
     let isValid = true;
     const errors = [];
-    
+
     // Required field validation
     const requiredFields = ['title', 'description', 'category_id', 'age_group', 'duration'];
     requiredFields.forEach(fieldName => {
@@ -538,21 +539,21 @@ function validateStoryForm() {
             isValid = false;
         }
     });
-    
+
     // Number validation
     const totalEpisodes = parseInt(document.getElementById('total_episodes').value) || 0;
     const freeEpisodes = parseInt(document.getElementById('free_episodes').value) || 0;
-    
+
     if (freeEpisodes > totalEpisodes) {
         errors.push('تعداد اپیزودهای رایگان نمی‌تواند بیشتر از کل اپیزودها باشد');
         isValid = false;
     }
-    
+
     // Show errors if any
     if (!isValid) {
         showNotification(errors.join('، '), 'error');
     }
-    
+
     return isValid;
 }
 
@@ -573,40 +574,40 @@ document.addEventListener('DOMContentLoaded', function() {
 function enhanceTagInput() {
     const tagInput = document.getElementById('tags');
     if (!tagInput) return;
-    
+
     const commonTags = [
         'ماجراجویی', 'دوستی', 'خانواده', 'عشق', 'کمدی', 'درام', 'ترسناک',
         'علمی تخیلی', 'فانتزی', 'تاریخی', 'آموزشی', 'اخلاقی', 'اجتماعی'
     ];
-    
+
     // Create tag suggestions container
     const suggestionsContainer = document.createElement('div');
     suggestionsContainer.id = 'tag-suggestions';
     suggestionsContainer.className = 'hidden absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto';
     tagInput.parentNode.style.position = 'relative';
     tagInput.parentNode.appendChild(suggestionsContainer);
-    
+
     // Show suggestions on focus
     tagInput.addEventListener('focus', function() {
         showTagSuggestions();
     });
-    
+
     // Hide suggestions on blur
     tagInput.addEventListener('blur', function() {
         setTimeout(() => {
             suggestionsContainer.classList.add('hidden');
         }, 200);
     });
-    
+
     function showTagSuggestions() {
         const currentTags = tagInput.value.split(',').map(tag => tag.trim());
-        const availableTags = commonTags.filter(tag => 
-            !currentTags.includes(tag) && 
+        const availableTags = commonTags.filter(tag =>
+            !currentTags.includes(tag) &&
             tag.includes(tagInput.value.toLowerCase())
         );
-        
+
         if (availableTags.length > 0) {
-            suggestionsContainer.innerHTML = availableTags.map(tag => 
+            suggestionsContainer.innerHTML = availableTags.map(tag =>
                 `<div class="px-3 py-2 hover:bg-gray-100 cursor-pointer" onclick="addTag('${tag}')">${tag}</div>`
             ).join('');
             suggestionsContainer.classList.remove('hidden');
@@ -614,7 +615,7 @@ function enhanceTagInput() {
             suggestionsContainer.classList.add('hidden');
         }
     }
-    
+
     // Update suggestions as user types
     tagInput.addEventListener('input', showTagSuggestions);
 }
@@ -622,12 +623,12 @@ function enhanceTagInput() {
 function addTag(tag) {
     const tagInput = document.getElementById('tags');
     const currentTags = tagInput.value.split(',').map(t => t.trim()).filter(t => t);
-    
+
     if (!currentTags.includes(tag)) {
         currentTags.push(tag);
         tagInput.value = currentTags.join(', ');
     }
-    
+
     document.getElementById('tag-suggestions').classList.add('hidden');
     tagInput.focus();
 }
@@ -644,28 +645,28 @@ function clearStoryFormData() {
         if (window.storyFormManager) {
             window.storyFormManager.clearData();
         }
-        
+
         // Clear file data
         localStorage.removeItem('story_cover_image_file');
         localStorage.removeItem('story_image_file');
-        
+
         // Reset form
         const form = document.querySelector('form[action*="stories"]');
         if (form) {
             form.reset();
         }
-        
+
         // Clear image previews
         const coverPreview = document.getElementById('cover_preview');
         if (coverPreview) {
             coverPreview.remove();
         }
-        
+
         const imagePreview = document.getElementById('image_preview');
         if (imagePreview) {
             imagePreview.remove();
         }
-        
+
         showNotification('داده‌های فرم پاک شد', 'success');
     }
 }
@@ -674,14 +675,14 @@ function clearStoryFormData() {
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 ${
-        type === 'error' ? 'bg-red-500 text-white' : 
-        type === 'success' ? 'bg-green-500 text-white' : 
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'success' ? 'bg-green-500 text-white' :
         'bg-blue-500 text-white'
     }`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     // Auto remove after 5 seconds
     setTimeout(() => {
         notification.remove();
