@@ -10,61 +10,173 @@ use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
-    protected $firebaseServerKey;
+    protected $firebaseProjectId;
+    protected $firebaseAuthService;
     protected $smsApiKey;
     protected $emailFrom;
+    protected $useV1Api;
 
-    public function __construct()
+    public function __construct(FirebaseAuthService $firebaseAuthService = null)
     {
-        $this->firebaseServerKey = config('notification.firebase.server_key');
+        $this->firebaseProjectId = config('notification.firebase.project_id');
+        $this->firebaseAuthService = $firebaseAuthService ?? app(FirebaseAuthService::class);
         $this->smsApiKey = config('notification.sms.api_key');
         $this->emailFrom = config('notification.email.from');
+        $this->useV1Api = config('notification.firebase.use_v1_api', true);
     }
 
     /**
-     * Send push notification
+     * Send push notification using FCM v1 API
      */
     public function sendPushNotification(User $user, string $title, string $body, array $data = []): bool
     {
         try {
-            // Get user's FCM tokens (this would be stored in user profile)
+            // Get user's FCM tokens
             $fcmTokens = $this->getUserFcmTokens($user);
             
             if (empty($fcmTokens)) {
                 return false;
             }
 
-            $payload = [
-                'registration_ids' => $fcmTokens,
-                'notification' => [
-                    'title' => $title,
-                    'body' => $body,
-                    'sound' => 'default',
-                    'badge' => 1
-                ],
-                'data' => $data,
-                'priority' => 'high'
-            ];
-
-            $response = Http::withHeaders([
-                'Authorization' => 'key=' . $this->firebaseServerKey,
-                'Content-Type' => 'application/json'
-            ])->post('https://fcm.googleapis.com/fcm/send', $payload);
-
-            if ($response->successful()) {
-                $result = $response->json();
-                
-                // Log notification
-                $this->logNotification($user, 'push', $title, $body, $data, $result);
-                
-                return $result['success'] > 0;
+            // Use FCM v1 API if enabled, otherwise fallback to legacy
+            if ($this->useV1Api) {
+                return $this->sendPushNotificationV1($fcmTokens, $title, $body, $data, $user);
+            } else {
+                return $this->sendPushNotificationLegacy($fcmTokens, $title, $body, $data, $user);
             }
-
-            return false;
         } catch (\Exception $e) {
             Log::error('Push notification failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Send push notification using FCM HTTP v1 API
+     */
+    protected function sendPushNotificationV1(array $fcmTokens, string $title, string $body, array $data, User $user): bool
+    {
+        try {
+            // Get OAuth2 access token
+            $accessToken = $this->firebaseAuthService->getAccessToken();
+            
+            if (!$accessToken) {
+                Log::error('Failed to get Firebase access token');
+                return false;
+            }
+
+            $successCount = 0;
+            $projectId = $this->firebaseProjectId;
+            $apiUrl = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+
+            // Send to each token individually (FCM v1 requires individual requests)
+            foreach ($fcmTokens as $token) {
+                $message = [
+                    'message' => [
+                        'token' => $token,
+                        'notification' => [
+                            'title' => $title,
+                            'body' => $body,
+                        ],
+                        'data' => $this->prepareDataPayload($data),
+                        'android' => [
+                            'priority' => 'high',
+                            'notification' => [
+                                'sound' => 'default',
+                                'channel_id' => 'sarvcast_notifications',
+                            ],
+                        ],
+                        'apns' => [
+                            'headers' => [
+                                'apns-priority' => '10',
+                            ],
+                            'payload' => [
+                                'aps' => [
+                                    'sound' => 'default',
+                                    'badge' => 1,
+                                ],
+                            ],
+                        ],
+                    ],
+                ];
+
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $accessToken,
+                    'Content-Type' => 'application/json',
+                ])->post($apiUrl, $message);
+
+                if ($response->successful()) {
+                    $successCount++;
+                } else {
+                    Log::warning('FCM v1 notification failed for token', [
+                        'token_preview' => substr($token, 0, 20) . '...',
+                        'status' => $response->status(),
+                        'response' => $response->body(),
+                    ]);
+                }
+            }
+
+            // Log notification
+            $this->logNotification($user, 'push', $title, $body, $data, [
+                'success_count' => $successCount,
+                'total_tokens' => count($fcmTokens),
+            ]);
+
+            return $successCount > 0;
+        } catch (\Exception $e) {
+            Log::error('FCM v1 push notification failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send push notification using Legacy FCM API (fallback)
+     */
+    protected function sendPushNotificationLegacy(array $fcmTokens, string $title, string $body, array $data, User $user): bool
+    {
+        $serverKey = config('notification.firebase.server_key');
+        
+        if (!$serverKey) {
+            Log::error('Firebase server key not configured for legacy API');
+            return false;
+        }
+
+        $payload = [
+            'registration_ids' => $fcmTokens,
+            'notification' => [
+                'title' => $title,
+                'body' => $body,
+                'sound' => 'default',
+                'badge' => 1
+            ],
+            'data' => $data,
+            'priority' => 'high'
+        ];
+
+        $response = Http::withHeaders([
+            'Authorization' => 'key=' . $serverKey,
+            'Content-Type' => 'application/json'
+        ])->post('https://fcm.googleapis.com/fcm/send', $payload);
+
+        if ($response->successful()) {
+            $result = $response->json();
+            $this->logNotification($user, 'push', $title, $body, $data, $result);
+            return $result['success'] > 0;
+        }
+
+        return false;
+    }
+
+    /**
+     * Prepare data payload for FCM (convert all values to strings)
+     */
+    protected function prepareDataPayload(array $data): array
+    {
+        $prepared = [];
+        foreach ($data as $key => $value) {
+            // FCM data payload values must be strings
+            $prepared[$key] = is_array($value) ? json_encode($value) : (string) $value;
+        }
+        return $prepared;
     }
 
     /**

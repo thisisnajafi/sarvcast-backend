@@ -11,9 +11,36 @@ return [
     */
 
     'firebase' => [
+        // Legacy API (deprecated - use only as fallback)
         'server_key' => env('FIREBASE_SERVER_KEY'),
-        'project_id' => env('FIREBASE_PROJECT_ID'),
-        'api_url' => 'https://fcm.googleapis.com/fcm/send',
+
+        // FCM v1 API Configuration (Recommended)
+        'project_id' => env('FIREBASE_PROJECT_ID', 'sarvcast-20d5c'),
+        'service_account_path' => (function() {
+            $path = env('FIREBASE_SERVICE_ACCOUNT_PATH');
+            if (!$path) {
+                return storage_path('app/firebase-service-account.json');
+            }
+            // If absolute path (Windows or Unix), use as-is
+            if (str_starts_with($path, '/') || preg_match('/^[A-Za-z]:\\\\/', $path)) {
+                return $path;
+            }
+            // If path starts with 'storage/', remove it
+            if (str_starts_with($path, 'storage/')) {
+                $path = substr($path, 8);
+            }
+            // If path starts with 'app/', use storage_path directly
+            if (str_starts_with($path, 'app/')) {
+                return storage_path($path);
+            }
+            // Otherwise, assume it's a filename in storage/app
+            return storage_path('app/' . $path);
+        })(),
+        'use_v1_api' => env('FIREBASE_USE_V1_API', true), // Set to false to use legacy API
+
+        // API URLs
+        'api_url_v1' => 'https://fcm.googleapis.com/v1/projects/{project_id}/messages:send',
+        'api_url_legacy' => 'https://fcm.googleapis.com/fcm/send',
     ],
 
     'email' => [
