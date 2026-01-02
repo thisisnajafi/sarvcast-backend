@@ -44,7 +44,7 @@ class EpisodeController extends BaseController
         $randomString = substr(str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 32);
         $datetime = now()->format('Y-m-d_H-i-s');
         $prefix = $prefix ? $prefix . '_' : '';
-        
+
         return $prefix . $randomString . '-' . $datetime . '.' . $extension;
     }
     /**
@@ -120,7 +120,7 @@ class EpisodeController extends BaseController
         // Apply sorting
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
-        
+
         switch ($sort) {
             case 'title':
                 $query->orderBy('title', $direction);
@@ -156,11 +156,11 @@ class EpisodeController extends BaseController
         $perPage = min($perPage, 100); // Max 100 per page
 
         $episodes = $query->paginate($perPage);
-        
+
         // Get filter options
         $stories = Story::where('status', 'published')->get();
         $narrators = Person::whereJsonContains('roles', 'narrator')->get();
-        
+
         // Get statistics
         $stats = [
             'total' => Episode::count(),
@@ -185,12 +185,12 @@ class EpisodeController extends BaseController
     {
         $stories = Story::with('category')->orderBy('title', 'asc')->get();
         $people = Person::orderBy('name', 'asc')->get();
-        
+
         // Get narrators (Person model) for voice actors dropdown
         $narrators = Person::whereJsonContains('roles', 'narrator')
             ->orderBy('name', 'asc')
             ->get();
-        
+
         // Get users who can be narrators (voice_actor, admin, super_admin)
         $eligibleUsers = User::whereIn('role', [
             User::ROLE_VOICE_ACTOR,
@@ -276,16 +276,16 @@ class EpisodeController extends BaseController
             // Handle audio file upload and processing
             if ($request->hasFile('audio_file')) {
                 $audioFile = $request->file('audio_file');
-                
+
                 // Ensure directory exists in public/audio/episodes
                 $audioDir = public_path('audio/episodes');
                 if (!file_exists($audioDir)) {
                     mkdir($audioDir, 0755, true);
                 }
-                
+
                 // Generate unique filename to avoid conflicts
                 $filename = $this->generateUniqueFilename($audioFile, 'audio');
-                
+
                 // Save to public/audio/episodes directory
                 $audioPath = $audioFile->move($audioDir, $filename);
                 // Store the path relative to public directory
@@ -321,12 +321,12 @@ class EpisodeController extends BaseController
             if ($request->hasFile('script_file')) {
                 $scriptFile = $request->file('script_file');
                 $scriptDir = public_path('scripts/episodes');
-                
+
                 // Ensure directory exists
                 if (!file_exists($scriptDir)) {
                     mkdir($scriptDir, 0755, true);
                 }
-                
+
                 $scriptFileName = time() . '_' . $scriptFile->getClientOriginalName();
                 $scriptFile->move($scriptDir, $scriptFileName);
                 // Store only the relative path
@@ -346,7 +346,7 @@ class EpisodeController extends BaseController
                     try {
                         $imageWidth = $request->input('image_width', 800);
                         $imageHeight = $request->input('image_height', 600);
-                        
+
                         $processedImage = $this->imageProcessingService->processImage(
                             storage_path('app/public/' . str_replace('/storage/', '', $data['cover_image_url'])),
                             [
@@ -382,7 +382,7 @@ class EpisodeController extends BaseController
                 $favoritedUserIds = \App\Models\Favorite::where('story_id', $story->id)
                     ->pluck('user_id')
                     ->toArray();
-                
+
                 if (!empty($favoritedUserIds)) {
                     $this->notificationService->sendToMultipleUsers(
                         $favoritedUserIds,
@@ -495,16 +495,16 @@ class EpisodeController extends BaseController
                 }
 
                 $audioFile = $request->file('audio_file');
-                
+
                 // Ensure directory exists in public/audio/episodes
                 $audioDir = public_path('audio/episodes');
                 if (!file_exists($audioDir)) {
                     mkdir($audioDir, 0755, true);
                 }
-                
+
                 // Generate unique filename to avoid conflicts
                 $filename = $this->generateUniqueFilename($audioFile, 'audio');
-                
+
                 // Save to public/audio/episodes directory
                 $audioPath = $audioFile->move($audioDir, $filename);
                 // Store the path relative to public directory
@@ -563,7 +563,7 @@ class EpisodeController extends BaseController
                     try {
                         $imageWidth = $request->input('image_width', 800);
                         $imageHeight = $request->input('image_height', 600);
-                        
+
                         $processedImage = $this->imageProcessingService->processImage(
                             storage_path('app/public/' . str_replace('/storage/', '', $data['cover_image_url'])),
                             [
@@ -601,7 +601,7 @@ class EpisodeController extends BaseController
                 $favoritedUserIds = \App\Models\Favorite::where('story_id', $story->id)
                     ->pluck('user_id')
                     ->toArray();
-                
+
                 if (!empty($favoritedUserIds)) {
                     $this->notificationService->sendToMultipleUsers(
                         $favoritedUserIds,
@@ -927,17 +927,17 @@ class EpisodeController extends BaseController
         }
 
         $filename = 'episodes_export_' . now()->format('Y-m-d_H-i-s') . '.csv';
-        
+
         $callback = function() use ($csvData) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fwrite($file, "\xEF\xBB\xBF");
-            
+
             foreach ($csvData as $row) {
                 fputcsv($file, $row);
             }
-            
+
             fclose($file);
         };
 
@@ -1010,7 +1010,7 @@ class EpisodeController extends BaseController
             $favoritedUserIds = \App\Models\Favorite::where('story_id', $story->id)
                 ->pluck('user_id')
                 ->toArray();
-            
+
             if (!empty($favoritedUserIds)) {
                 $this->notificationService->sendToMultipleUsers(
                     $favoritedUserIds,
@@ -1252,7 +1252,7 @@ class EpisodeController extends BaseController
     {
         try {
             $story = $episode->story;
-            
+
             // Notify episode narrator (if assigned and is a User)
             if ($episode->narrator_id) {
                 // Note: narrator_id in episodes table references people table, not users
