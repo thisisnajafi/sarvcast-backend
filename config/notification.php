@@ -47,10 +47,10 @@ return [
 
     'channels' => [
         'default' => ['in_app', 'push'],
-        'subscription' => ['in_app', 'push', 'email'],
-        'payment' => ['in_app', 'push', 'email'],
+        'subscription' => ['in_app', 'push'],
+        'payment' => ['in_app', 'push'],
         'content' => ['in_app', 'push'],
-        'marketing' => ['in_app', 'push', 'email', 'sms'],
+        'marketing' => ['in_app', 'push', 'sms'],
     ],
 
     'types' => [
@@ -81,12 +81,12 @@ return [
         'subscription_activated' => [
             'title' => 'اشتراک فعال شد',
             'message' => 'اشتراک شما فعال شد و می‌توانید از تمام امکانات استفاده کنید',
-            'channels' => ['in_app', 'push', 'email'],
+            'channels' => ['in_app', 'push'],
         ],
         'subscription_expired' => [
             'title' => 'اشتراک منقضی شد',
             'message' => 'اشتراک شما منقضی شده است. برای ادامه استفاده، اشتراک جدید خریداری کنید',
-            'channels' => ['in_app', 'push', 'email'],
+            'channels' => ['in_app', 'push'],
         ],
         'payment_success' => [
             'title' => 'پرداخت موفق',
@@ -96,7 +96,7 @@ return [
         'payment_failed' => [
             'title' => 'پرداخت ناموفق',
             'message' => 'پرداخت شما انجام نشد. لطفاً مجدداً تلاش کنید',
-            'channels' => ['in_app', 'push', 'email'],
+            'channels' => ['in_app', 'push'],
         ],
         'new_episode' => [
             'title' => 'اپیزود جدید',

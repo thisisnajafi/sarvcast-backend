@@ -135,6 +135,12 @@ Route::prefix('v1')->middleware('security')->group(function () {
         Route::get('{user}/view-count', [UserController::class, 'getProfileViewCount']);
     });
 
+    // Dashboard API routes (for AJAX data loading)
+    Route::prefix('dashboard')->middleware('role:admin,super_admin')->group(function () {
+        Route::get('stats', [\App\Http\Controllers\Api\DashboardApiController::class, 'getStats']);
+        Route::get('charts', [\App\Http\Controllers\Api\DashboardApiController::class, 'getChartData']);
+    });
+
     // Admin Panel routes
     Route::prefix('admin-panel')->middleware('role:admin,super_admin')->group(function () {
         // Stats (super admin only)

@@ -73,6 +73,8 @@ Route::prefix('admin/2fa')->name('admin.2fa.')->middleware(['auth:web', 'admin']
 // Admin Routes
 Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export', [DashboardController::class, 'export'])->name('dashboard.export');
+    Route::get('/search', [DashboardController::class, 'globalSearch'])->name('search');
 
     // Dashboard Routes
     Route::prefix('dashboards')->name('dashboards.')->group(function () {
@@ -174,12 +176,22 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
     Route::resource('users', UserController::class);
     Route::post('users/{user}/suspend', [UserController::class, 'suspend'])->name('users.suspend');
     Route::post('users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
+    Route::post('users/{user}/change-role', [UserController::class, 'changeRole'])->name('users.change-role');
     Route::post('users/bulk-action', [UserController::class, 'bulkAction'])->name('users.bulk-action');
     Route::get('users/export', [UserController::class, 'export'])->name('users.export');
     Route::get('users/statistics', [UserController::class, 'statistics'])->name('users.statistics');
     Route::get('users/{user}/activity', [UserController::class, 'activity'])->name('users.activity');
     Route::post('users/{user}/send-notification', [UserController::class, 'sendNotification'])->name('users.send-notification');
     Route::get('users/{user}/profile', [UserController::class, 'profile'])->name('users.profile');
+
+    // Voice Actors Management
+    Route::prefix('voice-actors')->name('voice-actors.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\VoiceActorsManagementController::class, 'index'])->name('index');
+        Route::get('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorsManagementController::class, 'show'])->name('show');
+        Route::get('/{voiceActor}/edit', [\App\Http\Controllers\Admin\VoiceActorsManagementController::class, 'edit'])->name('edit');
+        Route::put('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorsManagementController::class, 'update'])->name('update');
+        Route::post('/{voiceActor}/change-role', [\App\Http\Controllers\Admin\VoiceActorsManagementController::class, 'updateRole'])->name('change-role');
+    });
 
     // File Management
     Route::get('files/upload', function () {

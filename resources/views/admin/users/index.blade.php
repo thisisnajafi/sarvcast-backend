@@ -27,9 +27,12 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">نقش</label>
                 <select name="role" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                     <option value="">همه نقش‌ها</option>
+                    <option value="basic" {{ request('role') == 'basic' ? 'selected' : '' }}>پایه</option>
                     <option value="parent" {{ request('role') == 'parent' ? 'selected' : '' }}>والد</option>
                     <option value="child" {{ request('role') == 'child' ? 'selected' : '' }}>کودک</option>
+                    <option value="voice_actor" {{ request('role') == 'voice_actor' ? 'selected' : '' }}>صداپیشه</option>
                     <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>مدیر</option>
+                    <option value="super_admin" {{ request('role') == 'super_admin' ? 'selected' : '' }}>ادمین کل</option>
                 </select>
             </div>
             
@@ -92,19 +95,48 @@
                                 {{ $user->email }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                @if($user->role == 'admin')
-                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                        مدیر
-                                    </span>
-                                @elseif($user->role == 'parent')
-                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                        والد
-                                    </span>
-                                @else
-                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                        کودک
-                                    </span>
-                                @endif
+                                <div class="flex items-center space-x-2 space-x-reverse">
+                                    @if($user->role == 'super_admin')
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                            ادمین کل
+                                        </span>
+                                    @elseif($user->role == 'admin')
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                            مدیر
+                                        </span>
+                                    @elseif($user->role == 'voice_actor')
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-pink-100 text-pink-800">
+                                            صداپیشه
+                                        </span>
+                                    @elseif($user->role == 'parent')
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                            والد
+                                        </span>
+                                    @elseif($user->role == 'child')
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            کودک
+                                        </span>
+                                    @else
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                            پایه
+                                        </span>
+                                    @endif
+                                    
+                                    <!-- Role Change Dropdown -->
+                                    <div class="relative inline-block">
+                                        <form method="POST" action="{{ route('admin.users.change-role', $user) }}" class="inline" onsubmit="return confirm('آیا از تغییر نقش کاربر اطمینان دارید؟')">
+                                            @csrf
+                                            <select name="role" onchange="this.form.submit()" class="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-primary focus:border-transparent">
+                                                <option value="basic" {{ $user->role == 'basic' ? 'selected' : '' }}>پایه</option>
+                                                <option value="parent" {{ $user->role == 'parent' ? 'selected' : '' }}>والد</option>
+                                                <option value="child" {{ $user->role == 'child' ? 'selected' : '' }}>کودک</option>
+                                                <option value="voice_actor" {{ $user->role == 'voice_actor' ? 'selected' : '' }}>صداپیشه</option>
+                                                <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>مدیر</option>
+                                                <option value="super_admin" {{ $user->role == 'super_admin' ? 'selected' : '' }}>ادمین کل</option>
+                                            </select>
+                                        </form>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 @if($user->status == 'active')

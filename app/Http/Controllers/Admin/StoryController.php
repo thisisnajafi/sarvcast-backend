@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\User;
 use App\Models\Episode;
 use App\Services\InAppNotificationService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -17,10 +18,12 @@ use Illuminate\Support\Facades\DB;
 class StoryController extends Controller
 {
     protected $notificationService;
+    protected $pushNotificationService;
 
-    public function __construct(InAppNotificationService $notificationService)
+    public function __construct(InAppNotificationService $notificationService, NotificationService $pushNotificationService)
     {
         $this->notificationService = $notificationService;
+        $this->pushNotificationService = $pushNotificationService;
     }
     /**
      * Display a listing of the resource.
@@ -291,7 +294,28 @@ class StoryController extends Controller
             $validated['script_file_url'] = 'scripts/stories/' . $scriptFileName;
         }
 
+        $oldNarratorId = null;
         $story = Story::create($validated);
+
+        // Send notification if narrator is assigned
+        if ($story->narrator_id) {
+            $narrator = User::find($story->narrator_id);
+            if ($narrator) {
+                $this->pushNotificationService->sendVoiceActorAssignmentNotification(
+                    $narrator,
+                    'story_narrator',
+                    [
+                        'story_id' => $story->id,
+                        'story_title' => $story->title
+                    ]
+                );
+            }
+        }
+
+        // Send notification if script is uploaded
+        if (isset($validated['script_file_url'])) {
+            $this->notifyScriptUploaded($story);
+        }
 
         // Attach people relationships if provided
         if ($request->filled('people')) {
@@ -399,7 +423,59 @@ class StoryController extends Controller
             $validated['cover_image_url'] = 'stories/' . $coverImageName;
         }
 
+        $oldNarratorId = $story->narrator_id;
+        $oldWorkflowStatus = $story->workflow_status;
+        $oldStatus = $story->status;
+        
         $story->update($validated);
+        $story->refresh();
+
+        // Handle narrator assignment/removal
+        if ($oldNarratorId != $story->narrator_id) {
+            // If narrator was removed
+            if ($oldNarratorId && !$story->narrator_id) {
+                $oldNarrator = User::find($oldNarratorId);
+                if ($oldNarrator) {
+                    $this->pushNotificationService->sendVoiceActorRemovalNotification(
+                        $oldNarrator,
+                        'story_narrator',
+                        [
+                            'story_id' => $story->id,
+                            'story_title' => $story->title
+                        ]
+                    );
+                }
+            }
+            // If narrator was assigned or changed
+            if ($story->narrator_id) {
+                $narrator = User::find($story->narrator_id);
+                if ($narrator) {
+                    $this->pushNotificationService->sendVoiceActorAssignmentNotification(
+                        $narrator,
+                        'story_narrator',
+                        [
+                            'story_id' => $story->id,
+                            'story_title' => $story->title
+                        ]
+                    );
+                }
+            }
+        }
+
+        // Handle workflow status change
+        if ($oldWorkflowStatus != $story->workflow_status && $story->workflow_status) {
+            $this->notifyWorkflowStatusChange($story, $oldWorkflowStatus, $story->workflow_status);
+        }
+
+        // Handle script upload
+        if ($request->hasFile('script_file')) {
+            $this->notifyScriptUploaded($story);
+        }
+
+        // Handle story published
+        if ($oldStatus !== 'published' && $story->status === 'published') {
+            $this->notifyStoryPublished($story);
+        }
 
         // Sync people relationships if provided
         if ($request->has('people')) {
@@ -779,15 +855,29 @@ class StoryController extends Controller
             ]);
 
             // Send notification to all users about new story
-            $this->notificationService->createNewStoryNotification(
-                0, // Will be sent to all users
-                $story->title
+            $this->notificationService->sendToAllUsers(
+                'content',
+                'داستان جدید منتشر شد',
+                "داستان جدید \"{$story->title}\" منتشر شد. از شنیدن آن لذت ببرید.",
+                [
+                    'is_important' => true,
+                    'action_type' => 'button',
+                    'action_text' => 'شنیدن داستان',
+                    'action_url' => '/stories/latest',
+                    'data' => [
+                        'story_title' => $story->title,
+                        'story_id' => $story->id
+                    ]
+                ]
             );
 
             DB::commit();
 
-            return redirect()->route('admin.stories.index')
-                ->with('success', 'داستان منتشر شد و کاربران مطلع شدند.');
+        // Notify voice actors about story published
+        $this->notifyStoryPublished($story);
+
+        return redirect()->route('admin.stories.index')
+            ->with('success', 'داستان منتشر شد و کاربران مطلع شدند.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -800,6 +890,143 @@ class StoryController extends Controller
                 ->with('error', 'خطا در انتشار داستان: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Notify voice actors when story is published
+     */
+    private function notifyStoryPublished(Story $story): void
+    {
+        try {
+            // Notify narrator
+            if ($story->narrator_id) {
+                $narrator = User::find($story->narrator_id);
+                if ($narrator) {
+                    $this->pushNotificationService->sendContentPublishedNotification(
+                        $narrator,
+                        'story',
+                        [
+                            'story_id' => $story->id,
+                            'story_title' => $story->title,
+                            'role' => 'narrator'
+                        ]
+                    );
+                }
+            }
+
+            // Notify character voice actors
+            $characters = $story->characters()->whereNotNull('voice_actor_id')->get();
+            foreach ($characters as $character) {
+                $voiceActor = User::find($character->voice_actor_id);
+                if ($voiceActor) {
+                    $this->pushNotificationService->sendContentPublishedNotification(
+                        $voiceActor,
+                        'story',
+                        [
+                            'story_id' => $story->id,
+                            'story_title' => $story->title,
+                            'character_id' => $character->id,
+                            'character_name' => $character->name,
+                            'role' => 'character_voice_actor'
+                        ]
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to notify voice actors about story published', [
+                'story_id' => $story->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Notify voice actors when workflow status changes
+     */
+    private function notifyWorkflowStatusChange(Story $story, string $oldStatus, string $newStatus): void
+    {
+        try {
+            // Notify narrator
+            if ($story->narrator_id) {
+                $narrator = User::find($story->narrator_id);
+                if ($narrator) {
+                    $this->pushNotificationService->sendWorkflowStatusChangeNotification(
+                        $narrator,
+                        $story,
+                        $oldStatus,
+                        $newStatus
+                    );
+                }
+            }
+
+            // Notify character voice actors
+            $characters = $story->characters()->whereNotNull('voice_actor_id')->get();
+            foreach ($characters as $character) {
+                $voiceActor = User::find($character->voice_actor_id);
+                if ($voiceActor) {
+                    $this->pushNotificationService->sendWorkflowStatusChangeNotification(
+                        $voiceActor,
+                        $story,
+                        $oldStatus,
+                        $newStatus
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to notify voice actors about workflow status change', [
+                'story_id' => $story->id,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Notify voice actors when script is uploaded
+     */
+    private function notifyScriptUploaded(Story $story): void
+    {
+        try {
+            // Notify narrator
+            if ($story->narrator_id) {
+                $narrator = User::find($story->narrator_id);
+                if ($narrator) {
+                    $this->pushNotificationService->sendScriptReadyNotification(
+                        $narrator,
+                        'story',
+                        [
+                            'story_id' => $story->id,
+                            'story_title' => $story->title,
+                            'script_url' => $story->script_file_url
+                        ]
+                    );
+                }
+            }
+
+            // Notify character voice actors
+            $characters = $story->characters()->whereNotNull('voice_actor_id')->get();
+            foreach ($characters as $character) {
+                $voiceActor = User::find($character->voice_actor_id);
+                if ($voiceActor) {
+                    $this->pushNotificationService->sendScriptReadyNotification(
+                        $voiceActor,
+                        'story',
+                        [
+                            'story_id' => $story->id,
+                            'story_title' => $story->title,
+                            'script_url' => $story->script_file_url
+                        ]
+                    );
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to notify voice actors about script upload', [
+                'story_id' => $story->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+}
 
     // API Methods for Postman Collection
     public function apiIndex(Request $request)

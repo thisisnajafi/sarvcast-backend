@@ -8,6 +8,7 @@ use App\Models\Story;
 use App\Models\Person;
 use App\Models\User;
 use App\Services\InAppNotificationService;
+use App\Services\NotificationService;
 use App\Services\AudioProcessingService;
 use App\Services\ImageProcessingService;
 use Illuminate\Http\Request;
@@ -18,15 +19,18 @@ use Illuminate\Support\Facades\DB;
 class EpisodeController extends BaseController
 {
     protected $notificationService;
+    protected $pushNotificationService;
     protected $audioProcessingService;
     protected $imageProcessingService;
 
     public function __construct(
         InAppNotificationService $notificationService,
+        NotificationService $pushNotificationService,
         AudioProcessingService $audioProcessingService,
         ImageProcessingService $imageProcessingService
     ) {
         $this->notificationService = $notificationService;
+        $this->pushNotificationService = $pushNotificationService;
         $this->audioProcessingService = $audioProcessingService;
         $this->imageProcessingService = $imageProcessingService;
     }
@@ -367,20 +371,33 @@ class EpisodeController extends BaseController
                 $episode->people()->attach($request->people);
             }
 
-            // Send notification if published
+            // Send notification if published - only to users who favorited this story
             if ($episode->status === 'published') {
-                $this->notificationService->sendToAllUsers(
-                    'content',
-                    'قسمت جدید منتشر شد',
-                    "قسمت جدید \"{$episode->title}\" از داستان \"{$episode->story->title}\" منتشر شد.",
-                    [
-                        'is_important' => true,
-                        'action_type' => 'button',
-                        'action_text' => 'شنیدن قسمت',
-                        'action_url' => '/episodes/latest',
-                        'data' => ['story_title' => $episode->story->title, 'episode_title' => $episode->title]
-                    ]
-                );
+                $story = $episode->story;
+                $favoritedUserIds = \App\Models\Favorite::where('story_id', $story->id)
+                    ->pluck('user_id')
+                    ->toArray();
+                
+                if (!empty($favoritedUserIds)) {
+                    $this->notificationService->sendToMultipleUsers(
+                        $favoritedUserIds,
+                        'content',
+                        'قسمت جدید منتشر شد',
+                        "قسمت جدید \"{$episode->title}\" از داستان \"{$story->title}\" منتشر شد.",
+                        [
+                            'is_important' => true,
+                            'action_type' => 'button',
+                            'action_text' => 'شنیدن قسمت',
+                            'action_url' => '/episodes/latest',
+                            'data' => [
+                                'story_title' => $story->title,
+                                'episode_title' => $episode->title,
+                                'story_id' => $story->id,
+                                'episode_id' => $episode->id
+                            ]
+                        ]
+                    );
+                }
             }
 
             DB::commit();
@@ -573,20 +590,33 @@ class EpisodeController extends BaseController
                 $episode->people()->detach();
             }
 
-            // Send notification if status changed to published
+            // Send notification if status changed to published - only to users who favorited this story
             if ($episode->status === 'published' && $episode->wasChanged('status')) {
-                $this->notificationService->sendToAllUsers(
-                    'content',
-                    'قسمت جدید منتشر شد',
-                    "قسمت جدید \"{$episode->title}\" از داستان \"{$episode->story->title}\" منتشر شد.",
-                    [
-                        'is_important' => true,
-                        'action_type' => 'button',
-                        'action_text' => 'شنیدن قسمت',
-                        'action_url' => '/episodes/latest',
-                        'data' => ['story_title' => $episode->story->title, 'episode_title' => $episode->title]
-                    ]
-                );
+                $story = $episode->story;
+                $favoritedUserIds = \App\Models\Favorite::where('story_id', $story->id)
+                    ->pluck('user_id')
+                    ->toArray();
+                
+                if (!empty($favoritedUserIds)) {
+                    $this->notificationService->sendToMultipleUsers(
+                        $favoritedUserIds,
+                        'content',
+                        'قسمت جدید منتشر شد',
+                        "قسمت جدید \"{$episode->title}\" از داستان \"{$story->title}\" منتشر شد.",
+                        [
+                            'is_important' => true,
+                            'action_type' => 'button',
+                            'action_text' => 'شنیدن قسمت',
+                            'action_url' => '/episodes/latest',
+                            'data' => [
+                                'story_title' => $story->title,
+                                'episode_title' => $episode->title,
+                                'story_id' => $story->id,
+                                'episode_id' => $episode->id
+                            ]
+                        ]
+                    );
+                }
             }
 
             DB::commit();
@@ -970,19 +1000,35 @@ class EpisodeController extends BaseController
                 'release_date' => now()
             ]);
 
-            // Send notification to all users about new episode
-            $this->notificationService->sendToAllUsers(
-                'content',
-                'قسمت جدید منتشر شد',
-                "قسمت جدید \"{$episode->title}\" از داستان \"{$episode->story->title}\" منتشر شد.",
-                [
-                    'is_important' => true,
-                    'action_type' => 'button',
-                    'action_text' => 'شنیدن قسمت',
-                    'action_url' => '/episodes/latest',
-                    'data' => ['story_title' => $episode->story->title, 'episode_title' => $episode->title]
-                ]
-            );
+            // Send notification to users who favorited this story about new episode
+            $story = $episode->story;
+            $favoritedUserIds = \App\Models\Favorite::where('story_id', $story->id)
+                ->pluck('user_id')
+                ->toArray();
+            
+            if (!empty($favoritedUserIds)) {
+                $this->notificationService->sendToMultipleUsers(
+                    $favoritedUserIds,
+                    'content',
+                    'قسمت جدید منتشر شد',
+                    "قسمت جدید \"{$episode->title}\" از داستان \"{$story->title}\" منتشر شد.",
+                    [
+                        'is_important' => true,
+                        'action_type' => 'button',
+                        'action_text' => 'شنیدن قسمت',
+                        'action_url' => '/episodes/latest',
+                        'data' => [
+                            'story_title' => $story->title,
+                            'episode_title' => $episode->title,
+                            'story_id' => $story->id,
+                            'episode_id' => $episode->id
+                        ]
+                    ]
+                );
+            }
+
+            // Notify voice actors about episode published
+            $this->notifyEpisodePublished($episode);
 
             DB::commit();
 
@@ -1192,5 +1238,68 @@ class EpisodeController extends BaseController
             'success' => true,
             'data' => $stats
         ]);
+    }
+
+    /**
+     * Notify voice actors when episode is published
+     */
+    private function notifyEpisodePublished(Episode $episode): void
+    {
+        try {
+            $story = $episode->story;
+            
+            // Notify episode narrator (if assigned and is a User)
+            if ($episode->narrator_id) {
+                // Note: narrator_id in episodes table references people table, not users
+                // We need to check if there's a corresponding user
+                $narratorPerson = Person::find($episode->narrator_id);
+                if ($narratorPerson && isset($narratorPerson->email)) {
+                    $narratorUser = User::where('email', $narratorPerson->email)->first();
+                    if ($narratorUser) {
+                        $this->pushNotificationService->sendContentPublishedNotification(
+                            $narratorUser,
+                            'episode',
+                            [
+                                'episode_id' => $episode->id,
+                                'episode_title' => $episode->title,
+                                'story_id' => $story->id,
+                                'story_title' => $story->title ?? 'داستان',
+                                'role' => 'narrator'
+                            ]
+                        );
+                    }
+                }
+            }
+
+            // Notify episode voice actors
+            $voiceActors = $episode->voiceActors;
+            foreach ($voiceActors as $voiceActor) {
+                $person = $voiceActor->person;
+                if ($person && isset($person->email)) {
+                    $user = User::where('email', $person->email)->first();
+                    if ($user) {
+                        $this->pushNotificationService->sendContentPublishedNotification(
+                            $user,
+                            'episode',
+                            [
+                                'episode_id' => $episode->id,
+                                'episode_title' => $episode->title,
+                                'story_id' => $story->id,
+                                'story_title' => $story->title ?? 'داستان',
+                                'role' => 'voice_actor',
+                                'character_name' => $voiceActor->character_name,
+                                'start_time' => $voiceActor->start_time,
+                                'end_time' => $voiceActor->end_time
+                            ]
+                        );
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to notify voice actors about episode published', [
+                'episode_id' => $episode->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

@@ -230,15 +230,6 @@ class NotificationService
         
         // Send push notification
         $this->sendPushNotification($user, $notification['title'], $notification['message'], $data);
-        
-        // Send email for important events
-        if (in_array($event, ['subscription_expired', 'payment_failed'])) {
-            $this->sendEmailNotification($user, $notification['title'], 'emails.notification', [
-                'title' => $notification['title'],
-                'message' => $notification['message'],
-                'user' => $user
-            ]);
-        }
 
         return true;
     }
@@ -282,13 +273,64 @@ class NotificationService
     }
 
     /**
+     * Send marketing notification (SMS + In-App + Push)
+     */
+    public function sendMarketingNotification(User $user, string $title, string $message, array $data = [], bool $sendSms = true): bool
+    {
+        try {
+            // Send in-app notification
+            $this->sendInAppNotification($user, $title, $message, 'promotion', $data);
+            
+            // Send push notification
+            $this->sendPushNotification($user, $title, $message, $data);
+            
+            // Send SMS for marketing (if enabled and user has phone)
+            if ($sendSms && $user->phone_number) {
+                $this->sendSmsNotification($user, $message);
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Marketing notification failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send marketing notification to multiple users
+     */
+    public function sendBulkMarketingNotification(array $userIds, string $title, string $message, array $data = [], bool $sendSms = true): array
+    {
+        $results = [];
+        
+        foreach ($userIds as $userId) {
+            $user = User::find($userId);
+            if (!$user) continue;
+
+            $results[$userId] = $this->sendMarketingNotification($user, $title, $message, $data, $sendSms);
+        }
+
+        return $results;
+    }
+
+    /**
      * Get user's FCM tokens
      */
     private function getUserFcmTokens(User $user): array
     {
-        // This would typically be stored in a user_devices table
-        // For now, return empty array
-        return [];
+        try {
+            $tokens = \DB::table('user_devices')
+                ->where('user_id', $user->id)
+                ->whereNotNull('fcm_token')
+                ->where('fcm_token', '!=', '')
+                ->pluck('fcm_token')
+                ->toArray();
+            
+            return array_filter($tokens); // Remove any empty values
+        } catch (\Exception $e) {
+            Log::error('Failed to get user FCM tokens: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -350,5 +392,313 @@ class NotificationService
     public function cleanOldNotifications(int $days = 30): int
     {
         return Notification::where('created_at', '<', now()->subDays($days))->delete();
+    }
+
+    /**
+     * Send voice actor assignment notification
+     */
+    public function sendVoiceActorAssignmentNotification(User $user, string $assignmentType, array $data): bool
+    {
+        $notifications = [
+            'story_narrator' => [
+                'title' => 'اختصاص راوی داستان',
+                'message' => "شما به عنوان راوی داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'type' => 'info'
+            ],
+            'character' => [
+                'title' => 'اختصاص صداپیشه شخصیت',
+                'message' => "شما به عنوان صداپیشه شخصیت «{$data['character_name']}» در داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'type' => 'info'
+            ],
+            'episode_voice_actor' => [
+                'title' => 'اختصاص صداپیشه قسمت',
+                'message' => "شما به عنوان صداپیشه در قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'type' => 'info'
+            ],
+            'episode_narrator' => [
+                'title' => 'اختصاص راوی قسمت',
+                'message' => "شما به عنوان راوی قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'type' => 'info'
+            ]
+        ];
+
+        if (!isset($notifications[$assignmentType])) {
+            return false;
+        }
+
+        $notification = $notifications[$assignmentType];
+        
+        // Prepare deep link data
+        $pushData = [
+            'type' => 'voice_actor_assignment',
+            'assignment_type' => $assignmentType,
+            'action' => 'assigned'
+        ];
+        
+        if (isset($data['story_id'])) {
+            $pushData['story_id'] = $data['story_id'];
+        }
+        if (isset($data['episode_id'])) {
+            $pushData['episode_id'] = $data['episode_id'];
+        }
+        if (isset($data['character_id'])) {
+            $pushData['character_id'] = $data['character_id'];
+        }
+        
+        $pushData = array_merge($pushData, $data);
+        
+        // Send in-app notification
+        $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
+        
+        // Send push notification
+        $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
+        
+        // Send email notification
+        $this->sendEmailNotification($user, $notification['title'], 'emails.voice_actor_assignment', [
+            'user' => $user,
+            'assignment_type' => $assignmentType,
+            'data' => $data
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Send voice actor removal notification
+     */
+    public function sendVoiceActorRemovalNotification(User $user, string $assignmentType, array $data): bool
+    {
+        $notifications = [
+            'story_narrator' => [
+                'title' => 'حذف از نقش راوی',
+                'message' => "شما از نقش راوی داستان «{$data['story_title']}» حذف شده‌اید.",
+                'type' => 'warning'
+            ],
+            'character' => [
+                'title' => 'حذف از نقش صداپیشه',
+                'message' => "شما از نقش صداپیشه شخصیت «{$data['character_name']}» در داستان «{$data['story_title']}» حذف شده‌اید.",
+                'type' => 'warning'
+            ],
+            'episode_voice_actor' => [
+                'title' => 'حذف از نقش صداپیشه',
+                'message' => "شما از نقش صداپیشه در قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» حذف شده‌اید.",
+                'type' => 'warning'
+            ]
+        ];
+
+        if (!isset($notifications[$assignmentType])) {
+            return false;
+        }
+
+        $notification = $notifications[$assignmentType];
+        
+        // Prepare deep link data
+        $pushData = [
+            'type' => 'voice_actor_assignment',
+            'assignment_type' => $assignmentType,
+            'action' => 'removed'
+        ];
+        
+        if (isset($data['story_id'])) {
+            $pushData['story_id'] = $data['story_id'];
+        }
+        if (isset($data['episode_id'])) {
+            $pushData['episode_id'] = $data['episode_id'];
+        }
+        
+        $pushData = array_merge($pushData, $data);
+        
+        // Send in-app notification
+        $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
+        
+        // Send push notification
+        $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
+
+        return true;
+    }
+
+    /**
+     * Send workflow status change notification
+     */
+    public function sendWorkflowStatusChangeNotification(User $user, \App\Models\Story $story, string $oldStatus, string $newStatus): bool
+    {
+        $statusLabels = [
+            'written' => 'نوشته شده',
+            'characters_made' => 'شخصیت‌ها ساخته شده',
+            'recorded' => 'ضبط شده',
+            'timeline_created' => 'تایم‌لاین ایجاد شده',
+            'published' => 'منتشر شده'
+        ];
+
+        $oldLabel = $statusLabels[$oldStatus] ?? $oldStatus;
+        $newLabel = $statusLabels[$newStatus] ?? $newStatus;
+
+        $title = 'تغییر وضعیت داستان';
+        $message = "وضعیت داستان «{$story->title}» به «{$newLabel}» تغییر کرد.";
+
+        // Special messages for specific transitions
+        if ($newStatus === 'characters_made') {
+            $message = "شخصیت‌ها برای داستان «{$story->title}» ساخته شده‌اند. آماده ضبط هستید.";
+        } elseif ($newStatus === 'recorded') {
+            $message = "ضبط داستان «{$story->title}» شروع شده است.";
+        } elseif ($newStatus === 'timeline_created') {
+            $message = "تایم‌لاین برای داستان «{$story->title}» ایجاد شده است.";
+        } elseif ($newStatus === 'published') {
+            $message = "داستان «{$story->title}» منتشر شد! 🎉";
+        }
+
+        $pushData = [
+            'type' => 'workflow_status_change',
+            'story_id' => $story->id,
+            'story_title' => $story->title,
+            'old_status' => $oldStatus,
+            'new_status' => $newStatus,
+            'status_label' => $newLabel
+        ];
+
+        // Send in-app notification
+        $this->sendInAppNotification($user, $title, $message, 'info', $pushData);
+        
+        // Send push notification
+        $this->sendPushNotification($user, $title, $message, $pushData);
+        
+        // Send email for important status changes
+        if (in_array($newStatus, ['characters_made', 'recorded', 'published'])) {
+            $this->sendEmailNotification($user, $title, 'emails.workflow_status_change', [
+                'user' => $user,
+                'story' => $story,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus
+            ]);
+        }
+
+        return true;
+    }
+
+    /**
+     * Send content published notification for voice actors
+     */
+    public function sendContentPublishedNotification(User $user, string $contentType, array $data): bool
+    {
+        $notifications = [
+            'story' => [
+                'narrator' => [
+                    'title' => 'داستان منتشر شد',
+                    'message' => "داستان «{$data['story_title']}» که شما راوی آن هستید منتشر شد! 🎉",
+                    'type' => 'success'
+                ],
+                'character_voice_actor' => [
+                    'title' => 'داستان منتشر شد',
+                    'message' => "داستان «{$data['story_title']}» که شما صداپیشه شخصیت «{$data['character_name']}» در آن هستید منتشر شد! 🎉",
+                    'type' => 'success'
+                ]
+            ],
+            'episode' => [
+                'narrator' => [
+                    'title' => 'قسمت منتشر شد',
+                    'message' => "قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» که شما راوی آن هستید منتشر شد! 🎉",
+                    'type' => 'success'
+                ],
+                'voice_actor' => [
+                    'title' => 'قسمت منتشر شد',
+                    'message' => "قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» که شما در آن صداپیشه هستید منتشر شد! 🎉",
+                    'type' => 'success'
+                ]
+            ]
+        ];
+
+        $role = $data['role'] ?? 'voice_actor';
+        if (!isset($notifications[$contentType][$role])) {
+            return false;
+        }
+
+        $notification = $notifications[$contentType][$role];
+        
+        $pushData = [
+            'type' => 'content_published',
+            'content_type' => $contentType,
+            'role' => $role
+        ];
+        
+        if (isset($data['story_id'])) {
+            $pushData['story_id'] = $data['story_id'];
+        }
+        if (isset($data['episode_id'])) {
+            $pushData['episode_id'] = $data['episode_id'];
+        }
+        if (isset($data['character_id'])) {
+            $pushData['character_id'] = $data['character_id'];
+        }
+        
+        $pushData = array_merge($pushData, $data);
+        
+        // Send in-app notification
+        $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
+        
+        // Send push notification
+        $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
+        
+        // Send email for published content
+        $this->sendEmailNotification($user, $notification['title'], 'emails.content_published', [
+            'user' => $user,
+            'content_type' => $contentType,
+            'data' => $data
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Send script ready notification
+     */
+    public function sendScriptReadyNotification(User $user, string $contentType, array $data): bool
+    {
+        $notifications = [
+            'story' => [
+                'title' => 'فیلمنامه آماده است',
+                'message' => "فیلمنامه داستان «{$data['story_title']}» آماده است. می‌توانید آن را مطالعه کنید.",
+                'type' => 'info'
+            ],
+            'episode' => [
+                'title' => 'فیلمنامه آماده است',
+                'message' => "فیلمنامه قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» آماده است.",
+                'type' => 'info'
+            ]
+        ];
+
+        if (!isset($notifications[$contentType])) {
+            return false;
+        }
+
+        $notification = $notifications[$contentType];
+        
+        $pushData = [
+            'type' => 'script_ready',
+            'content_type' => $contentType
+        ];
+        
+        if (isset($data['story_id'])) {
+            $pushData['story_id'] = $data['story_id'];
+        }
+        if (isset($data['episode_id'])) {
+            $pushData['episode_id'] = $data['episode_id'];
+        }
+        
+        $pushData = array_merge($pushData, $data);
+        
+        // Send in-app notification
+        $this->sendInAppNotification($user, $notification['title'], $notification['message'], $notification['type'], $pushData);
+        
+        // Send push notification
+        $this->sendPushNotification($user, $notification['title'], $notification['message'], $pushData);
+        
+        // Send email notification
+        $this->sendEmailNotification($user, $notification['title'], 'emails.script_ready', [
+            'user' => $user,
+            'content_type' => $contentType,
+            'data' => $data
+        ]);
+
+        return true;
     }
 }

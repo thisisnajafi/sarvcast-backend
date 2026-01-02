@@ -53,6 +53,42 @@ class EpisodeVoiceActorService
 
             DB::commit();
 
+            // Send notification if person has a user account
+            try {
+                $episode->load('story');
+                $person = $voiceActor->person;
+                
+                // Try to find user by email or phone (if person has these fields)
+                // Or check if there's a relationship between Person and User
+                // For now, we'll check if person has an email that matches a user
+                if ($person && isset($person->email)) {
+                    $user = \App\Models\User::where('email', $person->email)->first();
+                    if ($user) {
+                        $notificationService = app(\App\Services\NotificationService::class);
+                        $notificationService->sendVoiceActorAssignmentNotification(
+                            $user,
+                            'episode_voice_actor',
+                            [
+                                'episode_id' => $episode->id,
+                                'episode_title' => $episode->title,
+                                'story_id' => $episode->story_id,
+                                'story_title' => $episode->story->title ?? 'داستان',
+                                'role' => $data['role'],
+                                'character_name' => $data['character_name'] ?? null,
+                                'start_time' => $data['start_time'],
+                                'end_time' => $data['end_time']
+                            ]
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed to send episode voice actor assignment notification', [
+                    'episode_id' => $episodeId,
+                    'person_id' => $data['person_id'],
+                    'error' => $e->getMessage()
+                ]);
+            }
+
             return [
                 'success' => true,
                 'message' => 'صداپیشه با موفقیت اضافه شد',

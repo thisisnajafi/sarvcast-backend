@@ -363,6 +363,32 @@ class UserController extends Controller
     }
 
     /**
+     * Change user role
+     */
+    public function changeRole(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'role' => 'required|in:' . implode(',', [
+                User::ROLE_BASIC,
+                User::ROLE_PARENT,
+                User::ROLE_CHILD,
+                User::ROLE_VOICE_ACTOR,
+                User::ROLE_ADMIN,
+                User::ROLE_SUPER_ADMIN
+            ]),
+        ]);
+
+        $oldRole = $user->role;
+        $user->update(['role' => $validated['role']]);
+
+        // Update 2FA requirement if role changed to/from admin
+        $user->update2FARequirement();
+
+        return redirect()->back()
+            ->with('success', "نقش کاربر از {$oldRole} به {$validated['role']} تغییر کرد.");
+    }
+
+    /**
      * Bulk operations on users
      */
     public function bulkAction(Request $request)

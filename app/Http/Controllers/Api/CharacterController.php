@@ -238,8 +238,46 @@ class CharacterController extends Controller
         ]);
 
         $character = Character::findOrFail($characterId);
+        $oldVoiceActorId = $character->voice_actor_id;
         $character->update(['voice_actor_id' => $request->voice_actor_id]);
-        $character->load('voiceActor');
+        $character->load(['voiceActor', 'story']);
+
+        // Send notifications
+        $notificationService = app(\App\Services\NotificationService::class);
+        
+        // If voice actor was removed
+        if ($oldVoiceActorId && !$character->voice_actor_id) {
+            $oldVoiceActor = User::find($oldVoiceActorId);
+            if ($oldVoiceActor) {
+                $notificationService->sendVoiceActorRemovalNotification(
+                    $oldVoiceActor,
+                    'character',
+                    [
+                        'story_id' => $character->story_id,
+                        'character_id' => $character->id,
+                        'character_name' => $character->name,
+                        'story_title' => $character->story->title ?? 'داستان'
+                    ]
+                );
+            }
+        }
+        
+        // If voice actor was assigned
+        if ($character->voice_actor_id) {
+            $voiceActor = User::find($character->voice_actor_id);
+            if ($voiceActor) {
+                $notificationService->sendVoiceActorAssignmentNotification(
+                    $voiceActor,
+                    'character',
+                    [
+                        'story_id' => $character->story_id,
+                        'character_id' => $character->id,
+                        'character_name' => $character->name,
+                        'story_title' => $character->story->title ?? 'داستان'
+                    ]
+                );
+            }
+        }
 
         return response()->json([
             'success' => true,

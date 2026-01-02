@@ -391,8 +391,42 @@ class StoryController extends Controller
             'narrator_id.exists' => 'کاربر انتخاب شده معتبر نیست',
         ]);
 
+        $oldNarratorId = $story->narrator_id;
         $story->update(['narrator_id' => $request->narrator_id]);
         $story->load('narrator');
+
+        // Send notifications
+        $notificationService = app(\App\Services\NotificationService::class);
+        
+        // If narrator was removed
+        if ($oldNarratorId && !$story->narrator_id) {
+            $oldNarrator = \App\Models\User::find($oldNarratorId);
+            if ($oldNarrator) {
+                $notificationService->sendVoiceActorRemovalNotification(
+                    $oldNarrator,
+                    'story_narrator',
+                    [
+                        'story_id' => $story->id,
+                        'story_title' => $story->title
+                    ]
+                );
+            }
+        }
+        
+        // If narrator was assigned
+        if ($story->narrator_id) {
+            $narrator = \App\Models\User::find($story->narrator_id);
+            if ($narrator) {
+                $notificationService->sendVoiceActorAssignmentNotification(
+                    $narrator,
+                    'story_narrator',
+                    [
+                        'story_id' => $story->id,
+                        'story_title' => $story->title
+                    ]
+                );
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -450,6 +484,7 @@ class StoryController extends Controller
             'workflow_status.in' => 'وضعیت گردش کار معتبر نیست',
         ]);
 
+        $oldStatus = $story->workflow_status;
         $newStatus = $request->workflow_status;
         $success = $story->transitionWorkflowStatus($newStatus);
 
@@ -461,6 +496,36 @@ class StoryController extends Controller
         }
 
         $story->refresh();
+
+        // Notify voice actors about workflow status change
+        $notificationService = app(\App\Services\NotificationService::class);
+        
+        // Notify narrator
+        if ($story->narrator_id) {
+            $narrator = \App\Models\User::find($story->narrator_id);
+            if ($narrator) {
+                $notificationService->sendWorkflowStatusChangeNotification(
+                    $narrator,
+                    $story,
+                    $oldStatus ?? 'written',
+                    $newStatus
+                );
+            }
+        }
+
+        // Notify character voice actors
+        $characters = $story->characters()->whereNotNull('voice_actor_id')->get();
+        foreach ($characters as $character) {
+            $voiceActor = \App\Models\User::find($character->voice_actor_id);
+            if ($voiceActor) {
+                $notificationService->sendWorkflowStatusChangeNotification(
+                    $voiceActor,
+                    $story,
+                    $oldStatus ?? 'written',
+                    $newStatus
+                );
+            }
+        }
 
         return response()->json([
             'success' => true,

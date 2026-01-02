@@ -9,6 +9,13 @@ use Carbon\Carbon;
 
 class InAppNotificationService
 {
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService = null)
+    {
+        $this->notificationService = $notificationService ?? app(NotificationService::class);
+    }
+
     /**
      * Notification types
      */
@@ -45,6 +52,13 @@ class InAppNotificationService
         'promotion' => 'تبلیغات'
     ];
 
+    protected $notificationService;
+
+    public function __construct(NotificationService $notificationService = null)
+    {
+        $this->notificationService = $notificationService ?? app(NotificationService::class);
+    }
+
     /**
      * Create a new notification
      */
@@ -57,6 +71,40 @@ class InAppNotificationService
     ): Notification {
         try {
             $notification = Notification::createNotification($userId, $type, $title, $message, $options);
+
+            // Send push notification if user has FCM token
+            $user = User::find($userId);
+            if ($user) {
+                try {
+                    // Extract data for push notification
+                    $pushData = $options['data'] ?? [];
+                    if (isset($options['story_id'])) {
+                        $pushData['story_id'] = $options['story_id'];
+                        $pushData['type'] = 'story';
+                    }
+                    if (isset($options['episode_id'])) {
+                        $pushData['episode_id'] = $options['episode_id'];
+                        $pushData['type'] = 'episode';
+                    }
+                    if (isset($options['subscription_id'])) {
+                        $pushData['subscription_id'] = $options['subscription_id'];
+                        $pushData['type'] = 'subscription';
+                    }
+                    if (isset($options['payment_id'])) {
+                        $pushData['payment_id'] = $options['payment_id'];
+                        $pushData['type'] = 'payment';
+                    }
+                    
+                    // Send push notification
+                    $this->notificationService->sendPushNotification($user, $title, $message, $pushData);
+                } catch (\Exception $e) {
+                    // Log but don't fail if push notification fails
+                    Log::warning('Failed to send push notification', [
+                        'user_id' => $userId,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
 
             Log::info('In-app notification created', [
                 'user_id' => $userId,

@@ -6,16 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Services\PaymentService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PaymentController extends Controller
 {
     protected $paymentService;
+    protected $notificationService;
 
-    public function __construct(PaymentService $paymentService)
+    public function __construct(PaymentService $paymentService, NotificationService $notificationService)
     {
         $this->paymentService = $paymentService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -163,6 +166,19 @@ class PaymentController extends Controller
                             'expected_status' => 'active',
                             'actual_status' => $updatedSubscription->status
                         ]);
+                    } else {
+                        // Send payment success and subscription activated notifications
+                        $user = $payment->user;
+                        $this->notificationService->sendSubscriptionNotification(
+                            $user,
+                            'payment_success',
+                            ['payment_id' => $payment->id, 'subscription_id' => $subscription->id]
+                        );
+                        $this->notificationService->sendSubscriptionNotification(
+                            $user,
+                            'subscription_activated',
+                            ['subscription_id' => $subscription->id]
+                        );
                     }
                 } catch (\Exception $e) {
                     \Log::error('Error activating subscription', [
@@ -171,6 +187,14 @@ class PaymentController extends Controller
                         'error' => $e->getMessage()
                     ]);
                 }
+            } else {
+                // Payment success but no subscription (standalone payment)
+                $user = $payment->user;
+                $this->notificationService->sendSubscriptionNotification(
+                    $user,
+                    'payment_success',
+                    ['payment_id' => $payment->id]
+                );
             }
 
             return response()->json([
@@ -192,6 +216,14 @@ class PaymentController extends Controller
                     'failed_at' => now()->toISOString()
                 ])
             ]);
+            
+            // Send payment failed notification
+            $user = $payment->user;
+            $this->notificationService->sendSubscriptionNotification(
+                $user,
+                'payment_failed',
+                ['payment_id' => $payment->id, 'reason' => $verificationResult['message'] ?? 'Unknown error']
+            );
             
             return response()->json([
                 'success' => false,

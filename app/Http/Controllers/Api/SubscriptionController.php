@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\SubscriptionService;
+use App\Services\NotificationService;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use Illuminate\Http\Request;
@@ -14,10 +15,12 @@ use Illuminate\Support\Facades\Log;
 class SubscriptionController extends Controller
 {
     protected $subscriptionService;
+    protected $notificationService;
 
-    public function __construct(SubscriptionService $subscriptionService)
+    public function __construct(SubscriptionService $subscriptionService, NotificationService $notificationService)
     {
         $this->subscriptionService = $subscriptionService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -417,6 +420,13 @@ class SubscriptionController extends Controller
                 'auto_renew' => $request->input('auto_renew', true),
             ]);
 
+            // Send subscription created notification
+            $this->notificationService->sendSubscriptionNotification(
+                $user,
+                'subscription_created',
+                ['subscription_id' => $subscription->id]
+            );
+
             // Get plan's first feature for description
             $planFeatures = $plan->features ?? [];
             $firstFeature = !empty($planFeatures) ? $planFeatures[0] : ($plan->name ?? $plan->title ?? 'اشتراک');
@@ -582,6 +592,13 @@ class SubscriptionController extends Controller
             }
             
             $subscription = $this->subscriptionService->cancelSubscription($currentSubscription->id, $reason);
+
+            // Send subscription cancelled notification
+            $this->notificationService->sendSubscriptionNotification(
+                $user,
+                'subscription_cancelled',
+                ['subscription_id' => $subscription->id, 'reason' => $reason]
+            );
 
             return response()->json([
                 'success' => true,
