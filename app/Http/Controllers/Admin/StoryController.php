@@ -1026,7 +1026,6 @@ class StoryController extends Controller
             ]);
         }
     }
-}
 
     // API Methods for Postman Collection
     public function apiIndex(Request $request)
