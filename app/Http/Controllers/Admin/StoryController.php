@@ -109,7 +109,7 @@ class StoryController extends Controller
         // Apply sorting
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
-        
+
         switch ($sort) {
             case 'title':
                 $query->orderBy('title', $direction);
@@ -140,12 +140,12 @@ class StoryController extends Controller
         $perPage = min($perPage, 100); // Max 100 per page
 
         $stories = $query->paginate($perPage);
-        
+
         // Get filter options
         $categories = Category::where('is_active', true)->get();
         $directors = Person::whereJsonContains('roles', 'director')->get();
         $narrators = Person::whereJsonContains('roles', 'narrator')->get();
-        
+
         // Get statistics
         $stats = [
             'total' => Story::count(),
@@ -170,7 +170,7 @@ class StoryController extends Controller
     {
         $categories = Category::where('is_active', true)->get();
         $people = Person::all();
-        
+
         // Get users who can be authors/narrators (voice_actor, admin, super_admin)
         $eligibleUsers = User::whereIn('role', [
             User::ROLE_VOICE_ACTOR,
@@ -180,7 +180,7 @@ class StoryController extends Controller
           ->orderBy('first_name')
           ->orderBy('last_name')
           ->get();
-        
+
         return view('admin.stories.create', compact('categories', 'people', 'eligibleUsers'));
     }
 
@@ -246,7 +246,6 @@ class StoryController extends Controller
             'workflow_status' => 'nullable|in:written,characters_made,recorded,timeline_created,published',
             'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'script_file' => 'nullable|file|mimes:md,txt,doc,docx|max:10240', // 10MB max
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
             'people' => 'nullable|array',
@@ -255,17 +254,17 @@ class StoryController extends Controller
 
         // Set default language (all stories are in Persian)
         $validated['language'] = 'persian';
-        
+
         // Set default workflow status if not provided
         if (!isset($validated['workflow_status']) || empty($validated['workflow_status'])) {
             $validated['workflow_status'] = 'written';
         }
-        
+
         // Ensure duration has a default value if not provided
         if (!isset($validated['duration']) || empty($validated['duration'])) {
             $validated['duration'] = 0;
         }
-        
+
         // Ensure free_episodes has a default value if not provided
         if (!isset($validated['free_episodes']) || empty($validated['free_episodes'])) {
             $validated['free_episodes'] = 0;
@@ -279,29 +278,13 @@ class StoryController extends Controller
             // Store only the relative path
             $validated['image_url'] = 'stories/' . $imageName;
         }
-        
+
         if ($request->hasFile('cover_image')) {
             $coverImage = $request->file('cover_image');
             $coverImageName = time() . '_cover_' . $coverImage->getClientOriginalName();
             $coverImage->move(public_path('images/stories'), $coverImageName);
             // Store only the relative path
             $validated['cover_image_url'] = 'stories/' . $coverImageName;
-        }
-
-        // Handle script file upload
-        if ($request->hasFile('script_file')) {
-            $scriptFile = $request->file('script_file');
-            $scriptDir = public_path('scripts/stories');
-            
-            // Ensure directory exists
-            if (!file_exists($scriptDir)) {
-                mkdir($scriptDir, 0755, true);
-            }
-            
-            $scriptFileName = time() . '_' . $scriptFile->getClientOriginalName();
-            $scriptFile->move($scriptDir, $scriptFileName);
-            // Store only the relative path
-            $validated['script_file_url'] = 'scripts/stories/' . $scriptFileName;
         }
 
         $oldNarratorId = null;
@@ -320,11 +303,6 @@ class StoryController extends Controller
                     ]
                 );
             }
-        }
-
-        // Send notification if script is uploaded
-        if (isset($validated['script_file_url'])) {
-            $this->notifyScriptUploaded($story);
         }
 
         // Attach people relationships if provided
@@ -346,7 +324,7 @@ class StoryController extends Controller
     public function show(Story $story)
     {
         $story->load(['category', 'director', 'author', 'narrator', 'episodes.narrator', 'people']);
-        
+
         return view('admin.stories.show', compact('story'));
     }
 
@@ -357,7 +335,7 @@ class StoryController extends Controller
     {
         $categories = Category::where('is_active', true)->get();
         $people = Person::all();
-        
+
         return view('admin.stories.edit', compact('story', 'categories', 'people'));
     }
 
@@ -400,7 +378,7 @@ class StoryController extends Controller
 
         // Set default language (all stories are in Persian)
         $validated['language'] = 'persian';
-        
+
         // Ensure duration has a default value if not provided
         if (!isset($validated['duration']) || empty($validated['duration'])) {
             $validated['duration'] = 0;
@@ -412,20 +390,20 @@ class StoryController extends Controller
             if ($story->attributes['image_url'] && file_exists(public_path('images/' . $story->attributes['image_url']))) {
                 unlink(public_path('images/' . $story->attributes['image_url']));
             }
-            
+
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $image->move(public_path('images/stories'), $imageName);
             // Store only the relative path
             $validated['image_url'] = 'stories/' . $imageName;
         }
-        
+
         if ($request->hasFile('cover_image')) {
             // Delete old cover image if exists
             if ($story->attributes['cover_image_url'] && file_exists(public_path('images/' . $story->attributes['cover_image_url']))) {
                 unlink(public_path('images/' . $story->attributes['cover_image_url']));
             }
-            
+
             $coverImage = $request->file('cover_image');
             $coverImageName = time() . '_cover_' . $coverImage->getClientOriginalName();
             $coverImage->move(public_path('images/stories'), $coverImageName);
@@ -436,7 +414,7 @@ class StoryController extends Controller
         $oldNarratorId = $story->narrator_id;
         $oldWorkflowStatus = $story->workflow_status;
         $oldStatus = $story->status;
-        
+
         $story->update($validated);
         $story->refresh();
 
@@ -477,11 +455,6 @@ class StoryController extends Controller
             $this->notifyWorkflowStatusChange($story, $oldWorkflowStatus, $story->workflow_status);
         }
 
-        // Handle script upload
-        if ($request->hasFile('script_file')) {
-            $this->notifyScriptUploaded($story);
-        }
-
         // Handle story published
         if ($oldStatus !== 'published' && $story->status === 'published') {
             $this->notifyStoryPublished($story);
@@ -510,7 +483,7 @@ class StoryController extends Controller
 
             // Delete associated episodes
             $story->episodes()->delete();
-            
+
             // Delete the story
             $story->delete();
 
@@ -740,17 +713,17 @@ class StoryController extends Controller
         }
 
         $filename = 'stories_export_' . now()->format('Y-m-d_H-i-s') . '.csv';
-        
+
         $callback = function() use ($csvData) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fwrite($file, "\xEF\xBB\xBF");
-            
+
             foreach ($csvData as $row) {
                 fputcsv($file, $row);
             }
-            
+
             fclose($file);
         };
 

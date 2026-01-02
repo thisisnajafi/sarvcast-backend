@@ -99,19 +99,19 @@
 
                 <!-- Narrator -->
                 <div>
-                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی (کاربر)</label>
+                    <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی</label>
                     <select name="narrator_id" id="narrator_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
                         <option value="">انتخاب راوی</option>
-                        @foreach($eligibleUsers as $user)
-                            <option value="{{ $user->id }}" {{ old('narrator_id') == $user->id ? 'selected' : '' }}>
-                                {{ $user->first_name }} {{ $user->last_name }} ({{ $user->role }})
+                        @foreach($narrators as $narrator)
+                            <option value="{{ $narrator->id }}" {{ old('narrator_id') == $narrator->id ? 'selected' : '' }}>
+                                {{ $narrator->name }}
                             </option>
                         @endforeach
                     </select>
                     @error('narrator_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
-                    <p class="text-xs text-gray-500 mt-1">فقط کاربران با نقش صداپیشه، ادمین یا ادمین کل</p>
+                    <p class="text-xs text-gray-500 mt-1">راوی از لیست افراد انتخاب می‌شود</p>
                 </div>
 
                 <!-- Episode Number -->
@@ -164,9 +164,9 @@
                     @enderror
                 </div>
 
-                <!-- Script File -->
+                <!-- Script File (Optional) -->
                 <div class="md:col-span-2">
-                    <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت</label>
+                    <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت (اختیاری)</label>
                     <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('script_file') border-red-500 @enderror">
                     @error('script_file')
@@ -300,10 +300,33 @@ let imageTimelineCounter = 0;
 // Available voice actors (from server)
 const availableVoiceActors = @json($narrators);
 
+// Story narrators map (story_id => narrator_person_id)
+const storyNarrators = @json($storyNarrators ?? []);
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initializeAudioPlayer();
     initializeVoiceActorManagement();
+    
+    // Auto-select narrator when story is selected
+    const storySelect = document.getElementById('story_id');
+    const narratorSelect = document.getElementById('narrator_id');
+    
+    if (storySelect && narratorSelect) {
+        storySelect.addEventListener('change', function() {
+            const storyId = this.value;
+            if (storyId && storyNarrators[storyId]) {
+                narratorSelect.value = storyNarrators[storyId];
+            } else if (!storyId) {
+                narratorSelect.value = '';
+            }
+        });
+        
+        // Auto-select on page load if story is already selected
+        if (storySelect.value && storyNarrators[storySelect.value]) {
+            narratorSelect.value = storyNarrators[storySelect.value];
+        }
+    }
 });
 
 // Audio Player Functions

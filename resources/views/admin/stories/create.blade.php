@@ -221,17 +221,6 @@
                 </button>
                 <div id="advanced-section" class="hidden">
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
-                        <!-- Script File -->
-                        <div>
-                            <label for="script_file" class="block text-sm font-medium text-gray-700 mb-2">فایل اسکریپت</label>
-                            <input type="file" name="script_file" id="script_file" accept=".md,.txt,.doc,.docx"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('script_file') border-red-500 @enderror">
-                            @error('script_file')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                            @enderror
-                            <p class="text-xs text-gray-500 mt-1">حداکثر 10 مگابایت، فرمت‌های مجاز: MD, TXT, DOC, DOCX</p>
-                        </div>
-
                         <!-- Workflow Status -->
                         <div>
                             <label for="workflow_status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت گردش کار</label>

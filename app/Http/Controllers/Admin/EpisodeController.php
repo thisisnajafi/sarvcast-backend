@@ -183,25 +183,32 @@ class EpisodeController extends BaseController
      */
     public function create()
     {
-        $stories = Story::with('category')->orderBy('title', 'asc')->get();
+        $stories = Story::with(['category', 'narrator'])->orderBy('title', 'asc')->get();
         $people = Person::orderBy('name', 'asc')->get();
 
-        // Get narrators (Person model) for voice actors dropdown
+        // Get narrators (Person model) for episodes - episodes use Person, not User
         $narrators = Person::whereJsonContains('roles', 'narrator')
             ->orderBy('name', 'asc')
             ->get();
 
-        // Get users who can be narrators (voice_actor, admin, super_admin)
-        $eligibleUsers = User::whereIn('role', [
-            User::ROLE_VOICE_ACTOR,
-            User::ROLE_ADMIN,
-            User::ROLE_SUPER_ADMIN
-        ])->where('status', 'active')
-          ->orderBy('first_name')
-          ->orderBy('last_name')
-          ->get();
+        // Create a map of story_id => narrator_name for auto-selection
+        $storyNarrators = [];
+        foreach ($stories as $story) {
+            if ($story->narrator) {
+                // Try to find matching Person by name
+                $narratorName = $story->narrator->first_name . ' ' . $story->narrator->last_name;
+                $matchingPerson = $narrators->first(function($person) use ($narratorName) {
+                    return $person->name === $narratorName ||
+                           stripos($person->name, $narratorName) !== false ||
+                           stripos($narratorName, $person->name) !== false;
+                });
+                if ($matchingPerson) {
+                    $storyNarrators[$story->id] = $matchingPerson->id;
+                }
+            }
+        }
 
-        return view('admin.episodes.create', compact('stories', 'people', 'eligibleUsers', 'narrators'));
+        return view('admin.episodes.create', compact('stories', 'people', 'narrators', 'storyNarrators'));
     }
 
     /**
@@ -217,22 +224,7 @@ class EpisodeController extends BaseController
             'duration' => 'required|integer|min:1',
             'audio_file' => 'required|file|mimes:mp3,wav,m4a,aac,ogg|max:102400', // 100MB max
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
-            'narrator_id' => [
-                'nullable',
-                'exists:users,id',
-                function ($attribute, $value, $fail) {
-                    if ($value) {
-                        $user = User::find($value);
-                        if ($user && !in_array($user->role, [
-                            User::ROLE_VOICE_ACTOR,
-                            User::ROLE_ADMIN,
-                            User::ROLE_SUPER_ADMIN
-                        ])) {
-                            $fail('راوی باید نقش صداپیشه، ادمین یا ادمین کل داشته باشد.');
-                        }
-                    }
-                },
-            ],
+            'narrator_id' => 'nullable|exists:people,id',
             'script_file' => 'nullable|file|mimes:md,txt,doc,docx|max:10240', // 10MB max
             'is_premium' => 'boolean',
             'status' => 'required|in:draft,published,archived',
