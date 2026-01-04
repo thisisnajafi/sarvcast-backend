@@ -1807,7 +1807,8 @@ class DashboardController extends Controller
             });
 
         // Combine moderation queue
-        $moderationQueue = $recentPendingComments->merge($recentPendingStories)
+        // Convert both to arrays, merge, then convert back to collection
+        $moderationQueue = collect(array_merge($recentPendingComments->toArray(), $recentPendingStories->toArray()))
             ->sortBy('created_at')
             ->take(10)
             ->values();
