@@ -24,9 +24,9 @@ class UserAuthController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
 
-            // If user is admin, redirect to admin dashboard
+            // If user is admin, redirect to admin stories page
             if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])) {
-                return redirect()->route('admin.dashboard');
+                return redirect()->route('admin.stories.index');
             }
 
             // For regular users, redirect to checkout or home

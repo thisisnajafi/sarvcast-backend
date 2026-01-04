@@ -43,7 +43,7 @@
                         @foreach($imageUrls as $index => $imageUrl)
                             <div class="border border-gray-200 rounded-lg p-4">
                                 <img src="{{ $imageUrl }}"
-                                     alt="Episode Image {{ $index + 1 }}"
+                                     alt="Episode Image {{ $index + 1 }}" 
                                      class="w-full h-48 object-cover rounded-lg"
                                      onerror="this.src='/images/default-episode.png'">
                             </div>
@@ -57,25 +57,25 @@
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-medium text-gray-900">تایم‌لاین تصویری</h3>
                     @if($episode->use_image_timeline)
-                        <a href="{{ route('admin.episodes.timeline.index', $episode) }}"
+                        <a href="{{ route('admin.episodes.timeline.index', $episode) }}" 
                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                             مدیریت تایم‌لاین
                         </a>
                     @else
-                        <a href="{{ route('admin.episodes.timeline.create', $episode) }}"
+                        <a href="{{ route('admin.episodes.timeline.create', $episode) }}" 
                            class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                             ایجاد تایم‌لاین
                         </a>
                     @endif
                 </div>
-
+                
                 @if($episode->use_image_timeline && $episode->imageTimelines && $episode->imageTimelines->count() > 0)
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($episode->imageTimelines->take(6) as $timeline)
                             <div class="border border-gray-200 rounded-lg p-4">
                                 @if($timeline->image_url)
-                                    <img src="{{ $timeline->image_url }}"
-                                         alt="Timeline Image"
+                                    <img src="{{ $timeline->image_url }}" 
+                                         alt="Timeline Image" 
                                          class="w-full h-32 object-cover rounded-lg mb-3">
                                 @endif
                                 <div class="text-sm text-gray-600">
@@ -92,10 +92,10 @@
                             </div>
                         @endforeach
                     </div>
-
+                    
                     @if($episode->imageTimelines->count() > 6)
                         <div class="mt-4 text-center">
-                            <a href="{{ route('admin.episodes.timeline.index', $episode) }}"
+                            <a href="{{ route('admin.episodes.timeline.index', $episode) }}" 
                                class="text-primary hover:text-primary/80 text-sm">
                                 مشاهده همه {{ $episode->imageTimelines->count() }} تایم‌لاین
                             </a>
@@ -108,7 +108,7 @@
                         </svg>
                         <h4 class="text-lg font-medium text-gray-900 mb-2">هنوز تایم‌لاینی ایجاد نشده</h4>
                         <p class="text-gray-600 mb-4">برای افزودن تصاویر همگام با صدا، تایم‌لاین ایجاد کنید.</p>
-                        <a href="{{ route('admin.episodes.timeline.create', $episode) }}"
+                        <a href="{{ route('admin.episodes.timeline.create', $episode) }}" 
                            class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors">
                             ایجاد اولین تایم‌لاین
                         </a>
@@ -124,30 +124,30 @@
                         <label class="block text-sm font-medium text-gray-700">عنوان</label>
                         <p class="mt-1 text-sm text-gray-900">{{ $episode->title }}</p>
                     </div>
-
+                    
                     <div>
                         <label class="block text-sm font-medium text-gray-700">داستان</label>
                         <p class="mt-1 text-sm text-gray-900">{{ $episode->story?->title ?? 'نامشخص' }}</p>
                     </div>
-
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">شماره اپیزود</label>
                             <p class="mt-1 text-sm text-gray-900">{{ $episode->episode_number }}</p>
                         </div>
-
+                        
                         <div>
                             <label class="block text-sm font-medium text-gray-700">ترتیب</label>
                             <p class="mt-1 text-sm text-gray-900">{{ $episode->order }}</p>
                         </div>
                     </div>
-
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">مدت زمان</label>
                             <p class="mt-1 text-sm text-gray-900">{{ $episode->duration }} دقیقه</p>
                         </div>
-
+                        
                         <div>
                             <label class="block text-sm font-medium text-gray-700">راوی</label>
                             <p class="mt-1 text-sm text-gray-900">
@@ -158,13 +158,13 @@
                                 @endif
                             </p>
                         </div>
-
+                        
                         <div>
                             <label class="block text-sm font-medium text-gray-700">حجم فایل</label>
                             <p class="mt-1 text-sm text-gray-900">{{ $episode->file_size ? $episode->file_size . ' مگابایت' : 'نامشخص' }}</p>
                         </div>
                     </div>
-
+                    
                     @if($episode->description)
                         <div>
                             <label class="block text-sm font-medium text-gray-700">توضیحات</label>
@@ -344,19 +344,19 @@
                             @else {{ $episode->status }} @endif
                         </span>
                     </div>
-
+                    
                     @if($episode->published_at)
                         <div class="flex justify-between">
                             <span class="text-sm text-gray-600">تاریخ انتشار</span>
                             <span class="text-sm text-gray-900">{{ $episode->published_at->format('Y/m/d H:i') }}</span>
                         </div>
                     @endif
-
+                    
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">تاریخ ایجاد</span>
                         <span class="text-sm text-gray-900">{{ $episode->created_at->format('Y/m/d H:i') }}</span>
                     </div>
-
+                    
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">آخرین به‌روزرسانی</span>
                         <span class="text-sm text-gray-900">{{ $episode->updated_at->format('Y/m/d H:i') }}</span>
@@ -374,7 +374,7 @@
                             {{ $episode->is_premium ? 'بله' : 'خیر' }}
                         </span>
                     </div>
-
+                    
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">رایگان</span>
                         <span class="text-sm {{ $episode->is_free ? 'text-green-600' : 'text-gray-500' }}">
@@ -392,17 +392,17 @@
                         <span class="text-sm text-gray-600">تعداد پخش</span>
                         <span class="text-sm text-gray-900">{{ number_format($episode->play_count) }}</span>
                     </div>
-
+                    
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">تکمیل شده</span>
                         <span class="text-sm text-gray-900">{{ $episode->playHistories->where('completed', true)->count() }}</span>
                     </div>
-
+                    
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">در حال پخش</span>
                         <span class="text-sm text-gray-900">{{ $episode->playHistories->where('completed', false)->count() }}</span>
                     </div>
-
+                    
                     <div class="flex justify-between">
                         <span class="text-sm text-gray-600">میانگین مدت گوش دادن</span>
                         <span class="text-sm text-gray-900">
@@ -422,13 +422,13 @@
                     <a href="{{ route('admin.episodes.edit', $episode) }}" class="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-200 text-center block">
                         ویرایش اپیزود
                     </a>
-
+                    
                     @if($episode->story)
-                        <a href="{{ route('admin.stories.show', $episode->story) }}" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition duration-200 text-center block">
-                            مشاهده داستان
-                        </a>
+                    <a href="{{ route('admin.stories.show', $episode->story) }}" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition duration-200 text-center block">
+                        مشاهده داستان
+                    </a>
                     @endif
-
+                    
                     @if($episode->status === 'published')
                         <form method="POST" action="{{ route('admin.episodes.update', $episode) }}" class="w-full">
                             @csrf

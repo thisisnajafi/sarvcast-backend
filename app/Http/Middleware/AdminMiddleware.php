@@ -27,7 +27,7 @@ class AdminMiddleware
                     'error' => 'UNAUTHENTICATED'
                 ], 401);
             }
-
+            
             return redirect()->route('admin.auth.login');
         }
 
@@ -42,7 +42,7 @@ class AdminMiddleware
                     'error' => 'FORBIDDEN'
                 ], 403);
             }
-
+            
             abort(403, 'دسترسی غیرمجاز');
         }
 
@@ -55,7 +55,7 @@ class AdminMiddleware
                     'error' => 'ACCOUNT_INACTIVE'
                 ], 403);
             }
-
+            
             abort(403, 'حساب کاربری غیرفعال');
         }
 
@@ -83,7 +83,7 @@ class AdminMiddleware
                     'error' => 'SUPER_ADMIN_REQUIRED'
                 ], 403);
             }
-
+            
             abort(403, 'این عملیات فقط برای ادمین کل مجاز است');
         }
 
@@ -102,7 +102,7 @@ class AdminMiddleware
                         'error' => 'RATE_LIMITED'
                     ], 429);
                 }
-
+                
                 abort(429, 'تعداد درخواست‌های شما بیش از حد مجاز است');
             }
             app('cache')->increment($key);
@@ -112,7 +112,7 @@ class AdminMiddleware
 
         // Log admin activity (don't let logging errors break the request)
         try {
-            $this->logAdminActivity($request, $user);
+        $this->logAdminActivity($request, $user);
         } catch (\Exception $e) {
             // Log the logging error but don't break the request
             Log::error('Failed to log admin activity in middleware: ' . $e->getMessage());
@@ -159,7 +159,7 @@ class AdminMiddleware
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-            } catch (\Exception $e) {
+        } catch (\Exception $e) {
                 // If database logging fails, log the error but don't break the request
                 Log::error('Failed to log admin activity to database: ' . $e->getMessage(), [
                     'exception' => $e,
@@ -170,8 +170,8 @@ class AdminMiddleware
                 $errorMessage = $e->getMessage();
                 if (strpos($errorMessage, "doesn't exist") !== false || strpos($errorMessage, 'Unknown table') !== false) {
                     cache()->forget('admin_activity_logs_table_exists');
-                }
-            }
         }
+    }
+}
     }
 }

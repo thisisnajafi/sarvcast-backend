@@ -23,11 +23,11 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
-        // If user is already authenticated as admin, redirect to dashboard
+        // If user is already authenticated as admin, redirect to stories page
         if (Auth::guard('web')->check()) {
             $user = Auth::guard('web')->user();
             if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])) {
-                return redirect()->route('admin.dashboard');
+                return redirect()->route('admin.stories.index');
             }
         }
         
@@ -153,7 +153,7 @@ class AuthController extends Controller
         // Login the user using web guard
         Auth::guard('web')->login($user);
 
-        return redirect()->route('admin.dashboard')
+        return redirect()->route('admin.stories.index')
             ->with('success', 'ورود با موفقیت انجام شد');
     }
 

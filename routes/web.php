@@ -29,7 +29,7 @@ use App\Http\Controllers\AudioController;
 // Redirect root to admin login if not authenticated
 Route::get('/', function () {
     if (auth('web')->check() && auth('web')->user()->role === 'admin') {
-        return redirect()->route('admin.dashboard');
+        return redirect()->route('admin.stories.index');
     }
     return redirect()->route('admin.auth.login');
 })->name('home');

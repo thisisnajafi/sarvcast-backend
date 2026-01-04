@@ -72,7 +72,7 @@ class TwoFactorAuthController extends Controller
             // Set 2FA verified in session
             session(['2fa_verified' => true]);
             
-            return redirect()->intended(route('admin.dashboard'))
+            return redirect()->intended(route('admin.stories.index'))
                 ->with('success', 'تایید دو مرحله‌ای با موفقیت انجام شد');
         } else {
             return redirect()->back()
@@ -88,7 +88,7 @@ class TwoFactorAuthController extends Controller
         // Only allow skipping in development
         if (app()->environment('local', 'development')) {
             session(['2fa_verified' => true]);
-            return redirect()->route('admin.dashboard')
+            return redirect()->route('admin.stories.index')
                 ->with('warning', 'تایید دو مرحله‌ای رد شد (فقط در محیط توسعه)');
         }
 
