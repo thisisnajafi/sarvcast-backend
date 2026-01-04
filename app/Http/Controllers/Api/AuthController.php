@@ -711,8 +711,8 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Only admins can change password
-        if ($user->role !== 'admin') {
+        // Only admins and super admins can change password
+        if (!in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])) {
             return response()->json([
                 'success' => false,
                 'message' => 'دسترسی غیرمجاز'

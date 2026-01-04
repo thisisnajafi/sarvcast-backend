@@ -151,67 +151,17 @@
                 </div>
             </div>
 
-            <!-- Images -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Cover Image -->
-                <div>
-                    <label for="cover_image" class="block text-sm font-medium text-gray-700 mb-2">تصویر جلد</label>
-                    <input type="file" name="cover_image" id="cover_image" accept="image/*"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('cover_image') border-red-500 @enderror">
-                    @error('cover_image')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-sm text-gray-500 mt-1">حداکثر 5 مگابایت، فرمت‌های مجاز: JPG, PNG, WebP</p>
-                </div>
-
-                <!-- Story Image -->
-                <div>
-                    <label for="image" class="block text-sm font-medium text-gray-700 mb-2">تصویر داستان</label>
-                    <input type="file" name="image" id="image" accept="image/*"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('image') border-red-500 @enderror">
-                    @error('image')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-sm text-gray-500 mt-1">حداکثر 5 مگابایت، فرمت‌های مجاز: JPG, PNG, WebP</p>
-                </div>
+            <!-- Image -->
+            <div class="mb-6">
+                <label for="image" class="block text-sm font-medium text-gray-700 mb-2">تصویر داستان *</label>
+                <input type="file" name="image" id="image" accept="image/*" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('image') border-red-500 @enderror">
+                @error('image')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+                <p class="text-sm text-gray-500 mt-1">حداکثر 5 مگابایت، فرمت‌های مجاز: JPG, PNG, WebP (این تصویر برای تصویر جلد و تصویر داستان استفاده می‌شود)</p>
             </div>
 
-            <!-- Story Details -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                <!-- Duration -->
-                <div>
-                    <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">مدت زمان (دقیقه)</label>
-                    <input type="number" name="duration" id="duration" value="{{ old('duration', 0) }}" min="0"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror"
-                           placeholder="مدت زمان کل داستان">
-                    @error('duration')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-xs text-gray-500 mt-1">در صورت خالی بودن، مقدار پیش‌فرض 0 خواهد بود</p>
-                </div>
-
-                <!-- Total Episodes -->
-                <div>
-                    <label for="total_episodes" class="block text-sm font-medium text-gray-700 mb-2">تعداد اپیزودها</label>
-                    <input type="number" name="total_episodes" id="total_episodes" value="{{ old('total_episodes') }}" min="0"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('total_episodes') border-red-500 @enderror"
-                           placeholder="تعداد کل اپیزودها">
-                    @error('total_episodes')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <!-- Free Episodes -->
-                <div>
-                    <label for="free_episodes" class="block text-sm font-medium text-gray-700 mb-2">اپیزودهای رایگان</label>
-                    <input type="number" name="free_episodes" id="free_episodes" value="{{ old('free_episodes', 0) }}" min="0"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('free_episodes') border-red-500 @enderror"
-                           placeholder="تعداد اپیزودهای رایگان">
-                    @error('free_episodes')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
 
             <!-- Script File and Workflow Status (Optional) -->
             <div class="mb-6">
@@ -314,28 +264,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-calculate free episodes based on total episodes
-    const totalEpisodesInput = document.getElementById('total_episodes');
-    const freeEpisodesInput = document.getElementById('free_episodes');
-
-    totalEpisodesInput.addEventListener('input', function() {
-        const total = parseInt(this.value) || 0;
-        const currentFree = parseInt(freeEpisodesInput.value) || 0;
-
-        if (currentFree > total) {
-            freeEpisodesInput.value = Math.min(currentFree, total);
-        }
-    });
-
-    // Validate free episodes
-    freeEpisodesInput.addEventListener('input', function() {
-        const total = parseInt(totalEpisodesInput.value) || 0;
-        const free = parseInt(this.value) || 0;
-
-        if (free > total) {
-            this.value = total;
-        }
-    });
 
     // Preview image uploads
     function previewImage(input, previewId) {
@@ -471,11 +399,7 @@ function enhanceImagePreview() {
         }
     }
 
-    // Attach enhanced preview to image inputs
-    document.getElementById('cover_image').addEventListener('change', function() {
-        previewImage(this, 'cover_preview');
-    });
-
+    // Attach enhanced preview to image input
     document.getElementById('image').addEventListener('change', function() {
         previewImage(this, 'image_preview');
     });
@@ -514,14 +438,6 @@ function validateStoryForm() {
         }
     });
 
-    // Number validation
-    const totalEpisodes = parseInt(document.getElementById('total_episodes').value) || 0;
-    const freeEpisodes = parseInt(document.getElementById('free_episodes').value) || 0;
-
-    if (freeEpisodes > totalEpisodes) {
-        errors.push('تعداد اپیزودهای رایگان نمی‌تواند بیشتر از کل اپیزودها باشد');
-        isValid = false;
-    }
 
     // Show errors if any
     if (!isValid) {
@@ -621,7 +537,6 @@ function clearStoryFormData() {
         }
 
         // Clear file data
-        localStorage.removeItem('story_cover_image_file');
         localStorage.removeItem('story_image_file');
 
         // Reset form
@@ -631,11 +546,6 @@ function clearStoryFormData() {
         }
 
         // Clear image previews
-        const coverPreview = document.getElementById('cover_preview');
-        if (coverPreview) {
-            coverPreview.remove();
-        }
-
         const imagePreview = document.getElementById('image_preview');
         if (imagePreview) {
             imagePreview.remove();

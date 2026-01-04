@@ -193,6 +193,8 @@ class EpisodeController extends BaseController
 
         // Create a map of story_id => narrator_name for auto-selection
         $storyNarrators = [];
+        // Create a map of story_id => is_premium for premium status handling
+        $storyPremiumStatus = [];
         foreach ($stories as $story) {
             if ($story->narrator) {
                 // Try to find matching Person by name
@@ -206,9 +208,10 @@ class EpisodeController extends BaseController
                     $storyNarrators[$story->id] = $matchingPerson->id;
                 }
             }
+            $storyPremiumStatus[$story->id] = $story->is_premium;
         }
 
-        return view('admin.episodes.create', compact('stories', 'people', 'narrators', 'storyNarrators'));
+        return view('admin.episodes.create', compact('stories', 'people', 'narrators', 'storyNarrators', 'storyPremiumStatus'));
     }
 
     /**
@@ -361,7 +364,22 @@ class EpisodeController extends BaseController
                 }
             }
 
+            // Auto-set premium status based on story premium status
+            $story = Story::find($request->story_id);
+            if ($story && $story->is_premium) {
+                // If story is premium, all episodes must be premium
+                $data['is_premium'] = true;
+            } else {
+                // If story is free, use the value from request (can be premium or free)
+                $data['is_premium'] = $request->boolean('is_premium', false);
+            }
+
             $episode = Episode::create($data);
+
+            // Update story statistics after creating episode
+            if ($story) {
+                $story->updateStatistics();
+            }
 
             // Attach people if provided
             if ($request->filled('people')) {
@@ -436,7 +454,13 @@ class EpisodeController extends BaseController
         $people = Person::orderBy('name', 'asc')->get();
         $episode->load(['imageTimelines']);
 
-        return view('admin.episodes.edit', compact('episode', 'stories', 'narrators', 'people'));
+        // Create a map of story_id => is_premium for premium status handling
+        $storyPremiumStatus = [];
+        foreach ($stories as $story) {
+            $storyPremiumStatus[$story->id] = $story->is_premium;
+        }
+
+        return view('admin.episodes.edit', compact('episode', 'stories', 'narrators', 'people', 'storyPremiumStatus'));
     }
 
     /**
@@ -578,7 +602,22 @@ class EpisodeController extends BaseController
                 }
             }
 
+            // Auto-set premium status based on story premium status
+            $story = Story::find($request->story_id);
+            if ($story && $story->is_premium) {
+                // If story is premium, all episodes must be premium
+                $data['is_premium'] = true;
+            } else {
+                // If story is free, use the value from request (can be premium or free)
+                $data['is_premium'] = $request->boolean('is_premium', $episode->is_premium);
+            }
+
             $episode->update($data);
+
+            // Update story statistics after updating episode
+            if ($story) {
+                $story->updateStatistics();
+            }
 
             // Handle people relationships
             if ($request->filled('people')) {

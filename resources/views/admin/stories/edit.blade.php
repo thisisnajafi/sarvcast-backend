@@ -20,13 +20,13 @@
         <form method="POST" action="{{ route('admin.stories.update', $story) }}" enctype="multipart/form-data">
             @csrf
             @method('PUT')
-            
+
             <!-- Basic Information -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Title -->
                 <div>
                     <label for="title" class="block text-sm font-medium text-gray-700 mb-2">عنوان داستان</label>
-                    <input type="text" name="title" id="title" value="{{ old('title', $story->title) }}" 
+                    <input type="text" name="title" id="title" value="{{ old('title', $story->title) }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('title') border-red-500 @enderror"
                            placeholder="عنوان داستان را وارد کنید" required>
                     @error('title')
@@ -37,7 +37,7 @@
                 <!-- Subtitle -->
                 <div>
                     <label for="subtitle" class="block text-sm font-medium text-gray-700 mb-2">زیرعنوان</label>
-                    <input type="text" name="subtitle" id="subtitle" value="{{ old('subtitle', $story->subtitle) }}" 
+                    <input type="text" name="subtitle" id="subtitle" value="{{ old('subtitle', $story->subtitle) }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('subtitle') border-red-500 @enderror"
                            placeholder="زیرعنوان داستان را وارد کنید">
                     @error('subtitle')
@@ -49,7 +49,7 @@
             <!-- Description -->
             <div class="mb-6">
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">توضیحات</label>
-                <textarea name="description" id="description" rows="4" 
+                <textarea name="description" id="description" rows="4"
                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('description') border-red-500 @enderror"
                           placeholder="توضیحات داستان را وارد کنید" required>{{ old('description', $story->description) }}</textarea>
                 @error('description')
@@ -62,7 +62,7 @@
                 <!-- Category -->
                 <div>
                     <label for="category_id" class="block text-sm font-medium text-gray-700 mb-2">دسته‌بندی</label>
-                    <select name="category_id" id="category_id" 
+                    <select name="category_id" id="category_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('category_id') border-red-500 @enderror" required>
                         <option value="">انتخاب دسته‌بندی</option>
                         @foreach($categories as $category)
@@ -79,7 +79,7 @@
                 <!-- Age Group -->
                 <div>
                     <label for="age_group" class="block text-sm font-medium text-gray-700 mb-2">گروه سنی</label>
-                    <select name="age_group" id="age_group" 
+                    <select name="age_group" id="age_group"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('age_group') border-red-500 @enderror" required>
                         <option value="">انتخاب گروه سنی</option>
                         <option value="3-5" {{ old('age_group', $story->age_group) == '3-5' ? 'selected' : '' }}>3-5 سال</option>
@@ -98,7 +98,7 @@
                 <!-- Director -->
                 <div>
                     <label for="director_id" class="block text-sm font-medium text-gray-700 mb-2">کارگردان</label>
-                    <select name="director_id" id="director_id" 
+                    <select name="director_id" id="director_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('director_id') border-red-500 @enderror">
                         <option value="">انتخاب کارگردان</option>
                         @foreach($people as $person)
@@ -115,7 +115,7 @@
                 <!-- Writer -->
                 <div>
                     <label for="writer_id" class="block text-sm font-medium text-gray-700 mb-2">نویسنده</label>
-                    <select name="writer_id" id="writer_id" 
+                    <select name="writer_id" id="writer_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('writer_id') border-red-500 @enderror">
                         <option value="">انتخاب نویسنده</option>
                         @foreach($people as $person)
@@ -134,7 +134,7 @@
                 <!-- Author -->
                 <div>
                     <label for="author_id" class="block text-sm font-medium text-gray-700 mb-2">مؤلف</label>
-                    <select name="author_id" id="author_id" 
+                    <select name="author_id" id="author_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('author_id') border-red-500 @enderror">
                         <option value="">انتخاب مؤلف</option>
                         @foreach($people as $person)
@@ -151,7 +151,7 @@
                 <!-- Narrator -->
                 <div>
                     <label for="narrator_id" class="block text-sm font-medium text-gray-700 mb-2">راوی</label>
-                    <select name="narrator_id" id="narrator_id" 
+                    <select name="narrator_id" id="narrator_id"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('narrator_id') border-red-500 @enderror">
                         <option value="">انتخاب راوی</option>
                         @foreach($people as $person)
@@ -172,7 +172,7 @@
                 <select name="people[]" id="people" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('people') border-red-500 @enderror" size="6">
                     @foreach($people as $person)
                         <option value="{{ $person->id }}" {{ in_array($person->id, old('people', $story->people->pluck('id')->toArray())) ? 'selected' : '' }}>
-                            {{ $person->name }} 
+                            {{ $person->name }}
                             @if($person->roles)
                                 ({{ implode(', ', $person->roles) }})
                             @endif
@@ -185,51 +185,25 @@
                 <p class="text-sm text-gray-500 mt-1">برای انتخاب چند نفر، کلید Ctrl را نگه دارید</p>
             </div>
 
-            <!-- Current Images -->
-            @if($story->cover_image_url || $story->image_url)
+            <!-- Current Image -->
+            @if($story->image_url || $story->cover_image_url)
                 <div class="mb-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">تصاویر فعلی</h3>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        @if($story->cover_image_url)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">تصویر جلد فعلی</label>
-                                <img src="{{ $story->cover_image_url }}" alt="Cover Image" class="w-full h-48 object-cover rounded-lg border">
-                            </div>
-                        @endif
-                        
-                        @if($story->image_url)
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">تصویر داستان فعلی</label>
-                                <img src="{{ $story->image_url }}" alt="Story Image" class="w-full h-48 object-cover rounded-lg border">
-                            </div>
-                        @endif
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">تصویر فعلی</h3>
+                    <div>
+                        <img src="{{ $story->image_url ?: $story->cover_image_url }}" alt="Story Image" class="w-full max-w-md h-48 object-cover rounded-lg border">
                     </div>
                 </div>
             @endif
 
-            <!-- New Images -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Cover Image -->
-                <div>
-                    <label for="cover_image" class="block text-sm font-medium text-gray-700 mb-2">تصویر جلد جدید</label>
-                    <input type="file" name="cover_image" id="cover_image" accept="image/*" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('cover_image') border-red-500 @enderror">
-                    @error('cover_image')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-sm text-gray-500 mt-1">حداکثر 5 مگابایت، فرمت‌های مجاز: JPG, PNG, WebP</p>
-                </div>
-
-                <!-- Story Image -->
-                <div>
-                    <label for="image" class="block text-sm font-medium text-gray-700 mb-2">تصویر داستان جدید</label>
-                    <input type="file" name="image" id="image" accept="image/*" 
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('image') border-red-500 @enderror">
-                    @error('image')
-                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                    @enderror
-                    <p class="text-sm text-gray-500 mt-1">حداکثر 5 مگابایت، فرمت‌های مجاز: JPG, PNG, WebP</p>
-                </div>
+            <!-- New Image -->
+            <div class="mb-6">
+                <label for="image" class="block text-sm font-medium text-gray-700 mb-2">تصویر داستان جدید</label>
+                <input type="file" name="image" id="image" accept="image/*"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('image') border-red-500 @enderror">
+                @error('image')
+                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                @enderror
+                <p class="text-sm text-gray-500 mt-1">حداکثر 5 مگابایت، فرمت‌های مجاز: JPG, PNG, WebP (این تصویر برای تصویر جلد و تصویر داستان استفاده می‌شود)</p>
             </div>
 
             <!-- Story Statistics (Read-only) -->
@@ -271,7 +245,7 @@
                     </div>
                     <p class="text-xs text-gray-500 mt-1">تعداد اپیزودهای پولی منتشر شده</p>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">اپیزودهای منتشر شده</label>
                     <div class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
@@ -284,7 +258,7 @@
             <!-- Tags -->
             <div class="mb-6">
                 <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">برچسب‌ها</label>
-                <input type="text" name="tags" id="tags" value="{{ old('tags') ? (is_array(old('tags')) ? implode(', ', old('tags')) : old('tags')) : (is_array($story->tags) ? implode(', ', $story->tags) : $story->tags) }}" 
+                <input type="text" name="tags" id="tags" value="{{ old('tags') ? (is_array(old('tags')) ? implode(', ', old('tags')) : old('tags')) : (is_array($story->tags) ? implode(', ', $story->tags) : $story->tags) }}"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('tags') border-red-500 @enderror"
                        placeholder="برچسب‌ها را با کاما جدا کنید">
                 @error('tags')
@@ -298,7 +272,7 @@
                 <!-- Status -->
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت</label>
-                    <select name="status" id="status" 
+                    <select name="status" id="status"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('status') border-red-500 @enderror" required>
                         <option value="draft" {{ old('status', $story->status) == 'draft' ? 'selected' : '' }}>پیش‌نویس</option>
                         <option value="pending" {{ old('status', $story->status) == 'pending' ? 'selected' : '' }}>در انتظار بررسی</option>
@@ -314,8 +288,8 @@
                 <!-- Published At -->
                 <div>
                     <label for="published_at" class="block text-sm font-medium text-gray-700 mb-2">تاریخ انتشار</label>
-                    <input type="datetime-local" name="published_at" id="published_at" 
-                           value="{{ old('published_at', $story->published_at ? $story->published_at->format('Y-m-d\TH:i') : '') }}" 
+                    <input type="datetime-local" name="published_at" id="published_at"
+                           value="{{ old('published_at', $story->published_at ? $story->published_at->format('Y-m-d\TH:i') : '') }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('published_at') border-red-500 @enderror">
                     @error('published_at')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -327,14 +301,14 @@
             <div class="mb-6">
                 <div class="space-y-3">
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_premium" id="is_premium" value="1" 
+                        <input type="checkbox" name="is_premium" id="is_premium" value="1"
                                class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                                {{ old('is_premium', $story->is_premium) ? 'checked' : '' }}>
                         <label for="is_premium" class="mr-2 text-sm text-gray-700">داستان پولی</label>
                     </div>
-                    
+
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_completely_free" id="is_completely_free" value="1" 
+                        <input type="checkbox" name="is_completely_free" id="is_completely_free" value="1"
                                class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                                {{ old('is_completely_free', $story->is_completely_free) ? 'checked' : '' }}>
                         <label for="is_completely_free" class="mr-2 text-sm text-gray-700">کاملاً رایگان</label>
@@ -374,11 +348,7 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsDataURL(input.files[0]);
         }
     }
-    
-    document.getElementById('cover_image').addEventListener('change', function() {
-        previewImage(this, 'cover_preview');
-    });
-    
+
     document.getElementById('image').addEventListener('change', function() {
         previewImage(this, 'image_preview');
     });

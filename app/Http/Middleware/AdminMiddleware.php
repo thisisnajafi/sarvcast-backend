@@ -24,7 +24,7 @@ class AdminMiddleware
                     'error' => 'UNAUTHENTICATED'
                 ], 401);
             }
-            
+
             return redirect()->route('admin.auth.login');
         }
 
@@ -39,7 +39,7 @@ class AdminMiddleware
                     'error' => 'FORBIDDEN'
                 ], 403);
             }
-            
+
             abort(403, 'دسترسی غیرمجاز');
         }
 
@@ -52,7 +52,7 @@ class AdminMiddleware
                     'error' => 'ACCOUNT_INACTIVE'
                 ], 403);
             }
-            
+
             abort(403, 'حساب کاربری غیرفعال');
         }
 
@@ -71,7 +71,8 @@ class AdminMiddleware
             'admin.backup.restore',
         ];
 
-        if (in_array($request->route()->getName(), $sensitiveRoutes) && $user->role !== 'super_admin') {
+        $routeName = $request->route()?->getName();
+        if ($routeName && in_array($routeName, $sensitiveRoutes) && $user->role !== 'super_admin') {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
@@ -79,7 +80,7 @@ class AdminMiddleware
                     'error' => 'SUPER_ADMIN_REQUIRED'
                 ], 403);
             }
-            
+
             abort(403, 'این عملیات فقط برای ادمین کل مجاز است');
         }
 
@@ -98,7 +99,7 @@ class AdminMiddleware
                         'error' => 'RATE_LIMITED'
                     ], 429);
                 }
-                
+
                 abort(429, 'تعداد درخواست‌های شما بیش از حد مجاز است');
             }
             app('cache')->increment($key);
@@ -119,12 +120,12 @@ class AdminMiddleware
     {
         $logData = [
             'user_id' => $user->id,
-            'user_email' => $user->email,
+            'user_phone' => $user->phone_number,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'method' => $request->method(),
             'url' => $request->fullUrl(),
-            'route_name' => $request->route()->getName(),
+            'route_name' => $request->route()?->getName(),
             'timestamp' => now(),
         ];
 
@@ -141,7 +142,7 @@ class AdminMiddleware
                     'user_agent' => $request->userAgent(),
                     'method' => $request->method(),
                     'url' => $request->fullUrl(),
-                    'route_name' => $request->route()->getName(),
+                    'route_name' => $request->route()?->getName(),
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

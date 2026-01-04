@@ -265,6 +265,7 @@
                     <label for="is_premium" class="mr-2 block text-sm text-gray-900">
                         اپیزود پولی
                     </label>
+                    <p id="premium-status-note" class="mr-2 text-xs text-gray-500"></p>
                 </div>
             </div>
         </div>
@@ -302,6 +303,8 @@ const availableVoiceActors = @json($narrators);
 
 // Story narrators map (story_id => narrator_person_id)
 const storyNarrators = @json($storyNarrators ?? []);
+// Story premium status map (story_id => is_premium)
+const storyPremiumStatus = @json($storyPremiumStatus ?? []);
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -311,6 +314,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Auto-select narrator when story is selected
     const storySelect = document.getElementById('story_id');
     const narratorSelect = document.getElementById('narrator_id');
+    const premiumCheckbox = document.getElementById('is_premium');
+    const premiumNote = document.getElementById('premium-status-note');
+    
+    function updatePremiumStatus() {
+        const storyId = storySelect.value;
+        if (storyId && storyPremiumStatus[storyId]) {
+            // Story is premium - force episode to be premium
+            premiumCheckbox.checked = true;
+            premiumCheckbox.disabled = true;
+            premiumNote.textContent = '(این داستان پولی است، بنابراین تمام اپیزودها باید پولی باشند)';
+            premiumNote.className = 'mr-2 text-xs text-orange-600';
+        } else {
+            // Story is free - allow user to choose
+            premiumCheckbox.disabled = false;
+            premiumNote.textContent = '(اگر داستان رایگان است، می‌توانید اپیزود را پولی یا رایگان تعیین کنید)';
+            premiumNote.className = 'mr-2 text-xs text-gray-500';
+        }
+    }
     
     if (storySelect && narratorSelect) {
         storySelect.addEventListener('change', function() {
@@ -320,12 +341,14 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (!storyId) {
                 narratorSelect.value = '';
             }
+            updatePremiumStatus();
         });
         
         // Auto-select on page load if story is already selected
         if (storySelect.value && storyNarrators[storySelect.value]) {
             narratorSelect.value = storyNarrators[storySelect.value];
         }
+        updatePremiumStatus();
     }
 });
 

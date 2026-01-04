@@ -15,8 +15,12 @@ class SmsService
 
     public function __construct()
     {
-        $this->apiToken = config('melipayamak.password', 'Prof48017421@#');
-        $this->username = config('melipayamak.username', '09136708883');
+        $this->apiToken = config('melipayamak.password');
+        $this->username = config('melipayamak.username');
+
+        if (empty($this->apiToken) || empty($this->username)) {
+            throw new \RuntimeException('Melipayamak credentials are not configured. Please set MELIPAYAMAK_USERNAME and MELIPAYAMAK_PASSWORD in your .env file.');
+        }
     }
 
     /**
@@ -32,7 +36,11 @@ class SmsService
             $api = new MelipayamakApi($username, $password);
             $sms = $api->sms();
 
-            $from = config('services.melipayamk.sender', '50002710008883');
+            $from = config('services.melipayamk.sender');
+
+            if (empty($from)) {
+                throw new \RuntimeException('Melipayamak sender number is not configured. Please set MELIPAYAMK_SENDER in your .env file.');
+            }
 
             // Prepare sending data for logging
             $sendingData = [
@@ -72,7 +80,7 @@ class SmsService
                 'username' => $this->username,
                 'password' => $this->apiToken,
                 'to' => $to,
-                'from' => config('services.melipayamk.sender', '50002710008883'),
+                'from' => config('services.melipayamk.sender'),
                 'text' => $message,
                 'isFlash' => false
             ];
@@ -124,7 +132,11 @@ class SmsService
             $api = new MelipayamakApi($username, $password);
             $sms = $api->sms('rest');
 
-            $from = config('services.melipayamk.sender', '50002710008883');
+            $from = config('services.melipayamk.sender');
+
+            if (empty($from)) {
+                throw new \RuntimeException('Melipayamak sender number is not configured. Please set MELIPAYAMK_SENDER in your .env file.');
+            }
 
             // Prepare sending data for logging
             $sendingData = [
@@ -164,7 +176,7 @@ class SmsService
                 'username' => $this->username,
                 'password' => $this->apiToken,
                 'to' => $to,
-                'from' => config('services.melipayamk.sender', '50002710008883'),
+                'from' => config('services.melipayamk.sender'),
                 'template_id' => $templateId,
                 'parameters' => $parameters,
                 'isFlash' => false

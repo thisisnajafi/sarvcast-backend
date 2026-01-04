@@ -20,13 +20,13 @@
         <form method="POST" action="{{ route('admin.episodes.update', $episode) }}" enctype="multipart/form-data">
             @csrf
             @method('PUT')
-            
+
             <!-- Basic Information -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Title -->
                 <div>
                     <label for="title" class="block text-sm font-medium text-gray-700 mb-2">عنوان اپیزود</label>
-                    <input type="text" name="title" id="title" value="{{ old('title', $episode->title) }}" 
+                    <input type="text" name="title" id="title" value="{{ old('title', $episode->title) }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('title') border-red-500 @enderror"
                            placeholder="عنوان اپیزود را وارد کنید" required>
                     @error('title')
@@ -37,7 +37,7 @@
                 <!-- Episode Number -->
                 <div>
                     <label for="episode_number" class="block text-sm font-medium text-gray-700 mb-2">شماره اپیزود</label>
-                    <input type="number" name="episode_number" id="episode_number" value="{{ old('episode_number', $episode->episode_number) }}" min="1" 
+                    <input type="number" name="episode_number" id="episode_number" value="{{ old('episode_number', $episode->episode_number) }}" min="1"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('episode_number') border-red-500 @enderror"
                            placeholder="شماره اپیزود" required>
                     @error('episode_number')
@@ -65,7 +65,7 @@
             <!-- Story Selection -->
             <div class="mb-6">
                 <label for="story_id" class="block text-sm font-medium text-gray-700 mb-2">داستان</label>
-                <select name="story_id" id="story_id" 
+                <select name="story_id" id="story_id"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('story_id') border-red-500 @enderror" required>
                     <option value="">انتخاب داستان</option>
                     @foreach($stories as $story)
@@ -86,7 +86,7 @@
             <!-- Description -->
             <div class="mb-6">
                 <label for="description" class="block text-sm font-medium text-gray-700 mb-2">توضیحات</label>
-                <textarea name="description" id="description" rows="4" 
+                <textarea name="description" id="description" rows="4"
                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('description') border-red-500 @enderror"
                           placeholder="توضیحات اپیزود را وارد کنید">{{ old('description', $episode->description) }}</textarea>
                 @error('description')
@@ -99,7 +99,7 @@
                 <!-- Duration -->
                 <div>
                     <label for="duration" class="block text-sm font-medium text-gray-700 mb-2">مدت زمان (دقیقه)</label>
-                    <input type="number" name="duration" id="duration" value="{{ old('duration', $episode->duration) }}" min="1" 
+                    <input type="number" name="duration" id="duration" value="{{ old('duration', $episode->duration) }}" min="1"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('duration') border-red-500 @enderror"
                            placeholder="مدت زمان اپیزود" required>
                     @error('duration')
@@ -110,7 +110,7 @@
                 <!-- File Size -->
                 <div>
                     <label for="file_size" class="block text-sm font-medium text-gray-700 mb-2">حجم فایل (مگابایت)</label>
-                    <input type="number" name="file_size" id="file_size" value="{{ old('file_size', $episode->file_size) }}" min="0" step="0.1" 
+                    <input type="number" name="file_size" id="file_size" value="{{ old('file_size', $episode->file_size) }}" min="0" step="0.1"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('file_size') border-red-500 @enderror"
                            placeholder="حجم فایل صوتی">
                     @error('file_size')
@@ -121,7 +121,7 @@
                 <!-- Order -->
                 <div>
                     <label for="order" class="block text-sm font-medium text-gray-700 mb-2">ترتیب</label>
-                    <input type="number" name="order" id="order" value="{{ old('order', $episode->order) }}" min="1" 
+                    <input type="number" name="order" id="order" value="{{ old('order', $episode->order) }}" min="1"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('order') border-red-500 @enderror"
                            placeholder="ترتیب نمایش">
                     @error('order')
@@ -141,14 +141,14 @@
                                 <p class="text-sm text-gray-500">{{ $episode->duration }} دقیقه</p>
                             </div>
                         </div>
-                        
+
                         <!-- Audio Player with Speed Controls -->
                         <div class="space-y-4">
                             <audio id="audio-player" controls class="w-full">
                                 <source src="{{ $episode->audio_url }}" type="audio/mpeg">
                                 مرورگر شما از پخش فایل صوتی پشتیبانی نمی‌کند.
                             </audio>
-                            
+
                             <!-- Playback Speed Controls -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">سرعت پخش</label>
@@ -160,13 +160,13 @@
                                     <button type="button" id="speed-2x" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" onclick="setPlaybackSpeed(2)">2x</button>
                                 </div>
                             </div>
-                            
+
                             <!-- Time Display -->
                             <div class="flex items-center justify-between text-sm text-gray-600">
                                 <span id="current-time">00:00</span>
                                 <span id="total-duration">00:00</span>
                             </div>
-                            
+
                             <!-- Time Slider -->
                             <input type="range" id="time-slider" min="0" max="100" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
                         </div>
@@ -177,7 +177,7 @@
             <!-- New Audio File -->
             <div class="mb-6">
                 <label for="audio_file" class="block text-sm font-medium text-gray-700 mb-2">فایل صوتی جدید</label>
-                <input type="file" name="audio_file" id="audio_file" accept="audio/*" 
+                <input type="file" name="audio_file" id="audio_file" accept="audio/*"
                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('audio_file') border-red-500 @enderror">
                 @error('audio_file')
                     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -192,8 +192,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @foreach($episode->image_urls as $index => $imageUrl)
                             <div class="border border-gray-200 rounded-lg p-4">
-                                <img src="{{ $episode->getImageUrlFromPath($imageUrl) }}" 
-                                     alt="Episode Image {{ $index + 1 }}" 
+                                <img src="{{ $episode->getImageUrlFromPath($imageUrl) }}"
+                                     alt="Episode Image {{ $index + 1 }}"
                                      class="w-full h-48 object-cover rounded-lg">
                             </div>
                         @endforeach
@@ -209,8 +209,8 @@
                         @foreach($episode->imageTimelines as $timeline)
                             <div class="border border-gray-200 rounded-lg p-4">
                                 @if($timeline->image_url)
-                                    <img src="{{ $timeline->getImageUrlFromPath($timeline->image_url) }}" 
-                                         alt="Timeline Image" 
+                                    <img src="{{ $timeline->getImageUrlFromPath($timeline->image_url) }}"
+                                         alt="Timeline Image"
                                          class="w-full h-32 object-cover rounded-lg mb-3">
                                 @endif
                                 <div class="text-sm text-gray-600">
@@ -234,7 +234,7 @@
                     <select name="people[]" id="people" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('people') border-red-500 @enderror" size="6">
                         @foreach($people as $person)
                             <option value="{{ $person->id }}" {{ in_array($person->id, old('people', $episode->people->pluck('id')->toArray())) ? 'selected' : '' }}>
-                                {{ $person->name }} 
+                                {{ $person->name }}
                                 @if($person->roles)
                                     ({{ implode(', ', $person->roles) }})
                                 @endif
@@ -289,7 +289,7 @@
                 <!-- Status -->
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-2">وضعیت</label>
-                    <select name="status" id="status" 
+                    <select name="status" id="status"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('status') border-red-500 @enderror" required>
                         <option value="draft" {{ old('status', $episode->status) == 'draft' ? 'selected' : '' }}>پیش‌نویس</option>
                         <option value="pending" {{ old('status', $episode->status) == 'pending' ? 'selected' : '' }}>در انتظار بررسی</option>
@@ -305,8 +305,8 @@
                 <!-- Published At -->
                 <div>
                     <label for="published_at" class="block text-sm font-medium text-gray-700 mb-2">تاریخ انتشار</label>
-                    <input type="datetime-local" name="published_at" id="published_at" 
-                           value="{{ old('published_at', $episode->published_at ? $episode->published_at->format('Y-m-d\TH:i') : '') }}" 
+                    <input type="datetime-local" name="published_at" id="published_at"
+                           value="{{ old('published_at', $episode->published_at ? $episode->published_at->format('Y-m-d\TH:i') : '') }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent @error('published_at') border-red-500 @enderror">
                     @error('published_at')
                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -318,17 +318,11 @@
             <div class="mb-6">
                 <div class="space-y-3">
                     <div class="flex items-center">
-                        <input type="checkbox" name="is_premium" id="is_premium" value="1" 
+                        <input type="checkbox" name="is_premium" id="is_premium" value="1"
                                class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
                                {{ old('is_premium', $episode->is_premium) ? 'checked' : '' }}>
                         <label for="is_premium" class="mr-2 text-sm text-gray-700">اپیزود پولی</label>
-                    </div>
-                    
-                    <div class="flex items-center">
-                        <input type="checkbox" name="is_free" id="is_free" value="1" 
-                               class="h-4 w-4 text-primary focus:ring-primary border-gray-300"
-                               {{ old('is_free', $episode->is_free) ? 'checked' : '' }}>
-                        <label for="is_free" class="mr-2 text-sm text-gray-700">رایگان</label>
+                        <p id="premium-status-note" class="mr-2 text-xs text-gray-500"></p>
                     </div>
                 </div>
             </div>
@@ -368,24 +362,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (this.files && this.files[0]) {
                     const file = this.files[0];
                     const fileSize = (file.size / (1024 * 1024)).toFixed(2); // Convert to MB
-                    
+
                     // Update file size field
                     const fileSizeField = document.getElementById('file_size');
                     if (fileSizeField) {
                         fileSizeField.value = fileSize;
                     }
-                    
+
                     // Create audio preview
                     const audio = document.createElement('audio');
                     audio.controls = true;
                     audio.src = URL.createObjectURL(file);
-                    
+
                     // Remove existing preview
                     const existingPreview = document.getElementById('audio_preview');
                     if (existingPreview) {
                         existingPreview.remove();
                     }
-                    
+
                     // Add new preview
                     audio.id = 'audio_preview';
                     audio.className = 'mt-2 w-full';
@@ -393,13 +387,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Handle form submission with timeline and people data
         const form = document.getElementById('episode-form');
         if (form) {
             form.addEventListener('submit', function(e) {
                 console.log('Form submit event triggered');
-                
+
                 try {
                     // Update timeline and voice actors data before submission
                     console.log('Updating timeline and voice actors data...');
@@ -411,10 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Initialize timeline and voice actors data from existing episode
         initializeExistingData();
-        
+
     } catch (error) {
         console.error('Error initializing page:', error);
         showNotification('خطا در بارگذاری صفحه', 'error');
@@ -427,7 +421,7 @@ function showNotification(message, type = 'info') {
         // Create notification element
         const notification = document.createElement('div');
         notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm max-w-sm transform transition-all duration-300 translate-x-full`;
-        
+
         // Set background color based on type
         switch(type) {
             case 'success':
@@ -442,15 +436,15 @@ function showNotification(message, type = 'info') {
             default:
                 notification.classList.add('bg-blue-500');
         }
-        
+
         notification.textContent = message;
         document.body.appendChild(notification);
-        
+
         // Animate in
         setTimeout(() => {
             notification.classList.remove('translate-x-full');
         }, 100);
-        
+
         // Auto remove after 3 seconds
         setTimeout(() => {
             notification.classList.add('translate-x-full');
@@ -471,7 +465,7 @@ function previewImage(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const reader = new FileReader();
-            
+
             reader.onload = function(e) {
                 const previewContainer = input.parentNode.querySelector('.image-preview-container');
                 if (previewContainer) {
@@ -482,7 +476,7 @@ function previewImage(input) {
                     }
                 }
             };
-            
+
             reader.readAsDataURL(file);
         }
     } catch (error) {
@@ -504,7 +498,7 @@ function initializeExistingData() {
             });
         });
     }
-    
+
     // Initialize voice actors data from existing episode
     const existingVoiceActors = @json($episode->voiceActors);
     if (existingVoiceActors && existingVoiceActors.length > 0) {
@@ -521,7 +515,7 @@ function initializeExistingData() {
 function updateImageTimelineData() {
     const imageTimelineData = [];
     const imageTimelineList = document.getElementById('image-timeline-list');
-    
+
     if (imageTimelineList) {
         imageTimelineList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
             const imageInput = row.querySelector('input[type="file"]');
@@ -531,7 +525,7 @@ function updateImageTimelineData() {
             const sceneDescriptionInput = row.querySelector('input[name^="timeline_scene_"]');
             const transitionTypeSelect = row.querySelector('select[name^="timeline_transition_"]');
             const isKeyFrameCheckbox = row.querySelector('input[name^="timeline_keyframe_"]');
-            
+
             if (startTimeInput && endTimeInput) {
                 const timelineData = {
                     start_time: startTimeInput.value || 0,
@@ -541,7 +535,7 @@ function updateImageTimelineData() {
                     is_key_frame: isKeyFrameCheckbox ? isKeyFrameCheckbox.checked : false,
                     image_order: index
                 };
-                
+
                 // Check if there's a new file uploaded
                 if (imageInput && imageInput.files[0]) {
                     timelineData.image_file = imageInput.files[0].name;
@@ -550,12 +544,12 @@ function updateImageTimelineData() {
                     // Use the relative path as image_file (same as create method)
                     timelineData.image_file = existingImagePath.value;
                 }
-                
+
                 imageTimelineData.push(timelineData);
             }
         });
     }
-    
+
     const hiddenInput = document.getElementById('image-timeline-data');
     if (hiddenInput) {
         hiddenInput.value = JSON.stringify(imageTimelineData);
@@ -566,12 +560,12 @@ function updateImageTimelineData() {
 function updateVoiceActorsData() {
     const voiceActorsData = [];
     const voiceActorsList = document.getElementById('voice-actors-list');
-    
+
     if (voiceActorsList) {
         voiceActorsList.querySelectorAll('.bg-gray-50').forEach((row, index) => {
             const narratorSelect = row.querySelector('select[name^="voice_actor_"]');
             const roleInput = row.querySelector('input[name^="voice_actor_role_"]');
-            
+
             if (narratorSelect && roleInput && narratorSelect.value && roleInput.value.trim()) {
                 voiceActorsData.push({
                     person_id: narratorSelect.value,
@@ -580,7 +574,7 @@ function updateVoiceActorsData() {
             }
         });
     }
-    
+
     const hiddenInput = document.getElementById('voice-actors-data');
     if (hiddenInput) {
         hiddenInput.value = JSON.stringify(voiceActorsData);
@@ -595,7 +589,7 @@ function addImageTimelineRow(data = {}) {
             console.warn('Image timeline list element not found');
             return;
         }
-    
+
     const row = document.createElement('div');
     row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
     row.innerHTML = `
@@ -644,7 +638,7 @@ function addImageTimelineRow(data = {}) {
             </button>
         </div>
     `;
-    
+
         imageTimelineList.appendChild(row);
         imageTimelineCounter++;
         updateImageTimelineData();
@@ -662,7 +656,7 @@ function addVoiceActorRow(data = {}) {
             console.warn('Voice actors list element not found');
             return;
         }
-    
+
     const row = document.createElement('div');
     row.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
     row.innerHTML = `
@@ -687,7 +681,7 @@ function addVoiceActorRow(data = {}) {
             </button>
         </div>
     `;
-    
+
     voiceActorsList.appendChild(row);
     voiceActorCounter++;
     updateVoiceActorsData();
@@ -735,7 +729,7 @@ function initializeAudioPlayer() {
     if (audioPlayer) {
         // Set default playback speed to 1x
         audioPlayer.playbackRate = 1;
-        
+
         audioPlayer.addEventListener('loadedmetadata', function() {
             const duration = audioPlayer.duration;
             totalDurationSpan.textContent = formatTime(duration);
@@ -758,7 +752,7 @@ function setPlaybackSpeed(speed) {
     const audioPlayer = document.getElementById('audio-player');
     if (audioPlayer) {
         audioPlayer.playbackRate = speed;
-        
+
         // Update button styles
         const speedButtons = ['speed-0.5x', 'speed-1x', 'speed-1.25x', 'speed-1.5x', 'speed-2x'];
         speedButtons.forEach(buttonId => {
@@ -768,14 +762,14 @@ function setPlaybackSpeed(speed) {
                 button.classList.add('hover:bg-gray-100');
             }
         });
-        
+
         // Highlight selected speed button
         const selectedButton = document.getElementById(`speed-${speed}x`);
         if (selectedButton) {
             selectedButton.classList.add('bg-blue-500', 'text-white');
             selectedButton.classList.remove('hover:bg-gray-100');
         }
-        
+
         // Show notification
         showNotification(`سرعت پخش به ${speed}x تغییر کرد`, 'info');
     }
@@ -793,14 +787,14 @@ function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white ${
-        type === 'success' ? 'bg-green-500' : 
-        type === 'error' ? 'bg-red-500' : 
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' :
         'bg-blue-500'
     }`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     // Remove notification after 3 seconds
     setTimeout(() => {
         notification.remove();
@@ -823,10 +817,39 @@ function initializeExistingTimelineData() {
     @endif
 }
 
+// Story premium status map (story_id => is_premium)
+const storyPremiumStatus = @json($storyPremiumStatus ?? []);
+
 // Initialize audio player when page loads
 document.addEventListener('DOMContentLoaded', function() {
     initializeAudioPlayer();
     initializeExistingTimelineData();
+
+    // Handle premium status based on story selection
+    const storySelect = document.getElementById('story_id');
+    const premiumCheckbox = document.getElementById('is_premium');
+    const premiumNote = document.getElementById('premium-status-note');
+
+    function updatePremiumStatus() {
+        const storyId = storySelect.value;
+        if (storyId && storyPremiumStatus[storyId]) {
+            // Story is premium - force episode to be premium
+            premiumCheckbox.checked = true;
+            premiumCheckbox.disabled = true;
+            premiumNote.textContent = '(این داستان پولی است، بنابراین تمام اپیزودها باید پولی باشند)';
+            premiumNote.className = 'mr-2 text-xs text-orange-600';
+        } else {
+            // Story is free - allow user to choose
+            premiumCheckbox.disabled = false;
+            premiumNote.textContent = '(اگر داستان رایگان است، می‌توانید اپیزود را پولی یا رایگان تعیین کنید)';
+            premiumNote.className = 'mr-2 text-xs text-gray-500';
+        }
+    }
+
+    if (storySelect && premiumCheckbox) {
+        storySelect.addEventListener('change', updatePremiumStatus);
+        updatePremiumStatus(); // Initialize on page load
+    }
 });
 </script>
 @endsection

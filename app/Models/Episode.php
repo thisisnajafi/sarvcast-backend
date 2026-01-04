@@ -303,12 +303,28 @@ class Episode extends Model
      */
     public function getImageUrlsAttribute()
     {
-        $imageUrls = $this->attributes['image_urls'] ?? [];
+        $imageUrls = $this->attributes['image_urls'] ?? null;
+        
+        // Handle JSON string
+        if (is_string($imageUrls)) {
+            $decoded = json_decode($imageUrls, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $imageUrls = $decoded;
+            } else {
+                return [];
+            }
+        }
+        
+        // Handle array
         if (is_array($imageUrls)) {
             return array_map(function($url) {
+                if (empty($url) || !is_string($url)) {
+                    return null;
+                }
                 return $this->getImageUrlFromPath($url);
-            }, $imageUrls);
+            }, array_filter($imageUrls));
         }
+        
         return [];
     }
 }

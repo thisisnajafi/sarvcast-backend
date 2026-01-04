@@ -252,13 +252,31 @@ class DashboardController extends Controller
         );
 
         // Get Device & Platform Analytics (cached)
-        $devicePlatformAnalytics = Cache::remember(
-            'dashboard_device_platform_' . md5($startDate . $endDate),
-            $cacheDuration,
-            function() use ($startDate, $endDate) {
-                return $this->getDevicePlatformAnalytics($startDate, $endDate);
-            }
-        );
+        try {
+            $devicePlatformAnalytics = Cache::remember(
+                'dashboard_device_platform_' . md5($startDate . $endDate),
+                $cacheDuration,
+                function() use ($startDate, $endDate) {
+                    return $this->getDevicePlatformAnalytics($startDate, $endDate);
+                }
+            );
+        } catch (\Exception $e) {
+            // Log error and return empty analytics
+            \Log::error('Error getting device platform analytics: ' . $e->getMessage());
+            $devicePlatformAnalytics = [
+                'device_types' => [],
+                'platforms' => [],
+                'os_versions' => [],
+                'browsers' => [],
+                'device_models' => [],
+                'app_versions' => [],
+                'active_devices' => 0,
+                'engagement' => [],
+                'revenue' => [],
+                'retention_rates' => [],
+                'growth' => []
+            ];
+        }
 
         // Prepare view data
         $viewData = [
@@ -1787,30 +1805,38 @@ class DashboardController extends Controller
      */
     private function getDevicePlatformAnalytics($startDate, $endDate)
     {
-        // Device Type Distribution (from users table)
-        $deviceTypeStats = User::whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('device_type, COUNT(*) as count')
-            ->whereNotNull('device_type')
-            ->groupBy('device_type')
-            ->get()
-            ->pluck('count', 'device_type')
-            ->toArray();
+        try {
+            // Device Type Distribution (from users table)
+            $deviceTypeStats = User::whereBetween('created_at', [$startDate, $endDate])
+                ->selectRaw('device_type, COUNT(*) as count')
+                ->whereNotNull('device_type')
+                ->groupBy('device_type')
+                ->get()
+                ->pluck('count', 'device_type')
+                ->toArray();
+        } catch (\Exception $e) {
+            $deviceTypeStats = [];
+        }
 
-        // Platform Distribution (Android, iOS, Web)
-        $platformStats = User::whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('
-                CASE
-                    WHEN os LIKE "%Android%" OR device_type = "android" THEN "Android"
-                    WHEN os LIKE "%iOS%" OR os LIKE "%iPhone%" OR device_type = "ios" THEN "iOS"
-                    WHEN registration_source = "web" OR device_type = "desktop" THEN "Web"
-                    ELSE "Unknown"
-                END as platform,
-                COUNT(*) as count
-            ')
-            ->groupBy('platform')
-            ->get()
-            ->pluck('count', 'platform')
-            ->toArray();
+        try {
+            // Platform Distribution (Android, iOS, Web)
+            $platformStats = User::whereBetween('created_at', [$startDate, $endDate])
+                ->selectRaw('
+                    CASE
+                        WHEN os LIKE "%Android%" OR device_type = "android" THEN "Android"
+                        WHEN os LIKE "%iOS%" OR os LIKE "%iPhone%" OR device_type = "ios" THEN "iOS"
+                        WHEN registration_source = "web" OR device_type = "desktop" THEN "Web"
+                        ELSE "Unknown"
+                    END as platform,
+                    COUNT(*) as count
+                ')
+                ->groupBy('platform')
+                ->get()
+                ->pluck('count', 'platform')
+                ->toArray();
+        } catch (\Exception $e) {
+            $platformStats = [];
+        }
 
         // OS Version Distribution
         $osVersionStats = User::whereBetween('created_at', [$startDate, $endDate])
@@ -1824,9 +1850,11 @@ class DashboardController extends Controller
             ->map(function($item) {
                 return [
                     'os' => $item->os,
-                    'count' => $item->count
+                    'count' => (int)($item->count ?? 0)
                 ];
-            });
+            })
+            ->values()
+            ->toArray();
 
         // Browser Distribution
         $browserStats = User::whereBetween('created_at', [$startDate, $endDate])
@@ -1847,6 +1875,7 @@ class DashboardController extends Controller
         // Check if user_devices table exists and get device data
         $deviceModelStats = [];
         $appVersionStats = [];
+        $activeDevices = 0;
         try {
             if (DB::getSchemaBuilder()->hasTable('user_devices')) {
                 // Device Model Distribution
@@ -1862,9 +1891,11 @@ class DashboardController extends Controller
                     ->map(function($item) {
                         return [
                             'model' => $item->device_model,
-                            'count' => $item->count
+                            'count' => (int)($item->count ?? 0)
                         ];
-                    });
+                    })
+                    ->values()
+                    ->toArray();
 
                 // App Version Distribution
                 $appVersionStats = DB::table('user_devices')
@@ -1879,18 +1910,19 @@ class DashboardController extends Controller
                     ->map(function($item) {
                         return [
                             'version' => $item->app_version,
-                            'count' => $item->count
+                            'count' => (int)($item->count ?? 0)
                         ];
-                    });
+                    })
+                    ->values()
+                    ->toArray();
 
                 // Active Devices (devices active in the last 30 days)
-                $activeDevices = DB::table('user_devices')
+                $activeDevices = (int)DB::table('user_devices')
                     ->where('last_active', '>=', now()->subDays(30))
                     ->count();
-            } else {
-                $activeDevices = 0;
             }
         } catch (\Exception $e) {
+            // Table doesn't exist or error occurred, use defaults
             $activeDevices = 0;
         }
 
@@ -1914,15 +1946,17 @@ class DashboardController extends Controller
             ->map(function($item) {
                 return [
                     'platform' => $item->platform,
-                    'user_count' => $item->user_count,
-                    'total_sessions' => $item->total_sessions ?? 0,
-                    'total_play_time' => $item->total_play_time ?? 0,
-                    'total_favorites' => $item->total_favorites ?? 0,
-                    'total_ratings' => $item->total_ratings ?? 0,
+                    'user_count' => (int)($item->user_count ?? 0),
+                    'total_sessions' => (int)($item->total_sessions ?? 0),
+                    'total_play_time' => (int)($item->total_play_time ?? 0),
+                    'total_favorites' => (int)($item->total_favorites ?? 0),
+                    'total_ratings' => (int)($item->total_ratings ?? 0),
                     'avg_sessions' => $item->user_count > 0 ? round(($item->total_sessions ?? 0) / $item->user_count, 2) : 0,
                     'avg_play_time' => $item->user_count > 0 ? round(($item->total_play_time ?? 0) / $item->user_count, 2) : 0
                 ];
-            });
+            })
+            ->values()
+            ->toArray();
 
         // Platform-specific Revenue
         $platformRevenue = Payment::whereBetween('created_at', [$startDate, $endDate])
@@ -1944,12 +1978,14 @@ class DashboardController extends Controller
             ->map(function($item) {
                 return [
                     'platform' => $item->platform,
-                    'total_revenue' => $item->total_revenue ?? 0,
-                    'paying_users' => $item->paying_users ?? 0,
-                    'transaction_count' => $item->transaction_count ?? 0,
+                    'total_revenue' => (int)($item->total_revenue ?? 0),
+                    'paying_users' => (int)($item->paying_users ?? 0),
+                    'transaction_count' => (int)($item->transaction_count ?? 0),
                     'arpu' => $item->paying_users > 0 ? round(($item->total_revenue ?? 0) / $item->paying_users, 2) : 0
                 ];
-            });
+            })
+            ->values()
+            ->toArray();
 
         // Platform-specific User Retention (users active in last 7 days)
         $platformRetention = User::where('last_activity_at', '>=', now()->subDays(7))
@@ -2016,20 +2052,20 @@ class DashboardController extends Controller
                     })
                     ->count()
             ];
-        })->reverse()->values();
+        })->reverse()->values()->toArray();
 
         return [
-            'device_types' => $deviceTypeStats,
-            'platforms' => $platformStats,
-            'os_versions' => $osVersionStats,
-            'browsers' => $browserStats,
-            'device_models' => $deviceModelStats,
-            'app_versions' => $appVersionStats,
-            'active_devices' => $activeDevices,
-            'engagement' => $platformEngagement,
-            'revenue' => $platformRevenue,
-            'retention_rates' => $retentionRates,
-            'growth' => $platformGrowth
+            'device_types' => $deviceTypeStats ?? [],
+            'platforms' => $platformStats ?? [],
+            'os_versions' => $osVersionStats ?? [],
+            'browsers' => $browserStats ?? [],
+            'device_models' => $deviceModelStats ?? [],
+            'app_versions' => $appVersionStats ?? [],
+            'active_devices' => $activeDevices ?? 0,
+            'engagement' => $platformEngagement ?? [],
+            'revenue' => $platformRevenue ?? [],
+            'retention_rates' => $retentionRates ?? [],
+            'growth' => $platformGrowth ?? []
         ];
     }
 }

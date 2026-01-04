@@ -237,15 +237,11 @@ class StoryController extends Controller
                     }
                 },
             ],
-            'duration' => 'nullable|integer|min:0',
-            'total_episodes' => 'nullable|integer|min:1',
-            'free_episodes' => 'nullable|integer|min:0',
             'is_premium' => 'boolean',
             'is_completely_free' => 'boolean',
             'status' => 'required|in:draft,pending,approved,rejected,published',
             'workflow_status' => 'nullable|in:written,characters_made,recorded,timeline_created,published',
             'image' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
             'people' => 'nullable|array',
@@ -260,35 +256,22 @@ class StoryController extends Controller
             $validated['workflow_status'] = 'written';
         }
 
-        // Ensure duration has a default value if not provided
-        if (!isset($validated['duration']) || empty($validated['duration'])) {
-            $validated['duration'] = 0;
-        }
-
-        // Ensure free_episodes has a default value if not provided
-        if (!isset($validated['free_episodes']) || empty($validated['free_episodes'])) {
-            $validated['free_episodes'] = 0;
-        }
-
-        // Handle file uploads
+        // Handle single image upload - set both image_url and cover_image_url to the same value
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $image->move(public_path('images/stories'), $imageName);
-            // Store only the relative path
-            $validated['image_url'] = 'stories/' . $imageName;
-        }
-
-        if ($request->hasFile('cover_image')) {
-            $coverImage = $request->file('cover_image');
-            $coverImageName = time() . '_cover_' . $coverImage->getClientOriginalName();
-            $coverImage->move(public_path('images/stories'), $coverImageName);
-            // Store only the relative path
-            $validated['cover_image_url'] = 'stories/' . $coverImageName;
+            // Store only the relative path - use same image for both
+            $imagePath = 'stories/' . $imageName;
+            $validated['image_url'] = $imagePath;
+            $validated['cover_image_url'] = $imagePath;
         }
 
         $oldNarratorId = null;
         $story = Story::create($validated);
+
+        // Auto-calculate duration, total_episodes, and free_episodes from episodes
+        $story->updateStatistics();
 
         // Send notification if narrator is assigned
         if ($story->narrator_id) {
@@ -362,14 +345,10 @@ class StoryController extends Controller
             'director_id' => 'nullable|exists:people,id',
             'author_id' => 'nullable|exists:people,id',
             'narrator_id' => 'nullable|exists:people,id',
-            'duration' => 'nullable|integer|min:0',
-            'total_episodes' => 'nullable|integer|min:1',
-            'free_episodes' => 'nullable|integer|min:0',
             'is_premium' => 'boolean',
             'is_completely_free' => 'boolean',
             'status' => 'required|in:draft,pending,approved,rejected,published',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
             'people' => 'nullable|array',
@@ -379,36 +358,28 @@ class StoryController extends Controller
         // Set default language (all stories are in Persian)
         $validated['language'] = 'persian';
 
-        // Ensure duration has a default value if not provided
-        if (!isset($validated['duration']) || empty($validated['duration'])) {
-            $validated['duration'] = 0;
-        }
-
-        // Handle file uploads
+        // Handle single image upload - set both image_url and cover_image_url to the same value
         if ($request->hasFile('image')) {
-            // Delete old image if exists
+            // Delete old images if they exist (only delete if they're different files)
             if ($story->attributes['image_url'] && file_exists(public_path('images/' . $story->attributes['image_url']))) {
+                // Only delete if cover_image_url is different from image_url
+                if ($story->attributes['cover_image_url'] && $story->attributes['cover_image_url'] !== $story->attributes['image_url']) {
+                    if (file_exists(public_path('images/' . $story->attributes['cover_image_url']))) {
+                        unlink(public_path('images/' . $story->attributes['cover_image_url']));
+                    }
+                }
                 unlink(public_path('images/' . $story->attributes['image_url']));
+            } elseif ($story->attributes['cover_image_url'] && file_exists(public_path('images/' . $story->attributes['cover_image_url']))) {
+                unlink(public_path('images/' . $story->attributes['cover_image_url']));
             }
 
             $image = $request->file('image');
             $imageName = time() . '_' . $image->getClientOriginalName();
             $image->move(public_path('images/stories'), $imageName);
-            // Store only the relative path
-            $validated['image_url'] = 'stories/' . $imageName;
-        }
-
-        if ($request->hasFile('cover_image')) {
-            // Delete old cover image if exists
-            if ($story->attributes['cover_image_url'] && file_exists(public_path('images/' . $story->attributes['cover_image_url']))) {
-                unlink(public_path('images/' . $story->attributes['cover_image_url']));
-            }
-
-            $coverImage = $request->file('cover_image');
-            $coverImageName = time() . '_cover_' . $coverImage->getClientOriginalName();
-            $coverImage->move(public_path('images/stories'), $coverImageName);
-            // Store only the relative path
-            $validated['cover_image_url'] = 'stories/' . $coverImageName;
+            // Store only the relative path - use same image for both
+            $imagePath = 'stories/' . $imageName;
+            $validated['image_url'] = $imagePath;
+            $validated['cover_image_url'] = $imagePath;
         }
 
         $oldNarratorId = $story->narrator_id;
@@ -417,6 +388,9 @@ class StoryController extends Controller
 
         $story->update($validated);
         $story->refresh();
+
+        // Auto-calculate duration, total_episodes, and free_episodes from episodes
+        $story->updateStatistics();
 
         // Handle narrator assignment/removal
         if ($oldNarratorId != $story->narrator_id) {
