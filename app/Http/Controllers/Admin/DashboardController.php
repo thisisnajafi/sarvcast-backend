@@ -279,6 +279,18 @@ class DashboardController extends Controller
             ];
         }
 
+        // Get top selling plans (cached)
+        $topSellingPlans = Cache::remember(
+            'dashboard_top_selling_plans',
+            600, // 10 minutes
+            function() {
+                return SubscriptionPlan::withCount('subscriptions')
+                    ->orderBy('subscriptions_count', 'desc')
+                    ->limit(5)
+                    ->get();
+            }
+        );
+
         // Prepare view data
         $viewData = [
             'stats' => $stats,
@@ -303,7 +315,8 @@ class DashboardController extends Controller
             'recentActivity' => $recentActivity,
             'voiceActorsAnalytics' => $voiceActorsAnalytics,
             'moderationAnalytics' => $moderationAnalytics,
-            'devicePlatformAnalytics' => $devicePlatformAnalytics
+            'devicePlatformAnalytics' => $devicePlatformAnalytics,
+            'topSellingPlans' => $topSellingPlans ?? collect()
         ];
 
         // Cache the view data
