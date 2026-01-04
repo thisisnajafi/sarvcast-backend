@@ -1444,7 +1444,7 @@ class DashboardController extends Controller
                     'icon' => 'dollar-sign',
                     'color' => 'yellow',
                     'title' => 'پرداخت جدید دریافت شد',
-                    'description' => number_format($payment->amount) . ' تومان - ' . ($payment->user->first_name ?? 'کاربر ناشناس'),
+                    'description' => number_format($payment->amount) . ' تومان - ' . ($payment->user?->first_name ?? 'کاربر ناشناس'),
                     'time' => $payment->created_at,
                     'url' => route('admin.payments.show', $payment->id)
                 ];
@@ -1464,7 +1464,7 @@ class DashboardController extends Controller
                     'icon' => 'comment',
                     'color' => 'purple',
                     'title' => 'نظر جدید اضافه شد',
-                    'description' => 'برای داستان: ' . ($comment->story->title ?? 'نامشخص'),
+                    'description' => 'برای داستان: ' . ($comment->story?->title ?? 'نامشخص'),
                     'time' => $comment->created_at,
                     'url' => route('admin.comments.index')
                 ];
@@ -1724,9 +1724,9 @@ class DashboardController extends Controller
                 return [
                     'id' => $comment->id,
                     'type' => 'comment',
-                    'content' => substr($comment->content, 0, 100) . '...',
-                    'story_title' => $comment->story->title ?? 'نامشخص',
-                    'user_name' => ($comment->user->first_name ?? '') . ' ' . ($comment->user->last_name ?? ''),
+                    'content' => substr($comment->content ?? '', 0, 100) . '...',
+                    'story_title' => $comment->story?->title ?? 'نامشخص',
+                    'user_name' => ($comment->user?->first_name ?? '') . ' ' . ($comment->user?->last_name ?? ''),
                     'created_at' => $comment->created_at,
                     'url' => route('admin.comments.show', $comment->id)
                 ];

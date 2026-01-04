@@ -52,7 +52,7 @@ class ImageTimelineManagementController extends Controller
         // Sorting
         $sortBy = $request->get('sort_by', 'start_time');
         $sortOrder = $request->get('sort_order', 'asc');
-        
+
         $allowedSortFields = ['start_time', 'end_time', 'image_order', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -140,7 +140,7 @@ class ImageTimelineManagementController extends Controller
         }
 
         $imageTimelineData = $request->only([
-            'episode_id', 'start_time', 'end_time', 'image_url', 
+            'episode_id', 'start_time', 'end_time', 'image_url',
             'image_order', 'status', 'description', 'tags'
         ]);
 
@@ -162,7 +162,7 @@ class ImageTimelineManagementController extends Controller
     public function show(ImageTimeline $imageTimeline)
     {
         $imageTimeline->load(['episode.story']);
-        
+
         // Get related image timelines
         $relatedTimelines = ImageTimeline::where('episode_id', $imageTimeline->episode_id)
             ->where('id', '!=', $imageTimeline->id)
@@ -219,7 +219,7 @@ class ImageTimelineManagementController extends Controller
         }
 
         $imageTimelineData = $request->only([
-            'episode_id', 'start_time', 'end_time', 'image_url', 
+            'episode_id', 'start_time', 'end_time', 'image_url',
             'image_order', 'status', 'description', 'tags'
         ]);
 
@@ -247,9 +247,9 @@ class ImageTimelineManagementController extends Controller
     {
         $newStatus = $imageTimeline->status === 'active' ? 'inactive' : 'active';
         $imageTimeline->update(['status' => $newStatus]);
-        
+
         $statusText = $newStatus === 'active' ? 'فعال شد' : 'غیرفعال شد';
-        
+
         return response()->json([
             'success' => true,
             'message' => "تایم‌لاین تصویر {$statusText}",
@@ -285,8 +285,8 @@ class ImageTimelineManagementController extends Controller
 
         foreach ($imageTimelines as $imageTimeline) {
             $csvData[] = [
-                $imageTimeline->episode->title,
-                $imageTimeline->episode->story->title,
+                $imageTimeline->episode?->title ?? 'نامشخص',
+                $imageTimeline->episode?->story?->title ?? 'نامشخص',
                 gmdate('H:i:s', $imageTimeline->start_time),
                 gmdate('H:i:s', $imageTimeline->end_time),
                 $imageTimeline->image_url,
@@ -299,7 +299,7 @@ class ImageTimelineManagementController extends Controller
         }
 
         $filename = 'image_timelines_export_' . date('Y-m-d_H-i-s') . '.csv';
-        
+
         $callback = function() use ($csvData) {
             $file = fopen('php://output', 'w');
             foreach ($csvData as $row) {
@@ -355,13 +355,13 @@ class ImageTimelineManagementController extends Controller
                 $count = count($imageTimelineIds);
                 $message = "{$count} تایم‌لاین تصویر فعال شد";
                 break;
-                
+
             case 'deactivate':
                 ImageTimeline::whereIn('id', $imageTimelineIds)->update(['status' => 'inactive']);
                 $count = count($imageTimelineIds);
                 $message = "{$count} تایم‌لاین تصویر غیرفعال شد";
                 break;
-                
+
             case 'delete':
                 ImageTimeline::whereIn('id', $imageTimelineIds)->delete();
                 $count = count($imageTimelineIds);
@@ -379,7 +379,7 @@ class ImageTimelineManagementController extends Controller
     {
         $storyId = $request->story_id;
         $episodes = Episode::where('story_id', $storyId)->orderBy('title')->get();
-        
+
         return response()->json([
             'success' => true,
             'episodes' => $episodes->map(function($episode) {

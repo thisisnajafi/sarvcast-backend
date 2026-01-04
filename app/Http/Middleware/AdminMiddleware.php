@@ -4,6 +4,9 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 class AdminMiddleware
@@ -116,11 +119,12 @@ class AdminMiddleware
     /**
      * Log admin activity for security monitoring
      */
-    private function logAdminActivity(Request $request, $user)
+    private function logAdminActivity(Request $request, $user): void
     {
+        // Prepare log data
         $logData = [
             'user_id' => $user->id,
-            'user_phone' => $user->phone_number,
+            'user_phone' => $user->phone_number ?? null,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'method' => $request->method(),
@@ -129,14 +133,18 @@ class AdminMiddleware
             'timestamp' => now(),
         ];
 
-        // Log to file
-        \Log::info('Admin Activity', $logData);
+        // Log to file (always log to file for debugging)
+        Log::info('Admin Activity', $logData);
 
         // Store in database for advanced monitoring (if table exists)
-        try {
-            // Check if the table exists before trying to insert
-            if (\Schema::hasTable('admin_activity_logs')) {
-                \DB::table('admin_activity_logs')->insert([
+        // Use cache to avoid checking table existence on every request
+        $tableExists = cache()->remember('admin_activity_logs_table_exists', 3600, function () {
+            return Schema::hasTable('admin_activity_logs');
+        });
+
+        if ($tableExists) {
+            try {
+                DB::table('admin_activity_logs')->insert([
                     'user_id' => $user->id,
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
@@ -146,10 +154,18 @@ class AdminMiddleware
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+            } catch (\Exception $e) {
+                // If database logging fails, log the error but don't break the request
+                Log::error('Failed to log admin activity to database: ' . $e->getMessage(), [
+                    'exception' => $e,
+                    'log_data' => $logData
+                ]);
+
+                // Invalidate cache if table check fails (might have been dropped)
+                if (str_contains($e->getMessage(), "doesn't exist") || str_contains($e->getMessage(), 'Unknown table')) {
+                    cache()->forget('admin_activity_logs_table_exists');
+                }
             }
-        } catch (\Exception $e) {
-            // If logging fails, continue without throwing error
-            \Log::error('Failed to log admin activity: ' . $e->getMessage());
         }
     }
 }
