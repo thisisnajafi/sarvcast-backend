@@ -9,8 +9,8 @@ use Melipayamak\MelipayamakApi;
 
 class SmsService
 {
-    private string $apiToken;
-    private string $username;
+    private ?string $apiToken = null;
+    private ?string $username = null;
     private string $baseUrl = 'http://api.payamak-panel.com/post/send.asmx?wsdl';
 
     public function __construct()
