@@ -1637,7 +1637,7 @@ class DashboardController extends Controller
             $totalPlays = PlayHistory::whereHas('story', function($q) use ($actor) {
                     $q->where('narrator_id', $actor->id);
                 })
-                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('played_at', [$startDate, $endDate])
                 ->count();
 
             // Calculate average rating for narrated stories
