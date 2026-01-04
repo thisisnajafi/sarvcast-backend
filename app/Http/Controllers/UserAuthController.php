@@ -20,6 +20,19 @@ class UserAuthController extends Controller
      */
     public function showLoginForm(Request $request)
     {
+        // If user is already authenticated, redirect to dashboard or intended page
+        if (Auth::check()) {
+            $user = Auth::user();
+
+            // If user is admin, redirect to admin dashboard
+            if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])) {
+                return redirect()->route('admin.dashboard');
+            }
+
+            // For regular users, redirect to checkout or home
+            return redirect()->intended(route('checkout'));
+        }
+
         $step = $request->session()->get('user_login_step', 'phone');
         $phone = $request->session()->get('user_login_phone');
 

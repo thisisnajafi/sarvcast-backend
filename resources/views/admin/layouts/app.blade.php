@@ -43,7 +43,7 @@
     <div class="flex min-h-screen">
         <!-- Sidebar Backdrop (Mobile Only) -->
         <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-40 transition-opacity duration-300 lg:hidden"></div>
-
+        
         <!-- Sidebar -->
         <div id="sidebar" class="hidden lg:flex flex-col w-56 lg:w-64 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 fixed right-0 h-full overflow-y-auto transition-transform duration-300 z-50 translate-x-full lg:translate-x-0">
             <div class="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">

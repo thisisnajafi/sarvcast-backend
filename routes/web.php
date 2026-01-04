@@ -230,14 +230,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
         return view('admin.analytics.referral-analytics');
     })->name('analytics.referral');
 
-
-
-
-    // Admin Dashboard
-    Route::get('/', function () {
-        return view('admin.dashboard.index');
-    })->name('dashboard');
-
     // Role Management
     Route::prefix('roles')->name('roles.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\RoleController::class, 'index'])->name('index');

@@ -23,6 +23,14 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
+        // If user is already authenticated as admin, redirect to dashboard
+        if (Auth::guard('web')->check()) {
+            $user = Auth::guard('web')->user();
+            if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])) {
+                return redirect()->route('admin.dashboard');
+            }
+        }
+        
         return view('admin.auth.login');
     }
 
