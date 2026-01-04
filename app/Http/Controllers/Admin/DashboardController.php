@@ -39,14 +39,15 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        // Get date range from request
-        $dateRange = $request->get('date_range', '30days');
-        $dateFrom = $request->get('date_from');
-        $dateTo = $request->get('date_to');
+        try {
+            // Get date range from request
+            $dateRange = $request->get('date_range', '30days');
+            $dateFrom = $request->get('date_from');
+            $dateTo = $request->get('date_to');
 
-        // Calculate date range
-        $startDate = $this->getStartDate($dateRange, $dateFrom);
-        $endDate = $dateTo ? Carbon::parse($dateTo)->endOfDay() : now();
+            // Calculate date range
+            $startDate = $this->getStartDate($dateRange, $dateFrom);
+            $endDate = $dateTo ? Carbon::parse($dateTo)->endOfDay() : now();
 
         // Generate cache key based on parameters
         $cacheKey = 'dashboard_' . md5(json_encode([
@@ -309,6 +310,40 @@ class DashboardController extends Controller
         Cache::put($cacheKey, $viewData, $cacheDuration);
 
         return view('admin.dashboard', $viewData);
+        } catch (\Exception $e) {
+            // Log the error with full context
+            \Log::error('Dashboard Error: ' . $e->getMessage(), [
+                'exception' => $e,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all(),
+                'user_id' => auth()->id()
+            ]);
+
+            // Return a simple error response to avoid cascading errors
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در بارگذاری داشبورد. لطفاً دوباره تلاش کنید.',
+                    'error' => 'DASHBOARD_ERROR'
+                ], 500);
+            }
+
+            // For web requests, return a simple error response
+            // Use a simple HTML response to avoid view rendering issues
+            $errorMessage = 'خطا در بارگذاری داشبورد. لطفاً دوباره تلاش کنید.';
+            if (view()->exists('errors.500')) {
+                return response()->view('errors.500', [
+                    'message' => $errorMessage,
+                    'error_code' => 'DASHBOARD_ERROR'
+                ], 500);
+            }
+
+            // Fallback to simple HTML if error view doesn't exist
+            return response('<html><body><h1>خطا</h1><p>' . htmlspecialchars($errorMessage) . '</p></body></html>', 500)
+                ->header('Content-Type', 'text/html; charset=utf-8');
+        }
     }
 
     /**

@@ -110,8 +110,13 @@ class AdminMiddleware
             app('cache')->put($key, 1, $decayMinutes * 60);
         }
 
-        // Log admin activity
-        $this->logAdminActivity($request, $user);
+        // Log admin activity (don't let logging errors break the request)
+        try {
+            $this->logAdminActivity($request, $user);
+        } catch (\Exception $e) {
+            // Log the logging error but don't break the request
+            Log::error('Failed to log admin activity in middleware: ' . $e->getMessage());
+        }
 
         return $next($request);
     }
@@ -162,7 +167,8 @@ class AdminMiddleware
                 ]);
 
                 // Invalidate cache if table check fails (might have been dropped)
-                if (str_contains($e->getMessage(), "doesn't exist") || str_contains($e->getMessage(), 'Unknown table')) {
+                $errorMessage = $e->getMessage();
+                if (strpos($errorMessage, "doesn't exist") !== false || strpos($errorMessage, 'Unknown table') !== false) {
                     cache()->forget('admin_activity_logs_table_exists');
                 }
             }
