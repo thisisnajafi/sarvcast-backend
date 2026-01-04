@@ -399,6 +399,7 @@ class DashboardController extends Controller
             'total_ratings' => Rating::count(),
             'average_rating' => Rating::avg('rating') ?? 0,
             'total_favorites' => Favorite::count(),
+            'total_content_shares' => $this->getContentSharesCount(),
 
             // Play History Statistics (Story Listens)
             'total_play_history' => PlayHistory::count(),
@@ -2124,5 +2125,20 @@ class DashboardController extends Controller
             'retention_rates' => $retentionRates ?? [],
             'growth' => $platformGrowth ?? []
         ];
+    }
+
+    /**
+     * Get content shares count with error handling
+     */
+    private function getContentSharesCount(): int
+    {
+        try {
+            if (DB::getSchemaBuilder()->hasTable('content_shares')) {
+                return ContentShare::count();
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Error getting content shares count: ' . $e->getMessage());
+        }
+        return 0;
     }
 }

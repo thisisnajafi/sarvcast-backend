@@ -579,7 +579,7 @@
             </div>
             <div class="flex items-center justify-between text-sm mt-1">
                 <span class="text-gray-500">اشتراک‌گذاری</span>
-                <span class="text-blue-600 font-medium">{{ number_format($stats['total_content_shares']) }}</span>
+                <span class="text-blue-600 font-medium">{{ number_format($stats['total_content_shares'] ?? 0) }}</span>
             </div>
         </div>
     </div>
