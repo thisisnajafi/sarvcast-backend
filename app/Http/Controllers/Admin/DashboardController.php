@@ -1615,74 +1615,93 @@ class DashboardController extends Controller
      */
     private function getVoiceActorsAnalytics($startDate, $endDate)
     {
-        // Get all voice actors (users with voice_actor, admin, or super_admin role)
-        $voiceActors = User::whereIn('role', ['voice_actor', 'admin', 'super_admin'])
-            ->withCount([
-                'storiesAsNarrator',
-                'storiesAsAuthor',
-                'characters'
-            ])
-            ->get();
+        try {
+            // Get all voice actors (users with voice_actor, admin, or super_admin role)
+            $voiceActors = User::whereIn('role', ['voice_actor', 'admin', 'super_admin'])
+                ->withCount([
+                    'storiesAsNarrator',
+                    'storiesAsAuthor',
+                    'characters'
+                ])
+                ->get();
+        } catch (\Exception $e) {
+            // If withCount fails, get users without counts and calculate manually
+            \Log::warning('Error using withCount in getVoiceActorsAnalytics: ' . $e->getMessage());
+            $voiceActors = User::whereIn('role', ['voice_actor', 'admin', 'super_admin'])->get();
+
+            // Manually add counts
+            foreach ($voiceActors as $actor) {
+                $actor->stories_as_narrator_count = Story::where('narrator_id', $actor->id)->count();
+                $actor->stories_as_author_count = Story::where('author_id', $actor->id)->count();
+                $actor->characters_count = \App\Models\Character::where('voice_actor_id', $actor->id)->count();
+            }
+        }
 
         $analytics = [];
 
         foreach ($voiceActors as $actor) {
-            // Get stories narrated by this voice actor (all time, not filtered by date)
-            $narratedStories = Story::where('narrator_id', $actor->id)->get();
+            try {
+                // Get stories narrated by this voice actor (all time, not filtered by date)
+                $narratedStories = Story::where('narrator_id', $actor->id)->get();
 
-            // Get stories authored by this voice actor (all time, not filtered by date)
-            $authoredStories = Story::where('author_id', $actor->id)->get();
+                // Get stories authored by this voice actor (all time, not filtered by date)
+                $authoredStories = Story::where('author_id', $actor->id)->get();
 
-            // Calculate total plays for narrated stories
-            $totalPlays = PlayHistory::whereHas('story', function($q) use ($actor) {
-                    $q->where('narrator_id', $actor->id);
-                })
-                ->whereBetween('played_at', [$startDate, $endDate])
-                ->count();
+                // Calculate total plays for narrated stories
+                $totalPlays = PlayHistory::whereHas('story', function($q) use ($actor) {
+                        $q->where('narrator_id', $actor->id);
+                    })
+                    ->whereBetween('played_at', [$startDate, $endDate])
+                    ->count();
 
-            // Calculate average rating for narrated stories
-            $avgRating = Rating::whereHas('story', function($q) use ($actor) {
-                    $q->where('narrator_id', $actor->id);
-                })
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->avg('rating') ?? 0;
+                // Calculate average rating for narrated stories
+                $avgRating = Rating::whereHas('story', function($q) use ($actor) {
+                        $q->where('narrator_id', $actor->id);
+                    })
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->avg('rating') ?? 0;
 
-            // Calculate total favorites for narrated stories
-            $totalFavorites = Favorite::whereHas('story', function($q) use ($actor) {
-                    $q->where('narrator_id', $actor->id);
-                })
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->count();
+                // Calculate total favorites for narrated stories
+                $totalFavorites = Favorite::whereHas('story', function($q) use ($actor) {
+                        $q->where('narrator_id', $actor->id);
+                    })
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->count();
 
-            // Calculate engagement rate (favorites + ratings + comments per story)
-            $totalEngagement = $totalFavorites +
-                Rating::whereHas('story', function($q) use ($actor) {
-                    $q->where('narrator_id', $actor->id);
-                })->whereBetween('created_at', [$startDate, $endDate])->count() +
-                StoryComment::whereHas('story', function($q) use ($actor) {
-                    $q->where('narrator_id', $actor->id);
-                })->whereBetween('created_at', [$startDate, $endDate])->count();
+                // Calculate engagement rate (favorites + ratings + comments per story)
+                $totalEngagement = $totalFavorites +
+                    Rating::whereHas('story', function($q) use ($actor) {
+                        $q->where('narrator_id', $actor->id);
+                    })->whereBetween('created_at', [$startDate, $endDate])->count() +
+                    StoryComment::whereHas('story', function($q) use ($actor) {
+                        $q->where('narrator_id', $actor->id);
+                    })->whereBetween('created_at', [$startDate, $endDate])->count();
 
-            $engagementRate = $narratedStories->count() > 0
-                ? round($totalEngagement / $narratedStories->count(), 2)
-                : 0;
+                $engagementRate = $narratedStories->count() > 0
+                    ? round($totalEngagement / $narratedStories->count(), 2)
+                    : 0;
 
-            $analytics[] = [
-                'id' => $actor->id,
-                'name' => $actor->first_name . ' ' . $actor->last_name,
-                'phone' => $actor->phone_number,
-                'role' => $actor->role,
-                'status' => $actor->status,
-                'total_stories_narrated' => $narratedStories->count(),
-                'total_stories_authored' => $authoredStories->count(),
-                'total_characters' => $actor->characters_count,
-                'total_plays' => $totalPlays,
-                'average_rating' => round($avgRating, 2),
-                'total_favorites' => $totalFavorites,
-                'engagement_rate' => $engagementRate,
-                'total_engagement' => $totalEngagement,
-                'profile_image' => $actor->profile_image_url,
-            ];
+                $analytics[] = [
+                    'id' => $actor->id,
+                    'name' => ($actor->first_name ?? '') . ' ' . ($actor->last_name ?? ''),
+                    'phone' => $actor->phone_number ?? null,
+                    'role' => $actor->role ?? null,
+                    'status' => $actor->status ?? null,
+                    'total_stories_narrated' => $narratedStories->count(),
+                    'total_stories_authored' => $authoredStories->count(),
+                    'total_characters' => $actor->characters_count ?? 0,
+                    'total_plays' => $totalPlays,
+                    'average_rating' => round($avgRating, 2),
+                    'total_favorites' => $totalFavorites,
+                    'engagement_rate' => $engagementRate,
+                    'total_engagement' => $totalEngagement,
+                    'profile_image' => $actor->profile_image_url ?? null,
+                ];
+            } catch (\Exception $e) {
+                // Log error but continue processing other actors
+                \Log::error('Error processing voice actor analytics for actor ID ' . ($actor->id ?? 'unknown') . ': ' . $e->getMessage());
+                continue;
+            }
         }
 
         // Sort by total plays (most popular first)
