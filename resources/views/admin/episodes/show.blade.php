@@ -294,15 +294,15 @@
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900">
-                                                {{ $playHistory->user->first_name }} {{ $playHistory->user->last_name }}
+                                                {{ $playHistory->user?->first_name ?? 'نامشخص' }} {{ $playHistory->user?->last_name ?? '' }}
                                             </div>
-                                            <div class="text-sm text-gray-500">{{ $playHistory->user->phone_number }}</div>
+                                            <div class="text-sm text-gray-500">{{ $playHistory->user?->phone_number ?? 'نامشخص' }}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $playHistory->created_at->format('Y/m/d H:i') }}
+                                            {{ $playHistory->played_at ? $playHistory->played_at->format('Y/m/d H:i') : 'نامشخص' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $playHistory->listened_duration ? round($playHistory->listened_duration / 60, 1) . ' دقیقه' : 'نامشخص' }}
+                                            {{ $playHistory->duration_played ? round($playHistory->duration_played / 60, 1) . ' دقیقه' : 'نامشخص' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full

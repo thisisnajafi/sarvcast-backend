@@ -175,10 +175,10 @@ class DashboardController extends Controller
             60, // 1 minute cache
             function() {
                 return Story::whereHas('playHistories', function($q) {
-                        $q->whereDate('created_at', today());
+                        $q->whereDate('played_at', today());
                     })
                     ->withCount(['playHistories' => function($q) {
-                        $q->whereDate('created_at', today());
+                        $q->whereDate('played_at', today());
                     }])
                     ->orderBy('play_histories_count', 'desc')
                     ->limit(10)
@@ -191,10 +191,10 @@ class DashboardController extends Controller
             300, // 5 minutes cache
             function() {
                 return Story::whereHas('playHistories', function($q) {
-                        $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                        $q->whereBetween('played_at', [now()->startOfWeek(), now()->endOfWeek()]);
                     })
                     ->withCount(['playHistories' => function($q) {
-                        $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                        $q->whereBetween('played_at', [now()->startOfWeek(), now()->endOfWeek()]);
                     }])
                     ->orderBy('play_histories_count', 'desc')
                     ->limit(10)
@@ -207,10 +207,10 @@ class DashboardController extends Controller
             600, // 10 minutes cache
             function() {
                 return Story::whereHas('playHistories', function($q) {
-                        $q->whereMonth('created_at', now()->month);
+                        $q->whereMonth('played_at', now()->month)->whereYear('played_at', now()->year);
                     })
                     ->withCount(['playHistories' => function($q) {
-                        $q->whereMonth('created_at', now()->month);
+                        $q->whereMonth('played_at', now()->month)->whereYear('played_at', now()->year);
                     }])
                     ->orderBy('play_histories_count', 'desc')
                     ->limit(10)
@@ -223,10 +223,10 @@ class DashboardController extends Controller
             1800, // 30 minutes cache
             function() {
                 return Story::whereHas('playHistories', function($q) {
-                        $q->whereYear('created_at', now()->year);
+                        $q->whereYear('played_at', now()->year);
                     })
                     ->withCount(['playHistories' => function($q) {
-                        $q->whereYear('created_at', now()->year);
+                        $q->whereYear('played_at', now()->year);
                     }])
                     ->orderBy('play_histories_count', 'desc')
                     ->limit(10)
@@ -402,31 +402,31 @@ class DashboardController extends Controller
 
             // Play History Statistics (Story Listens)
             'total_play_history' => PlayHistory::count(),
-            'play_history_today' => PlayHistory::whereDate('created_at', today())->count(),
-            'play_history_this_week' => PlayHistory::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-            'play_history_this_month' => PlayHistory::whereMonth('created_at', now()->month)->count(),
-            'play_history_this_year' => PlayHistory::whereYear('created_at', now()->year)->count(),
+            'play_history_today' => PlayHistory::whereDate('played_at', today())->count(),
+            'play_history_this_week' => PlayHistory::whereBetween('played_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+            'play_history_this_month' => PlayHistory::whereMonth('played_at', now()->month)->whereYear('played_at', now()->year)->count(),
+            'play_history_this_year' => PlayHistory::whereYear('played_at', now()->year)->count(),
 
             // Story Listens by Story (Top Stories)
-            'top_stories_today' => PlayHistory::whereDate('created_at', today())
+            'top_stories_today' => PlayHistory::whereDate('played_at', today())
                 ->select('story_id', DB::raw('count(*) as listens'))
                 ->groupBy('story_id')
                 ->orderBy('listens', 'desc')
                 ->limit(10)
                 ->get(),
-            'top_stories_this_week' => PlayHistory::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+            'top_stories_this_week' => PlayHistory::whereBetween('played_at', [now()->startOfWeek(), now()->endOfWeek()])
                 ->select('story_id', DB::raw('count(*) as listens'))
                 ->groupBy('story_id')
                 ->orderBy('listens', 'desc')
                 ->limit(10)
                 ->get(),
-            'top_stories_this_month' => PlayHistory::whereMonth('created_at', now()->month)
+            'top_stories_this_month' => PlayHistory::whereMonth('played_at', now()->month)->whereYear('played_at', now()->year)
                 ->select('story_id', DB::raw('count(*) as listens'))
                 ->groupBy('story_id')
                 ->orderBy('listens', 'desc')
                 ->limit(10)
                 ->get(),
-            'top_stories_this_year' => PlayHistory::whereYear('created_at', now()->year)
+            'top_stories_this_year' => PlayHistory::whereYear('played_at', now()->year)
                 ->select('story_id', DB::raw('count(*) as listens'))
                 ->groupBy('story_id')
                 ->orderBy('listens', 'desc')
@@ -521,40 +521,40 @@ class DashboardController extends Controller
 
         // Top Stories Listened (by play history)
         $topStoriesListenedToday = Story::whereHas('playHistories', function($q) {
-                $q->whereDate('created_at', today());
+                $q->whereDate('played_at', today());
             })
             ->withCount(['playHistories' => function($q) {
-                $q->whereDate('created_at', today());
+                $q->whereDate('played_at', today());
             }])
             ->orderBy('play_histories_count', 'desc')
             ->limit(10)
             ->get();
 
         $topStoriesListenedThisWeek = Story::whereHas('playHistories', function($q) {
-                $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                $q->whereBetween('played_at', [now()->startOfWeek(), now()->endOfWeek()]);
             })
             ->withCount(['playHistories' => function($q) {
-                $q->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                $q->whereBetween('played_at', [now()->startOfWeek(), now()->endOfWeek()]);
             }])
             ->orderBy('play_histories_count', 'desc')
             ->limit(10)
             ->get();
 
         $topStoriesListenedThisMonth = Story::whereHas('playHistories', function($q) {
-                $q->whereMonth('created_at', now()->month);
+                $q->whereMonth('played_at', now()->month)->whereYear('played_at', now()->year);
             })
             ->withCount(['playHistories' => function($q) {
-                $q->whereMonth('created_at', now()->month);
+                $q->whereMonth('played_at', now()->month)->whereYear('played_at', now()->year);
             }])
             ->orderBy('play_histories_count', 'desc')
             ->limit(10)
             ->get();
 
         $topStoriesListenedThisYear = Story::whereHas('playHistories', function($q) {
-                $q->whereYear('created_at', now()->year);
+                $q->whereYear('played_at', now()->year);
             })
             ->withCount(['playHistories' => function($q) {
-                $q->whereYear('created_at', now()->year);
+                $q->whereYear('played_at', now()->year);
             }])
             ->orderBy('play_histories_count', 'desc')
             ->limit(10)
