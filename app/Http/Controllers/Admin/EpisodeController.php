@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class EpisodeController extends BaseController
 {
@@ -365,13 +366,20 @@ class EpisodeController extends BaseController
             }
 
             // Auto-set premium status based on story premium status
-            $story = Story::find($request->story_id);
+            $story = Story::with('narrator')->find($request->story_id);
             if ($story && $story->is_premium) {
                 // If story is premium, all episodes must be premium
                 $data['is_premium'] = true;
             } else {
                 // If story is free, use the value from request (can be premium or free)
                 $data['is_premium'] = $request->boolean('is_premium', false);
+            }
+
+            // Auto-set narrator from story narrator (if story has a narrator)
+            // All episodes of a story should have the same narrator as the story
+            $personNarrator = $story ? $story->getMatchingPersonNarrator() : null;
+            if ($personNarrator) {
+                $data['narrator_id'] = $personNarrator->id;
             }
 
             $episode = Episode::create($data);
@@ -472,7 +480,14 @@ class EpisodeController extends BaseController
             'story_id' => 'required|exists:stories,id',
             'title' => 'required|string|max:200',
             'description' => 'nullable|string|max:2000',
-            'episode_number' => 'required|integer|min:1',
+            'episode_number' => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::unique('episodes')->where(function ($query) use ($request) {
+                    return $query->where('story_id', $request->story_id);
+                })->ignore($episode->id)
+            ],
             'duration' => 'required|integer|min:1',
             'audio_file' => 'nullable|file|mimes:mp3,wav,m4a|max:102400',
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
@@ -603,13 +618,20 @@ class EpisodeController extends BaseController
             }
 
             // Auto-set premium status based on story premium status
-            $story = Story::find($request->story_id);
+            $story = Story::with('narrator')->find($request->story_id);
             if ($story && $story->is_premium) {
                 // If story is premium, all episodes must be premium
                 $data['is_premium'] = true;
             } else {
                 // If story is free, use the value from request (can be premium or free)
                 $data['is_premium'] = $request->boolean('is_premium', $episode->is_premium);
+            }
+
+            // Auto-set narrator from story narrator (if story has a narrator)
+            // All episodes of a story should have the same narrator as the story
+            $personNarrator = $story ? $story->getMatchingPersonNarrator() : null;
+            if ($personNarrator) {
+                $data['narrator_id'] = $personNarrator->id;
             }
 
             $episode->update($data);

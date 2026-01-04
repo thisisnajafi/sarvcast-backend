@@ -273,6 +273,9 @@ class StoryController extends Controller
         // Auto-calculate duration, total_episodes, and free_episodes from episodes
         $story->updateStatistics();
 
+        // Sync episode narrators when story narrator is set (for future episodes)
+        // Note: This will be applied when episodes are created
+
         // Send notification if narrator is assigned
         if ($story->narrator_id) {
             $narrator = User::find($story->narrator_id);
@@ -391,6 +394,11 @@ class StoryController extends Controller
 
         // Auto-calculate duration, total_episodes, and free_episodes from episodes
         $story->updateStatistics();
+
+        // Sync episode narrators when story narrator changes
+        if ($oldNarratorId != $story->narrator_id) {
+            $story->syncEpisodeNarrators();
+        }
 
         // Handle narrator assignment/removal
         if ($oldNarratorId != $story->narrator_id) {

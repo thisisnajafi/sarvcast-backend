@@ -193,7 +193,7 @@ class Story extends Model
     {
         $rules = self::getValidationRules($storyId);
         $messages = self::getValidationMessages();
-        
+
         return validator($data, $rules, $messages);
     }
 
@@ -528,7 +528,7 @@ class Story extends Model
 
     /**
      * Transition workflow status to the next stage.
-     * 
+     *
      * @param string $newStatus
      * @return bool
      */
@@ -854,14 +854,14 @@ class Story extends Model
     public function getFormattedDurationAttribute(): string
     {
         $totalSeconds = $this->total_duration;
-        
+
         if ($totalSeconds == 0) {
             return '0:00';
         }
-        
+
         $minutes = floor($totalSeconds / 60);
         $seconds = $totalSeconds % 60;
-        
+
         return sprintf('%d:%02d', $minutes, $seconds);
     }
 
@@ -916,6 +916,40 @@ class Story extends Model
     }
 
     /**
+     * Get matching Person narrator from User narrator
+     * Story narrator is User, Episode narrator is Person
+     */
+    public function getMatchingPersonNarrator(): ?Person
+    {
+        if (!$this->narrator) {
+            return null;
+        }
+
+        $narratorName = $this->narrator->first_name . ' ' . $this->narrator->last_name;
+
+        return Person::where('name', $narratorName)
+            ->orWhere(function($query) use ($narratorName) {
+                $query->where('name', 'like', '%' . $narratorName . '%')
+                      ->orWhere('name', 'like', $narratorName . '%')
+                      ->orWhere('name', 'like', '%' . $narratorName);
+            })
+            ->whereJsonContains('roles', 'narrator')
+            ->first();
+    }
+
+    /**
+     * Sync all episode narrators to match story narrator
+     */
+    public function syncEpisodeNarrators(): void
+    {
+        $personNarrator = $this->getMatchingPersonNarrator();
+
+        if ($personNarrator) {
+            $this->episodes()->update(['narrator_id' => $personNarrator->id]);
+        }
+    }
+
+    /**
      * Recalculate and update play count from episodes
      */
     public function recalculatePlayCount(): void
@@ -949,7 +983,7 @@ class Story extends Model
         if (!$this->relationLoaded('author')) {
             $this->load('author');
         }
-        
+
         if (!$this->author) {
             return null;
         }
@@ -973,7 +1007,7 @@ class Story extends Model
         if (!$this->relationLoaded('narrator')) {
             $this->load('narrator');
         }
-        
+
         if (!$this->narrator) {
             return null;
         }
@@ -994,7 +1028,7 @@ class Story extends Model
     public function toArray()
     {
         $array = parent::toArray();
-        
+
         // Add author_user if author relationship is loaded and exists
         if ($this->relationLoaded('author')) {
             if ($this->author) {
@@ -1010,7 +1044,7 @@ class Story extends Model
                 $array['author_user'] = null;
             }
         }
-        
+
         // Add narrator_user if narrator relationship is loaded and exists
         if ($this->relationLoaded('narrator')) {
             if ($this->narrator) {
@@ -1026,7 +1060,7 @@ class Story extends Model
                 $array['narrator_user'] = null;
             }
         }
-        
+
         return $array;
     }
 }

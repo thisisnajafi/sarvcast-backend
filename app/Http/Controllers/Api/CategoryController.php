@@ -142,6 +142,12 @@ class CategoryController extends Controller
 
         // Transform stories to match API specification
         $transformedStories = $stories->map(function ($story) {
+            // Only include episodes that have timelines
+            $episodeIds = $story->episodes()
+                ->whereHas('imageTimelines')
+                ->pluck('id')
+                ->toArray();
+            
             return [
                 'id' => $story->id,
                 'title' => $story->title,
@@ -157,7 +163,7 @@ class CategoryController extends Controller
                 'rating' => $story->rating ?? 0.0,
                 'rating_count' => $story->rating_count ?? 0,
                 'favorite_count' => $story->favorite_count ?? 0,
-                'episode_count' => $story->episode_count ?? 0,
+                'episode_count' => count($episodeIds),
                 'created_at' => $story->created_at->toISOString(),
                 'updated_at' => $story->updated_at->toISOString(),
                 'category' => $story->category ? [
@@ -188,9 +194,9 @@ class CategoryController extends Controller
                 ] : null,
                 'image_url' => $story->image_url ?? null,
                 'cover_image_url' => $story->cover_image_url ?? null,
-                'total_episodes' => $story->episode_count ?? 0,
-                'free_episodes' => $story->free_episode_count ?? 0,
-                'episode_ids' => $story->episodes->pluck('id')->toArray(),
+                'total_episodes' => count($episodeIds),
+                'free_episodes' => $story->episodes()->whereHas('imageTimelines')->where('is_premium', false)->count(),
+                'episode_ids' => $episodeIds,
                 'is_favorite' => false, // Will be set based on user authentication
                 'progress' => 0.0, // Will be set based on user progress
                 'tags' => $story->tags ?? [],

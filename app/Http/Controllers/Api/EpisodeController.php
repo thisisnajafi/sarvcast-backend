@@ -69,7 +69,8 @@ class EpisodeController extends Controller
     public function index(Request $request)
     {
         $query = Episode::with(['story', 'narrator', 'people', 'imageTimelines.voiceActor.person'])
-            ->published();
+            ->published()
+            ->whereHas('imageTimelines');
 
         // Apply filters
         if ($request->filled('story_id')) {
@@ -113,6 +114,15 @@ class EpisodeController extends Controller
         $includeTimeline = $request->get('include_timeline', false);
 
         $episode->load(['story', 'narrator', 'people', 'imageTimelines.voiceActor.person']);
+
+        // Only return episodes that have at least one timeline
+        if (!$episode->imageTimelines || $episode->imageTimelines->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Episode not found or has no timeline',
+                'error_code' => 'EPISODE_NOT_FOUND'
+            ], 404);
+        }
 
         // Check access control
         $user = $request->user();

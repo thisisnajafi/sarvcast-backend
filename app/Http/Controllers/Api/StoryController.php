@@ -109,11 +109,14 @@ class StoryController extends Controller
 
         // For admins, super admins, and voice actors, load all episodes (including draft)
         // For regular users, only load published episodes
+        // Only load episodes that have at least one timeline
         if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
-            $story->load(['category', 'director', 'author', 'narrator', 'episodes', 'people', 'characters.voiceActor']);
+            $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
+                $query->whereHas('imageTimelines');
+            }, 'people', 'characters.voiceActor']);
         } else {
             $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
-                $query->published();
+                $query->published()->whereHas('imageTimelines');
             }, 'people', 'characters.voiceActor']);
         }
 
@@ -140,9 +143,15 @@ class StoryController extends Controller
         // Filter episodes based on access
         // For admins and voice actors, show all episodes (including draft)
         // For regular users, only show accessible published episodes
+        // Only return episodes that have at least one timeline
         $accessibleEpisodes = [];
         if ($accessInfo['has_access'] || ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor()))) {
             foreach ($story->episodes as $episode) {
+                // Skip episodes without timeline
+                if (!$episode->imageTimelines || $episode->imageTimelines->isEmpty()) {
+                    continue;
+                }
+                
                 // Admins and voice actors can see all episodes
                 if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
                     $accessibleEpisodes[] = $episode;
@@ -191,6 +200,9 @@ class StoryController extends Controller
         if ($user && !$user->hasActiveSubscription()) {
             $query->where('is_premium', false);
         }
+
+        // Only return episodes that have at least one timeline
+        $query->whereHas('imageTimelines');
 
         $episodes = $query->with(['narrator', 'people', 'imageTimelines.voiceActor.person'])->orderBy('episode_number')->get();
 
