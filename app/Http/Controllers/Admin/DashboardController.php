@@ -351,7 +351,7 @@ class DashboardController extends Controller
      */
     private function getBasicStatistics($startDate, $endDate)
     {
-        return [
+        $stats = [
             // User Statistics (optimized with single query where possible)
             'total_users' => User::count(),
             'active_users' => User::where('status', 'active')->count(),
@@ -478,6 +478,8 @@ class DashboardController extends Controller
             Subscription::whereMonth('created_at', now()->subMonth()->month)->count(),
             Subscription::whereMonth('created_at', now()->month)->count()
         );
+
+        return $stats;
 
         // Recent Activity
         $recentStories = Story::with(['category', 'director', 'narrator'])
@@ -2014,8 +2016,8 @@ class DashboardController extends Controller
             ->toArray();
 
         // Platform-specific Revenue
-        $platformRevenue = Payment::whereBetween('created_at', [$startDate, $endDate])
-            ->where('status', 'completed')
+        $platformRevenue = Payment::whereBetween('payments.created_at', [$startDate, $endDate])
+            ->where('payments.status', 'completed')
             ->join('users', 'payments.user_id', '=', 'users.id')
             ->selectRaw('
                 CASE
