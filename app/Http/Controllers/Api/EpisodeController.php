@@ -68,7 +68,8 @@ class EpisodeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Episode::with(['story', 'narrator', 'people', 'imageTimelines.voiceActor.person'])
+        // Load story with narrator, but not episode narrator or people
+        $query = Episode::with(['story.narrator', 'imageTimelines.voiceActor.person'])
             ->published()
             ->whereHas('imageTimelines');
 
@@ -92,8 +93,24 @@ class EpisodeController extends Controller
 
         $episodes = $query->paginate($request->get('per_page', 20));
 
+        // Prepare episodes data with story narrator and empty people
+        $episodesData = [];
+        foreach ($episodes->items() as $episode) {
+            $episodeData = $episode->toArray();
+            $episodeData['narrator'] = $episode->story && $episode->story->narrator ? [
+                'id' => $episode->story->narrator->id,
+                'first_name' => $episode->story->narrator->first_name,
+                'last_name' => $episode->story->narrator->last_name,
+                'name' => trim(($episode->story->narrator->first_name ?? '') . ' ' . ($episode->story->narrator->last_name ?? '')),
+                'profile_image_url' => $episode->story->narrator->profile_image_url,
+                'role' => $episode->story->narrator->role,
+            ] : null;
+            $episodeData['people'] = [];
+            $episodesData[] = $episodeData;
+        }
+
         return $this->successResponse(
-            $episodes->items(),
+            $episodesData,
             'Episodes retrieved successfully',
             [
                 'pagination' => [
@@ -113,7 +130,13 @@ class EpisodeController extends Controller
     {
         $includeTimeline = $request->get('include_timeline', false);
 
-        $episode->load(['story', 'narrator', 'people', 'imageTimelines.voiceActor.person']);
+        // Load story with author (writer) and narrator, episode voice actors with person
+        $episode->load([
+            'story.author',
+            'story.narrator',
+            'voiceActors.person',
+            'imageTimelines.voiceActor.person'
+        ]);
 
         // Only return episodes that have at least one timeline
         if (!$episode->imageTimelines || $episode->imageTimelines->isEmpty()) {
@@ -160,8 +183,52 @@ class EpisodeController extends Controller
         // Check if the story is in user's favorites
         $isStoryFavorited = \App\Models\Favorite::isFavorited($user->id, $episode->story_id);
 
+        // Prepare episode data with story narrator and empty people
+        $episodeData = $episode->toArray();
+
+        // Add writer (from story author)
+        $episodeData['writer'] = $episode->story->author ? [
+            'id' => $episode->story->author->id,
+            'first_name' => $episode->story->author->first_name,
+            'last_name' => $episode->story->author->last_name,
+            'name' => trim(($episode->story->author->first_name ?? '') . ' ' . ($episode->story->author->last_name ?? '')),
+            'profile_image_url' => $episode->story->author->profile_image_url,
+            'role' => $episode->story->author->role,
+        ] : null;
+
+        // Add narrator (from story narrator)
+        $episodeData['narrator'] = $episode->story->narrator ? [
+            'id' => $episode->story->narrator->id,
+            'first_name' => $episode->story->narrator->first_name,
+            'last_name' => $episode->story->narrator->last_name,
+            'name' => trim(($episode->story->narrator->first_name ?? '') . ' ' . ($episode->story->narrator->last_name ?? '')),
+            'profile_image_url' => $episode->story->narrator->profile_image_url,
+            'role' => $episode->story->narrator->role,
+        ] : null;
+
+        // Add all voice actors
+        $episodeData['voice_actors'] = $episode->voiceActors->map(function($voiceActor) {
+            return [
+                'id' => $voiceActor->id,
+                'person' => $voiceActor->person ? [
+                    'id' => $voiceActor->person->id,
+                    'name' => $voiceActor->person->name,
+                    'image_url' => $voiceActor->person->image_url,
+                    'bio' => $voiceActor->person->bio,
+                ] : null,
+                'role' => $voiceActor->role,
+                'character_name' => $voiceActor->character_name,
+                'start_time' => $voiceActor->start_time,
+                'end_time' => $voiceActor->end_time,
+                'voice_description' => $voiceActor->voice_description,
+                'is_primary' => $voiceActor->is_primary,
+            ];
+        })->toArray();
+
+        $episodeData['people'] = [];
+
         $responseData = [
-            'episode' => $episode,
+            'episode' => $episodeData,
             'access_info' => $accessInfo,
             'is_story_favorited' => $isStoryFavorited
         ];

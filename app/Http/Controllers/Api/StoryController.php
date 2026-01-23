@@ -110,14 +110,15 @@ class StoryController extends Controller
         // For admins, super admins, and voice actors, load all episodes (including draft)
         // For regular users, only load published episodes
         // Only load episodes that have at least one timeline
+        // Note: people is not loaded and will be set to empty array in response
         if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
             $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
                 $query->whereHas('imageTimelines');
-            }, 'people', 'characters.voiceActor']);
+            }, 'characters.voiceActor']);
         } else {
             $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
                 $query->published()->whereHas('imageTimelines');
-            }, 'people', 'characters.voiceActor']);
+            }, 'characters.voiceActor']);
         }
 
         // Check access control
@@ -165,12 +166,32 @@ class StoryController extends Controller
             }
         }
 
+        // Prepare story data with empty people
+        $storyData = $story->toArray();
+        $storyData['people'] = [];
+
+        // Update accessible episodes to use story narrator and empty people
+        $accessibleEpisodesData = [];
+        foreach ($accessibleEpisodes as $episode) {
+            $episodeData = $episode->toArray();
+            $episodeData['narrator'] = $story->narrator ? [
+                'id' => $story->narrator->id,
+                'first_name' => $story->narrator->first_name,
+                'last_name' => $story->narrator->last_name,
+                'name' => trim(($story->narrator->first_name ?? '') . ' ' . ($story->narrator->last_name ?? '')),
+                'profile_image_url' => $story->narrator->profile_image_url,
+                'role' => $story->narrator->role,
+            ] : null;
+            $episodeData['people'] = [];
+            $accessibleEpisodesData[] = $episodeData;
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
-                'story' => $story,
+                'story' => $storyData,
                 'access_info' => $accessInfo,
-                'accessible_episodes' => $accessibleEpisodes,
+                'accessible_episodes' => $accessibleEpisodesData,
                 'is_favorite' => $isFavorite,
                 'user_rating' => $userRating
             ]
@@ -184,6 +205,9 @@ class StoryController extends Controller
     {
         $user = Auth::user();
         $includeDraft = $request->boolean('include_draft', false);
+
+        // Load story narrator
+        $story->load('narrator');
 
         // For admins, super admins, and voice actors, include all episodes (draft, pending, published, etc.)
         // For regular users, only show published episodes (unless include_draft is explicitly requested)
@@ -204,12 +228,29 @@ class StoryController extends Controller
         // Only return episodes that have at least one timeline
         $query->whereHas('imageTimelines');
 
-        $episodes = $query->with(['narrator', 'people', 'imageTimelines.voiceActor.person'])->orderBy('episode_number')->get();
+        // Load episodes without narrator or people (we'll use story narrator)
+        $episodes = $query->with(['imageTimelines.voiceActor.person'])->orderBy('episode_number')->get();
+
+        // Prepare episodes data with story narrator and empty people
+        $episodesData = [];
+        foreach ($episodes as $episode) {
+            $episodeData = $episode->toArray();
+            $episodeData['narrator'] = $story->narrator ? [
+                'id' => $story->narrator->id,
+                'first_name' => $story->narrator->first_name,
+                'last_name' => $story->narrator->last_name,
+                'name' => trim(($story->narrator->first_name ?? '') . ' ' . ($story->narrator->last_name ?? '')),
+                'profile_image_url' => $story->narrator->profile_image_url,
+                'role' => $story->narrator->role,
+            ] : null;
+            $episodeData['people'] = [];
+            $episodesData[] = $episodeData;
+        }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'episodes' => $episodes
+                'episodes' => $episodesData
             ]
         ]);
     }

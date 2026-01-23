@@ -117,8 +117,8 @@ jobs:
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@4.0.0
         with:
-          server: ftp.tejarlink.com
-          username: sarvcastbackend@sarvcast.ir
+          server: ftp.sarvcast.ir
+          username: my@sarvcast.ir
           password: Prof48017421@#
           server-dir: /
           exclude: |
@@ -138,16 +138,16 @@ jobs:
             bootstrap/cache/*
             vendor
 
-      - name: Notify Telegram
-        env:
-          TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
-          TELEGRAM_CHAT_ID: -1002796302613_97
-          GITHUB_ACTOR: ${{ github.actor }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-        run: |
-          FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
-          MESSAGE=$(echo -e "😎 <b>SarvCast Admin Dashboard</b> 😎\n\n👌 <b>Status:</b> Deployment Complete\n\n👤 <b>User:</b> ${GITHUB_ACTOR}\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
-          curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
-            -d chat_id=${TELEGRAM_CHAT_ID} \
-            -d text="${MESSAGE}" \
-            -d parse_mode="HTML"
+      # - name: Notify Telegram
+      #   env:
+      #     TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
+      #     TELEGRAM_CHAT_ID: -1002796302613_97
+      #     GITHUB_ACTOR: ${{ github.actor }}
+      #     COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+      #   run: |
+      #     FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
+      #     MESSAGE=$(echo -e "😎 <b>SarvCast Admin Dashboard</b> 😎\n\n👌 <b>Status:</b> Deployment Complete\n\n👤 <b>User:</b> ${GITHUB_ACTOR}\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
+      #     curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
+      #       -d chat_id=${TELEGRAM_CHAT_ID} \
+      #       -d text="${MESSAGE}" \
+      #       -d parse_mode="HTML"
