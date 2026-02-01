@@ -114,13 +114,15 @@ jobs:
           php artisan view:clear
           echo "✅ Pre-deployment caches cleared"
 
+      # Set repo secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD (Settings → Secrets)
       - name: 📂 Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@4.0.0
         with:
-          server: ftp.sarvcast.ir
-          username: my@sarvcast.ir
-          password: Prof48017421@#
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
           server-dir: /
+          log-level: verbose
           exclude: |
             .env
             .env.*
