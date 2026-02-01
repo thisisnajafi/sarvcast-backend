@@ -7,6 +7,7 @@
 /storage/pail
 /storage/app/firebase-service-account.json
 /vendor
+vendor.zip
 .env
 .env.backup
 .env.production
