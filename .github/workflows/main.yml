@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  FTP_SERVER: "1540664912.cloudylink.com"
+  FTP_SERVER: "ftp.sarvcast.ir"
   FTP_USERNAME: "my@sarvcast.ir"
   FTP_PASSWORD: "Prof48017421@#"
   SITE_URL: "https://my.sarvcast.ir"
