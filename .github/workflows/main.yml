@@ -121,10 +121,9 @@ jobs:
           username: ${{ env.FTP_USERNAME }}
           password: ${{ env.FTP_PASSWORD }}
           server-dir: /
-          protocol: ftps
+          protocol: ftp
           port: 21
           timeout: 60000
-          security: loose
           log-level: verbose
           exclude: |
             **/.git*
