@@ -8,7 +8,7 @@ name: 🚀 Deploy website on push (Main)
 env:
   FTP_SERVER: "ftp.sarvcast.ir"
   FTP_USERNAME: "my@sarvcast.ir"
-  FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}          # ← move to repo secrets!
+  FTP_PASSWORD: "Prof48017421@#"          # ← move to repo secrets!
   SITE_URL: "https://my.sarvcast.ir"
   DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}          # ← also secret
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
