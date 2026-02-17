@@ -1,9 +1,18 @@
-name: SarvCast Backend
+name: SarvCast Backend Deploy
 
 on:
   push:
     branches:
       - main
+
+env:
+  FTP_SERVER: "1540664912.cloudylink.com"
+  FTP_USERNAME: "my@sarvcast.ir"
+  FTP_PASSWORD: "Prof48017421@#"
+  SITE_URL: "https://my.sarvcast.ir"
+  DEPLOY_TOKEN: "sarvcast_deploy_key_2026"
+  TELEGRAM_BOT_TOKEN: "7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc"
+  TELEGRAM_CHAT_ID: "-1002796302613_97"
 
 jobs:
   deploy:
@@ -18,15 +27,6 @@ jobs:
         with:
           php-version: 8.2
 
-      - name: Setup MySQL
-        uses: mirromutth/mysql-action@v1.1
-        with:
-          mysql version: '8.0'
-          mysql root password: 'iWY]RgUhnqiu'
-          mysql database: 'h273779_lgb'
-          mysql user: 'h273779_lgb'
-          mysql password: 'iWY]RgUhnqiu'
-
       - name: Cache Composer packages
         id: composer-cache
         uses: actions/cache@v3
@@ -37,126 +37,139 @@ jobs:
             ${{ runner.os }}-php-
 
       - name: Install dependencies
-        env:
-          BROADCAST_DRIVER: log
-          PUSHER_APP_KEY: dummy_key
-          PUSHER_APP_SECRET: dummy_secret
-          PUSHER_APP_ID: dummy_id
-          PUSHER_APP_CLUSTER: mt1
-        run: composer install
+        run: composer install --no-dev --optimize-autoloader --no-interaction
 
+      - name: Generate deploy helper
+        run: |
+          cat > public/deploy_helper.php << 'DEPLOY_SCRIPT'
+          <?php
+          /**
+           * Post-deploy helper — creates storage symlink and directories, then self-destructs.
+           */
+          $token = $_GET['token'] ?? '';
+          if ($token !== 'sarvcast_deploy_key_2026') {
+              http_response_code(403);
+              echo json_encode(['error' => 'Unauthorized']);
+              exit;
+          }
 
-      # - name: Copy .env
-      #   env:
-      #     BROADCAST_DRIVER: log
-      #     PUSHER_APP_KEY: dummy_key
-      #     PUSHER_APP_SECRET: dummy_secret
-      #     PUSHER_APP_ID: dummy_id
-      #     PUSHER_APP_CLUSTER: mt1
-      #   run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+          $results = [];
 
-      # - name: Configure database for GitHub Actions
-      #   run: |
-      #     # Update .env file with GitHub Actions database credentials
-      #     sed -i 's/DB_HOST=.*/DB_HOST=localhost/' .env
-      #     sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
-      #     sed -i 's/DB_DATABASE=.*/DB_DATABASE=h273779_lgb/' .env
-      #     sed -i 's/DB_USERNAME=.*/DB_USERNAME=h273779_lgb/' .env
-      #     sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=iWY]RgUhnqiu/' .env
+          // 1. Create storage symlink (public/storage -> storage/app/public)
+          $publicStorage = __DIR__ . '/storage';
+          $storageTarget = dirname(__DIR__) . '/storage/app/public';
 
-      - name: Generate key
-        env:
-          BROADCAST_DRIVER: log
-          PUSHER_APP_KEY: dummy_key
-          PUSHER_APP_SECRET: dummy_secret
-          PUSHER_APP_ID: dummy_id
-          PUSHER_APP_CLUSTER: mt1
-        run: php artisan key:generate --force
+          if (is_link($publicStorage)) {
+              $results[] = 'Storage symlink already exists -> ' . readlink($publicStorage);
+          } elseif (file_exists($publicStorage)) {
+              $results[] = 'WARNING: public/storage exists but is not a symlink';
+          } else {
+              if (@symlink($storageTarget, $publicStorage)) {
+                  $results[] = 'Storage symlink created successfully';
+              } else {
+                  $results[] = 'ERROR: Failed to create storage symlink';
+              }
+          }
+
+          // 2. Ensure storage directories exist
+          $dirs = [
+              dirname(__DIR__) . '/storage/app/public',
+              dirname(__DIR__) . '/storage/framework/cache',
+              dirname(__DIR__) . '/storage/framework/sessions',
+              dirname(__DIR__) . '/storage/framework/views',
+              dirname(__DIR__) . '/storage/logs',
+              dirname(__DIR__) . '/bootstrap/cache',
+          ];
+          foreach ($dirs as $dir) {
+              if (!is_dir($dir)) {
+                  @mkdir($dir, 0755, true);
+                  $results[] = "Created directory: $dir";
+              }
+          }
+
+          // 3. Ensure public image directories exist
+          $imageDirs = [
+              'images/categories', 'images/stories', 'images/episodes',
+              'images/people', 'images/users', 'images/playlists', 'images/timeline',
+          ];
+          foreach ($imageDirs as $imgDir) {
+              $fullPath = __DIR__ . '/' . $imgDir;
+              if (!is_dir($fullPath)) {
+                  @mkdir($fullPath, 0755, true);
+                  $results[] = "Created: public/$imgDir";
+              }
+          }
+
+          // 4. Self-destruct
+          @unlink(__FILE__);
+          $results[] = 'Deploy helper removed';
+
+          header('Content-Type: application/json');
+          echo json_encode(['success' => true, 'results' => $results], JSON_PRETTY_PRINT);
+          DEPLOY_SCRIPT
 
       - name: Directory Permissions
         run: chmod -R 777 storage bootstrap/cache
 
-      - name: Link Storage
-        run: |
-          echo "🔗 Creating storage symbolic link..."
-          php artisan storage:link || echo "⚠️ Storage link may already exist"
-          echo "✅ Storage link created successfully"
-
-      - name: Create Public Images Directories
-        run: |
-          echo "📁 Creating public images directories..."
-          mkdir -p public/images/categories
-          mkdir -p public/images/stories
-          mkdir -p public/images/episodes
-          mkdir -p public/images/people
-          mkdir -p public/images/users
-          mkdir -p public/images/playlists
-          mkdir -p public/images/timeline
-          echo "✅ Public images directories created successfully"
-
-      - name: Set Public Images Permissions
-        run: |
-          echo "🔐 Setting public images permissions..."
-          chmod -R 755 public/images
-          echo "✅ Public images permissions set successfully"
-
-      - name: Test Database Connection
-        run: |
-          echo "🔍 Testing database connection..."
-          php artisan tinker --execute="echo 'Database connection: ' . (DB::connection()->getPdo() ? 'OK' : 'FAILED') . PHP_EOL;"
-
-
-      - name: Pre-deployment Cache Clear
-        run: |
-          echo "🧹 Clearing pre-deployment caches..."
-          php artisan config:clear
-          php artisan route:clear
-          php artisan view:clear
-          echo "✅ Pre-deployment caches cleared"
-
-      - name: Regenerate bootstrap cache (no Pail)
-        run: |
-          echo "📦 Regenerating package discovery cache..."
-          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
-          php artisan package:discover
-          composer dump-autoload
-          echo "✅ Bootstrap cache regenerated"
-
-      # Set repo secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD (Settings → Secrets)
-      - name: 📂 Sync files via FTP
-        uses: SamKirkland/FTP-Deploy-Action@4.0.0
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          server: ${{ env.FTP_SERVER }}
+          username: ${{ env.FTP_USERNAME }}
+          password: ${{ env.FTP_PASSWORD }}
           server-dir: /
-          log-level: verbose
+          log-level: standard
           exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            tests/**
+            phpunit.xml
+            .styleci.yml
             .env
             .env.*
-            node_modules/
-            .git/
-            .github/
-            tests/
-            phpunit.xml
-            *.md
-            .styleci.yml
-            storage/logs/*
-            storage/framework/cache/*
-            storage/framework/sessions/*
-            storage/framework/views/*
-            vendor
+            storage/logs/**
+            storage/framework/cache/data/**
+            storage/framework/sessions/**
+            storage/framework/views/**
+            node_modules/**
+
+      - name: Create storage link on server
+        run: |
+          echo "Calling deploy helper to create storage symlink..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            "${{ env.SITE_URL }}/deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
+            --max-time 30)
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "Storage link and post-deploy tasks completed successfully"
+          else
+            echo "Deploy helper returned status $HTTP_CODE (may have already run or self-destructed)"
+          fi
 
       - name: Notify Telegram
-        env:
-          TELEGRAM_BOT_TOKEN: 7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc
-          TELEGRAM_CHAT_ID: -1002796302613_97
-          GITHUB_ACTOR: ${{ github.actor }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        if: always()
         run: |
-          FORMATTED_COMMIT_MESSAGE=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
-          MESSAGE=$(echo -e "😎 <b>SarvCast Admin Dashboard</b> 😎\n\n👌 <b>Status:</b> Deployment Complete\n\n👤 <b>User:</b> ${GITHUB_ACTOR}\n <blockquote>${FORMATTED_COMMIT_MESSAGE}</blockquote>")
-          curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
-            -d chat_id=${TELEGRAM_CHAT_ID} \
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            EMOJI="✅"
+            STATUS_TEXT="Deployment Complete"
+          else
+            EMOJI="❌"
+            STATUS_TEXT="Deployment Failed"
+          fi
+
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          FORMATTED=$(echo "${COMMIT_MESSAGE}" | sed 's/$/\\n/' | sed ':a;N;$!ba;s/\n/\\n/g')
+          MESSAGE=$(echo -e "${EMOJI} <b>SarvCast Backend</b> ${EMOJI}\n\n<b>Status:</b> ${STATUS_TEXT}\n<b>User:</b> ${{ github.actor }}\n<blockquote>${FORMATTED}</blockquote>")
+
+          curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
             -d text="${MESSAGE}" \
-            -d parse_mode="HTML"
+            -d parse_mode="HTML" || echo "Telegram notification failed"
