@@ -99,6 +99,21 @@ jobs:
           echo json_encode(['success' => true, 'results' => $results], JSON_PRETTY_PRINT);
           HELPERSCRIPT
 
+      - name: 🔍 Test FTP connectivity
+        run: |
+          echo "=== Testing connection to ${{ env.FTP_SERVER }} ==="
+          echo "Runner IP:"
+          curl -s ifconfig.me || echo "Could not detect IP"
+          echo ""
+          echo "--- Testing port 21 (FTP) ---"
+          timeout 10 bash -c "echo > /dev/tcp/${{ env.FTP_SERVER }}/21" 2>&1 && echo "Port 21: OPEN" || echo "Port 21: CLOSED/BLOCKED"
+          echo "--- Testing port 990 (FTPS) ---"
+          timeout 10 bash -c "echo > /dev/tcp/${{ env.FTP_SERVER }}/990" 2>&1 && echo "Port 990: OPEN" || echo "Port 990: CLOSED/BLOCKED"
+          echo "--- Testing port 22 (SSH/SFTP) ---"
+          timeout 10 bash -c "echo > /dev/tcp/${{ env.FTP_SERVER }}/22" 2>&1 && echo "Port 22: OPEN" || echo "Port 22: CLOSED/BLOCKED"
+          echo "--- DNS lookup ---"
+          nslookup ${{ env.FTP_SERVER }} || echo "DNS lookup failed"
+
       - name: 📂 Sync files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
@@ -108,9 +123,9 @@ jobs:
           server-dir: /
           protocol: ftps
           port: 21
-          timeout: 6000000
+          timeout: 60000
           security: loose
-          log-level: standard
+          log-level: verbose
           exclude: |
             **/.git*
             **/.git*/**
