@@ -17,7 +17,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -29,7 +29,6 @@ jobs:
           php-version: 8.2
 
       - name: Cache Composer packages
-        id: composer-cache
         uses: actions/cache@v3
         with:
           path: vendor
@@ -40,99 +39,136 @@ jobs:
       - name: Install dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      - name: Generate deploy helper
+      - name: Prepare deployment
         run: |
-          cat > public/deploy_helper.php << 'DEPLOY_SCRIPT'
+          chmod -R 777 storage bootstrap/cache
+
+          # Create the deploy/extract script that will live on the server
+          cat > _deploy_extract.php << 'EXTRACTSCRIPT'
           <?php
-          $token = $_GET['token'] ?? '';
-          if ($token !== 'sarvcast_deploy_key_2026') {
+          // Auth check
+          if (($_GET['token'] ?? '') !== 'sarvcast_deploy_key_2026') {
               http_response_code(403);
-              echo json_encode(['error' => 'Unauthorized']);
-              exit;
+              die(json_encode(['error' => 'Unauthorized']));
           }
+
+          set_time_limit(300);
           $results = [];
-          $publicStorage = __DIR__ . '/storage';
-          $storageTarget = dirname(__DIR__) . '/storage/app/public';
-          if (is_link($publicStorage)) {
-              $results[] = 'Storage symlink already exists';
-          } elseif (file_exists($publicStorage)) {
-              $results[] = 'WARNING: public/storage exists but is not a symlink';
+          $baseDir = __DIR__;
+          $zipFile = $baseDir . '/_deploy_package.zip';
+
+          // 1. Extract zip
+          if (file_exists($zipFile)) {
+              $zip = new ZipArchive();
+              if ($zip->open($zipFile) === true) {
+                  $zip->extractTo($baseDir . '/');
+                  $zip->close();
+                  $results[] = 'Zip extracted successfully';
+                  @unlink($zipFile);
+                  $results[] = 'Zip file removed';
+              } else {
+                  $results[] = 'ERROR: Failed to open zip';
+              }
           } else {
-              if (@symlink($storageTarget, $publicStorage)) {
+              $results[] = 'No zip file found (already extracted or not uploaded)';
+          }
+
+          // 2. Storage symlink
+          $publicDir = $baseDir . '/public';
+          $link = $publicDir . '/storage';
+          $target = $baseDir . '/storage/app/public';
+          if (is_link($link)) {
+              $results[] = 'Storage symlink already exists';
+          } elseif (!file_exists($link)) {
+              if (@symlink($target, $link)) {
                   $results[] = 'Storage symlink created';
               } else {
-                  $results[] = 'ERROR: Failed to create storage symlink';
+                  $results[] = 'ERROR: symlink() failed - trying alternative';
+                  // Fallback for hosts that block symlink(): create .htaccess redirect
+                  @mkdir($link, 0755, true);
+                  file_put_contents($link . '/.htaccess',
+                      "RewriteEngine On\nRewriteRule ^(.*)$ /storage/app/public/$1 [L]");
+                  $results[] = 'Created .htaccess redirect as symlink fallback';
               }
           }
+
+          // 3. Ensure directories exist
           foreach ([
-              dirname(__DIR__) . '/storage/app/public',
-              dirname(__DIR__) . '/storage/framework/cache',
-              dirname(__DIR__) . '/storage/framework/sessions',
-              dirname(__DIR__) . '/storage/framework/views',
-              dirname(__DIR__) . '/storage/logs',
-              dirname(__DIR__) . '/bootstrap/cache',
+              $baseDir . '/storage/app/public',
+              $baseDir . '/storage/framework/cache/data',
+              $baseDir . '/storage/framework/sessions',
+              $baseDir . '/storage/framework/views',
+              $baseDir . '/storage/logs',
+              $baseDir . '/bootstrap/cache',
           ] as $dir) {
               if (!is_dir($dir)) { @mkdir($dir, 0755, true); $results[] = "Created: $dir"; }
           }
-          foreach (['images/categories','images/stories','images/episodes','images/people','images/users','images/playlists','images/timeline'] as $d) {
-              $p = __DIR__ . '/' . $d;
+
+          foreach (['images/categories','images/stories','images/episodes',
+                     'images/people','images/users','images/playlists','images/timeline'] as $d) {
+              $p = $publicDir . '/' . $d;
               if (!is_dir($p)) { @mkdir($p, 0755, true); $results[] = "Created: public/$d"; }
           }
+
+          // 4. Self-destruct
           @unlink(__FILE__);
-          $results[] = 'Deploy helper removed';
+          $results[] = 'Deploy script removed';
+
           header('Content-Type: application/json');
           echo json_encode(['success' => true, 'results' => $results], JSON_PRETTY_PRINT);
-          DEPLOY_SCRIPT
+          EXTRACTSCRIPT
 
-      - name: Directory Permissions
-        run: chmod -R 777 storage bootstrap/cache
-
-      - name: Deploy via FTP (lftp)
+      - name: Create deployment zip
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+          echo "Creating deployment zip..."
+          zip -r -q _deploy_package.zip . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x ".env" \
+            -x ".env.*" \
+            -x "tests/*" \
+            -x "phpunit.xml" \
+            -x ".styleci.yml" \
+            -x "node_modules/*" \
+            -x "storage/logs/*.log" \
+            -x "storage/framework/sessions/*" \
+            -x "storage/framework/views/*.php" \
+            -x "_deploy_extract.php" \
+            -x "_deploy_package.zip"
 
-          echo "Starting FTP upload with lftp (parallel transfers)..."
+          ZIP_SIZE=$(du -h _deploy_package.zip | cut -f1)
+          echo "Zip created: $ZIP_SIZE"
+
+      - name: Upload zip + extractor via FTP
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp > /dev/null 2>&1
+
+          echo "Uploading deployment zip and extractor..."
 
           lftp -c "
             set ftp:ssl-allow no;
-            set net:timeout 60;
+            set net:timeout 120;
             set net:max-retries 5;
             set net:reconnect-interval-base 5;
-            set net:reconnect-interval-multiplier 1;
-            set mirror:parallel-transfer-count 5;
-            set mirror:use-pget-n 5;
             set ftp:passive-mode yes;
-            set xfer:log no;
 
             open -u ${{ env.FTP_USERNAME }},'${{ env.FTP_PASSWORD }}' ${{ env.FTP_SERVER }};
 
-            mirror --reverse --verbose --delete \
-              --parallel=5 \
-              --exclude-glob .git/ \
-              --exclude-glob .github/ \
-              --exclude-glob .env \
-              --exclude-glob .env.* \
-              --exclude-glob tests/ \
-              --exclude-glob phpunit.xml \
-              --exclude-glob .styleci.yml \
-              --exclude-glob node_modules/ \
-              --exclude-glob storage/logs/*.log \
-              --exclude-glob storage/framework/cache/data/ \
-              --exclude-glob storage/framework/sessions/ \
-              --exclude-glob storage/framework/views/*.php \
-              ./ /;
+            put _deploy_extract.php;
+            put _deploy_package.zip;
 
             bye;
           "
 
-          echo "FTP upload completed"
+          echo "Upload completed"
 
-      - name: Create storage link on server
+      - name: Extract on server and setup storage
         run: |
-          echo "Calling deploy helper to create storage symlink..."
+          echo "Calling deploy extractor on server..."
+
           RESPONSE=$(curl -s -w "\n%{http_code}" \
-            "${{ env.SITE_URL }}/deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 30)
+            "${{ env.SITE_URL }}/_deploy_extract.php?token=${{ env.DEPLOY_TOKEN }}" \
+            --max-time 120)
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | head -n -1)
@@ -141,9 +177,10 @@ jobs:
           echo "Response: $BODY"
 
           if [ "$HTTP_CODE" = "200" ]; then
-            echo "Storage link and post-deploy tasks completed successfully"
+            echo "Deployment completed successfully!"
           else
-            echo "Deploy helper returned status $HTTP_CODE (may have already run or self-destructed)"
+            echo "WARNING: Server returned $HTTP_CODE"
+            exit 1
           fi
 
       - name: Notify Telegram
