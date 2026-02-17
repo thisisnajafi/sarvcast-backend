@@ -78,24 +78,26 @@ class InAppPurchaseController extends Controller
                 ]);
             }
 
-            // Map product ID to subscription type
-            $subscriptionType = $this->cafeBazaarService->mapProductIdToSubscriptionType($request->product_id);
-            
-            if (!$subscriptionType) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'شناسه محصول نامعتبر است'
-                ], 400);
+            // Find subscription plan by cafebazaar_product_id first, then fallback to slug mapping
+            $plan = SubscriptionPlan::where('cafebazaar_product_id', $request->product_id)->first();
+
+            if (!$plan) {
+                // Fallback: map product ID to slug via hardcoded mapping (legacy product IDs)
+                $subscriptionType = $this->cafeBazaarService->mapProductIdToSubscriptionType($request->product_id);
+                if ($subscriptionType) {
+                    $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+                }
             }
 
-            // Get subscription plan
-            $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
-            
             if (!$plan) {
+                Log::warning('CafeBazaar verify: no plan found for product_id', [
+                    'product_id' => $request->product_id,
+                    'user_id' => $user->id,
+                ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'پلن اشتراک یافت نشد'
-                ], 404);
+                    'message' => 'شناسه محصول نامعتبر است: ' . $request->product_id
+                ], 400);
             }
 
             DB::beginTransaction();

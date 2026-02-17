@@ -212,13 +212,23 @@ class CafeBazaarService
     }
 
     /**
-     * Map product ID to subscription type
+     * Map product ID to subscription plan slug.
      * 
-     * @param string $productId Product ID from CafeBazaar
-     * @return string|null Subscription type (1month, 3months, etc.)
+     * Looks up the cafebazaar_product_id in the subscription_plans table first,
+     * then falls back to a hardcoded mapping for legacy product IDs.
+     * 
+     * @param string $productId Product ID from CafeBazaar (e.g. the cafebazaar_product_id value)
+     * @return string|null Plan slug (1month, 3months, etc.)
      */
     public function mapProductIdToSubscriptionType(string $productId): ?string
     {
+        // 1. Dynamic lookup: find plan by cafebazaar_product_id in the database
+        $plan = \App\Models\SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
+        if ($plan) {
+            return $plan->slug;
+        }
+
+        // 2. Fallback: hardcoded mapping for legacy product IDs (subscription_xxx format)
         $mapping = config('services.cafebazaar.product_mapping', [
             'subscription_1month' => '1month',
             'subscription_3months' => '3months',
