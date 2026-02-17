@@ -108,9 +108,9 @@ jobs:
           server-dir: /
           protocol: ftps
           port: 21
-          timeout: 60000
+          timeout: 6000000
           security: loose
-          log-level: verbose
+          log-level: standard
           exclude: |
             **/.git*
             **/.git*/**
