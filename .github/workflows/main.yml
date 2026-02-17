@@ -17,6 +17,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -43,67 +44,42 @@ jobs:
         run: |
           cat > public/deploy_helper.php << 'DEPLOY_SCRIPT'
           <?php
-          /**
-           * Post-deploy helper — creates storage symlink and directories, then self-destructs.
-           */
           $token = $_GET['token'] ?? '';
           if ($token !== 'sarvcast_deploy_key_2026') {
               http_response_code(403);
               echo json_encode(['error' => 'Unauthorized']);
               exit;
           }
-
           $results = [];
-
-          // 1. Create storage symlink (public/storage -> storage/app/public)
           $publicStorage = __DIR__ . '/storage';
           $storageTarget = dirname(__DIR__) . '/storage/app/public';
-
           if (is_link($publicStorage)) {
-              $results[] = 'Storage symlink already exists -> ' . readlink($publicStorage);
+              $results[] = 'Storage symlink already exists';
           } elseif (file_exists($publicStorage)) {
               $results[] = 'WARNING: public/storage exists but is not a symlink';
           } else {
               if (@symlink($storageTarget, $publicStorage)) {
-                  $results[] = 'Storage symlink created successfully';
+                  $results[] = 'Storage symlink created';
               } else {
                   $results[] = 'ERROR: Failed to create storage symlink';
               }
           }
-
-          // 2. Ensure storage directories exist
-          $dirs = [
+          foreach ([
               dirname(__DIR__) . '/storage/app/public',
               dirname(__DIR__) . '/storage/framework/cache',
               dirname(__DIR__) . '/storage/framework/sessions',
               dirname(__DIR__) . '/storage/framework/views',
               dirname(__DIR__) . '/storage/logs',
               dirname(__DIR__) . '/bootstrap/cache',
-          ];
-          foreach ($dirs as $dir) {
-              if (!is_dir($dir)) {
-                  @mkdir($dir, 0755, true);
-                  $results[] = "Created directory: $dir";
-              }
+          ] as $dir) {
+              if (!is_dir($dir)) { @mkdir($dir, 0755, true); $results[] = "Created: $dir"; }
           }
-
-          // 3. Ensure public image directories exist
-          $imageDirs = [
-              'images/categories', 'images/stories', 'images/episodes',
-              'images/people', 'images/users', 'images/playlists', 'images/timeline',
-          ];
-          foreach ($imageDirs as $imgDir) {
-              $fullPath = __DIR__ . '/' . $imgDir;
-              if (!is_dir($fullPath)) {
-                  @mkdir($fullPath, 0755, true);
-                  $results[] = "Created: public/$imgDir";
-              }
+          foreach (['images/categories','images/stories','images/episodes','images/people','images/users','images/playlists','images/timeline'] as $d) {
+              $p = __DIR__ . '/' . $d;
+              if (!is_dir($p)) { @mkdir($p, 0755, true); $results[] = "Created: public/$d"; }
           }
-
-          // 4. Self-destruct
           @unlink(__FILE__);
           $results[] = 'Deploy helper removed';
-
           header('Content-Type: application/json');
           echo json_encode(['success' => true, 'results' => $results], JSON_PRETTY_PRINT);
           DEPLOY_SCRIPT
@@ -111,28 +87,45 @@ jobs:
       - name: Directory Permissions
         run: chmod -R 777 storage bootstrap/cache
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ env.FTP_SERVER }}
-          username: ${{ env.FTP_USERNAME }}
-          password: ${{ env.FTP_PASSWORD }}
-          server-dir: /
-          log-level: standard
-          exclude: |
-            **/.git*
-            **/.git*/**
-            .github/**
-            tests/**
-            phpunit.xml
-            .styleci.yml
-            .env
-            .env.*
-            storage/logs/**
-            storage/framework/cache/data/**
-            storage/framework/sessions/**
-            storage/framework/views/**
-            node_modules/**
+      - name: Deploy via FTP (lftp)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+          echo "Starting FTP upload with lftp (parallel transfers)..."
+
+          lftp -c "
+            set ftp:ssl-allow no;
+            set net:timeout 60;
+            set net:max-retries 5;
+            set net:reconnect-interval-base 5;
+            set net:reconnect-interval-multiplier 1;
+            set mirror:parallel-transfer-count 5;
+            set mirror:use-pget-n 5;
+            set ftp:passive-mode yes;
+            set xfer:log no;
+
+            open -u ${{ env.FTP_USERNAME }},'${{ env.FTP_PASSWORD }}' ${{ env.FTP_SERVER }};
+
+            mirror --reverse --verbose --delete \
+              --parallel=5 \
+              --exclude-glob .git/ \
+              --exclude-glob .github/ \
+              --exclude-glob .env \
+              --exclude-glob .env.* \
+              --exclude-glob tests/ \
+              --exclude-glob phpunit.xml \
+              --exclude-glob .styleci.yml \
+              --exclude-glob node_modules/ \
+              --exclude-glob storage/logs/*.log \
+              --exclude-glob storage/framework/cache/data/ \
+              --exclude-glob storage/framework/sessions/ \
+              --exclude-glob storage/framework/views/*.php \
+              ./ /;
+
+            bye;
+          "
+
+          echo "FTP upload completed"
 
       - name: Create storage link on server
         run: |
