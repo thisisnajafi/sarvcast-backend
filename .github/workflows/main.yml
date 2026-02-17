@@ -46,34 +46,90 @@ jobs:
           # Create the deploy/extract script that will live on the server
           cat > _deploy_extract.php << 'EXTRACTSCRIPT'
           <?php
-          // Auth check
           if (($_GET['token'] ?? '') !== 'sarvcast_deploy_key_2026') {
               http_response_code(403);
               die(json_encode(['error' => 'Unauthorized']));
           }
 
-          set_time_limit(300);
+          @ini_set('memory_limit', '512M');
+          set_time_limit(600);
+
           $results = [];
           $baseDir = __DIR__;
           $zipFile = $baseDir . '/_deploy_package.zip';
 
-          // 1. Extract zip
-          if (file_exists($zipFile)) {
-              $zip = new ZipArchive();
-              if ($zip->open($zipFile) === true) {
-                  $zip->extractTo($baseDir . '/');
-                  $zip->close();
-                  $results[] = 'Zip extracted successfully';
-                  @unlink($zipFile);
-                  $results[] = 'Zip file removed';
-              } else {
-                  $results[] = 'ERROR: Failed to open zip';
-              }
-          } else {
-              $results[] = 'No zip file found (already extracted or not uploaded)';
+          if (!file_exists($zipFile)) {
+              header('Content-Type: application/json');
+              echo json_encode(['success' => false, 'results' => ['No zip file found']]);
+              exit;
           }
 
-          // 2. Storage symlink
+          $zipSize = filesize($zipFile);
+          $results[] = 'Zip size: ' . round($zipSize / 1024 / 1024, 2) . ' MB';
+
+          $extracted = false;
+
+          // Method 1: shell unzip (fastest, no PHP memory issues)
+          if (!$extracted && function_exists('exec')) {
+              $output = [];
+              $code = -1;
+              @exec('cd ' . escapeshellarg($baseDir) . ' && unzip -o ' . escapeshellarg($zipFile) . ' 2>&1', $output, $code);
+              if ($code === 0) {
+                  $extracted = true;
+                  $results[] = 'Extracted via exec(unzip)';
+              } else {
+                  $results[] = 'exec(unzip) failed (code ' . $code . '): ' . implode(' ', array_slice($output, -3));
+              }
+          }
+
+          // Method 2: shell_exec unzip
+          if (!$extracted && function_exists('shell_exec')) {
+              $out = @shell_exec('cd ' . escapeshellarg($baseDir) . ' && unzip -o ' . escapeshellarg($zipFile) . ' 2>&1');
+              if ($out !== null && stripos($out, 'error') === false) {
+                  $extracted = true;
+                  $results[] = 'Extracted via shell_exec(unzip)';
+              } else {
+                  $results[] = 'shell_exec(unzip) failed: ' . substr($out ?? 'null', -200);
+              }
+          }
+
+          // Method 3: ZipArchive with high memory
+          if (!$extracted && class_exists('ZipArchive')) {
+              $zip = new ZipArchive();
+              if ($zip->open($zipFile) === true) {
+                  $numFiles = $zip->numFiles;
+                  $results[] = 'ZipArchive opened: ' . $numFiles . ' files';
+                  if ($zip->extractTo($baseDir . '/')) {
+                      $extracted = true;
+                      $results[] = 'Extracted via ZipArchive';
+                  } else {
+                      $results[] = 'ERROR: ZipArchive extractTo() returned false';
+                  }
+                  $zip->close();
+              } else {
+                  $results[] = 'ERROR: ZipArchive could not open zip';
+              }
+          }
+
+          if ($extracted) {
+              @unlink($zipFile);
+              $results[] = 'Zip file removed';
+
+              // Verify critical files exist
+              $checks = ['vendor/autoload.php', 'artisan', 'public/index.php',
+                         'vendor/laravel/framework/src/Illuminate/Foundation/Application.php'];
+              foreach ($checks as $f) {
+                  $results[] = file_exists($baseDir . '/' . $f) ? "OK: $f" : "MISSING: $f";
+              }
+          } else {
+              $results[] = 'ERROR: All extraction methods failed!';
+              header('Content-Type: application/json');
+              http_response_code(500);
+              echo json_encode(['success' => false, 'results' => $results], JSON_PRETTY_PRINT);
+              exit;
+          }
+
+          // Storage symlink
           $publicDir = $baseDir . '/public';
           $link = $publicDir . '/storage';
           $target = $baseDir . '/storage/app/public';
@@ -83,8 +139,6 @@ jobs:
               if (@symlink($target, $link)) {
                   $results[] = 'Storage symlink created';
               } else {
-                  $results[] = 'ERROR: symlink() failed - trying alternative';
-                  // Fallback for hosts that block symlink(): create .htaccess redirect
                   @mkdir($link, 0755, true);
                   file_put_contents($link . '/.htaccess',
                       "RewriteEngine On\nRewriteRule ^(.*)$ /storage/app/public/$1 [L]");
@@ -92,7 +146,7 @@ jobs:
               }
           }
 
-          // 3. Ensure directories exist
+          // Ensure directories exist
           foreach ([
               $baseDir . '/storage/app/public',
               $baseDir . '/storage/framework/cache/data',
@@ -110,7 +164,6 @@ jobs:
               if (!is_dir($p)) { @mkdir($p, 0755, true); $results[] = "Created: public/$d"; }
           }
 
-          // 4. Self-destruct
           @unlink(__FILE__);
           $results[] = 'Deploy script removed';
 
@@ -168,7 +221,7 @@ jobs:
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_extract.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 120)
+            --max-time 300)
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | head -n -1)
