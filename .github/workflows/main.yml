@@ -1,9 +1,9 @@
-name: SarvCast Backend Deploy
-
 on:
   push:
     branches:
-      - main
+      - master
+
+name: 🚀 Deploy website on push (Master)
 
 env:
   FTP_SERVER: "ftp.sarvcast.ir"
@@ -15,12 +15,13 @@ env:
   TELEGRAM_CHAT_ID: "-1002796302613_97"
 
 jobs:
-  deploy:
+  web-deploy:
+    name: 🎉 Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
-      - name: Checkout repository
+      - name: 🚚 Get latest code
         uses: actions/checkout@v4
 
       - name: Setup PHP
@@ -29,6 +30,7 @@ jobs:
           php-version: 8.2
 
       - name: Cache Composer packages
+        id: composer-cache
         uses: actions/cache@v3
         with:
           path: vendor
@@ -53,7 +55,7 @@ jobs:
           $baseDir = rtrim(__DIR__, '/');
           $publicDir = $baseDir . '/public';
 
-          // Storage symlink
+          // Create storage symlink
           $link = $publicDir . '/storage';
           $target = $baseDir . '/storage/app/public';
           if (is_link($link)) {
@@ -69,6 +71,7 @@ jobs:
               }
           }
 
+          // Ensure required directories exist
           foreach ([
               'storage/app/public', 'storage/framework/cache/data',
               'storage/framework/sessions', 'storage/framework/views',
@@ -77,13 +80,15 @@ jobs:
               $full = $baseDir . '/' . $dir;
               if (!is_dir($full)) { @mkdir($full, 0755, true); $results[] = "Created: $dir"; }
           }
+
+          // Ensure public image directories exist
           foreach (['images/categories','images/stories','images/episodes',
                      'images/people','images/users','images/playlists','images/timeline'] as $d) {
               $p = $publicDir . '/' . $d;
               if (!is_dir($p)) { @mkdir($p, 0755, true); }
           }
 
-          // Verify key files
+          // Verify critical files
           foreach (['vendor/autoload.php','artisan','public/index.php'] as $f) {
               $results[] = (file_exists($baseDir.'/'.$f) ? 'OK' : 'MISSING') . ': ' . $f;
           }
@@ -94,44 +99,28 @@ jobs:
           echo json_encode(['success' => true, 'results' => $results], JSON_PRETTY_PRINT);
           HELPERSCRIPT
 
-      - name: Deploy via FTP
-        run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq lftp > /dev/null 2>&1
+      - name: 📂 Sync files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ env.FTP_SERVER }}
+          username: ${{ env.FTP_USERNAME }}
+          password: ${{ env.FTP_PASSWORD }}
+          server-dir: /
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            .env
+            .env.*
+            tests/**
+            phpunit.xml
+            .styleci.yml
+            node_modules/**
+            storage/logs/**
+            storage/framework/sessions/**
+            storage/framework/views/**
 
-          echo "Starting FTP mirror..."
-
-          lftp -c "
-            set ftp:ssl-allow no;
-            set net:timeout 30;
-            set net:max-retries 5;
-            set net:reconnect-interval-base 5;
-            set ftp:passive-mode yes;
-            set mirror:parallel-transfer-count 5;
-            set mirror:use-pget-n 5;
-
-            open -u ${{ env.FTP_USERNAME }},'${{ env.FTP_PASSWORD }}' ${{ env.FTP_SERVER }};
-
-            mirror --reverse --delete --verbose --only-newer --parallel=5 \
-              --exclude ^\.git/ \
-              --exclude ^\.github/ \
-              --exclude ^\.env \
-              --exclude ^tests/ \
-              --exclude ^phpunit\.xml \
-              --exclude ^node_modules/ \
-              --exclude ^storage/logs/ \
-              --exclude ^storage/framework/sessions/ \
-              --exclude ^storage/framework/views/ \
-              --exclude ^_deploy_helper\.php \
-              . .;
-
-            put _deploy_helper.php;
-
-            bye;
-          "
-
-          echo "FTP mirror completed"
-
-      - name: Setup storage link
+      - name: 🔗 Create storage link
         run: |
           echo "Running post-deploy setup..."
 
@@ -146,12 +135,12 @@ jobs:
           echo "Response: $BODY"
 
           if [ "$HTTP_CODE" = "200" ]; then
-            echo "Setup completed successfully!"
+            echo "✅ Storage link setup completed!"
           else
-            echo "WARNING: Setup returned $HTTP_CODE (non-critical)"
+            echo "⚠️ WARNING: Setup returned $HTTP_CODE (non-critical)"
           fi
 
-      - name: Notify Telegram
+      - name: 📢 Notify Telegram
         if: always()
         run: |
           STATUS="${{ job.status }}"
