@@ -74,7 +74,7 @@ jobs:
           server-dir: /
           protocol:   ftp
           port:       21
-          timeout:    6000000          # ← 5 minutes — the most important fix
+          timeout:    120000000          # ← 5 minutes — the most important fix
           log-level:  verbose
           exclude: |
             **/.git*
