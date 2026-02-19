@@ -25,3 +25,4 @@ yarn-error.log
 /.zed
 .htaccess
 my.sarvcast.zip
+.ftp-deploy-sync-state.json

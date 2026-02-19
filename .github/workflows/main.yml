@@ -3,114 +3,175 @@ on:
     branches:
       - main
 
-name: 🚀 Deploy website on push (Main)
+name: Deploy Laravel Backend via FTP
 
 env:
   FTP_SERVER: "ftp.sarvcast.ir"
   FTP_USERNAME: "my@sarvcast.ir"
-  FTP_PASSWORD: "Prof48017421@#"          # ← move to repo secrets!
+  FTP_PASSWORD: "Prof48017421@#"
   SITE_URL: "https://my.sarvcast.ir"
-  DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}          # ← also secret
-  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  DEPLOY_TOKEN: "sarvcast-ftp-deploy-x7k9m2"
+  TELEGRAM_BOT_TOKEN: "7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc"
+  TELEGRAM_CHAT_ID: "-1002796302613_97"
 
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
+  deploy:
+    name: Build & Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 600
+    timeout-minutes: 15
 
     steps:
-      - name: 🚚 Get latest code
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+          extensions: mbstring, xml, ctype, json, bcmath, curl, gd
+          coverage: none
 
       - name: Cache Composer packages
-        id: composer-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: vendor
-          key: \( {{ runner.os }}-php- \){{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: |
-            ${{ runner.os }}-php-
+            ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Prepare deployment
         run: |
-          chmod -R 777 storage bootstrap/cache
+          chmod -R 755 storage bootstrap/cache
+          mkdir -p storage/framework/{cache,sessions,views}
+          mkdir -p storage/logs
+          mkdir -p bootstrap/cache
 
-          # (your _deploy_helper.php script remains the same)
-          cat > _deploy_helper.php << 'HELPERSCRIPT'
-          <?php
-          # ... (your original script content here - no change needed)
-          HELPERSCRIPT
-
-      - name: 🔍 Test FTP connectivity
-        run: |
-          echo "=== Testing connection to ${{ env.FTP_SERVER }} ==="
-          echo "Runner IP:" && curl -s ifconfig.me || echo "Could not detect IP"
-          echo ""
-          echo "--- Testing port 21 (FTP) ---"
-          timeout 10 bash -c "echo > /dev/tcp/${{ env.FTP_SERVER }}/21" 2>&1 && echo "Port 21: OPEN" || echo "Port 21: CLOSED/BLOCKED"
-          echo "--- Testing port 990 (FTPS) ---"
-          timeout 10 bash -c "echo > /dev/tcp/${{ env.FTP_SERVER }}/990" 2>&1 && echo "Port 990: OPEN" || echo "Port 990: CLOSED/BLOCKED"
-          echo "--- Testing port 22 (SSH/SFTP) ---"
-          timeout 10 bash -c "echo > /dev/tcp/${{ env.FTP_SERVER }}/22" 2>&1 && echo "Port 22: OPEN" || echo "Port 22: CLOSED/BLOCKED"
-          echo "--- DNS lookup ---"
-          nslookup ${{ env.FTP_SERVER }} || echo "DNS lookup failed"
-
-      - name: 📂 Sync files
+      - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
-          server:     ${{ env.FTP_SERVER }}
-          username:   ${{ env.FTP_USERNAME }}
-          password:   ${{ env.FTP_PASSWORD }}
+          server: ${{ env.FTP_SERVER }}
+          username: ${{ env.FTP_USERNAME }}
+          password: ${{ env.FTP_PASSWORD }}
           server-dir: /
-          protocol:   ftp
-          port:       21
-          timeout:    120000000          # ← 5 minutes — the most important fix
-          log-level:  verbose
+          protocol: ftp
+          port: 21
+          timeout: 300000
+          log-level: standard
           exclude: |
             **/.git*
             **/.git*/**
             .github/**
             .env
             .env.*
+            .env.example
             tests/**
             phpunit.xml
+            phpunit.xml.*
             .styleci.yml
+            .editorconfig
+            .phpunit*
             node_modules/**
             storage/logs/**
             storage/framework/sessions/**
             storage/framework/views/**
+            storage/framework/cache/data/**
+            .cursor/**
+            .idea/**
+            .vscode/**
+            .fleet/**
+            .zed/**
+            .nova/**
+            **/*.md
+            docs/**
+            *.sh
+            *.bat
+            scripts/**
+            .ftp-deploy-sync-state.json
+            docker-compose*
+            Dockerfile*
+            Makefile*
+            .gitlab-ci.yml
+            vendor/**/tests/**
+            vendor/**/Tests/**
+            vendor/**/*.md
+            vendor/**/docs/**
+            vendor/**/.github/**
+            vendor/**/CHANGELOG*
+            vendor/**/LICENSE*
+            vendor/**/README*
+            vendor/**/readme*
+            vendor/**/phpunit.xml*
+            vendor/**/.gitignore
+            vendor/**/.editorconfig
+            vendor/**/CONTRIBUTING*
+            vendor/**/UPGRADE*
+            vendor/**/SECURITY*
+            vendor/**/.php-cs-fixer*
+            vendor/**/.travis.yml
+            vendor/**/.scrutinizer*
+            vendor/**/Makefile
 
-      - name: 🔗 Create storage link
+      - name: Post-deploy storage setup
         run: |
-          echo "Running post-deploy setup..."
+          echo "Running post-deploy storage setup..."
+
           RESPONSE=$(curl -s -w "\n%{http_code}" \
-            "\( {{ env.SITE_URL }}/_deploy_helper.php?token= \){{ env.DEPLOY_TOKEN }}" \
-            --max-time 60 --connect-timeout 15)
+            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
+            --max-time 30 --connect-timeout 10)
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
 
-          echo "HTTP Status: $HTTP_CODE"
-          echo "Response: $BODY"
+          echo "HTTP $HTTP_CODE"
+          echo "$BODY"
 
           if [[ "$HTTP_CODE" == "200" ]]; then
-            echo "✅ Storage link setup completed!"
+            echo "Post-deploy setup completed successfully"
           else
-            echo "⚠️ Setup returned $HTTP_CODE — check manually if needed"
+            echo "::warning::Post-deploy helper returned HTTP $HTTP_CODE — storage link may need manual setup"
           fi
 
-      - name: 📢 Notify Telegram
-        if: always()
+      - name: Notify Telegram (success)
+        if: success()
         run: |
-          # (your notification script - no major change needed)
-          # ...
+          COMMIT_MSG=$(git log -1 --pretty=%B | head -c 200)
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          AUTHOR=$(git log -1 --pretty=%an)
+
+          TEXT="✅ *SarvCast Backend Deployed*
+
+          📦 Commit: \`${COMMIT_HASH}\`
+          👤 Author: ${AUTHOR}
+          📝 ${COMMIT_MSG}
+
+          🔗 ${{ env.SITE_URL }}"
+
+          curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
+            -d text="$TEXT" \
+            -d parse_mode="Markdown" \
+            -d disable_web_page_preview=true || true
+
+      - name: Notify Telegram (failure)
+        if: failure()
+        run: |
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          AUTHOR=$(git log -1 --pretty=%an)
+
+          TEXT="❌ *SarvCast Backend Deploy Failed*
+
+          📦 Commit: \`${COMMIT_HASH}\`
+          👤 Author: ${AUTHOR}
+
+          🔗 [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
+            -d text="$TEXT" \
+            -d parse_mode="Markdown" \
+            -d disable_web_page_preview=true || true

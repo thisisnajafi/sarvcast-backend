@@ -6,11 +6,11 @@ tests
 .env.local
 .env.testing
 .env.production
-storage\logs\*
-storage\framework\cache\*
-storage\framework\sessions\*
-storage\framework\views\*
-bootstrap\cache\*
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
 Homestead.json
 Homestead.yaml
 *.log
