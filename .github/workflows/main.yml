@@ -16,40 +16,13 @@ env:
 
 jobs:
   deploy:
-    name: Build & Deploy
+    name: Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, xml, ctype, json, bcmath, curl, gd
-          coverage: none
-
-      - name: Cache Composer packages
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Install dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
-      - name: Prepare deployment
-        run: |
-          chmod -R 755 storage bootstrap/cache
-          mkdir -p storage/framework/{cache,sessions,views}
-          mkdir -p storage/logs
-          mkdir -p bootstrap/cache
 
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
@@ -69,60 +42,42 @@ jobs:
             .env
             .env.*
             .env.example
+            vendor/**
+            node_modules/**
             tests/**
+            docs/**
+            scripts/**
+            storage/logs/**
+            storage/framework/sessions/**
+            storage/framework/views/**
+            storage/framework/cache/data/**
+            **/*.md
+            *.sh
+            *.bat
             phpunit.xml
             phpunit.xml.*
             .styleci.yml
             .editorconfig
             .phpunit*
-            node_modules/**
-            storage/logs/**
-            storage/framework/sessions/**
-            storage/framework/views/**
-            storage/framework/cache/data/**
             .cursor/**
             .idea/**
             .vscode/**
             .fleet/**
             .zed/**
             .nova/**
-            **/*.md
-            docs/**
-            *.sh
-            *.bat
-            scripts/**
             .ftp-deploy-sync-state.json
             docker-compose*
             Dockerfile*
             Makefile*
             .gitlab-ci.yml
-            vendor/**/tests/**
-            vendor/**/Tests/**
-            vendor/**/*.md
-            vendor/**/docs/**
-            vendor/**/.github/**
-            vendor/**/CHANGELOG*
-            vendor/**/LICENSE*
-            vendor/**/README*
-            vendor/**/readme*
-            vendor/**/phpunit.xml*
-            vendor/**/.gitignore
-            vendor/**/.editorconfig
-            vendor/**/CONTRIBUTING*
-            vendor/**/UPGRADE*
-            vendor/**/SECURITY*
-            vendor/**/.php-cs-fixer*
-            vendor/**/.travis.yml
-            vendor/**/.scrutinizer*
-            vendor/**/Makefile
 
-      - name: Post-deploy storage setup
+      - name: Post-deploy setup (cache & storage link)
         run: |
-          echo "Running post-deploy storage setup..."
+          echo "Running post-deploy setup..."
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 30 --connect-timeout 10)
+            --max-time 60 --connect-timeout 15)
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
@@ -133,7 +88,7 @@ jobs:
           if [[ "$HTTP_CODE" == "200" ]]; then
             echo "Post-deploy setup completed successfully"
           else
-            echo "::warning::Post-deploy helper returned HTTP $HTTP_CODE — storage link may need manual setup"
+            echo "::warning::Post-deploy helper returned HTTP $HTTP_CODE — may need manual cache clear"
           fi
 
       - name: Notify Telegram (success)

@@ -13,6 +13,7 @@ if ($token !== $expected) {
 $basePath = dirname(__DIR__);
 $results = [];
 
+// 1. Create necessary directories
 $dirs = [
     'storage/app/public',
     'storage/app/public/audio',
@@ -39,29 +40,77 @@ foreach ($dirs as $dir) {
     }
 }
 
-$link = $basePath . '/public/storage';
-$target = $basePath . '/storage/app/public';
+// 2. Delete stale cache files before bootstrapping Laravel
+$staleFiles = [
+    'bootstrap/cache/config.php',
+    'bootstrap/cache/routes-v7.php',
+];
 
-if (is_link($link)) {
-    @unlink($link);
-    $results[] = 'Removed old storage symlink';
-}
-
-if (!file_exists($link)) {
-    $saved = getcwd();
-    chdir($basePath . '/public');
-    if (@symlink('../storage/app/public', 'storage')) {
-        $results[] = 'Storage symlink created';
-    } elseif (@symlink($target, $link)) {
-        $results[] = 'Storage symlink created (absolute)';
-    } else {
-        $results[] = 'Symlink failed - run manually: php artisan storage:link';
+foreach ($staleFiles as $file) {
+    $full = $basePath . '/' . $file;
+    if (file_exists($full)) {
+        @unlink($full);
+        $results[] = 'Deleted stale ' . $file;
     }
-    chdir($saved);
-} else {
-    $results[] = 'public/storage already exists';
 }
 
+$viewsDir = $basePath . '/storage/framework/views';
+if (is_dir($viewsDir)) {
+    $count = 0;
+    foreach (glob($viewsDir . '/*.php') as $file) {
+        @unlink($file);
+        $count++;
+    }
+    if ($count > 0) {
+        $results[] = 'Cleared ' . $count . ' compiled views';
+    }
+}
+
+// 3. Bootstrap Laravel and run artisan commands
+try {
+    define('LARAVEL_START', microtime(true));
+
+    require $basePath . '/vendor/autoload.php';
+
+    $app = require $basePath . '/bootstrap/app.php';
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+
+    $commands = [
+        'config:cache'  => [],
+        'route:cache'   => [],
+        'view:cache'    => [],
+        'storage:link'  => ['--force' => true],
+    ];
+
+    foreach ($commands as $cmd => $args) {
+        try {
+            $kernel->call($cmd, $args);
+            $results[] = $cmd . ' OK';
+        } catch (Throwable $e) {
+            $results[] = $cmd . ' FAILED: ' . $e->getMessage();
+        }
+    }
+
+} catch (Throwable $e) {
+    $results[] = 'Laravel bootstrap failed: ' . $e->getMessage();
+
+    // Fallback: create storage symlink manually
+    $link = $basePath . '/public/storage';
+    if (is_link($link)) {
+        @unlink($link);
+    }
+    if (!file_exists($link)) {
+        $saved = getcwd();
+        chdir($basePath . '/public');
+        if (@symlink('../storage/app/public', 'storage')) {
+            $results[] = 'Storage symlink created (manual fallback)';
+        }
+        chdir($saved);
+    }
+}
+
+// 4. Clear OPcache
 if (function_exists('opcache_reset')) {
     @opcache_reset();
     $results[] = 'OPcache cleared';
