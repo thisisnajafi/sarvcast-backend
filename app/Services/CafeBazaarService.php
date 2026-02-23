@@ -30,13 +30,21 @@ class CafeBazaarService
     public function verifyPurchase(string $purchaseToken, string $productId): array
     {
         try {
+            if (empty($this->apiKey)) {
+                Log::error('CafeBazaar API key not configured');
+                return [
+                    'success' => false,
+                    'message' => 'پیکربندی کافه‌بازار ناقص است (API key)',
+                ];
+            }
+
             Log::info('Verifying CafeBazaar purchase', [
                 'package_name' => $this->packageName,
                 'product_id' => $productId,
-                'purchase_token' => substr($purchaseToken, 0, 20) . '...' // Log partial token for security
+                'purchase_token' => substr($purchaseToken, 0, 20) . '...'
             ]);
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post($this->apiUrl, [
@@ -117,6 +125,14 @@ class CafeBazaarService
     public function verifySubscription(string $purchaseToken, string $subscriptionId): array
     {
         try {
+            if (empty($this->apiKey)) {
+                Log::error('CafeBazaar API key not configured');
+                return [
+                    'success' => false,
+                    'message' => 'پیکربندی کافه‌بازار ناقص است (API key)',
+                ];
+            }
+
             Log::info('Verifying CafeBazaar subscription', [
                 'package_name' => $this->packageName,
                 'subscription_id' => $subscriptionId
@@ -126,7 +142,7 @@ class CafeBazaarService
             $subscriptionUrl = config('services.cafebazaar.subscription_api_url', 
                 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/subscription');
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post($subscriptionUrl, [
@@ -138,12 +154,20 @@ class CafeBazaarService
             if ($response->successful()) {
                 $result = $response->json();
 
+                Log::info('CafeBazaar subscription verification response', [
+                    'subscription_id' => $subscriptionId,
+                    'status' => $result['status'] ?? 'unknown',
+                ]);
+
                 if (isset($result['status']) && $result['status'] == 0) {
                     return [
                         'success' => true,
                         'subscription_state' => $result['subscriptionState'] ?? 'active',
+                        'purchase_state' => $result['subscriptionState'] ?? 'active',
+                        'order_id' => $result['orderId'] ?? null,
+                        'purchase_time' => isset($result['purchaseTime']) ? date('Y-m-d H:i:s', (int) $result['purchaseTime'] / 1000) : (isset($result['purchaseTimeMillis']) ? date('Y-m-d H:i:s', (int) $result['purchaseTimeMillis'] / 1000) : null),
                         'expiry_time' => isset($result['expiryTimeMillis']) 
-                            ? date('Y-m-d H:i:s', $result['expiryTimeMillis'] / 1000) 
+                            ? date('Y-m-d H:i:s', (int) $result['expiryTimeMillis'] / 1000) 
                             : null,
                         'auto_renewing' => $result['autoRenewing'] ?? false,
                         'raw_response' => $result
@@ -174,6 +198,24 @@ class CafeBazaarService
     }
 
     /**
+     * Verify purchase with CafeBazaar: try subscription endpoint first, then one-time purchase.
+     * Use this for subscription products so expiry and auto_renewing are set correctly.
+     *
+     * @param string $purchaseToken Purchase token from CafeBazaar
+     * @param string $productId Product/Subscription ID
+     * @return array Unified verification result (success, order_id, purchase_state, purchase_time, expiry_time, auto_renewing, raw_response, ...)
+     */
+    public function verifyPurchaseOrSubscription(string $purchaseToken, string $productId): array
+    {
+        $sub = $this->verifySubscription($purchaseToken, $productId);
+        if ($sub['success']) {
+            return $sub;
+        }
+        $purchase = $this->verifyPurchase($purchaseToken, $productId);
+        return $purchase;
+    }
+
+    /**
      * Acknowledge purchase (required for CafeBazaar)
      * 
      * @param string $purchaseToken Purchase token
@@ -186,7 +228,7 @@ class CafeBazaarService
             $acknowledgeUrl = config('services.cafebazaar.acknowledge_url',
                 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge');
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(15)->connectTimeout(8)->withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post($acknowledgeUrl, [

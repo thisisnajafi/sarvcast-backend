@@ -49,8 +49,8 @@ class InAppPurchaseController extends Controller
         $user = Auth::user();
 
         try {
-            // Verify purchase with CafeBazaar
-            $verification = $this->cafeBazaarService->verifyPurchase(
+            // Verify with CafeBazaar (tries subscription API first, then one-time purchase)
+            $verification = $this->cafeBazaarService->verifyPurchaseOrSubscription(
                 $request->purchase_token,
                 $request->product_id
             );
@@ -100,6 +100,22 @@ class InAppPurchaseController extends Controller
                 ], 400);
             }
 
+            // Always use plan slug for subscription type (was bug: undefined when plan found by cafebazaar_product_id)
+            $subscriptionType = $plan->slug;
+
+            $subscriptionOptions = [
+                'billing_platform' => 'cafebazaar',
+                'payment_id' => null, // set after payment created
+                'store_subscription_id' => $verification['order_id'] ?? null,
+            ];
+            if (!empty($verification['expiry_time'])) {
+                $subscriptionOptions['store_expiry_time'] = $verification['expiry_time'];
+                $subscriptionOptions['store_metadata'] = [
+                    'expiry_time' => $verification['expiry_time'],
+                    'auto_renewing' => $verification['auto_renewing'] ?? false,
+                ];
+            }
+
             DB::beginTransaction();
 
             try {
@@ -128,17 +144,15 @@ class InAppPurchaseController extends Controller
                     ]
                 ]);
 
+                $subscriptionOptions['payment_id'] = $payment->id;
+
                 // Create or update subscription
                 $subscription = $this->subscriptionService->createOrUpdateSubscription(
                     $user->id,
                     $subscriptionType,
                     $plan->final_price,
                     $plan->currency,
-                    [
-                        'billing_platform' => 'cafebazaar',
-                        'payment_id' => $payment->id,
-                        'store_subscription_id' => $verification['order_id'] ?? null,
-                    ]
+                    $subscriptionOptions
                 );
 
                 $payment->update(['subscription_id' => $subscription->id]);
