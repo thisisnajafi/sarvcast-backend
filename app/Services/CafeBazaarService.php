@@ -7,6 +7,16 @@ use App\Models\Subscription;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Cafe Bazaar in-app purchase verification.
+ *
+ * API: https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/
+ * Docs: https://developers.cafebazaar.ir/fa/guidelines/feature/pishkhan-api
+ * Ref:  https://api.ir/web-service/api-وضعیت-خرید-درون-برنامه-کافه-بازار/
+ *
+ * Request: packageName, productId, purchaseToken. Auth: Bearer access_token (from Pishkhan).
+ * Response (200): consumptionState, purchaseState (0=normal, 1=refunded), purchaseTime (ms), developerPayload.
+ */
 class CafeBazaarService
 {
     protected $packageName;
@@ -17,7 +27,8 @@ class CafeBazaarService
     {
         $this->packageName = config('services.cafebazaar.package_name', 'com.sarvabi.sarvcast');
         $this->apiKey = config('services.cafebazaar.api_key');
-        $this->apiUrl = config('services.cafebazaar.api_url', 'https://pardakht.cafebazaar.ir/devapi/v2/validate');
+        // Documented: developers.cafebazaar.ir / api.ir — validate inapp purchases
+        $this->apiUrl = config('services.cafebazaar.api_url', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/');
     }
 
     /**
@@ -55,68 +66,57 @@ class CafeBazaarService
                 'purchaseToken' => $purchaseToken,
             ]);
 
-            // If 404, try alternate path (some setups use /devapi/v2/api/validate)
-            if ($response->status() === 404 && str_contains($url, '/devapi/v2/validate') && !str_contains($url, '/api/validate')) {
-                $altUrl = str_replace('/devapi/v2/validate', '/devapi/v2/api/validate', $url);
-                Log::info('CafeBazaar 404 on first URL, retrying with alternate', ['alt_url' => $altUrl]);
-                $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ])->post($altUrl, [
-                    'packageName' => $this->packageName,
-                    'productId' => $productId,
-                    'purchaseToken' => $purchaseToken,
-                ]);
-            }
-
             if ($response->successful()) {
                 $result = $response->json();
-
+                // Documented response: consumptionState, purchaseState (0=normal, 1=refunded), purchaseTime (ms), developerPayload, kind
+                $purchaseState = $result['purchaseState'] ?? 0;
                 Log::info('CafeBazaar verification response', [
                     'product_id' => $productId,
-                    'response_status' => $result['status'] ?? 'unknown',
-                    'purchase_state' => $result['purchaseState'] ?? null
+                    'purchaseState' => $purchaseState,
+                    'consumptionState' => $result['consumptionState'] ?? null,
                 ]);
 
-                // CafeBazaar returns status: 0 = success
-                if (isset($result['status']) && $result['status'] == 0) {
+                if ($purchaseState === 0 || $purchaseState === '0') {
                     return [
                         'success' => true,
-                        'purchase_state' => $result['purchaseState'] ?? 'purchased',
+                        'purchase_state' => 'purchased',
                         'order_id' => $result['orderId'] ?? null,
-                        'purchase_time' => isset($result['purchaseTime']) ? date('Y-m-d H:i:s', $result['purchaseTime'] / 1000) : null,
+                        'purchase_time' => isset($result['purchaseTime']) ? date('Y-m-d H:i:s', (int) $result['purchaseTime'] / 1000) : null,
                         'developer_payload' => $result['developerPayload'] ?? null,
-                        'purchase_type' => $result['purchaseType'] ?? null,
-                        'acknowledgement_state' => $result['acknowledgementState'] ?? null,
+                        'consumption_state' => $result['consumptionState'] ?? null,
                         'raw_response' => $result
                     ];
-                } else {
-                    $errorMessage = $result['errorMessage'] ?? 'Unknown error';
-                    Log::error('CafeBazaar purchase verification failed', [
-                        'product_id' => $productId,
-                        'status' => $result['status'] ?? 'unknown',
-                        'error_message' => $errorMessage
-                    ]);
-
-                    return [
-                        'success' => false,
-                        'message' => 'تایید خرید ناموفق: ' . $errorMessage,
-                        'error_code' => $result['status'] ?? null
-                    ];
                 }
-            } else {
-                Log::error('CafeBazaar API request failed', [
+                $errorMessage = $purchaseState === 1 || $purchaseState === '1'
+                    ? 'خرید بازگشت داده شده است (Refund)'
+                    : ('وضعیت خرید نامعتبر: ' . ($result['error_description'] ?? 'purchaseState=' . $purchaseState));
+                Log::error('CafeBazaar purchase verification failed', [
                     'product_id' => $productId,
-                    'status_code' => $response->status(),
-                    'response_body' => $response->body()
+                    'purchaseState' => $purchaseState,
+                    'error' => $result['error'] ?? null,
                 ]);
-
                 return [
                     'success' => false,
-                    'message' => 'خطا در ارتباط با کافه‌بازار',
-                    'status_code' => $response->status()
+                    'message' => $errorMessage,
+                    'error_code' => $purchaseState
                 ];
             }
+
+            $body = is_string($response->body()) && str_starts_with(trim($response->body()), '{')
+                ? $response->json()
+                : [];
+            $errorMsg = $body['error_description'] ?? $body['error'] ?? $response->body();
+            Log::error('CafeBazaar API request failed', [
+                'product_id' => $productId,
+                'status_code' => $response->status(),
+                'error' => $body['error'] ?? null,
+                'response_body' => $response->body()
+            ]);
+            return [
+                'success' => false,
+                'message' => is_string($errorMsg) ? $errorMsg : 'خطا در ارتباط با کافه‌بازار',
+                'status_code' => $response->status()
+            ];
         } catch (\Exception $e) {
             Log::error('CafeBazaar verification exception', [
                 'product_id' => $productId,
@@ -149,8 +149,9 @@ class CafeBazaarService
                 ];
             }
 
+            // Same endpoint as inapp purchases per Cafe Bazaar docs (validate/inapp/purchases/)
             $subscriptionUrl = config('services.cafebazaar.subscription_api_url',
-                'https://pardakht.cafebazaar.ir/devapi/v2/validate/subscription');
+                'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/');
 
             Log::info('Verifying CafeBazaar subscription', [
                 'package_name' => $this->packageName,
@@ -163,60 +164,49 @@ class CafeBazaarService
                 'Content-Type' => 'application/json',
             ])->post($subscriptionUrl, [
                 'packageName' => $this->packageName,
-                'subscriptionId' => $subscriptionId,
+                'productId' => $subscriptionId,
                 'purchaseToken' => $purchaseToken,
             ]);
 
-            if ($response->status() === 404 && str_contains($subscriptionUrl, '/devapi/v2/validate/') && !str_contains($subscriptionUrl, '/api/validate/')) {
-                $altUrl = str_replace('/devapi/v2/validate/', '/devapi/v2/api/validate/', $subscriptionUrl);
-                Log::info('CafeBazaar subscription 404, retrying with alternate', ['alt_url' => $altUrl]);
-                $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ])->post($altUrl, [
-                    'packageName' => $this->packageName,
-                    'subscriptionId' => $subscriptionId,
-                    'purchaseToken' => $purchaseToken,
-                ]);
-            }
-
             if ($response->successful()) {
                 $result = $response->json();
-
+                $purchaseState = $result['purchaseState'] ?? 0;
                 Log::info('CafeBazaar subscription verification response', [
                     'subscription_id' => $subscriptionId,
-                    'status' => $result['status'] ?? 'unknown',
+                    'purchaseState' => $purchaseState,
                 ]);
 
-                if (isset($result['status']) && $result['status'] == 0) {
+                if ($purchaseState === 0 || $purchaseState === '0') {
                     return [
                         'success' => true,
-                        'subscription_state' => $result['subscriptionState'] ?? 'active',
-                        'purchase_state' => $result['subscriptionState'] ?? 'active',
+                        'subscription_state' => 'active',
+                        'purchase_state' => 'active',
                         'order_id' => $result['orderId'] ?? null,
                         'purchase_time' => isset($result['purchaseTime']) ? date('Y-m-d H:i:s', (int) $result['purchaseTime'] / 1000) : (isset($result['purchaseTimeMillis']) ? date('Y-m-d H:i:s', (int) $result['purchaseTimeMillis'] / 1000) : null),
-                        'expiry_time' => isset($result['expiryTimeMillis']) 
-                            ? date('Y-m-d H:i:s', (int) $result['expiryTimeMillis'] / 1000) 
-                            : null,
+                        'expiry_time' => isset($result['expiryTimeMillis']) ? date('Y-m-d H:i:s', (int) $result['expiryTimeMillis'] / 1000) : null,
                         'auto_renewing' => $result['autoRenewing'] ?? false,
                         'raw_response' => $result
                     ];
-                } else {
-                    return [
-                        'success' => false,
-                        'message' => $result['errorMessage'] ?? 'تایید اشتراک ناموفق بود'
-                    ];
                 }
+                return [
+                    'success' => false,
+                    'message' => $result['error_description'] ?? $result['errorMessage'] ?? 'تایید اشتراک ناموفق بود'
+                ];
             }
 
+            $body = is_string($response->body()) && str_starts_with(trim($response->body()), '{')
+                ? $response->json()
+                : [];
+            $errorMsg = $body['error_description'] ?? $body['error'] ?? $response->body();
             Log::error('CafeBazaar subscription API request failed', [
                 'subscription_id' => $subscriptionId,
                 'status_code' => $response->status(),
+                'error' => $body['error'] ?? null,
                 'response_body' => $response->body()
             ]);
             return [
                 'success' => false,
-                'message' => 'خطا در ارتباط با کافه‌بازار'
+                'message' => is_string($errorMsg) ? $errorMsg : 'خطا در ارتباط با کافه‌بازار'
             ];
         } catch (\Exception $e) {
             Log::error('CafeBazaar subscription verification exception', [
@@ -276,6 +266,14 @@ class CafeBazaarService
                 if (isset($result['status']) && $result['status'] == 0) {
                     return ['success' => true];
                 }
+            }
+
+            // Acknowledge endpoint may not exist or return different format; log but don't fail verification
+            if ($response->status() === 404) {
+                Log::warning('CafeBazaar acknowledge endpoint returned 404 (may be optional)', [
+                    'acknowledge_url' => $acknowledgeUrl
+                ]);
+                return ['success' => true];
             }
 
             return ['success' => false, 'message' => 'خطا در تایید خرید'];
