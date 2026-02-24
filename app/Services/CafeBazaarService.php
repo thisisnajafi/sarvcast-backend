@@ -15,9 +15,9 @@ class CafeBazaarService
 
     public function __construct()
     {
-        $this->packageName = config('services.cafebazaar.package_name', 'ir.sarvcast.app');
+        $this->packageName = config('services.cafebazaar.package_name', 'com.sarvabi.sarvcast');
         $this->apiKey = config('services.cafebazaar.api_key');
-        $this->apiUrl = config('services.cafebazaar.api_url', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate');
+        $this->apiUrl = config('services.cafebazaar.api_url', 'https://pardakht.cafebazaar.ir/devapi/v2/validate');
     }
 
     /**
@@ -38,20 +38,36 @@ class CafeBazaarService
                 ];
             }
 
+            $url = $this->apiUrl;
             Log::info('Verifying CafeBazaar purchase', [
                 'package_name' => $this->packageName,
                 'product_id' => $productId,
+                'api_url' => $url,
                 'purchase_token' => substr($purchaseToken, 0, 20) . '...'
             ]);
 
             $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->apiUrl, [
+            ])->post($url, [
                 'packageName' => $this->packageName,
                 'productId' => $productId,
                 'purchaseToken' => $purchaseToken,
             ]);
+
+            // If 404, try alternate path (some setups use /devapi/v2/api/validate)
+            if ($response->status() === 404 && str_contains($url, '/devapi/v2/validate') && !str_contains($url, '/api/validate')) {
+                $altUrl = str_replace('/devapi/v2/validate', '/devapi/v2/api/validate', $url);
+                Log::info('CafeBazaar 404 on first URL, retrying with alternate', ['alt_url' => $altUrl]);
+                $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post($altUrl, [
+                    'packageName' => $this->packageName,
+                    'productId' => $productId,
+                    'purchaseToken' => $purchaseToken,
+                ]);
+            }
 
             if ($response->successful()) {
                 $result = $response->json();
@@ -133,14 +149,14 @@ class CafeBazaarService
                 ];
             }
 
+            $subscriptionUrl = config('services.cafebazaar.subscription_api_url',
+                'https://pardakht.cafebazaar.ir/devapi/v2/validate/subscription');
+
             Log::info('Verifying CafeBazaar subscription', [
                 'package_name' => $this->packageName,
-                'subscription_id' => $subscriptionId
+                'subscription_id' => $subscriptionId,
+                'api_url' => $subscriptionUrl,
             ]);
-
-            // CafeBazaar subscription verification endpoint
-            $subscriptionUrl = config('services.cafebazaar.subscription_api_url', 
-                'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/subscription');
 
             $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
@@ -150,6 +166,19 @@ class CafeBazaarService
                 'subscriptionId' => $subscriptionId,
                 'purchaseToken' => $purchaseToken,
             ]);
+
+            if ($response->status() === 404 && str_contains($subscriptionUrl, '/devapi/v2/validate/') && !str_contains($subscriptionUrl, '/api/validate/')) {
+                $altUrl = str_replace('/devapi/v2/validate/', '/devapi/v2/api/validate/', $subscriptionUrl);
+                Log::info('CafeBazaar subscription 404, retrying with alternate', ['alt_url' => $altUrl]);
+                $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post($altUrl, [
+                    'packageName' => $this->packageName,
+                    'subscriptionId' => $subscriptionId,
+                    'purchaseToken' => $purchaseToken,
+                ]);
+            }
 
             if ($response->successful()) {
                 $result = $response->json();
@@ -180,6 +209,11 @@ class CafeBazaarService
                 }
             }
 
+            Log::error('CafeBazaar subscription API request failed', [
+                'subscription_id' => $subscriptionId,
+                'status_code' => $response->status(),
+                'response_body' => $response->body()
+            ]);
             return [
                 'success' => false,
                 'message' => 'خطا در ارتباط با کافه‌بازار'

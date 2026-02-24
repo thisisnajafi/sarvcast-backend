@@ -44,16 +44,21 @@ return [
     ],
 
     'cafebazaar' => [
-        'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'ir.sarvcast.app'),
+        'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.sarvabi.sarvcast'),
         'api_key' => env('CAFEBAZAAR_API_KEY'),
-        'api_url' => env('CAFEBAZAAR_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate'),
-        'subscription_api_url' => env('CAFEBAZAAR_SUBSCRIPTION_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/subscription'),
-        'acknowledge_url' => env('CAFEBAZAAR_ACKNOWLEDGE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge'),
+        // If you get 404, try the other path in .env (e.g. .../api/validate vs .../validate)
+        'api_url' => env('CAFEBAZAAR_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/validate'),
+        'subscription_api_url' => env('CAFEBAZAAR_SUBSCRIPTION_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/validate/subscription'),
+        'acknowledge_url' => env('CAFEBAZAAR_ACKNOWLEDGE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/acknowledge'),
         'product_mapping' => [
             'subscription_1month' => '1month',
             'subscription_3months' => '3months',
             'subscription_6months' => '6months',
             'subscription_1year' => '1year',
+            '1-month-sub' => '1month',
+            '3-month-sub' => '3months',
+            '6-month-sub' => '6months',
+            '1-year-sub' => '1year',
         ],
     ],
 
