@@ -47,10 +47,11 @@ return [
         'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.sarvabi.sarvcast'),
         // Access token from Pishkhan (developers.cafebazaar.ir) → Your app → Payment settings
         'api_key' => env('CAFEBAZAAR_API_KEY'),
-        // Documented: https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/
+        // Base for subscription URL (path is built in code)
+        'api_base_url' => env('CAFEBAZAAR_API_BASE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api'),
+        // One-time in-app purchase: POST with packageName, productId, purchaseToken
         'api_url' => env('CAFEBAZAAR_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/'),
-        // Subscriptions use the same purchases endpoint per Cafe Bazaar docs
-        'subscription_api_url' => env('CAFEBAZAAR_SUBSCRIPTION_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/'),
+        // Subscription status: GET applications/<package_name>/subscriptions/<subscription_id>/purchases/<purchase_token> (built in CafeBazaarService)
         'acknowledge_url' => env('CAFEBAZAAR_ACKNOWLEDGE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge'),
         'product_mapping' => [
             'subscription_1month' => '1month',
