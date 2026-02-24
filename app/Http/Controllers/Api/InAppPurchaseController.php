@@ -49,145 +49,32 @@ class InAppPurchaseController extends Controller
         $user = Auth::user();
 
         try {
-            // Verify with CafeBazaar (tries subscription API first, then one-time purchase)
-            $verification = $this->cafeBazaarService->verifyPurchaseOrSubscription(
+            $result = $this->cafeBazaarService->verifyAndFulfillSubscription(
+                $user,
                 $request->purchase_token,
-                $request->product_id
+                $request->product_id,
+                $request->order_id
             );
 
-            if (!$verification['success']) {
+            if (!$result['success']) {
+                $statusCode = isset($result['error_code']) && $result['error_code'] === CafeBazaarService::ERROR_API_KEY_NOT_CONFIGURED ? 503 : 400;
                 return response()->json([
                     'success' => false,
-                    'message' => $verification['message'] ?? 'تایید خرید ناموفق بود'
-                ], 400);
+                    'message' => $result['message'] ?? 'تایید خرید ناموفق بود',
+                    'error_code' => $result['error_code'] ?? null,
+                ], $statusCode);
             }
 
-            // Check if payment already exists
-            $existingPayment = Payment::where('purchase_token', $request->purchase_token)
-                ->where('billing_platform', 'cafebazaar')
-                ->first();
-
-            if ($existingPayment) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'این خرید قبلاً ثبت شده است',
-                    'data' => [
-                        'payment' => $existingPayment->load('subscription'),
-                        'subscription' => $existingPayment->subscription
-                    ]
-                ]);
-            }
-
-            // Find subscription plan by cafebazaar_product_id first, then fallback to slug mapping
-            $plan = SubscriptionPlan::where('cafebazaar_product_id', $request->product_id)->first();
-
-            if (!$plan) {
-                // Fallback: map product ID to slug via hardcoded mapping (legacy product IDs)
-                $subscriptionType = $this->cafeBazaarService->mapProductIdToSubscriptionType($request->product_id);
-                if ($subscriptionType) {
-                    $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
-                }
-            }
-
-            if (!$plan) {
-                Log::warning('CafeBazaar verify: no plan found for product_id', [
-                    'product_id' => $request->product_id,
-                    'user_id' => $user->id,
-                ]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'شناسه محصول نامعتبر است: ' . $request->product_id
-                ], 400);
-            }
-
-            // Always use plan slug for subscription type (was bug: undefined when plan found by cafebazaar_product_id)
-            $subscriptionType = $plan->slug;
-
-            $subscriptionOptions = [
-                'billing_platform' => 'cafebazaar',
-                'payment_id' => null, // set after payment created
-                'store_subscription_id' => $verification['order_id'] ?? null,
-            ];
-            if (!empty($verification['expiry_time'])) {
-                $subscriptionOptions['store_expiry_time'] = $verification['expiry_time'];
-                $subscriptionOptions['store_metadata'] = [
-                    'expiry_time' => $verification['expiry_time'],
-                    'auto_renewing' => $verification['auto_renewing'] ?? false,
-                ];
-            }
-
-            DB::beginTransaction();
-
-            try {
-                // Create payment record
-                $payment = Payment::create([
-                    'user_id' => $user->id,
-                    'amount' => $plan->final_price,
-                    'currency' => $plan->currency,
-                    'payment_method' => 'in_app_purchase',
-                    'payment_gateway' => 'cafebazaar',
-                    'billing_platform' => 'cafebazaar',
-                    'status' => 'completed',
-                    'transaction_id' => $request->order_id ?? 'CB_' . time() . '_' . rand(1000, 9999),
-                    'purchase_token' => $request->purchase_token,
-                    'order_id' => $verification['order_id'] ?? $request->order_id,
-                    'product_id' => $request->product_id,
-                    'package_name' => config('services.cafebazaar.package_name'),
-                    'purchase_state' => $verification['purchase_state'] ?? 'purchased',
-                    'purchase_time' => $verification['purchase_time'] ?? now(),
-                    'store_response' => $verification['raw_response'] ?? null,
-                    'is_acknowledged' => false,
-                    'processed_at' => now(),
-                    'payment_metadata' => [
-                        'verification_time' => now()->toISOString(),
-                        'developer_payload' => $verification['developer_payload'] ?? null,
-                    ]
-                ]);
-
-                $subscriptionOptions['payment_id'] = $payment->id;
-
-                // Create or update subscription
-                $subscription = $this->subscriptionService->createOrUpdateSubscription(
-                    $user->id,
-                    $subscriptionType,
-                    $plan->final_price,
-                    $plan->currency,
-                    $subscriptionOptions
-                );
-
-                $payment->update(['subscription_id' => $subscription->id]);
-
-                // Acknowledge purchase (required for CafeBazaar)
-                $this->cafeBazaarService->acknowledgePurchase(
-                    $request->purchase_token,
-                    $request->product_id
-                );
-
-                $payment->update(['is_acknowledged' => true, 'acknowledged_at' => now()]);
-
-                DB::commit();
-
-                Log::info('CafeBazaar purchase verified and subscription activated', [
-                    'user_id' => $user->id,
-                    'payment_id' => $payment->id,
-                    'subscription_id' => $subscription->id,
-                    'product_id' => $request->product_id
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'خرید با موفقیت تایید و اشتراک فعال شد',
-                    'data' => [
-                        'payment' => $payment->fresh()->load('subscription'),
-                        'subscription' => $subscription->fresh()
-                    ]
-                ]);
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-                throw $e;
-            }
-
+            $message = !empty($result['is_duplicate']) ? 'این خرید قبلاً ثبت شده است' : 'خرید با موفقیت تایید و اشتراک فعال شد';
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'payment' => $result['payment'],
+                    'subscription' => $result['subscription'],
+                    'is_duplicate' => $result['is_duplicate'] ?? false,
+                ],
+            ]);
         } catch (\Exception $e) {
             Log::error('CafeBazaar purchase verification failed', [
                 'user_id' => $user->id,
