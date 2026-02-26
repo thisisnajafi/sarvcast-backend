@@ -225,6 +225,9 @@ class CafeBazaarSubscriptionController extends Controller
             if (array_key_exists('price', $subscriptionArray) && $subscriptionArray['price'] !== null) {
                 $subscriptionArray['price'] = (float) $subscriptionArray['price'];
             }
+            $billingPlatform = $subscriptionArray['billing_platform'] ?? null;
+            $subscriptionArray['plan_source'] = $billingPlatform === 'cafebazaar' ? 'cafebazaar' : 'website';
+            $subscriptionArray['source_label'] = $billingPlatform === 'cafebazaar' ? 'کافه‌بازار' : 'وب‌سایت';
 
             return response()->json([
                 'success' => true,
@@ -331,7 +334,7 @@ class CafeBazaarSubscriptionController extends Controller
 
     /**
      * Ensure payment and subscription arrays have numeric fields as numbers (not strings)
-     * so API clients (e.g. Flutter) that expect num? do not get "String is not a subtype of num?".
+     * and include plan source (bazaar vs website) for clients.
      */
     private function normalizeNumericFieldsForApi(array &$payment, array &$subscription): void
     {
@@ -344,6 +347,9 @@ class CafeBazaarSubscriptionController extends Controller
         if (array_key_exists('price', $subscription) && $subscription['price'] !== null) {
             $subscription['price'] = (float) $subscription['price'];
         }
+        $billingPlatform = $subscription['billing_platform'] ?? null;
+        $subscription['plan_source'] = $billingPlatform === 'cafebazaar' ? 'cafebazaar' : 'website';
+        $subscription['source_label'] = $billingPlatform === 'cafebazaar' ? 'کافه‌بازار' : 'وب‌سایت';
     }
 }
 
