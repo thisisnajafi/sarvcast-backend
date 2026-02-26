@@ -430,17 +430,27 @@ class CafeBazaarService
                 ->first();
 
             if ($existingPayment) {
-                Log::info('CafeBazaar verifyAndFulfill: idempotent return', [
+                $existingPayment->load('subscription');
+                if ($existingPayment->subscription && $existingPayment->subscription->id) {
+                    Log::info('CafeBazaar verifyAndFulfill: idempotent return', [
+                        'user_id' => $user->id,
+                        'payment_id' => $existingPayment->id,
+                        'subscription_id' => $existingPayment->subscription->id,
+                        'purchase_token_preview' => substr($purchaseToken, 0, 12) . '...',
+                    ]);
+                    return [
+                        'success' => true,
+                        'payment' => $existingPayment,
+                        'subscription' => $existingPayment->subscription,
+                        'is_duplicate' => true,
+                    ];
+                }
+                Log::warning('CafeBazaar verifyAndFulfill: payment exists but subscription missing, recovering', [
                     'user_id' => $user->id,
                     'payment_id' => $existingPayment->id,
                     'purchase_token_preview' => substr($purchaseToken, 0, 12) . '...',
                 ]);
-                return [
-                    'success' => true,
-                    'payment' => $existingPayment->load('subscription'),
-                    'subscription' => $existingPayment->subscription,
-                    'is_duplicate' => true,
-                ];
+                return $this->recoverSubscriptionForPayment($user, $existingPayment, $purchaseToken, $productId, $orderId);
             }
 
             // 2. Verify with Bazaar (subscription first, then one-time purchase)
@@ -613,6 +623,115 @@ class CafeBazaarService
                 'product_id' => $productId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Recover subscription for an existing payment that has no subscription (incomplete prior run).
+     * Verifies with Bazaar, finds plan, creates/extends subscription, links to payment, commits.
+     */
+    private function recoverSubscriptionForPayment(User $user, Payment $existingPayment, string $purchaseToken, string $productId, ?string $orderId): array
+    {
+        Log::info('CafeBazaar recoverSubscriptionForPayment: start', ['user_id' => $user->id, 'payment_id' => $existingPayment->id]);
+        $verification = $this->verifyPurchaseOrSubscription($purchaseToken, $productId);
+        if (!$verification['success']) {
+            Log::warning('CafeBazaar recoverSubscriptionForPayment: Bazaar verification failed', ['user_id' => $user->id, 'payment_id' => $existingPayment->id]);
+            return [
+                'success' => false,
+                'message' => $verification['message'] ?? 'تایید خرید ناموفق بود',
+                'error_code' => $verification['error_code'] ?? null,
+            ];
+        }
+        $plan = SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
+        if (!$plan) {
+            $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
+            if ($subscriptionType) {
+                $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+            }
+        }
+        if (!$plan) {
+            Log::warning('CafeBazaar recoverSubscriptionForPayment: no plan', ['product_id' => $productId, 'user_id' => $user->id]);
+            return [
+                'success' => false,
+                'message' => 'شناسه محصول نامعتبر است: ' . $productId,
+            ];
+        }
+        $subscriptionType = $plan->slug;
+        DB::beginTransaction();
+        try {
+            $existingSubscription = $this->subscriptionService->getActiveSubscription($user->id);
+            if ($existingSubscription && $existingSubscription->billing_platform === 'cafebazaar') {
+                $currentEndDate = Carbon::parse($existingSubscription->end_date);
+                $newEndDate = $currentEndDate->copy()->addDays($plan->duration_days);
+                Log::info('CafeBazaar recoverSubscriptionForPayment: extending existing subscription', ['subscription_id' => $existingSubscription->id]);
+                $existingSubscription->update([
+                    'end_date' => $newEndDate,
+                    'price' => $plan->final_price,
+                    'currency' => $plan->currency ?? 'IRR',
+                    'status' => 'active',
+                    'auto_renew' => true,
+                    'store_subscription_id' => $verification['order_id'] ?? $orderId,
+                    'store_expiry_time' => $verification['expiry_time'] ?? $newEndDate->toISOString(),
+                    'store_metadata' => array_filter([
+                        'last_purchase_token' => $purchaseToken,
+                        'last_product_id' => $productId,
+                        'last_verification_time' => now()->toISOString(),
+                        'expiry_time' => $verification['expiry_time'] ?? null,
+                        'auto_renewing' => $verification['auto_renewing'] ?? null,
+                    ]),
+                ]);
+                $subscription = $existingSubscription->fresh();
+            } else {
+                $startDate = now();
+                $endDate = Carbon::parse($startDate)->addDays($plan->duration_days);
+                Log::info('CafeBazaar recoverSubscriptionForPayment: creating new subscription', ['user_id' => $user->id, 'type' => $subscriptionType]);
+                $subscription = Subscription::create([
+                    'user_id' => $user->id,
+                    'type' => $subscriptionType,
+                    'status' => 'active',
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'price' => $plan->final_price,
+                    'currency' => $plan->currency ?? 'IRR',
+                    'auto_renew' => true,
+                    'payment_method' => 'in_app_purchase',
+                    'transaction_id' => $existingPayment->transaction_id,
+                    'billing_platform' => 'cafebazaar',
+                    'store_subscription_id' => $verification['order_id'] ?? $orderId,
+                    'auto_renew_enabled' => true,
+                    'store_expiry_time' => $verification['expiry_time'] ?? $endDate->toISOString(),
+                    'store_metadata' => array_filter([
+                        'purchase_token' => $purchaseToken,
+                        'product_id' => $productId,
+                        'verification_time' => now()->toISOString(),
+                        'purchase_state' => $verification['purchase_state'] ?? 'purchased',
+                        'expiry_time' => $verification['expiry_time'] ?? null,
+                        'auto_renewing' => $verification['auto_renewing'] ?? null,
+                    ]),
+                ]);
+            }
+            $existingPayment->update(['subscription_id' => $subscription->id]);
+            DB::commit();
+            Log::info('CafeBazaar recoverSubscriptionForPayment: completed', [
+                'user_id' => $user->id,
+                'payment_id' => $existingPayment->id,
+                'subscription_id' => $subscription->id,
+            ]);
+            return [
+                'success' => true,
+                'payment' => $existingPayment->fresh()->load('subscription'),
+                'subscription' => $subscription->fresh(),
+                'is_duplicate' => true,
+                'acknowledged' => false,
+            ];
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('CafeBazaar recoverSubscriptionForPayment: failed', [
+                'user_id' => $user->id,
+                'payment_id' => $existingPayment->id,
+                'error' => $e->getMessage(),
             ]);
             throw $e;
         }
