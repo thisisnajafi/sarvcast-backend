@@ -65,6 +65,12 @@ return [
         ],
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'), // Group or channel chat ID for payment notifications
+        'enabled' => env('TELEGRAM_NOTIFICATIONS_ENABLED', true), // Set false to disable even when token/chat_id are set
+    ],
+
     'myket' => [
         'package_name' => env('MYKET_PACKAGE_NAME', 'ir.sarvcast.app'),
         'api_key' => env('MYKET_API_KEY'),

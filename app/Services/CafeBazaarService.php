@@ -505,6 +505,8 @@ class CafeBazaarService
 
             DB::commit();
 
+            $this->notifyTelegramPayment($user, $payment->fresh(), $subscription->fresh(), $productId, false);
+
             return [
                 'success' => true,
                 'payment' => $payment->fresh()->load('subscription'),
@@ -521,6 +523,43 @@ class CafeBazaarService
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Send a payment notification to the configured Telegram group. No-op if Telegram is not configured or on failure.
+     */
+    private function notifyTelegramPayment(User $user, Payment $payment, Subscription $subscription, string $productId, bool $isDuplicate): void
+    {
+        $token = config('services.telegram.bot_token');
+        $chatId = config('services.telegram.chat_id');
+        if (empty($token) || empty($chatId) || config('services.telegram.enabled', true) === false) {
+            return;
+        }
+
+        $label = $isDuplicate ? ' (تکرار)' : '';
+        $amount = number_format((float) $payment->amount);
+        $plan = $subscription ? $subscription->type : $productId;
+        $endDate = $subscription && $subscription->end_date
+            ? $subscription->end_date->format('Y-m-d H:i')
+            : '-';
+        $text = "🛒 پرداخت کافه‌بازار{$label}\n"
+            . "کاربر: {$user->id} | مبلغ: {$amount} ریال\n"
+            . "پلن: {$plan} | تا: {$endDate}\n"
+            . "تراکنش: {$payment->transaction_id}";
+
+        try {
+            Http::timeout(5)
+                ->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                    'chat_id' => $chatId,
+                    'text' => $text,
+                    'disable_web_page_preview' => true,
+                ]);
+        } catch (\Throwable $e) {
+            Log::warning('CafeBazaar Telegram notification failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }
