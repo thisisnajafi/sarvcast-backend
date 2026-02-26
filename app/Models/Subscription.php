@@ -35,6 +35,7 @@ class Subscription extends Model
         'end_date' => 'datetime',
         'price' => 'decimal:2',
         'auto_renew' => 'boolean',
+        'store_metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
