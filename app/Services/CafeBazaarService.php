@@ -7,6 +7,7 @@ use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -371,53 +372,84 @@ class CafeBazaarService
      */
     public function verifyAndFulfillSubscription(User $user, string $purchaseToken, string $productId, ?string $orderId = null): array
     {
-        // 1. Idempotency
-        $existingPayment = Payment::where('purchase_token', $purchaseToken)
-            ->where('billing_platform', 'cafebazaar')
-            ->first();
+        $lockKey = 'cafebazaar_verify_' . md5($purchaseToken);
+        $lock = Cache::lock($lockKey, 30);
 
-        if ($existingPayment) {
-            return [
-                'success' => true,
-                'payment' => $existingPayment->load('subscription'),
-                'subscription' => $existingPayment->subscription,
-                'is_duplicate' => true,
-            ];
-        }
-
-        // 2. Verify with Bazaar (subscription first, then one-time purchase)
-        $verification = $this->verifyPurchaseOrSubscription($purchaseToken, $productId);
-        if (!$verification['success']) {
+        if (!$lock->get()) {
+            Log::warning('CafeBazaar verifyAndFulfill: could not acquire lock', ['purchase_token_preview' => substr($purchaseToken, 0, 12) . '...']);
             return [
                 'success' => false,
-                'message' => $verification['message'] ?? 'تایید خرید ناموفق بود',
-                'error_code' => $verification['error_code'] ?? null,
+                'message' => 'در حال پردازش این خرید هستیم. لطفاً چند ثانیه صبر کنید.',
             ];
         }
 
-        // 3. Find plan: cafebazaar_product_id first, then mapping + slug
-        $plan = SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
-        if (!$plan) {
-            $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
-            if ($subscriptionType) {
-                $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
-            }
-        }
-        if (!$plan) {
-            Log::warning('CafeBazaar verifyAndFulfill: no plan for product_id', ['product_id' => $productId, 'user_id' => $user->id]);
-            return [
-                'success' => false,
-                'message' => 'شناسه محصول نامعتبر است: ' . $productId,
-            ];
-        }
-
-        $subscriptionType = $plan->slug;
-        $transactionId = $orderId ?? $verification['order_id'] ?? 'CB_' . time() . '_' . rand(1000, 9999);
-
-        DB::beginTransaction();
         try {
-            // 4. Create payment
-            $payment = Payment::create([
+            return $this->verifyAndFulfillSubscriptionUnderLock($user, $purchaseToken, $productId, $orderId);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * Core verification and fulfillment logic; must be called while holding the purchase_token lock.
+     */
+    private function verifyAndFulfillSubscriptionUnderLock(User $user, string $purchaseToken, string $productId, ?string $orderId): array
+    {
+        // 1. Idempotency (re-check inside lock; another request may have created it)
+            $existingPayment = Payment::where('purchase_token', $purchaseToken)
+                ->where('billing_platform', 'cafebazaar')
+                ->first();
+
+            if ($existingPayment) {
+                Log::info('CafeBazaar verifyAndFulfill: idempotent return', [
+                    'user_id' => $user->id,
+                    'payment_id' => $existingPayment->id,
+                    'purchase_token_preview' => substr($purchaseToken, 0, 12) . '...',
+                ]);
+                return [
+                    'success' => true,
+                    'payment' => $existingPayment->load('subscription'),
+                    'subscription' => $existingPayment->subscription,
+                    'is_duplicate' => true,
+                ];
+            }
+
+            // 2. Verify with Bazaar (subscription first, then one-time purchase)
+            $verification = $this->verifyPurchaseOrSubscription($purchaseToken, $productId);
+            if (!$verification['success']) {
+                return [
+                    'success' => false,
+                    'message' => $verification['message'] ?? 'تایید خرید ناموفق بود',
+                    'error_code' => $verification['error_code'] ?? null,
+                ];
+            }
+            Log::info('CafeBazaar verifyAndFulfill: Bazaar verification OK', ['user_id' => $user->id, 'product_id' => $productId]);
+
+            // 3. Find plan: cafebazaar_product_id first, then mapping + slug
+            $plan = SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
+            if (!$plan) {
+                $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
+                if ($subscriptionType) {
+                    $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+                }
+            }
+            if (!$plan) {
+                Log::warning('CafeBazaar verifyAndFulfill: no plan for product_id', ['product_id' => $productId, 'user_id' => $user->id]);
+                return [
+                    'success' => false,
+                    'message' => 'شناسه محصول نامعتبر است: ' . $productId,
+                ];
+            }
+            Log::info('CafeBazaar verifyAndFulfill: plan found', ['user_id' => $user->id, 'plan_id' => $plan->id, 'slug' => $plan->slug]);
+
+            $subscriptionType = $plan->slug;
+            $transactionId = $orderId ?? $verification['order_id'] ?? 'CB_' . time() . '_' . rand(1000, 9999);
+
+            DB::beginTransaction();
+            try {
+                // 4. Create payment
+                Log::info('CafeBazaar verifyAndFulfill: creating payment', ['user_id' => $user->id, 'product_id' => $productId]);
+                $payment = Payment::create([
                 'user_id' => $user->id,
                 'amount' => $plan->final_price,
                 'currency' => $plan->currency ?? 'IRR',
@@ -443,6 +475,7 @@ class CafeBazaarService
                     'billing_platform' => 'cafebazaar',
                 ],
             ]);
+            Log::info('CafeBazaar verifyAndFulfill: payment created', ['user_id' => $user->id, 'payment_id' => $payment->id]);
 
             // 5. Get or create subscription (extend only if existing is CafeBazaar)
             $existingSubscription = $this->subscriptionService->getActiveSubscription($user->id);
@@ -494,6 +527,7 @@ class CafeBazaarService
                     ]),
                 ]);
             }
+            Log::info('CafeBazaar verifyAndFulfill: subscription created/updated', ['user_id' => $user->id, 'subscription_id' => $subscription->id]);
 
             $payment->update(['subscription_id' => $subscription->id]);
 
@@ -504,6 +538,11 @@ class CafeBazaarService
             }
 
             DB::commit();
+            Log::info('CafeBazaar verifyAndFulfill: transaction committed', [
+                'user_id' => $user->id,
+                'payment_id' => $payment->id,
+                'subscription_id' => $subscription->id,
+            ]);
 
             $this->notifyTelegramPayment($user, $payment->fresh(), $subscription->fresh(), $productId, false);
 

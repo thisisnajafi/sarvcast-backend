@@ -145,8 +145,23 @@ class CafeBazaarSubscriptionController extends Controller
                 ? 'این خرید قبلاً ثبت و تایید شده است'
                 : 'خرید با موفقیت تایید و اشتراک فعال شد';
 
-            $paymentArray = $result['payment']->toArray();
-            $subscriptionArray = $result['subscription']->toArray();
+            $payment = $result['payment'];
+            $subscription = $result['subscription'];
+            if (!$payment || !$subscription || !$payment->id || !$subscription->id) {
+                Log::error('CafeBazaar verification returned success but payment/subscription missing', [
+                    'user_id' => $user->id,
+                    'product_id' => $productId,
+                    'payment_id' => $payment?->id,
+                    'subscription_id' => $subscription?->id,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در ثبت پرداخت. لطفاً با پشتیبانی تماس بگیرید.',
+                ], 500);
+            }
+
+            $paymentArray = $payment->toArray();
+            $subscriptionArray = $subscription->toArray();
             $this->normalizeNumericFieldsForApi($paymentArray, $subscriptionArray);
 
             return response()->json([
