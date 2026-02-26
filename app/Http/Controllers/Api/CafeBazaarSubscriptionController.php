@@ -117,16 +117,26 @@ class CafeBazaarSubscriptionController extends Controller
             $result = $this->cafeBazaarService->verifyAndFulfillSubscription($user, $purchaseToken, $productId, $orderId);
 
             if (!$result['success']) {
-                $statusCode = isset($result['error_code']) && $result['error_code'] === CafeBazaarService::ERROR_API_KEY_NOT_CONFIGURED ? 503 : 400;
+                $statusCode = 400;
+                if (isset($result['error_code']) && in_array($result['error_code'], [CafeBazaarService::ERROR_API_KEY_NOT_CONFIGURED, CafeBazaarService::ERROR_INVALID_CREDENTIALS], true)) {
+                    $statusCode = 503;
+                }
                 Log::error('CafeBazaar subscription verification failed', [
                     'user_id' => $user->id,
                     'product_id' => $productId,
                     'message' => $result['message'] ?? null,
                     'error_code' => $result['error_code'] ?? null,
                 ]);
+                $message = $result['message'] ?? 'تایید خرید ناموفق بود';
+                // Never send HTML to the client (e.g. if an upstream 404 was returned as body)
+                if (is_string($message) && (str_contains($message, '<') || str_contains($message, 'DOCTYPE'))) {
+                    $message = $result['error_code'] === CafeBazaarService::ERROR_INVALID_CREDENTIALS
+                        ? 'توکن دسترسی کافه‌بازار نامعتبر است. لطفاً از پیشخوان توسعه‌دهنده توکن جدید بگیرید.'
+                        : 'تایید خرید ناموفق بود. لطفاً بعداً تلاش کنید.';
+                }
                 return response()->json([
                     'success' => false,
-                    'message' => $result['message'] ?? 'تایید خرید ناموفق بود',
+                    'message' => $message,
                     'error_code' => $result['error_code'] ?? null,
                 ], $statusCode);
             }

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
  * Subscription (بررسی وضعیت اشتراک): GET
  *   https://pardakht.cafebazaar.ir/devapi/v2/api/applications/<package_name>/subscriptions/<subscription_id>/purchases/<purchase_token>
  * One-time purchase: POST https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/
- *   Body: packageName, productId, purchaseToken. Auth: Bearer access_token (from Pishkhan).
+ *   Body: packageName, productId, purchaseToken. Auth: Header CAFEBAZAAR-PISHKHAN-API-SECRET (Pishkhan).
  * order_id: When Bazaar does not return orderId, we use the client-supplied order_id.
  * Acknowledge: If the acknowledge endpoint returns 404, we log and treat verification as success (non-fatal).
  */
@@ -25,6 +25,9 @@ class CafeBazaarService
 {
     /** Error code when API key is not configured (distinct from Bazaar rejection). */
     public const ERROR_API_KEY_NOT_CONFIGURED = 'cafebazaar_config_missing';
+
+    /** Error code when Cafe Bazaar rejects the access token (expired or invalid). */
+    public const ERROR_INVALID_CREDENTIALS = 'invalid_credentials';
 
     protected $packageName;
     protected $apiKey;
@@ -70,7 +73,7 @@ class CafeBazaarService
             ]);
 
             $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                config('services.cafebazaar.api_header_name', 'CAFEBAZAAR-PISHKHAN-API-SECRET') => $this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post($url, [
                 'packageName' => $this->packageName,
@@ -117,17 +120,23 @@ class CafeBazaarService
             $body = is_string($response->body()) && str_starts_with(trim($response->body()), '{')
                 ? $response->json()
                 : [];
-            $errorMsg = $body['error_description'] ?? $body['error'] ?? $response->body();
+            $errorMsg = is_array($body) ? ($body['error_description'] ?? $body['error'] ?? $body['message'] ?? null) : null;
+            if (!is_string($errorMsg) || $errorMsg === '') {
+                $errorMsg = $response->status() === 404
+                    ? 'آدرس تایید خرید در کافه‌بازار یافت نشد (404). برای اشتراک از endpoint وضعیت اشتراک استفاده می‌شود.'
+                    : 'خطا در ارتباط با کافه‌بازار';
+            }
             Log::error('CafeBazaar API request failed', [
                 'product_id' => $productId,
                 'status_code' => $response->status(),
                 'error' => $body['error'] ?? null,
-                'response_body' => $response->body()
+                'response_body' => substr($response->body(), 0, 500),
             ]);
             return [
                 'success' => false,
-                'message' => is_string($errorMsg) ? $errorMsg : 'خطا در ارتباط با کافه‌بازار',
-                'status_code' => $response->status()
+                'message' => $errorMsg,
+                'status_code' => $response->status(),
+                'error_code' => is_array($body) ? ($body['error'] ?? null) : null,
             ];
         } catch (\Exception $e) {
             Log::error('CafeBazaar verification exception', [
@@ -179,7 +188,7 @@ class CafeBazaarService
             ]);
 
             $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                config('services.cafebazaar.api_header_name', 'CAFEBAZAAR-PISHKHAN-API-SECRET') => $this->apiKey,
                 'Accept' => 'application/json',
             ])->get($subscriptionUrl);
 
@@ -224,6 +233,11 @@ class CafeBazaarService
             if (!$errorMsg && $response->status() === 404) {
                 $errorMsg = 'اشتراک یا توکن در کافه‌بازار یافت نشد (404)';
             }
+            $errorCode = is_array($body) && isset($body['error']) ? $body['error'] : null;
+            if ($response->status() === 403 && $errorCode === 'invalid_credentials') {
+                $errorMsg = 'توکن دسترسی کافه‌بازار نامعتبر یا منقضی است. از پیشخوان توسعه‌دهنده (developers.cafebazaar.ir) توکن جدید بگیرید و CAFEBAZAAR_API_KEY را به‌روز کنید.';
+                $errorCode = self::ERROR_INVALID_CREDENTIALS;
+            }
             Log::error('CafeBazaar subscription API request failed', [
                 'subscription_id' => $subscriptionId,
                 'status_code' => $response->status(),
@@ -233,6 +247,7 @@ class CafeBazaarService
             return [
                 'success' => false,
                 'message' => is_string($errorMsg) ? $errorMsg : 'خطا در ارتباط با کافه‌بازار',
+                'error_code' => $errorCode,
             ];
         } catch (\Exception $e) {
             Log::error('CafeBazaar subscription verification exception', [
@@ -261,6 +276,10 @@ class CafeBazaarService
         if ($sub['success']) {
             return $sub;
         }
+        // Do not fall back to purchase endpoint when the failure is token/config (user must fix token).
+        if (isset($sub['error_code']) && in_array($sub['error_code'], [self::ERROR_INVALID_CREDENTIALS, self::ERROR_API_KEY_NOT_CONFIGURED], true)) {
+            return $sub;
+        }
         $purchase = $this->verifyPurchase($purchaseToken, $productId);
         return $purchase;
     }
@@ -279,7 +298,7 @@ class CafeBazaarService
                 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge');
 
             $response = Http::timeout(15)->connectTimeout(8)->withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                config('services.cafebazaar.api_header_name', 'CAFEBAZAAR-PISHKHAN-API-SECRET') => $this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post($acknowledgeUrl, [
                 'packageName' => $this->packageName,

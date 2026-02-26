@@ -77,10 +77,12 @@ try {
     $kernel->bootstrap();
 
     $commands = [
-        'config:cache'  => [],
-        'route:cache'   => [],
-        'view:cache'    => [],
-        'storage:link'  => ['--force' => true],
+        'clear-compiled' => [],
+        'config:cache'   => [],
+        'route:cache'    => [],
+        'view:cache'     => [],
+        'optimize'       => [],
+        'storage:link'   => ['--force' => true],
     ];
 
     foreach ($commands as $cmd => $args) {

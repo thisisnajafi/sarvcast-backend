@@ -71,13 +71,13 @@ jobs:
             Makefile*
             .gitlab-ci.yml
 
-      - name: Post-deploy setup (cache & storage link)
+      - name: Clear and cache configurations
         run: |
-          echo "Running post-deploy setup..."
+          echo "Running clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link on server..."
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 60 --connect-timeout 15)
+            --max-time 90 --connect-timeout 15)
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
@@ -88,7 +88,7 @@ jobs:
           if [[ "$HTTP_CODE" == "200" ]]; then
             echo "Post-deploy setup completed successfully"
           else
-            echo "::warning::Post-deploy helper returned HTTP $HTTP_CODE — may need manual cache clear"
+            echo "::warning::Deploy helper returned HTTP $HTTP_CODE — may need manual cache clear"
           fi
 
       - name: Notify Telegram (success)

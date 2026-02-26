@@ -45,13 +45,13 @@ return [
 
     'cafebazaar' => [
         'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.sarvabi.sarvcast'),
-        // Access token from Pishkhan (developers.cafebazaar.ir) → Your app → Payment settings
+        // API key from Pishkhan; sent in header CAFEBAZAAR-PISHKHAN-API-SECRET (doc: developers.cafebazaar.ir)
         'api_key' => env('CAFEBAZAAR_API_KEY'),
-        // Base for subscription URL (path is built in code)
+        'api_header_name' => env('CAFEBAZAAR_API_HEADER_NAME', 'CAFEBAZAAR-PISHKHAN-API-SECRET'),
+        // Base for subscription URL: GET applications/<package_name>/subscriptions/<subscription_id>/purchases/<purchase_token>
         'api_base_url' => env('CAFEBAZAAR_API_BASE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api'),
-        // One-time in-app purchase: POST with packageName, productId, purchaseToken
+        // One-time in-app purchase: POST validate/inapp/purchases/
         'api_url' => env('CAFEBAZAAR_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/'),
-        // Subscription status: GET applications/<package_name>/subscriptions/<subscription_id>/purchases/<purchase_token> (built in CafeBazaarService)
         'acknowledge_url' => env('CAFEBAZAAR_ACKNOWLEDGE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge'),
         'product_mapping' => [
             'subscription_1month' => '1month',
