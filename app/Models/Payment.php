@@ -55,6 +55,7 @@ class Payment extends Model
             'refund_amount' => 'decimal:2',
             'payment_metadata' => 'array',
             'metadata' => 'array',
+            'store_response' => 'array',
             'processed_at' => 'datetime',
             'refunded_at' => 'datetime',
         ];
