@@ -145,12 +145,16 @@ class CafeBazaarSubscriptionController extends Controller
                 ? 'این خرید قبلاً ثبت و تایید شده است'
                 : 'خرید با موفقیت تایید و اشتراک فعال شد';
 
+            $paymentArray = $result['payment']->toArray();
+            $subscriptionArray = $result['subscription']->toArray();
+            $this->normalizeNumericFieldsForApi($paymentArray, $subscriptionArray);
+
             return response()->json([
                 'success' => true,
                 'message' => $message,
                 'data' => [
-                    'payment' => $result['payment'],
-                    'subscription' => $result['subscription'],
+                    'payment' => $paymentArray,
+                    'subscription' => $subscriptionArray,
                     'is_duplicate' => $result['is_duplicate'] ?? false,
                     'acknowledged' => $result['acknowledged'] ?? false,
                 ],
@@ -217,12 +221,16 @@ class CafeBazaarSubscriptionController extends Controller
             }
 
             $isActive = $subscription->status === 'active' && $subscription->end_date > now();
+            $subscriptionArray = $subscription->toArray();
+            if (array_key_exists('price', $subscriptionArray) && $subscriptionArray['price'] !== null) {
+                $subscriptionArray['price'] = (float) $subscriptionArray['price'];
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'has_subscription' => true,
-                    'subscription' => $subscription,
+                    'subscription' => $subscriptionArray,
                     'is_active' => $isActive,
                     'days_remaining' => $isActive ? max(0, now()->diffInDays($subscription->end_date, false)) : 0,
                     'status' => $subscription->status,
@@ -318,6 +326,23 @@ class CafeBazaarSubscriptionController extends Controller
                 'success' => false,
                 'message' => 'خطا در بازیابی خریدها',
             ], 500);
+        }
+    }
+
+    /**
+     * Ensure payment and subscription arrays have numeric fields as numbers (not strings)
+     * so API clients (e.g. Flutter) that expect num? do not get "String is not a subtype of num?".
+     */
+    private function normalizeNumericFieldsForApi(array &$payment, array &$subscription): void
+    {
+        $decimalKeys = ['amount', 'gateway_fee', 'net_amount', 'exchange_rate', 'refund_amount'];
+        foreach ($decimalKeys as $key) {
+            if (array_key_exists($key, $payment) && $payment[$key] !== null) {
+                $payment[$key] = (float) $payment[$key];
+            }
+        }
+        if (array_key_exists('price', $subscription) && $subscription['price'] !== null) {
+            $subscription['price'] = (float) $subscription['price'];
         }
     }
 }
