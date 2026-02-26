@@ -55,9 +55,10 @@ class CafeBazaarService
      */
     public function verifyPurchase(string $purchaseToken, string $productId): array
     {
+        Log::info('CafeBazaar verifyPurchase: start', ['product_id' => $productId]);
         try {
             if (empty($this->apiKey)) {
-                Log::error('CafeBazaar API key not configured');
+                Log::error('CafeBazaar verifyPurchase: API key not configured');
                 return [
                     'success' => false,
                     'message' => 'پیکربندی کافه‌بازار ناقص است (API key)',
@@ -94,6 +95,7 @@ class CafeBazaarService
                 ]);
 
                 if ($purchaseState === 0 || $purchaseState === '0') {
+                    Log::info('CafeBazaar verifyPurchase: success', ['product_id' => $productId, 'order_id' => $result['orderId'] ?? null]);
                     return [
                         'success' => true,
                         'purchase_state' => 'purchased',
@@ -104,6 +106,7 @@ class CafeBazaarService
                         'raw_response' => $result
                     ];
                 }
+                Log::info('CafeBazaar verifyPurchase: purchaseState not valid', ['product_id' => $productId, 'purchaseState' => $purchaseState]);
                 $errorMessage = $purchaseState === 1 || $purchaseState === '1'
                     ? 'خرید بازگشت داده شده است (Refund)'
                     : ('وضعیت خرید نامعتبر: ' . ($result['error_description'] ?? 'purchaseState=' . $purchaseState));
@@ -128,7 +131,7 @@ class CafeBazaarService
                     ? 'آدرس تایید خرید در کافه‌بازار یافت نشد (404). برای اشتراک از endpoint وضعیت اشتراک استفاده می‌شود.'
                     : 'خطا در ارتباط با کافه‌بازار';
             }
-            Log::error('CafeBazaar API request failed', [
+            Log::error('CafeBazaar verifyPurchase: API request failed', [
                 'product_id' => $productId,
                 'status_code' => $response->status(),
                 'error' => $body['error'] ?? null,
@@ -141,7 +144,7 @@ class CafeBazaarService
                 'error_code' => is_array($body) ? ($body['error'] ?? null) : null,
             ];
         } catch (\Exception $e) {
-            Log::error('CafeBazaar verification exception', [
+            Log::error('CafeBazaar verifyPurchase: exception', [
                 'product_id' => $productId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -167,9 +170,10 @@ class CafeBazaarService
      */
     public function verifySubscription(string $purchaseToken, string $subscriptionId): array
     {
+        Log::info('CafeBazaar verifySubscription: start', ['subscription_id' => $subscriptionId]);
         try {
             if (empty($this->apiKey)) {
-                Log::error('CafeBazaar API key not configured');
+                Log::error('CafeBazaar verifySubscription: API key not configured');
                 return [
                     'success' => false,
                     'message' => 'پیکربندی کافه‌بازار ناقص است (API key)',
@@ -197,6 +201,7 @@ class CafeBazaarService
             if ($response->successful()) {
                 $result = $response->json();
                 if (!is_array($result)) {
+                    Log::warning('CafeBazaar verifySubscription: response not array', ['subscription_id' => $subscriptionId]);
                     return [
                         'success' => false,
                         'message' => 'پاسخ نامعتبر از کافه‌بازار',
@@ -210,6 +215,7 @@ class CafeBazaarService
                 ]);
 
                 if ($purchaseState === 0 || $purchaseState === '0' || $purchaseState === 'active' || $purchaseState === 'Active') {
+                    Log::info('CafeBazaar verifySubscription: success', ['subscription_id' => $subscriptionId, 'order_id' => $result['orderId'] ?? $result['order_id'] ?? null]);
                     $purchaseTime = $result['purchaseTime'] ?? $result['purchaseTimeMillis'] ?? null;
                     $expiryMillis = $result['expiryTimeMillis'] ?? $result['expiryTime'] ?? null;
                     return [
@@ -223,12 +229,14 @@ class CafeBazaarService
                         'raw_response' => $result,
                     ];
                 }
+                Log::info('CafeBazaar verifySubscription: purchaseState not active', ['subscription_id' => $subscriptionId, 'purchaseState' => $purchaseState]);
                 return [
                     'success' => false,
                     'message' => $result['error_description'] ?? $result['errorMessage'] ?? $result['message'] ?? 'تایید اشتراک ناموفق بود',
                 ];
             }
 
+            Log::info('CafeBazaar verifySubscription: HTTP not successful', ['subscription_id' => $subscriptionId, 'status_code' => $response->status()]);
             $body = is_string($response->body()) && str_starts_with(trim($response->body()), '{')
                 ? $response->json()
                 : [];
@@ -241,7 +249,7 @@ class CafeBazaarService
                 $errorMsg = 'توکن دسترسی کافه‌بازار نامعتبر یا منقضی است. از پیشخوان توسعه‌دهنده (developers.cafebazaar.ir) توکن جدید بگیرید و CAFEBAZAAR_API_KEY را به‌روز کنید.';
                 $errorCode = self::ERROR_INVALID_CREDENTIALS;
             }
-            Log::error('CafeBazaar subscription API request failed', [
+            Log::error('CafeBazaar verifySubscription: API request failed', [
                 'subscription_id' => $subscriptionId,
                 'status_code' => $response->status(),
                 'error' => $body['error'] ?? null,
@@ -253,7 +261,7 @@ class CafeBazaarService
                 'error_code' => $errorCode,
             ];
         } catch (\Exception $e) {
-            Log::error('CafeBazaar subscription verification exception', [
+            Log::error('CafeBazaar verifySubscription: exception', [
                 'subscription_id' => $subscriptionId,
                 'error' => $e->getMessage(),
             ]);
@@ -275,15 +283,20 @@ class CafeBazaarService
      */
     public function verifyPurchaseOrSubscription(string $purchaseToken, string $productId): array
     {
+        Log::info('CafeBazaar verifyPurchaseOrSubscription: start', ['product_id' => $productId]);
         $sub = $this->verifySubscription($purchaseToken, $productId);
         if ($sub['success']) {
+            Log::info('CafeBazaar verifyPurchaseOrSubscription: subscription endpoint OK', ['product_id' => $productId]);
             return $sub;
         }
         // Do not fall back to purchase endpoint when the failure is token/config (user must fix token).
         if (isset($sub['error_code']) && in_array($sub['error_code'], [self::ERROR_INVALID_CREDENTIALS, self::ERROR_API_KEY_NOT_CONFIGURED], true)) {
+            Log::info('CafeBazaar verifyPurchaseOrSubscription: not falling back (config/token error)', ['product_id' => $productId, 'error_code' => $sub['error_code']]);
             return $sub;
         }
+        Log::info('CafeBazaar verifyPurchaseOrSubscription: falling back to one-time purchase', ['product_id' => $productId]);
         $purchase = $this->verifyPurchase($purchaseToken, $productId);
+        Log::info('CafeBazaar verifyPurchaseOrSubscription: done', ['product_id' => $productId, 'success' => $purchase['success'] ?? false]);
         return $purchase;
     }
 
@@ -296,6 +309,7 @@ class CafeBazaarService
      */
     public function acknowledgePurchase(string $purchaseToken, string $productId): array
     {
+        Log::info('CafeBazaar acknowledgePurchase: start', ['product_id' => $productId]);
         try {
             $acknowledgeUrl = config('services.cafebazaar.acknowledge_url',
                 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge');
@@ -312,22 +326,26 @@ class CafeBazaarService
             if ($response->successful()) {
                 $result = $response->json();
                 if (isset($result['status']) && $result['status'] == 0) {
+                    Log::info('CafeBazaar acknowledgePurchase: success', ['product_id' => $productId]);
                     return ['success' => true];
                 }
+                Log::warning('CafeBazaar acknowledgePurchase: response successful but status not 0', ['product_id' => $productId, 'result' => $result ?? []]);
             }
 
             // Acknowledge endpoint may not exist or return different format; log but don't fail verification.
             // Support: 404 here means "acknowledge not called"; verification still succeeded.
             if ($response->status() === 404) {
-                Log::warning('CafeBazaar acknowledge endpoint returned 404 (may be optional)', [
-                    'acknowledge_url' => $acknowledgeUrl
+                Log::warning('CafeBazaar acknowledgePurchase: endpoint returned 404 (treated as success)', [
+                    'acknowledge_url' => $acknowledgeUrl,
+                    'product_id' => $productId,
                 ]);
                 return ['success' => true];
             }
 
+            Log::warning('CafeBazaar acknowledgePurchase: failed', ['product_id' => $productId, 'status_code' => $response->status()]);
             return ['success' => false, 'message' => 'خطا در تایید خرید'];
         } catch (\Exception $e) {
-            Log::error('CafeBazaar acknowledge exception', [
+            Log::error('CafeBazaar acknowledgePurchase: exception', [
                 'error' => $e->getMessage()
             ]);
             return ['success' => false, 'message' => $e->getMessage()];
@@ -345,9 +363,11 @@ class CafeBazaarService
      */
     public function mapProductIdToSubscriptionType(string $productId): ?string
     {
+        Log::info('CafeBazaar mapProductIdToSubscriptionType: start', ['product_id' => $productId]);
         // 1. Dynamic lookup: find plan by cafebazaar_product_id in the database
         $plan = \App\Models\SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
         if ($plan) {
+            Log::info('CafeBazaar mapProductIdToSubscriptionType: found plan by cafebazaar_product_id', ['product_id' => $productId, 'slug' => $plan->slug]);
             return $plan->slug;
         }
 
@@ -358,8 +378,13 @@ class CafeBazaarService
             'subscription_6months' => '6months',
             'subscription_1year' => '1year',
         ]);
-
-        return $mapping[$productId] ?? null;
+        $slug = $mapping[$productId] ?? null;
+        if ($slug !== null) {
+            Log::info('CafeBazaar mapProductIdToSubscriptionType: found via config mapping', ['product_id' => $productId, 'slug' => $slug]);
+        } else {
+            Log::info('CafeBazaar mapProductIdToSubscriptionType: no mapping', ['product_id' => $productId]);
+        }
+        return $slug;
     }
 
     /**
@@ -374,6 +399,7 @@ class CafeBazaarService
      */
     public function verifyAndFulfillSubscription(User $user, string $purchaseToken, string $productId, ?string $orderId = null): array
     {
+        Log::info('CafeBazaar verifyAndFulfillSubscription: start', ['user_id' => $user->id, 'product_id' => $productId, 'order_id' => $orderId]);
         $lockKey = 'cafebazaar_verify_' . md5($purchaseToken);
         $lock = Cache::lock($lockKey, 30);
 
@@ -398,6 +424,7 @@ class CafeBazaarService
     private function verifyAndFulfillSubscriptionUnderLock(User $user, string $purchaseToken, string $productId, ?string $orderId): array
     {
         // 1. Idempotency (re-check inside lock; another request may have created it)
+            Log::info('CafeBazaar verifyAndFulfill: step 1 idempotency check', ['user_id' => $user->id]);
             $existingPayment = Payment::where('purchase_token', $purchaseToken)
                 ->where('billing_platform', 'cafebazaar')
                 ->first();
@@ -417,8 +444,10 @@ class CafeBazaarService
             }
 
             // 2. Verify with Bazaar (subscription first, then one-time purchase)
+            Log::info('CafeBazaar verifyAndFulfill: step 2 verify with Bazaar', ['user_id' => $user->id, 'product_id' => $productId]);
             $verification = $this->verifyPurchaseOrSubscription($purchaseToken, $productId);
             if (!$verification['success']) {
+                Log::warning('CafeBazaar verifyAndFulfill: Bazaar verification failed', ['user_id' => $user->id, 'product_id' => $productId, 'message' => $verification['message'] ?? null]);
                 return [
                     'success' => false,
                     'message' => $verification['message'] ?? 'تایید خرید ناموفق بود',
@@ -426,11 +455,14 @@ class CafeBazaarService
                 ];
             }
             Log::info('CafeBazaar verifyAndFulfill: Bazaar verification OK', ['user_id' => $user->id, 'product_id' => $productId]);
+            Log::info('CafeBazaar: verification successful; persisting payment and subscription for user in DB', ['user_id' => $user->id, 'product_id' => $productId]);
 
             // 3. Find plan: cafebazaar_product_id first, then mapping + slug
+            Log::info('CafeBazaar verifyAndFulfill: step 3 find plan', ['user_id' => $user->id, 'product_id' => $productId]);
             $plan = SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
             if (!$plan) {
                 $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
+                Log::info('CafeBazaar verifyAndFulfill: plan by cafebazaar_product_id not found, trying slug', ['product_id' => $productId, 'mapped_slug' => $subscriptionType]);
                 if ($subscriptionType) {
                     $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
                 }
@@ -446,11 +478,13 @@ class CafeBazaarService
 
             $subscriptionType = $plan->slug;
             $transactionId = $orderId ?? $verification['order_id'] ?? 'CB_' . time() . '_' . rand(1000, 9999);
+            Log::info('CafeBazaar verifyAndFulfill: step 4 begin transaction', ['user_id' => $user->id, 'transaction_id' => $transactionId]);
 
             DB::beginTransaction();
             try {
                 // 4. Create payment
-                Log::info('CafeBazaar verifyAndFulfill: creating payment', ['user_id' => $user->id, 'product_id' => $productId]);
+                Log::info('CafeBazaar verifyAndFulfill: step 4a creating payment', ['user_id' => $user->id, 'product_id' => $productId]);
+                Log::info('CafeBazaar DB: inserting into payments table', ['user_id' => $user->id, 'amount' => $plan->final_price, 'transaction_id' => $transactionId]);
                 $payment = Payment::create([
                 'user_id' => $user->id,
                 'amount' => $plan->final_price,
@@ -478,12 +512,17 @@ class CafeBazaarService
                 ],
             ]);
             Log::info('CafeBazaar verifyAndFulfill: payment created', ['user_id' => $user->id, 'payment_id' => $payment->id]);
+            Log::info('CafeBazaar DB: payments row inserted', ['user_id' => $user->id, 'payment_id' => $payment->id]);
 
             // 5. Get or create subscription (extend only if existing is CafeBazaar)
+            Log::info('CafeBazaar verifyAndFulfill: step 5 get or create subscription', ['user_id' => $user->id]);
+            Log::info('CafeBazaar DB: setting subscription for user (extend existing or create new)', ['user_id' => $user->id]);
             $existingSubscription = $this->subscriptionService->getActiveSubscription($user->id);
             if ($existingSubscription && $existingSubscription->billing_platform === 'cafebazaar') {
+                Log::info('CafeBazaar verifyAndFulfill: extending existing CafeBazaar subscription', ['user_id' => $user->id, 'subscription_id' => $existingSubscription->id]);
                 $currentEndDate = Carbon::parse($existingSubscription->end_date);
                 $newEndDate = $currentEndDate->copy()->addDays($plan->duration_days);
+                Log::info('CafeBazaar DB: updating subscriptions table (extend)', ['user_id' => $user->id, 'subscription_id' => $existingSubscription->id, 'new_end_date' => $newEndDate->toISOString()]);
                 $existingSubscription->update([
                     'end_date' => $newEndDate,
                     'price' => $plan->final_price,
@@ -501,9 +540,12 @@ class CafeBazaarService
                     ]),
                 ]);
                 $subscription = $existingSubscription->fresh();
+                Log::info('CafeBazaar DB: subscriptions table updated (extended)', ['user_id' => $user->id, 'subscription_id' => $subscription->id]);
             } else {
+                Log::info('CafeBazaar verifyAndFulfill: creating new subscription', ['user_id' => $user->id, 'type' => $subscriptionType]);
                 $startDate = now();
                 $endDate = Carbon::parse($startDate)->addDays($plan->duration_days);
+                Log::info('CafeBazaar DB: inserting into subscriptions table', ['user_id' => $user->id, 'type' => $subscriptionType, 'start_date' => $startDate->toISOString(), 'end_date' => $endDate->toISOString()]);
                 $subscription = Subscription::create([
                     'user_id' => $user->id,
                     'type' => $subscriptionType,
@@ -528,26 +570,35 @@ class CafeBazaarService
                         'auto_renewing' => $verification['auto_renewing'] ?? null,
                     ]),
                 ]);
+                Log::info('CafeBazaar DB: subscriptions row inserted', ['user_id' => $user->id, 'subscription_id' => $subscription->id]);
             }
             Log::info('CafeBazaar verifyAndFulfill: subscription created/updated', ['user_id' => $user->id, 'subscription_id' => $subscription->id]);
 
+            Log::info('CafeBazaar verifyAndFulfill: step 6 link payment to subscription', ['payment_id' => $payment->id, 'subscription_id' => $subscription->id]);
+            Log::info('CafeBazaar DB: linking payment to subscription (update payments.subscription_id)', ['payment_id' => $payment->id, 'subscription_id' => $subscription->id]);
             $payment->update(['subscription_id' => $subscription->id]);
 
             // 6. Acknowledge (404 is non-fatal; see acknowledgePurchase)
+            Log::info('CafeBazaar verifyAndFulfill: step 7 acknowledge purchase', ['product_id' => $productId]);
             $acknowledgement = $this->acknowledgePurchase($purchaseToken, $productId);
+            Log::info('CafeBazaar verifyAndFulfill: acknowledge result', ['product_id' => $productId, 'acknowledged' => $acknowledgement['success']]);
             if ($acknowledgement['success']) {
                 $payment->update(['is_acknowledged' => true, 'acknowledged_at' => now()]);
             }
 
+            Log::info('CafeBazaar verifyAndFulfill: step 8 commit transaction', ['user_id' => $user->id]);
             DB::commit();
             Log::info('CafeBazaar verifyAndFulfill: transaction committed', [
                 'user_id' => $user->id,
                 'payment_id' => $payment->id,
                 'subscription_id' => $subscription->id,
             ]);
+            Log::info('CafeBazaar DB: payment and subscription for user persisted successfully', ['user_id' => $user->id, 'payment_id' => $payment->id, 'subscription_id' => $subscription->id]);
 
+            Log::info('CafeBazaar verifyAndFulfill: step 9 notify Telegram', ['user_id' => $user->id]);
             $this->notifyTelegramPayment($user, $payment->fresh(), $subscription->fresh(), $productId, false);
 
+            Log::info('CafeBazaar verifyAndFulfill: completed successfully', ['user_id' => $user->id, 'payment_id' => $payment->id, 'subscription_id' => $subscription->id]);
             return [
                 'success' => true,
                 'payment' => $payment->fresh()->load('subscription'),
@@ -557,7 +608,7 @@ class CafeBazaarService
             ];
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('CafeBazaar verifyAndFulfillSubscription failed', [
+            Log::error('CafeBazaar verifyAndFulfill: exception (transaction rolled back)', [
                 'user_id' => $user->id,
                 'product_id' => $productId,
                 'error' => $e->getMessage(),
@@ -572,9 +623,11 @@ class CafeBazaarService
      */
     private function notifyTelegramPayment(User $user, Payment $payment, Subscription $subscription, string $productId, bool $isDuplicate): void
     {
+        Log::info('CafeBazaar notifyTelegramPayment: start', ['user_id' => $user->id, 'payment_id' => $payment->id]);
         $token = config('services.telegram.bot_token');
         $chatId = config('services.telegram.chat_id');
         if (empty($token) || empty($chatId) || config('services.telegram.enabled', true) === false) {
+            Log::info('CafeBazaar notifyTelegramPayment: skipped (not configured or disabled)', ['user_id' => $user->id]);
             return;
         }
 
@@ -590,14 +643,16 @@ class CafeBazaarService
             . "تراکنش: {$payment->transaction_id}";
 
         try {
+            Log::info('CafeBazaar notifyTelegramPayment: sending', ['user_id' => $user->id]);
             Http::timeout(5)
                 ->post("https://api.telegram.org/bot{$token}/sendMessage", [
                     'chat_id' => $chatId,
                     'text' => $text,
                     'disable_web_page_preview' => true,
                 ]);
+            Log::info('CafeBazaar notifyTelegramPayment: sent', ['user_id' => $user->id]);
         } catch (\Throwable $e) {
-            Log::warning('CafeBazaar Telegram notification failed', [
+            Log::warning('CafeBazaar notifyTelegramPayment: failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
