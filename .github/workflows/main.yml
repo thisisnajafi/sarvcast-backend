@@ -73,7 +73,8 @@ jobs:
 
       - name: Clear and cache configurations
         run: |
-          echo "Running clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link on server..."
+          echo "::group::Clear and cache configurations (server)"
+          echo "Calling deploy helper: clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
@@ -82,14 +83,38 @@ jobs:
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
 
-          echo "HTTP $HTTP_CODE"
-          echo "$BODY"
+          echo "HTTP status: $HTTP_CODE"
 
-          if [[ "$HTTP_CODE" == "200" ]]; then
-            echo "Post-deploy setup completed successfully"
-          else
+          if [[ "$HTTP_CODE" != "200" ]]; then
             echo "::warning::Deploy helper returned HTTP $HTTP_CODE — may need manual cache clear"
+            echo "Raw response: $BODY"
+            echo "::endgroup::"
+            exit 1
           fi
+
+          # Log each command result from the helper so we can confirm all steps ran
+          if command -v jq &>/dev/null; then
+            STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
+            echo "Helper status: $STATUS"
+            echo "Command results:"
+            echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do
+              echo "  - $line"
+              if echo "$line" | grep -q "FAILED"; then
+                echo "::warning::$line"
+              fi
+            done
+            FAILED=$(echo "$BODY" | jq -r '[.results[]? | select(. | test("FAILED"))] | length' 2>/dev/null || echo "0")
+            if [[ "$FAILED" != "0" ]]; then
+              echo "::error::Clear cache incomplete: $FAILED command(s) failed on server"
+              echo "::endgroup::"
+              exit 1
+            fi
+          else
+            echo "Raw response: $BODY"
+          fi
+
+          echo "✅ Clear and cache configurations completed successfully (clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link)"
+          echo "::endgroup::"
 
       - name: Notify Telegram (success)
         if: success()
