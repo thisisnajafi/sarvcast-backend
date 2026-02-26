@@ -90,6 +90,7 @@ class CafeBazaarService
                     'product_id' => $productId,
                     'purchaseState' => $purchaseState,
                     'consumptionState' => $result['consumptionState'] ?? null,
+                    'cafebazaar_response' => $result,
                 ]);
 
                 if ($purchaseState === 0 || $purchaseState === '0') {
@@ -205,6 +206,7 @@ class CafeBazaarService
                 Log::info('CafeBazaar subscription verification response', [
                     'subscription_id' => $subscriptionId,
                     'purchaseState' => $purchaseState,
+                    'cafebazaar_response' => $result,
                 ]);
 
                 if ($purchaseState === 0 || $purchaseState === '0' || $purchaseState === 'active' || $purchaseState === 'Active') {
