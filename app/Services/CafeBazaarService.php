@@ -432,6 +432,25 @@ class CafeBazaarService
             if ($existingPayment) {
                 $existingPayment->load('subscription');
                 if ($existingPayment->subscription && $existingPayment->subscription->id) {
+                    $sub = $existingPayment->subscription;
+                    $isStale = $sub->status === 'cancelled' || $sub->status === 'expired'
+                        || ($sub->end_date && Carbon::parse($sub->end_date)->isPast());
+                    if ($isStale) {
+                        Log::info('CafeBazaar verifyAndFulfill: idempotent but subscription cancelled/expired, refreshing from Bazaar', [
+                            'user_id' => $user->id,
+                            'subscription_id' => $sub->id,
+                            'status' => $sub->status,
+                        ]);
+                        $refreshed = $this->refreshSubscriptionFromBazaar($user, $sub, $existingPayment, $purchaseToken, $productId, $orderId);
+                        if ($refreshed) {
+                            return [
+                                'success' => true,
+                                'payment' => $existingPayment->fresh()->load('subscription'),
+                                'subscription' => $existingPayment->subscription,
+                                'is_duplicate' => true,
+                            ];
+                        }
+                    }
                     Log::info('CafeBazaar verifyAndFulfill: idempotent return', [
                         'user_id' => $user->id,
                         'payment_id' => $existingPayment->id,
@@ -524,7 +543,7 @@ class CafeBazaarService
             Log::info('CafeBazaar verifyAndFulfill: payment created', ['user_id' => $user->id, 'payment_id' => $payment->id]);
             Log::info('CafeBazaar DB: payments row inserted', ['user_id' => $user->id, 'payment_id' => $payment->id]);
 
-            // 5. Get or create subscription (extend only if existing is CafeBazaar)
+            // 5. Get or create subscription: extend only if user has an active (non-cancelled, non-expired) CafeBazaar sub; otherwise create new (e.g. user had cancelled/expired sub)
             Log::info('CafeBazaar verifyAndFulfill: step 5 get or create subscription', ['user_id' => $user->id]);
             Log::info('CafeBazaar DB: setting subscription for user (extend existing or create new)', ['user_id' => $user->id]);
             $existingSubscription = $this->subscriptionService->getActiveSubscription($user->id);
@@ -625,6 +644,63 @@ class CafeBazaarService
                 'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
+        }
+    }
+
+    /**
+     * Refresh a cancelled/expired subscription from Bazaar (idempotent path).
+     * Re-verifies with Bazaar and updates the subscription to active with correct end_date so the user gets access.
+     *
+     * @return bool true if subscription was updated, false otherwise (caller may still return success with existing data)
+     */
+    private function refreshSubscriptionFromBazaar(User $user, Subscription $subscription, Payment $payment, string $purchaseToken, string $productId, ?string $orderId): bool
+    {
+        Log::info('CafeBazaar refreshSubscriptionFromBazaar: start', ['user_id' => $user->id, 'subscription_id' => $subscription->id]);
+        $verification = $this->verifyPurchaseOrSubscription($purchaseToken, $productId);
+        if (!$verification['success']) {
+            Log::warning('CafeBazaar refreshSubscriptionFromBazaar: Bazaar verification failed', ['user_id' => $user->id, 'subscription_id' => $subscription->id]);
+            return false;
+        }
+        $plan = SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
+        if (!$plan) {
+            $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
+            if ($subscriptionType) {
+                $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+            }
+        }
+        if (!$plan) {
+            Log::warning('CafeBazaar refreshSubscriptionFromBazaar: no plan', ['product_id' => $productId]);
+            return false;
+        }
+        $endDate = isset($verification['expiry_time']) ? Carbon::parse($verification['expiry_time']) : Carbon::parse($subscription->end_date ?? now())->addDays($plan->duration_days);
+        if ($endDate->isPast()) {
+            Log::info('CafeBazaar refreshSubscriptionFromBazaar: Bazaar expiry in past, not updating', ['subscription_id' => $subscription->id]);
+            return false;
+        }
+        try {
+            $subscription->update([
+                'status' => 'active',
+                'end_date' => $endDate,
+                'store_expiry_time' => $verification['expiry_time'] ?? $endDate->toISOString(),
+                'store_metadata' => array_merge($subscription->store_metadata ?? [], array_filter([
+                    'last_refresh' => now()->toISOString(),
+                    'expiry_time' => $verification['expiry_time'] ?? null,
+                    'auto_renewing' => $verification['auto_renewing'] ?? null,
+                ])),
+            ]);
+            Log::info('CafeBazaar refreshSubscriptionFromBazaar: subscription reactivated', [
+                'user_id' => $user->id,
+                'subscription_id' => $subscription->id,
+                'end_date' => $endDate->toISOString(),
+            ]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('CafeBazaar refreshSubscriptionFromBazaar: failed', [
+                'user_id' => $user->id,
+                'subscription_id' => $subscription->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
         }
     }
 
