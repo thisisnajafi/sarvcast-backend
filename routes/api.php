@@ -75,12 +75,13 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('categories/{category}/stories', [CategoryController::class, 'stories'])->middleware('cache.api:180'); // 3 minutes
 
     Route::get('stories', [StoryController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
-    Route::get('stories/{story}', [StoryController::class, 'show'])->middleware('cache.api:180'); // 3 minutes
-    Route::get('stories/{story}/episodes', [StoryController::class, 'episodes'])->middleware('cache.api:180'); // 3 minutes
+    // Static story routes must be before stories/{story} so "featured"/"popular" etc. are not matched as IDs
     Route::get('stories/featured', [StoryController::class, 'featured'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/popular', [StoryController::class, 'popular'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/recent', [StoryController::class, 'recent'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/recommendations', [StoryController::class, 'recommendations'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/{story}', [StoryController::class, 'show'])->middleware('cache.api:180'); // 3 minutes
+    Route::get('stories/{story}/episodes', [StoryController::class, 'episodes'])->middleware('cache.api:180'); // 3 minutes
 
     Route::get('episodes', [EpisodeController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
     Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware(['auth:sanctum', 'cache.api:180']); // 3 minutes
