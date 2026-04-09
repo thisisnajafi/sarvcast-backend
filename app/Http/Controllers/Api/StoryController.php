@@ -37,6 +37,23 @@ class StoryController extends Controller
                 // Recalculate if not using withSum
                 $story->play_count = $story->episodes()->sum('play_count') ?? $story->play_count ?? 0;
             }
+
+            // Lightweight character badges for card UIs (additive; does not break clients)
+            $story->character_badges = collect($story->characters ?? [])
+                ->take(4)
+                ->map(function ($character) {
+                    return [
+                        'id' => $character->id,
+                        'name' => $character->name,
+                        'image_url' => $character->image_url,
+                        'voice_actor' => $character->voiceActor ? [
+                            'id' => $character->voiceActor->id,
+                            'name' => trim(($character->voiceActor->first_name ?? '') . ' ' . ($character->voiceActor->last_name ?? '')),
+                            'profile_image_url' => $character->voiceActor->profile_image_url,
+                        ] : null,
+                    ];
+                })
+                ->values();
         }
         return $stories;
     }
@@ -45,7 +62,7 @@ class StoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Story::with(['category', 'director', 'narrator'])
+        $query = Story::with(['category', 'director', 'narrator', 'author', 'characters.voiceActor'])
             ->withSum('episodes', 'play_count')
             ->published();
 
@@ -305,7 +322,7 @@ class StoryController extends Controller
     {
         $limit = $request->get('limit', 10);
 
-        $stories = Story::with(['category', 'narrator', 'author', 'director', 'people'])
+        $stories = Story::with(['category', 'narrator', 'author', 'director', 'people', 'characters.voiceActor'])
             ->withSum('episodes', 'play_count')
             ->published()
             ->where('is_featured', true)
@@ -328,7 +345,7 @@ class StoryController extends Controller
         $limit = $request->get('limit', 10);
         $period = $request->get('period', 'all'); // daily, weekly, monthly, all
 
-        $query = Story::with(['category', 'narrator', 'author', 'director', 'people'])
+        $query = Story::with(['category', 'narrator', 'author', 'director', 'people', 'characters.voiceActor'])
             ->withSum('episodes', 'play_count')
             ->published();
 
@@ -362,7 +379,7 @@ class StoryController extends Controller
     {
         $limit = $request->get('limit', 10);
 
-        $stories = Story::with(['category', 'narrator', 'author', 'director', 'people'])
+        $stories = Story::with(['category', 'narrator', 'author', 'director', 'people', 'characters.voiceActor'])
             ->withSum('episodes', 'play_count')
             ->published()
             ->latest()
@@ -386,7 +403,7 @@ class StoryController extends Controller
 
         if (!$user) {
             // Return popular stories for non-authenticated users
-            $stories = Story::with(['category', 'narrator', 'author', 'director', 'people'])
+            $stories = Story::with(['category', 'narrator', 'author', 'director', 'people', 'characters.voiceActor'])
                 ->withSum('episodes', 'play_count')
                 ->published()
                 ->orderBy('episodes_sum_play_count', 'desc')
@@ -394,7 +411,7 @@ class StoryController extends Controller
                 ->get();
         } else {
             // Get personalized recommendations based on user preferences
-            $stories = Story::with(['category', 'narrator', 'author', 'director', 'people'])
+            $stories = Story::with(['category', 'narrator', 'author', 'director', 'people', 'characters.voiceActor'])
                 ->withSum('episodes', 'play_count')
                 ->published()
                 ->whereNotIn('id', function($query) use ($user) {
