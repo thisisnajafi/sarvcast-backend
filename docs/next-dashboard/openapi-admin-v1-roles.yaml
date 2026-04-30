@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Roles
+  version: 1.0.0
+
+paths:
+  /api/admin/roles:
+    get:
+      summary: List roles
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create role
+      responses:
+        "201":
+          description: Created
+  /api/admin/roles/export:
+    get:
+      summary: Export roles CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/roles/statistics/data:
+    get:
+      summary: Role statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/roles/bulk-action:
+    post:
+      summary: Bulk actions
+      responses:
+        "200":
+          description: OK
+  /api/admin/roles/{id}:
+    get:
+      summary: Role detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update role
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete role
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

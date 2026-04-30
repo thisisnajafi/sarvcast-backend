@@ -341,6 +341,13 @@ class AuthController extends Controller
         $user->update(['last_login_at' => now()]);
 
         $token = $user->createToken('admin-auth-token')->plainTextToken;
+        $twoFactorRequired = (bool) ($user->requires_2fa ?? false);
+        $twoFactorCodeSent = false;
+
+        if ($twoFactorRequired) {
+            $sendResult = $this->smsService->sendOtp($user->phone_number, 'admin_2fa');
+            $twoFactorCodeSent = (bool) ($sendResult['success'] ?? false);
+        }
 
         return response()->json([
             'success' => true,
@@ -353,8 +360,103 @@ class AuthController extends Controller
                     'last_name' => $user->last_name,
                     'role' => $user->role,
                     'status' => $user->status,
+                    'requires_2fa' => $twoFactorRequired,
                 ],
-                'token' => $token
+                'token' => $token,
+                'two_factor_required' => $twoFactorRequired,
+                'two_factor_code_sent' => $twoFactorCodeSent,
+            ]
+        ]);
+    }
+
+    /**
+     * Send admin 2FA verification code for authenticated admin sessions.
+     */
+    public function sendAdminTwoFactorCode(Request $request)
+    {
+        $user = $request->user();
+        if (!$user || !in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی غیرمجاز'
+            ], 403);
+        }
+
+        if (!($user->requires_2fa ?? false)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تایید دو مرحله‌ای برای این حساب غیرفعال است',
+                'data' => [
+                    'two_factor_required' => false,
+                ]
+            ]);
+        }
+
+        if ($this->smsService->hasTooManyAttempts($user->phone_number, 'admin_2fa')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً کمی صبر کنید.'
+            ], 429);
+        }
+
+        $result = $this->smsService->sendOtp($user->phone_number, 'admin_2fa');
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ارسال کد تایید دو مرحله‌ای'
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کد تایید دو مرحله‌ای ارسال شد',
+            'data' => [
+                'two_factor_required' => true,
+                'expires_in' => 300
+            ]
+        ]);
+    }
+
+    /**
+     * Verify admin 2FA code for authenticated admin sessions.
+     */
+    public function verifyAdminTwoFactorCode(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string|size:6',
+        ]);
+
+        $user = $request->user();
+        if (!$user || !in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی غیرمجاز'
+            ], 403);
+        }
+
+        if (!($user->requires_2fa ?? false)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تایید دو مرحله‌ای برای این حساب غیرفعال است',
+                'data' => [
+                    'two_factor_verified' => true,
+                ]
+            ]);
+        }
+
+        $verified = $this->smsService->verifyOtp($user->phone_number, $request->code, 'admin_2fa');
+        if (!$verified) {
+            return response()->json([
+                'success' => false,
+                'message' => 'کد تایید نامعتبر یا منقضی شده است'
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تایید دو مرحله‌ای با موفقیت انجام شد',
+            'data' => [
+                'two_factor_verified' => true,
             ]
         ]);
     }
@@ -369,6 +471,87 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'خروج با موفقیت انجام شد'
+        ]);
+    }
+
+    /**
+     * Revoke all active tokens for current user.
+     */
+    public function logoutAllSessions(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Authentication is required.',
+            ], 401);
+        }
+
+        $user->tokens()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تمام نشست‌های فعال با موفقیت بسته شدند',
+        ]);
+    }
+
+    /**
+     * List Sanctum personal access tokens for the current user (session inventory).
+     */
+    public function listSessions(Request $request)
+    {
+        $user = $request->user();
+        $current = $user->currentAccessToken();
+        $currentId = $current ? $current->id : null;
+
+        $sessions = $user->tokens()
+            ->orderByDesc('last_used_at')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($token) use ($currentId) {
+                return [
+                    'id' => $token->id,
+                    'name' => $token->name,
+                    'last_used_at' => $token->last_used_at?->toIso8601String(),
+                    'created_at' => $token->created_at?->toIso8601String(),
+                    'is_current' => $token->id === $currentId,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'sessions' => $sessions,
+            ],
+        ]);
+    }
+
+    /**
+     * Revoke a single token belonging to the current user.
+     */
+    public function revokeSession(Request $request, int $id)
+    {
+        $user = $request->user();
+        $token = $user->tokens()->where('id', $id)->first();
+
+        if (!$token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نشست یافت نشد',
+            ], 404);
+        }
+
+        $current = $user->currentAccessToken();
+        $wasCurrent = $current && (int) $current->id === (int) $token->id;
+
+        $token->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'نشست قطع شد',
+            'data' => [
+                'revoked_current' => $wasCurrent,
+            ],
         ]);
     }
 
@@ -425,6 +608,10 @@ class AuthController extends Controller
             'subscription_end_date' => $subscriptionEndDate,
             'days_remaining' => $daysRemaining,
         ];
+        $permissions = $user->permissions()->pluck('name')
+            ->merge($user->directPermissions()->pluck('name'))
+            ->unique()
+            ->values();
 
         $jsonResponse = response()->json([
             'success' => true,
@@ -443,6 +630,7 @@ class AuthController extends Controller
                 'last_login_at' => $user->last_login_at,
                 'created_at' => $user->created_at,
                 'premium' => $premiumInfo,
+                'permissions' => $permissions,
             ]
         ]);
         // Disable caching for user profile - it needs to be retrieved immediately

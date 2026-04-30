@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Content moderation
+  version: 1.0.0
+
+paths:
+  /api/admin/content-moderation:
+    get:
+      summary: List content moderation items
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create content moderation report
+      responses:
+        "200":
+          description: Created
+  /api/admin/content-moderation/export:
+    get:
+      summary: Export content moderation CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/content-moderation/statistics/data:
+    get:
+      summary: Content moderation statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/content-moderation/bulk-action:
+    post:
+      summary: Bulk approve/reject/delete
+      responses:
+        "200":
+          description: OK
+  /api/admin/content-moderation/{id}:
+    get:
+      summary: Content moderation detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update content moderation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete content moderation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

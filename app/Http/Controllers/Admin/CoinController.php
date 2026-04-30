@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\CoinTransaction;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class CoinController extends Controller
 {
@@ -225,38 +226,48 @@ class CoinController extends Controller
     // API Methods
     public function apiIndex(Request $request)
     {
-        $query = CoinTransaction::with(['user']);
+        $query = $this->buildCoinTransactionQuery($request);
+        $this->applyCoinListSort($query, $request);
 
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('user', function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+        $perPage = $this->resolveCoinsPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($paginator);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildCoinTransactionQuery($request);
+        $this->applyCoinListSort($query, $request);
+
+        $filename = 'coin-transactions-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'user_id', 'amount', 'type', 'status', 'description', 'created_at']);
+
+            $query->clone()->chunk(500, function ($rows) use ($handle) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $row->id,
+                        $row->user_id,
+                        $row->amount,
+                        $row->type,
+                        $row->status,
+                        $row->description,
+                        $row->created_at?->toIso8601String(),
+                    ]);
+                }
             });
-        }
 
-        // Filter by type
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $transactions = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $transactions->items(),
-            'pagination' => [
-                'current_page' => $transactions->currentPage(),
-                'last_page' => $transactions->lastPage(),
-                'per_page' => $transactions->perPage(),
-                'total' => $transactions->total(),
-            ]
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -282,19 +293,15 @@ class CoinController extends Controller
         $user = User::find($request->user_id);
         $user->increment('coins', $request->amount);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'سکه با موفقیت اضافه شد.',
-            'data' => $transaction->load('user')
-        ]);
+        return AdminApiResponse::success(
+            $transaction->load('user'),
+            'سکه با موفقیت اضافه شد.'
+        );
     }
 
     public function apiShow(CoinTransaction $coin)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $coin->load('user')
-        ]);
+        return AdminApiResponse::success($coin->load('user'));
     }
 
     public function apiUpdate(Request $request, CoinTransaction $coin)
@@ -316,11 +323,10 @@ class CoinController extends Controller
             $user->increment('coins', $difference);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'تراکنش سکه با موفقیت به‌روزرسانی شد.',
-            'data' => $coin->load('user')
-        ]);
+        return AdminApiResponse::success(
+            $coin->load('user'),
+            'تراکنش سکه با موفقیت به‌روزرسانی شد.'
+        );
     }
 
     public function apiDestroy(CoinTransaction $coin)
@@ -331,10 +337,7 @@ class CoinController extends Controller
 
         $coin->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'تراکنش سکه با موفقیت حذف شد.'
-        ]);
+        return AdminApiResponse::okMessage('تراکنش سکه با موفقیت حذف شد.');
     }
 
     public function apiBulkAction(Request $request)
@@ -368,10 +371,7 @@ class CoinController extends Controller
                 break;
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $message
-        ]);
+        return AdminApiResponse::okMessage($message);
     }
 
     public function apiStatistics()
@@ -396,12 +396,75 @@ class CoinController extends Controller
             ];
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'stats' => $stats,
-                'daily_stats' => $dailyStats
-            ]
+        return AdminApiResponse::success([
+            'stats' => $stats,
+            'daily_stats' => $dailyStats,
         ]);
+    }
+
+    private function buildCoinTransactionQuery(Request $request)
+    {
+        $query = CoinTransaction::query()->with(['user']);
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('dateFrom')) {
+            $query->whereDate('created_at', '>=', $request->dateFrom);
+        }
+
+        if ($request->filled('dateTo')) {
+            $query->whereDate('created_at', '<=', $request->dateTo);
+        }
+
+        if ($request->filled('date_range')) {
+            switch ($request->date_range) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', Carbon::now()->subWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', Carbon::now()->subMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', Carbon::now()->subYear());
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyCoinListSort($query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', 'created_at');
+        $sortDir = strtolower((string) $request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $allowed = ['created_at', 'id', 'amount', 'type', 'status'];
+        if (! in_array($sortBy, $allowed, true)) {
+            $sortBy = 'created_at';
+        }
+        $query->orderBy($sortBy, $sortDir);
+    }
+
+    private function resolveCoinsPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 20));
+
+        return min(100, max(1, $raw ?: 20));
     }
 }

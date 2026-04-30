@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Users
+  version: 1.0.0
+
+paths:
+  /api/admin/users:
+    get:
+      summary: List users
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create user
+      responses:
+        "201":
+          description: Created
+  /api/admin/users/export:
+    get:
+      summary: Export users CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/users/statistics/data:
+    get:
+      summary: User statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/users/bulk-action:
+    post:
+      summary: Bulk actions
+      responses:
+        "200":
+          description: OK
+  /api/admin/users/{id}:
+    get:
+      summary: User detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

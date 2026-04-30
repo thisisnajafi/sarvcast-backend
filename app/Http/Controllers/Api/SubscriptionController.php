@@ -340,7 +340,9 @@ class SubscriptionController extends Controller
             'plan_slug' => 'nullable|string|in:1month,3months,6months,1year',
             'coupon_code' => 'nullable|string|max:50',
             'payment_method' => 'nullable|string|max:50',
-            'auto_renew' => 'nullable|boolean'
+            'auto_renew' => 'nullable|boolean',
+            'return_url' => 'nullable|string|max:2048',
+            'failure_url' => 'nullable|string|max:2048',
         ], [
             'plan_id.required' => 'شناسه پلن اشتراک الزامی است',
             'plan_id.integer' => 'شناسه پلن اشتراک باید عدد باشد',
@@ -377,6 +379,20 @@ class SubscriptionController extends Controller
                     'success' => false,
                     'message' => 'پلن اشتراک یافت نشد'
                 ], 404);
+            }
+
+            // Prevent duplicate purchase when user already has an active premium subscription
+            $activeSubscription = $this->subscriptionService->getActiveSubscription($user->id);
+            if ($activeSubscription && !$activeSubscription->isExpired()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'اشتراک پریمیوم شما فعال است و امکان خرید مجدد وجود ندارد.',
+                    'data' => [
+                        'active_subscription_id' => $activeSubscription->id,
+                        'status' => $activeSubscription->status,
+                        'end_date' => $activeSubscription->end_date,
+                    ]
+                ], 409);
             }
 
             // Calculate final amount
@@ -431,6 +447,10 @@ class SubscriptionController extends Controller
             $planFeatures = $plan->features ?? [];
             $firstFeature = !empty($planFeatures) ? $planFeatures[0] : ($plan->name ?? $plan->title ?? 'اشتراک');
 
+            $defaultWebBase = rtrim((string) config('services.sarvcast_web.app_url', 'https://app.sarvcast.ir'), '/');
+            $returnUrl = $this->sanitizeWebAppUrl($request->input('return_url'), $defaultWebBase . '/home');
+            $failureUrl = $this->sanitizeWebAppUrl($request->input('failure_url'), $defaultWebBase . '/subscription/failure');
+
             // Create payment record
             $payment = \App\Models\Payment::create([
                 'user_id' => $user->id,
@@ -439,7 +459,12 @@ class SubscriptionController extends Controller
                 'currency' => $finalCurrency,
                 'payment_method' => $request->input('payment_method', 'zarinpal'),
                 'status' => 'pending',
-                'transaction_id' => $this->generateTransactionId()
+                'transaction_id' => $this->generateTransactionId(),
+                'payment_metadata' => [
+                    'source' => 'web',
+                    'return_url' => $returnUrl,
+                    'failure_url' => $failureUrl,
+                ],
             ]);
 
             // Set description for payment service (since it's not in database)
@@ -512,6 +537,36 @@ class SubscriptionController extends Controller
     private function generateTransactionId(): string
     {
         return 'SUB_' . time() . '_' . rand(1000, 9999);
+    }
+
+    /**
+     * Prevent open redirects: only allow HTTPS URLs whose host matches the configured web app host.
+     */
+    private function sanitizeWebAppUrl(?string $url, string $fallback): string
+    {
+        if (empty($url)) {
+            return $fallback;
+        }
+        $parsed = parse_url($url);
+        if (!$parsed || empty($parsed['scheme'])) {
+            return $fallback;
+        }
+        $scheme = strtolower((string) $parsed['scheme']);
+        $host = strtolower((string) ($parsed['host'] ?? ''));
+        $localOk = $scheme === 'http' && in_array($host, ['localhost', '127.0.0.1'], true);
+        if ($scheme !== 'https' && !$localOk) {
+            return $fallback;
+        }
+        if (in_array($host, ['localhost', '127.0.0.1'], true)) {
+            return $url;
+        }
+        $allowedBase = rtrim((string) config('services.sarvcast_web.app_url', 'https://app.sarvcast.ir'), '/');
+        $allowedHost = parse_url($allowedBase, PHP_URL_HOST);
+        if (!$allowedHost || strcasecmp($host, (string) $allowedHost) !== 0) {
+            return $fallback;
+        }
+
+        return $url;
     }
 
     /**

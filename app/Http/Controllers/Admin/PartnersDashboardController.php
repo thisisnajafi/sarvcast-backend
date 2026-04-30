@@ -214,4 +214,46 @@ class PartnersDashboardController extends Controller
         return redirect()->back()
             ->with('success', "گزارش شرکا با فرمت {$format} آماده دانلود است.");
     }
+
+    public function apiOverview(Request $request)
+    {
+        $dateRange = (int) $request->get('date_range', 30);
+        $startDate = Carbon::now()->subDays($dateRange);
+
+        $stats = [
+            'total_partners' => AffiliatePartner::count(),
+            'active_partners' => AffiliatePartner::where('status', 'active')->count(),
+            'pending_partners' => AffiliatePartner::where('status', 'pending')->count(),
+            'verified_partners' => AffiliatePartner::where('is_verified', true)->count(),
+            'total_commission_paid' => Commission::where('status', 'paid')->sum('commission_amount'),
+            'pending_commissions' => Commission::where('status', 'pending')->sum('commission_amount'),
+        ];
+
+        $topPartners = AffiliatePartner::withCount(['influencerCampaigns as campaigns_count'])
+            ->withSum('commissions as total_earnings', 'commission_amount')
+            ->orderBy('total_earnings', 'desc')
+            ->limit(10)
+            ->get();
+
+        $commissionTrends = Commission::selectRaw('DATE(created_at) as date, SUM(commission_amount) as total_amount, COUNT(*) as count')
+            ->where('created_at', '>=', $startDate)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+                'top_partners' => $topPartners,
+                'commission_trends' => $commissionTrends,
+                'date_range' => $dateRange,
+            ],
+        ]);
+    }
+
+    public function apiAnalytics(Request $request)
+    {
+        return $this->analytics($request);
+    }
 }

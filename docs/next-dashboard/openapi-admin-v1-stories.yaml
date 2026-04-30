@@ -1,0 +1,78 @@
+﻿openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Stories
+  version: 1.0.0
+
+paths:
+  /api/admin/stories:
+    get:
+      summary: List stories
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create story
+      responses:
+        "201":
+          description: Created
+  /api/admin/stories/export:
+    get:
+      summary: Export stories CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/stories/statistics/data:
+    get:
+      summary: Story statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/stories/bulk-action:
+    post:
+      summary: Bulk actions
+      responses:
+        "200":
+          description: OK
+  /api/admin/stories/{id}:
+    get:
+      summary: Story detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update story
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete story
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+  /api/admin/stories/{id}/publish:
+    post:
+      summary: Publish story
+      responses:
+        "200":
+          description: OK
+  /api/admin/stories/{id}/duplicate:
+    post:
+      summary: Duplicate story
+      responses:
+        "201":
+          description: Created

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Notification;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -434,77 +436,50 @@ class NotificationController extends Controller
     // API Methods
     public function apiIndex(Request $request)
     {
-        $query = Notification::with(['sender', 'recipient']);
+        $query = $this->buildNotificationApiListQuery($request);
+        $this->applyNotificationListSort($query, $request);
 
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('message', 'like', "%{$search}%")
-                  ->orWhereHas('sender', function ($q) use ($search) {
-                      $q->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('recipient', function ($q) use ($search) {
-                      $q->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                  });
+        $perPage = $this->resolveNotificationPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $notifications = $query->with(['sender', 'recipient'])->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($notifications);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildNotificationApiListQuery($request);
+        $this->applyNotificationListSort($query, $request);
+
+        $filename = 'notifications-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'title', 'type', 'priority', 'status', 'is_read', 'sender_id', 'recipient_id', 'created_at']);
+
+            $query->clone()->chunk(500, function ($rows) use ($handle) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $row->id,
+                        $row->title,
+                        $row->type,
+                        $row->priority,
+                        $row->status,
+                        $row->is_read ? '1' : '0',
+                        $row->sender_id,
+                        $row->recipient_id,
+                        $row->created_at?->toIso8601String(),
+                    ]);
+                }
             });
-        }
 
-        // Filter by type
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by priority
-        if ($request->filled('priority')) {
-            $query->where('priority', $request->priority);
-        }
-
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by read status
-        if ($request->filled('is_read')) {
-            $query->where('is_read', $request->boolean('is_read'));
-        }
-
-        // Filter by sender
-        if ($request->filled('sender_id')) {
-            $query->where('sender_id', $request->sender_id);
-        }
-
-        // Filter by recipient
-        if ($request->filled('recipient_id')) {
-            $query->where('recipient_id', $request->recipient_id);
-        }
-
-        // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        $notifications = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        return response()->json([
-            'success' => true,
-            'data' => $notifications->items(),
-            'pagination' => [
-                'current_page' => $notifications->currentPage(),
-                'last_page' => $notifications->lastPage(),
-                'per_page' => $notifications->perPage(),
-                'total' => $notifications->total(),
-            ]
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -551,11 +526,10 @@ class NotificationController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'اعلان با موفقیت ایجاد شد.',
-                'data' => $notification->load(['sender', 'recipient'])
-            ]);
+            return AdminApiResponse::success(
+                $notification->load(['sender', 'recipient']),
+                'اعلان با موفقیت ایجاد شد.'
+            );
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -563,7 +537,8 @@ class NotificationController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در ایجاد اعلان: ' . $e->getMessage()
+                'message' => 'خطا در ایجاد اعلان: ' . $e->getMessage(),
+                'error' => 'SERVER_ERROR',
             ], 500);
         }
     }
@@ -572,10 +547,7 @@ class NotificationController extends Controller
     {
         $notification->load(['sender', 'recipient']);
 
-        return response()->json([
-            'success' => true,
-            'data' => $notification
-        ]);
+        return AdminApiResponse::success($notification);
     }
 
     public function apiUpdate(Request $request, Notification $notification)
@@ -615,11 +587,10 @@ class NotificationController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'اعلان با موفقیت به‌روزرسانی شد.',
-                'data' => $notification->load(['sender', 'recipient'])
-            ]);
+            return AdminApiResponse::success(
+                $notification->load(['sender', 'recipient']),
+                'اعلان با موفقیت به‌روزرسانی شد.'
+            );
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -627,7 +598,8 @@ class NotificationController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در به‌روزرسانی اعلان: ' . $e->getMessage()
+                'message' => 'خطا در به‌روزرسانی اعلان: ' . $e->getMessage(),
+                'error' => 'SERVER_ERROR',
             ], 500);
         }
     }
@@ -637,34 +609,42 @@ class NotificationController extends Controller
         try {
             $notification->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'اعلان با موفقیت حذف شد.'
-            ]);
+            return AdminApiResponse::okMessage('اعلان با موفقیت حذف شد.');
 
         } catch (\Exception $e) {
             Log::error('Error deleting notification: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در حذف اعلان: ' . $e->getMessage()
+                'message' => 'خطا در حذف اعلان: ' . $e->getMessage(),
+                'error' => 'SERVER_ERROR',
             ], 500);
         }
     }
 
     public function apiBulkAction(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'action' => 'required|string|in:send,mark_read,mark_unread,delete',
-            'notification_ids' => 'required|array|min:1',
+            'notification_ids' => 'nullable|array',
             'notification_ids.*' => 'integer|exists:notifications,id',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'integer|exists:notifications,id',
         ]);
+
+        $notificationIds = $validated['notification_ids'] ?? $validated['selected_items'] ?? [];
+        if ($notificationIds === []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ موردی انتخاب نشده است.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
 
         try {
             DB::beginTransaction();
 
-            $notificationIds = $request->notification_ids;
-            $action = $request->action;
+            $action = $validated['action'];
             $successCount = 0;
             $failureCount = 0;
 
@@ -717,12 +697,10 @@ class NotificationController extends Controller
                 $message .= " و {$failureCount} اعلان ناموفق بود";
         }
 
-        return response()->json([
-            'success' => true,
-                'message' => $message,
+            return AdminApiResponse::success([
                 'success_count' => $successCount,
-                'failure_count' => $failureCount
-            ]);
+                'failure_count' => $failureCount,
+            ], $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -734,7 +712,8 @@ class NotificationController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage(),
+                'error' => 'SERVER_ERROR',
             ], 500);
         }
     }
@@ -770,10 +749,7 @@ class NotificationController extends Controller
             'expired_notifications' => Notification::where('expires_at', '<', now())->count(),
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        return AdminApiResponse::success($stats);
     }
 
     public function apiSend(Notification $notification)
@@ -782,18 +758,107 @@ class NotificationController extends Controller
             $this->sendNotifications($notification->toArray());
             $notification->update(['status' => 'sent', 'sent_at' => now()]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'اعلان با موفقیت ارسال شد.'
-            ]);
+            return AdminApiResponse::okMessage('اعلان با موفقیت ارسال شد.');
 
         } catch (\Exception $e) {
             Log::error('Error sending notification: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در ارسال اعلان: ' . $e->getMessage()
+                'message' => 'خطا در ارسال اعلان: ' . $e->getMessage(),
+                'error' => 'SERVER_ERROR',
             ], 500);
         }
+    }
+
+    private function buildNotificationApiListQuery(Request $request)
+    {
+        $query = Notification::query();
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('message', 'like', '%'.$search.'%')
+                    ->orWhereHas('sender', function ($sq) use ($search) {
+                        $sq->where('first_name', 'like', '%'.$search.'%')
+                            ->orWhere('last_name', 'like', '%'.$search.'%')
+                            ->orWhere('email', 'like', '%'.$search.'%');
+                    })
+                    ->orWhereHas('recipient', function ($rq) use ($search) {
+                        $rq->where('first_name', 'like', '%'.$search.'%')
+                            ->orWhere('last_name', 'like', '%'.$search.'%')
+                            ->orWhere('email', 'like', '%'.$search.'%');
+                    });
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->priority);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('is_read')) {
+            $query->where('is_read', $request->boolean('is_read'));
+        }
+        if ($request->filled('sender_id')) {
+            $query->where('sender_id', $request->sender_id);
+        }
+        if ($request->filled('recipient_id')) {
+            $query->where('recipient_id', $request->recipient_id);
+        }
+
+        if ($request->filled('dateFrom')) {
+            $query->whereDate('created_at', '>=', $request->dateFrom);
+        } elseif ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('dateTo')) {
+            $query->whereDate('created_at', '<=', $request->dateTo);
+        } elseif ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        if ($request->filled('date_range')) {
+            switch ($request->date_range) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', Carbon::now()->subWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', Carbon::now()->subMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', Carbon::now()->subYear());
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyNotificationListSort($query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', 'created_at');
+        $sortDir = strtolower((string) $request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $allowed = ['created_at', 'id', 'title', 'type', 'priority', 'status', 'is_read', 'sender_id', 'recipient_id'];
+        if (! in_array($sortBy, $allowed, true)) {
+            $sortBy = 'created_at';
+        }
+        $query->orderBy($sortBy, $sortDir);
+    }
+
+    private function resolveNotificationPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 20));
+
+        return min(100, max(1, $raw ?: 20));
     }
 }

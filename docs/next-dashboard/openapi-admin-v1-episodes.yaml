@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Episodes
+  version: 1.0.0
+
+paths:
+  /api/admin/episodes:
+    get:
+      summary: List episodes
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create episode
+      responses:
+        "201":
+          description: Created
+  /api/admin/episodes/export:
+    get:
+      summary: Export episodes CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/episodes/statistics/data:
+    get:
+      summary: Episode statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/episodes/bulk-action:
+    post:
+      summary: Bulk delete/publish/archive
+      responses:
+        "200":
+          description: OK
+  /api/admin/episodes/reorder:
+    post:
+      summary: Reorder episodes within a story
+      responses:
+        "200":
+          description: OK
+  /api/admin/episodes/{id}:
+    get:
+      summary: Episode detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update episode
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete episode
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+  /api/admin/episodes/{id}/publish:
+    post:
+      summary: Publish episode
+      responses:
+        "200":
+          description: OK
+  /api/admin/episodes/{id}/duplicate:
+    post:
+      summary: Duplicate episode
+      responses:
+        "201":
+          description: Created

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
 
@@ -16,60 +17,95 @@ class PaymentCallbackController extends Controller
     }
 
     /**
+     * Append query string to a URL (handles existing ?).
+     *
+     * @param  array<string, scalar|null>  $params
+     */
+    private function appendQueryParams(string $url, array $params): string
+    {
+        $filtered = array_filter($params, static fn ($v) => $v !== null && $v !== '');
+        if ($filtered === []) {
+            return $url;
+        }
+        $sep = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$sep.http_build_query($filtered);
+    }
+
+    /**
      * Handle ZarinPal payment callback
      */
     public function zarinpalCallback(Request $request)
     {
+        $authority = $request->input('Authority') ?? $request->query('Authority');
+
+        $paymentPrefetch = $authority
+            ? Payment::with('subscription')->where('transaction_id', $authority)->where('payment_method', 'zarinpal')->first()
+            : null;
+
+        $prefetchMeta = $paymentPrefetch?->payment_metadata ?? [];
+
         $result = $this->paymentService->processCallback($request->all());
 
-        $payment = $result['payment'] ?? null;
-        $metadata = $payment?->payment_metadata ?? [];
+        $payment = $result['payment'] ?? $paymentPrefetch;
+        $metadata = $payment?->payment_metadata ?? $prefetchMeta;
         $source = $metadata['source'] ?? null;
-        $returnScheme = $metadata['return_scheme'] ?? null;
+        $returnScheme = $metadata['return_scheme'] ?? config('services.sarvcast_app.return_scheme', 'sarvcast');
         $episodeId = $metadata['episode_id'] ?? null;
 
-        // If flow originated from the app, redirect back via deep link
-        if ($payment && $source === 'app' && $returnScheme) {
-            $subscription = $payment->subscription;
-            $timestamp = now()->toIso8601String();
+        $webBase = rtrim((string) config('services.sarvcast_web.app_url', 'https://app.sarvcast.ir'), '/');
 
-            if ($result['success']) {
-                // Use parameter names compatible with Flutter deep link parsing
-                $params = [
-                    'success' => 'true',
-                    'payment_id' => $payment->id,
-                    'subscription_id' => $subscription?->id,
-                    'amount' => (int) $payment->amount,
-                    'transaction_id' => $payment->transaction_id,
-                    'timestamp' => $timestamp,
-                ];
+        // Next.js web app: redirect to configured frontend (subscription activated / failed)
+        if ($source === 'web') {
+            $returnUrl = $metadata['return_url'] ?? $webBase.'/home';
+            $failureUrl = $metadata['failure_url'] ?? $webBase.'/subscription/failure';
 
-                if ($episodeId) {
-                    $params['episode_id'] = $episodeId;
-                }
-
-                $deepLink = $returnScheme . '://payment/success?' . http_build_query($params);
-            } else {
-                $deepLink = $returnScheme . '://payment/failure?' . http_build_query([
-                    'success' => 'false',
-                    'payment_id' => $payment->id,
-                    'subscription_id' => $subscription?->id,
-                    'error' => $result['message'] ?? 'پرداخت ناموفق بود',
-                    'timestamp' => $timestamp,
+            if ($result['success'] && $payment) {
+                $url = $this->appendQueryParams($returnUrl, [
+                    'subscription' => 'activated',
+                    'payment_id' => (string) $payment->id,
                 ]);
+
+                return redirect()->away($url);
             }
 
-            return redirect()->away($deepLink);
+            $url = $this->appendQueryParams($failureUrl, array_filter([
+                'subscription' => 'failed',
+                'reason' => $result['message'] ?? null,
+            ]));
+
+            return redirect()->away($url);
         }
 
-        // Default web behaviour
+        // Non-web flows default to Flutter deep link (app).
+        $subscription = $payment?->subscription;
+        $timestamp = now()->toIso8601String();
         if ($result['success']) {
-            return redirect()->route('payment.success', [
-                'payment_id' => $payment?->id
-            ])->with('success', $result['message']);
+            $params = [
+                'success' => 'true',
+                'payment_id' => $payment?->id,
+                'subscription_id' => $subscription?->id,
+                'amount' => $payment ? (int) $payment->amount : null,
+                'transaction_id' => $payment?->transaction_id,
+                'timestamp' => $timestamp,
+            ];
+
+            if ($episodeId) {
+                $params['episode_id'] = $episodeId;
+            }
+
+            $deepLink = $returnScheme . '://payment/success?' . http_build_query(array_filter($params, static fn ($v) => $v !== null && $v !== ''));
+        } else {
+            $deepLink = $returnScheme . '://payment/failure?' . http_build_query(array_filter([
+                'success' => 'false',
+                'payment_id' => $payment?->id,
+                'subscription_id' => $subscription?->id,
+                'error' => $result['message'] ?? 'پرداخت ناموفق بود',
+                'timestamp' => $timestamp,
+            ], static fn ($v) => $v !== null && $v !== ''));
         }
 
-        return redirect()->route('payment.failure')->with('error', $result['message']);
+        return redirect()->away($deepLink);
     }
 
     /**

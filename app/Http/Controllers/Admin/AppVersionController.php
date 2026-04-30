@@ -7,6 +7,7 @@ use App\Models\AppVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class AppVersionController extends Controller
 {
@@ -387,6 +388,192 @@ class AppVersionController extends Controller
                 'release_date' => $latestVersion->release_date?->toISOString(),
                 'effective_date' => $latestVersion->effective_date?->toISOString(),
             ]
+        ]);
+    }
+
+    // API Methods for Next dashboard
+    public function apiIndex(Request $request)
+    {
+        $query = AppVersion::with('creator');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('version', 'like', "%{$search}%")
+                    ->orWhere('platform', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('platform')) {
+            $query->where('platform', $request->platform);
+        }
+        if ($request->filled('update_type')) {
+            $query->where('update_type', $request->update_type);
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            } elseif ($request->status === 'latest') {
+                $query->where('is_latest', true);
+            }
+        }
+
+        $items = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $items->items(),
+            'pagination' => [
+                'current_page' => $items->currentPage(),
+                'last_page' => $items->lastPage(),
+                'per_page' => $items->perPage(),
+                'total' => $items->total(),
+            ],
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $validated = $request->validate([
+            'platform' => 'required|in:android,ios,both',
+            'version' => 'required|string|max:20',
+            'build_number' => 'nullable|string|max:20',
+            'update_type' => 'required|in:optional,force',
+            'title' => 'required|string|max:100',
+            'description' => 'nullable|string|max:2000',
+            'download_url' => 'required|url|max:500',
+            'update_message' => 'nullable|string|max:500',
+            'release_notes' => 'nullable|string|max:2000',
+            'is_active' => 'boolean',
+            'is_latest' => 'boolean',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            if (($validated['is_latest'] ?? false) === true) {
+                AppVersion::where('platform', $validated['platform'])
+                    ->orWhere('platform', 'both')
+                    ->update(['is_latest' => false]);
+            }
+
+            $validated['created_by'] = Auth::id();
+            $version = AppVersion::create($validated);
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'نسخه برنامه با موفقیت ایجاد شد.',
+                'data' => $version,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ایجاد نسخه برنامه: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function apiShow(AppVersion $appVersion)
+    {
+        return response()->json(['success' => true, 'data' => $appVersion->load('creator')]);
+    }
+
+    public function apiUpdate(Request $request, AppVersion $appVersion)
+    {
+        $validated = $request->validate([
+            'platform' => 'required|in:android,ios,both',
+            'version' => 'required|string|max:20',
+            'build_number' => 'nullable|string|max:20',
+            'update_type' => 'required|in:optional,force',
+            'title' => 'required|string|max:100',
+            'description' => 'nullable|string|max:2000',
+            'download_url' => 'required|url|max:500',
+            'update_message' => 'nullable|string|max:500',
+            'release_notes' => 'nullable|string|max:2000',
+            'is_active' => 'boolean',
+            'is_latest' => 'boolean',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            if (($validated['is_latest'] ?? false) === true) {
+                AppVersion::where('platform', $validated['platform'])
+                    ->orWhere('platform', 'both')
+                    ->where('id', '!=', $appVersion->id)
+                    ->update(['is_latest' => false]);
+            }
+
+            $appVersion->update($validated);
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'نسخه برنامه با موفقیت به‌روزرسانی شد.',
+                'data' => $appVersion,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در به‌روزرسانی نسخه برنامه: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function apiDestroy(AppVersion $appVersion)
+    {
+        $appVersion->delete();
+        return response()->json(['success' => true, 'message' => 'نسخه برنامه حذف شد.']);
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => 'required|in:activate,deactivate,set_latest,delete',
+            'version_ids' => 'required|array|min:1',
+            'version_ids.*' => 'integer|exists:app_versions,id',
+        ]);
+
+        $versions = AppVersion::whereIn('id', $validated['version_ids'])->get();
+        DB::beginTransaction();
+        try {
+            foreach ($versions as $version) {
+                if ($validated['action'] === 'activate') {
+                    $version->update(['is_active' => true]);
+                } elseif ($validated['action'] === 'deactivate') {
+                    $version->update(['is_active' => false]);
+                } elseif ($validated['action'] === 'set_latest') {
+                    AppVersion::where('platform', $version->platform)
+                        ->orWhere('platform', 'both')
+                        ->update(['is_latest' => false]);
+                    $version->update(['is_latest' => true]);
+                } elseif ($validated['action'] === 'delete') {
+                    $version->delete();
+                }
+            }
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'عملیات گروهی با موفقیت انجام شد.']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'خطا در عملیات گروهی: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function apiStatistics()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_versions' => AppVersion::count(),
+                'active_versions' => AppVersion::active()->count(),
+                'latest_versions' => AppVersion::latest()->count(),
+                'force_updates' => AppVersion::forceUpdate()->count(),
+                'optional_updates' => AppVersion::optionalUpdate()->count(),
+            ],
         ]);
     }
 }

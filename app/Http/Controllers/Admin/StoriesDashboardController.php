@@ -254,4 +254,44 @@ class StoriesDashboardController extends Controller
         return redirect()->back()
             ->with('success', "گزارش داستان‌ها با فرمت {$format} آماده دانلود است.");
     }
+
+    public function apiOverview(Request $request)
+    {
+        $dateRange = (int) $request->get('date_range', 30);
+
+        $stats = [
+            'total_stories' => Story::count(),
+            'published_stories' => Story::where('status', 'published')->count(),
+            'total_episodes' => Episode::count(),
+            'total_plays' => PlayHistory::count(),
+            'avg_rating' => Rating::avg('rating'),
+            'total_comments' => StoryComment::count(),
+        ];
+
+        $topStories = Story::with(['category'])
+            ->withCount(['playHistories as plays_count'])
+            ->withAvg('ratings', 'rating')
+            ->orderBy('plays_count', 'desc')
+            ->limit(10)
+            ->get();
+
+        $categoryStats = Category::withCount('stories')
+            ->orderBy('stories_count', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+                'top_stories' => $topStories,
+                'category_stats' => $categoryStats,
+                'date_range' => $dateRange,
+            ],
+        ]);
+    }
+
+    public function apiAnalytics(Request $request)
+    {
+        return $this->analytics($request);
+    }
 }

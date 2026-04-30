@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Referrals
+  version: 1.0.0
+
+paths:
+  /api/admin/referrals:
+    get:
+      summary: List referrals
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create referral
+      responses:
+        "200":
+          description: Created
+  /api/admin/referrals/export:
+    get:
+      summary: Export referrals CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/referrals/statistics/data:
+    get:
+      summary: Referral statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/referrals/bulk-action:
+    post:
+      summary: Bulk actions on referrals
+      responses:
+        "200":
+          description: OK
+  /api/admin/referrals/{id}:
+    get:
+      summary: Referral detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update referral
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete referral
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

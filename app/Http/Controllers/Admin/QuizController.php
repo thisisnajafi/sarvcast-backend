@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\QuizQuestion;
 use App\Models\Story;
 use App\Models\Episode;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class QuizController extends Controller
 {
@@ -408,62 +412,134 @@ class QuizController extends Controller
         return response()->json($episodes);
     }
 
-    // API Methods
-    public function apiIndex(Request $request)
-    {
-        $query = QuizQuestion::with(['story', 'episode']);
+    // --- API helpers ---
 
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('question_text', 'like', "%{$search}%")
-                  ->orWhere('explanation', 'like', "%{$search}%");
+    private function resolveQuizPerPage(Request $request): int
+    {
+        $raw = $request->input('perPage', $request->input('per_page', 20));
+        return max(1, min(100, is_numeric($raw) ? (int) $raw : 20));
+    }
+
+    private function buildQuizApiListQuery(Request $request): Builder
+    {
+        $query = QuizQuestion::query()->with(['story', 'episode']);
+
+        $search = $request->filled('q')
+            ? $request->string('q')->toString()
+            : ($request->filled('search') ? $request->string('search')->toString() : null);
+
+        if ($search !== null && $search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('quiz_questions.question_text', 'like', "%{$search}%")
+                  ->orWhere('quiz_questions.explanation', 'like', "%{$search}%");
             });
         }
 
-        // Filter by question type
         if ($request->filled('question_type')) {
-            $query->where('question_type', $request->question_type);
+            $query->where('quiz_questions.question_type', $request->string('question_type')->toString());
         }
-
-        // Filter by difficulty level
         if ($request->filled('difficulty_level')) {
-            $query->where('difficulty_level', $request->difficulty_level);
+            $query->where('quiz_questions.difficulty_level', $request->string('difficulty_level')->toString());
         }
-
-        // Filter by active status
         if ($request->filled('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
+            $query->where('quiz_questions.is_active', $request->boolean('is_active'));
         }
-
-        // Filter by story
         if ($request->filled('story_id')) {
-            $query->where('story_id', $request->story_id);
+            $query->where('quiz_questions.story_id', (int) $request->input('story_id'));
         }
-
-        // Filter by episode
         if ($request->filled('episode_id')) {
-            $query->where('episode_id', $request->episode_id);
+            $query->where('quiz_questions.episode_id', (int) $request->input('episode_id'));
         }
 
-        $questions = $query->orderBy('created_at', 'desc')->paginate(20);
+        if ($request->filled('date_range')) {
+            $now = Carbon::now();
+            match ($request->string('date_range')->toString()) {
+                'today' => $query->whereDate('quiz_questions.created_at', $now->toDateString()),
+                'week'  => $query->where('quiz_questions.created_at', '>=', $now->copy()->subWeek()),
+                'month' => $query->where('quiz_questions.created_at', '>=', $now->copy()->subMonth()),
+                'year'  => $query->where('quiz_questions.created_at', '>=', $now->copy()->subYear()),
+                default => null,
+            };
+        } else {
+            if ($request->filled('dateFrom')) {
+                $query->whereDate('quiz_questions.created_at', '>=', $request->string('dateFrom')->toString());
+            }
+            if ($request->filled('dateTo')) {
+                $query->whereDate('quiz_questions.created_at', '<=', $request->string('dateTo')->toString());
+            }
+        }
 
-        return response()->json([
-            'success' => true,
-            'data' => $questions->items(),
-            'pagination' => [
-                'current_page' => $questions->currentPage(),
-                'last_page' => $questions->lastPage(),
-                'per_page' => $questions->perPage(),
-                'total' => $questions->total(),
-            ]
-        ]);
+        return $query;
+    }
+
+    private function applyQuizListSort(Builder $query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', $request->input('sort_by', 'created_at'));
+        $sortDir = strtolower((string) $request->input('sortDir', $request->input('sort_direction', 'desc'))) === 'asc' ? 'asc' : 'desc';
+
+        $column = match ($sortBy) {
+            'id' => 'quiz_questions.id',
+            'question_type', 'type' => 'quiz_questions.question_type',
+            'difficulty_level', 'difficulty' => 'quiz_questions.difficulty_level',
+            'points' => 'quiz_questions.points',
+            default => 'quiz_questions.created_at',
+        };
+
+        $query->orderBy($column, $sortDir)->orderBy('quiz_questions.id', 'desc');
+    }
+
+    // --- API Methods ---
+
+    public function apiIndex(Request $request)
+    {
+        try {
+            $query = $this->buildQuizApiListQuery($request);
+            $this->applyQuizListSort($query, $request);
+            $perPage = $this->resolveQuizPerPage($request);
+
+            return AdminApiResponse::paginated(
+                $query->paginate($perPage)->appends($request->query())
+            );
+        } catch (\Throwable $e) {
+            Log::error('Quiz apiIndex failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در بارگذاری سوالات.', 'error' => 'SERVER_ERROR'], 500);
+        }
+    }
+
+    public function apiExport(Request $request)
+    {
+        try {
+            $query = $this->buildQuizApiListQuery($request);
+            $this->applyQuizListSort($query, $request);
+
+            $filename = 'quiz-questions-' . now()->format('Y-m-d-His') . '.csv';
+
+            return response()->streamDownload(function () use ($query) {
+                $handle = fopen('php://output', 'w');
+                if ($handle === false) return;
+                fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+                fputcsv($handle, ['id', 'question_text', 'question_type', 'difficulty_level', 'points', 'time_limit', 'is_active', 'story_id', 'episode_id', 'created_at']);
+
+                $query->clone()->chunk(500, function ($rows) use ($handle) {
+                    foreach ($rows as $row) {
+                        fputcsv($handle, [
+                            $row->id, $row->question_text, $row->question_type, $row->difficulty_level,
+                            $row->points, $row->time_limit, $row->is_active ? '1' : '0',
+                            $row->story_id, $row->episode_id, $row->created_at?->toIso8601String(),
+                        ]);
+                    }
+                });
+                fclose($handle);
+            }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        } catch (\Throwable $e) {
+            Log::error('Quiz apiExport failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در خروجی CSV.', 'error' => 'SERVER_ERROR'], 500);
+        }
     }
 
     public function apiStore(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'question_text' => 'required|string|max:1000',
             'question_type' => 'required|in:multiple_choice,single_choice,true_false,fill_blank',
             'difficulty_level' => 'required|in:easy,medium,hard',
@@ -478,6 +554,10 @@ class QuizController extends Controller
             'options.*.is_correct' => 'boolean',
             'correct_answer' => 'required_if:question_type,single_choice,true_false,fill_blank|string|max:500',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'error' => 'VALIDATION_ERROR', 'errors' => $validator->errors()->toArray()], 422);
+        }
 
         try {
             DB::beginTransaction();
@@ -495,7 +575,6 @@ class QuizController extends Controller
                 'correct_answer' => $request->correct_answer,
             ]);
 
-            // Create options for multiple choice questions
             if ($request->question_type === 'multiple_choice' && $request->has('options')) {
                 foreach ($request->options as $option) {
                     $question->options()->create([
@@ -507,36 +586,32 @@ class QuizController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'سوال با موفقیت ایجاد شد.',
-                'data' => $question->load(['story', 'episode', 'options'])
-            ]);
-
-        } catch (\Exception $e) {
+            return AdminApiResponse::success(
+                $question->load(['story', 'episode', 'options']),
+                'سوال با موفقیت ایجاد شد.'
+            );
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error creating quiz question: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در ایجاد سوال: ' . $e->getMessage()
-            ], 500);
+            Log::error('Quiz apiStore failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در ایجاد سوال.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
     public function apiShow(QuizQuestion $quizQuestion)
     {
-        $quizQuestion->load(['story', 'episode', 'options']);
-
-        return response()->json([
-            'success' => true,
-            'data' => $quizQuestion
-        ]);
+        try {
+            return AdminApiResponse::success(
+                $quizQuestion->load(['story', 'episode', 'options'])
+            );
+        } catch (\Throwable $e) {
+            Log::error('Quiz apiShow failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در بارگذاری سوال.', 'error' => 'SERVER_ERROR'], 500);
+        }
     }
 
     public function apiUpdate(Request $request, QuizQuestion $quizQuestion)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'question_text' => 'required|string|max:1000',
             'question_type' => 'required|in:multiple_choice,single_choice,true_false,fill_blank',
             'difficulty_level' => 'required|in:easy,medium,hard',
@@ -551,6 +626,10 @@ class QuizController extends Controller
             'options.*.is_correct' => 'boolean',
             'correct_answer' => 'required_if:question_type,single_choice,true_false,fill_blank|string|max:500',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'error' => 'VALIDATION_ERROR', 'errors' => $validator->errors()->toArray()], 422);
+        }
 
         try {
             DB::beginTransaction();
@@ -568,7 +647,6 @@ class QuizController extends Controller
                 'correct_answer' => $request->correct_answer,
             ]);
 
-            // Update options for multiple choice questions
             if ($request->question_type === 'multiple_choice' && $request->has('options')) {
                 $quizQuestion->options()->delete();
                 foreach ($request->options as $option) {
@@ -581,20 +659,14 @@ class QuizController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'سوال با موفقیت به‌روزرسانی شد.',
-                'data' => $quizQuestion->load(['story', 'episode', 'options'])
-            ]);
-
-        } catch (\Exception $e) {
+            return AdminApiResponse::success(
+                $quizQuestion->load(['story', 'episode', 'options']),
+                'سوال با موفقیت به‌روزرسانی شد.'
+            );
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error updating quiz question: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در به‌روزرسانی سوال: ' . $e->getMessage()
-            ], 500);
+            Log::error('Quiz apiUpdate failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در به‌روزرسانی سوال.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
@@ -602,36 +674,35 @@ class QuizController extends Controller
     {
         try {
             $quizQuestion->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'سوال با موفقیت حذف شد.'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error deleting quiz question: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در حذف سوال: ' . $e->getMessage()
-            ], 500);
+            return AdminApiResponse::okMessage('سوال با موفقیت حذف شد.');
+        } catch (\Throwable $e) {
+            Log::error('Quiz apiDestroy failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در حذف سوال.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
     public function apiBulkAction(Request $request)
     {
-        $request->validate([
-            'action' => 'required|string|in:activate,deactivate,delete,change_difficulty,change_type',
-            'question_ids' => 'required|array|min:1',
-            'question_ids.*' => 'integer|exists:quiz_questions,id',
-            'difficulty_level' => 'required_if:action,change_difficulty|string|in:easy,medium,hard',
-            'question_type' => 'required_if:action,change_type|string|in:multiple_choice,single_choice,true_false,fill_blank',
-        ]);
+        $questionIds = $request->input('question_ids', $request->input('selected_items', []));
+        if (!is_array($questionIds)) $questionIds = [];
+
+        $validator = Validator::make(
+            array_merge($request->only(['action', 'difficulty_level', 'question_type']), ['question_ids' => $questionIds]),
+            [
+                'action' => 'required|string|in:activate,deactivate,delete,change_difficulty,change_type',
+                'question_ids' => 'required|array|min:1',
+                'question_ids.*' => 'integer|exists:quiz_questions,id',
+                'difficulty_level' => 'required_if:action,change_difficulty|string|in:easy,medium,hard',
+                'question_type' => 'required_if:action,change_type|string|in:multiple_choice,single_choice,true_false,fill_blank',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'error' => 'VALIDATION_ERROR', 'errors' => $validator->errors()->toArray()], 422);
+        }
 
         try {
             DB::beginTransaction();
-
-            $questionIds = $request->question_ids;
             $action = $request->action;
             $successCount = 0;
             $failureCount = 0;
@@ -639,101 +710,50 @@ class QuizController extends Controller
             foreach ($questionIds as $questionId) {
                 try {
                     $question = QuizQuestion::findOrFail($questionId);
-
                     switch ($action) {
-                        case 'activate':
-                            $question->update(['is_active' => true]);
-                            break;
-
-                        case 'deactivate':
-                            $question->update(['is_active' => false]);
-                            break;
-
-                        case 'delete':
-                            $question->delete();
-                            break;
-
-                        case 'change_difficulty':
-                            $question->update(['difficulty_level' => $request->difficulty_level]);
-                            break;
-
-                        case 'change_type':
-                            $question->update(['question_type' => $request->question_type]);
-                            break;
+                        case 'activate':    $question->update(['is_active' => true]); break;
+                        case 'deactivate':  $question->update(['is_active' => false]); break;
+                        case 'delete':      $question->delete(); break;
+                        case 'change_difficulty': $question->update(['difficulty_level' => $request->difficulty_level]); break;
+                        case 'change_type':       $question->update(['question_type' => $request->question_type]); break;
                     }
-
                     $successCount++;
-
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $failureCount++;
-                    Log::error('Bulk action failed for quiz question', [
-                        'question_id' => $questionId,
-                        'action' => $action,
-                        'error' => $e->getMessage()
-                    ]);
+                    Log::error('Quiz bulk action failed', ['question_id' => $questionId, 'action' => $action, 'error' => $e->getMessage()]);
                 }
             }
 
             DB::commit();
 
-            $message = "عملیات {$action} روی {$successCount} سوال انجام شد";
-            if ($failureCount > 0) {
-                $message .= " و {$failureCount} سوال ناموفق بود";
-            }
+            $message = "عملیات روی {$successCount} سوال انجام شد";
+            if ($failureCount > 0) $message .= " و {$failureCount} سوال ناموفق بود";
 
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'success_count' => $successCount,
-                'failure_count' => $failureCount
-            ]);
-
-        } catch (\Exception $e) {
+            return AdminApiResponse::okMessage($message);
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Bulk action failed', [
-                'action' => $request->action,
-                'question_ids' => $request->question_ids,
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
-            ], 500);
+            Log::error('Quiz apiBulkAction failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در انجام عملیات گروهی.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
     public function apiStatistics()
     {
-        $stats = [
-            'total_questions' => QuizQuestion::count(),
-            'active_questions' => QuizQuestion::where('is_active', true)->count(),
-            'inactive_questions' => QuizQuestion::where('is_active', false)->count(),
-            'questions_by_type' => QuizQuestion::selectRaw('question_type, COUNT(*) as count')
-                ->groupBy('question_type')
-                ->get(),
-            'questions_by_difficulty' => QuizQuestion::selectRaw('difficulty_level, COUNT(*) as count')
-                ->groupBy('difficulty_level')
-                ->get(),
-            'questions_by_story' => QuizQuestion::join('stories', 'quiz_questions.story_id', '=', 'stories.id')
-                ->selectRaw('stories.title, COUNT(*) as count')
-                ->groupBy('stories.id', 'stories.title')
-                ->orderBy('count', 'desc')
-                ->limit(10)
-                ->get(),
-            'recent_questions' => QuizQuestion::with(['story', 'episode'])
-                ->latest()
-                ->limit(10)
-                ->get(),
-            'total_points' => QuizQuestion::sum('points'),
-            'average_points' => round(QuizQuestion::avg('points'), 2),
-            'questions_with_time_limit' => QuizQuestion::whereNotNull('time_limit')->count(),
-            'questions_without_time_limit' => QuizQuestion::whereNull('time_limit')->count(),
-        ];
-
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        try {
+            return AdminApiResponse::success([
+                'total_questions' => QuizQuestion::count(),
+                'active_questions' => QuizQuestion::where('is_active', true)->count(),
+                'inactive_questions' => QuizQuestion::where('is_active', false)->count(),
+                'questions_by_type' => QuizQuestion::selectRaw('question_type, COUNT(*) as count')
+                    ->groupBy('question_type')->get(),
+                'questions_by_difficulty' => QuizQuestion::selectRaw('difficulty_level, COUNT(*) as count')
+                    ->groupBy('difficulty_level')->get(),
+                'total_points' => QuizQuestion::sum('points'),
+                'average_points' => round((float) QuizQuestion::avg('points'), 2),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Quiz apiStatistics failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در بارگذاری آمار.', 'error' => 'SERVER_ERROR'], 500);
+        }
     }
 }

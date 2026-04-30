@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Affiliate partners
+  version: 1.0.0
+
+paths:
+  /api/admin/affiliate:
+    get:
+      summary: List affiliate partners
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create affiliate partner
+      responses:
+        "201":
+          description: Created
+  /api/admin/affiliate/export:
+    get:
+      summary: Export partners CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/affiliate/statistics/data:
+    get:
+      summary: Affiliate statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/affiliate/bulk-action:
+    post:
+      summary: Bulk actions
+      responses:
+        "200":
+          description: OK
+  /api/admin/affiliate/{id}:
+    get:
+      summary: Partner detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update partner
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete partner
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

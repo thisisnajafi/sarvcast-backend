@@ -56,6 +56,7 @@ class ApiIntegrationTest extends TestCase
                             'user'
                         ]
                     ],
+                    'meta' => ['page', 'perPage', 'total', 'lastPage'],
                     'pagination'
                 ]);
 

@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Commission Payments
+  version: 1.0.0
+
+paths:
+  /api/admin/commission-payments:
+    get:
+      summary: List commission payments
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: perPage
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: sortBy
+          schema: { type: string }
+        - in: query
+          name: sortDir
+          schema: { type: string, enum: [asc, desc] }
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create commission payment
+      responses:
+        "200":
+          description: Created
+
+  /api/admin/commission-payments/export:
+    get:
+      summary: Export commission payments CSV
+      responses:
+        "200":
+          description: CSV stream
+
+  /api/admin/commission-payments/statistics/data:
+    get:
+      summary: Commission payment statistics
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/commission-payments/bulk-action:
+    post:
+      summary: Bulk action
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/commission-payments/{id}:
+    get:
+      summary: Get commission payment detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update commission payment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete commission payment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

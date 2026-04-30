@@ -25,17 +25,17 @@ class DashboardApiController extends Controller
         $dateRange = $request->get('date_range', '30days');
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
-        
+
         $startDate = $this->getStartDate($dateRange, $dateFrom);
         $endDate = $dateTo ? Carbon::parse($dateTo)->endOfDay() : now();
-        
+
         $cacheKey = 'api_dashboard_stats_' . md5(json_encode([
             'date_range' => $dateRange,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'user_id' => auth()->id()
         ]));
-        
+
         $stats = Cache::remember($cacheKey, 300, function() use ($startDate, $endDate) {
             return [
                 'users' => [
@@ -62,7 +62,7 @@ class DashboardApiController extends Controller
                 'engagement' => [
                     'total_comments' => StoryComment::count(),
                     'total_plays' => PlayHistory::count(),
-                    'plays_today' => PlayHistory::whereDate('created_at', today())->count(),
+                    'plays_today' => PlayHistory::whereDate('played_at', today())->count(),
                 ],
                 'subscriptions' => [
                     'total' => Subscription::count(),
@@ -70,14 +70,14 @@ class DashboardApiController extends Controller
                 ],
             ];
         });
-        
+
         return response()->json([
             'success' => true,
             'data' => $stats,
             'cached' => Cache::has($cacheKey)
         ]);
     }
-    
+
     /**
      * Get chart data (API endpoint)
      */
@@ -87,12 +87,12 @@ class DashboardApiController extends Controller
         $dateRange = $request->get('date_range', '30days');
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
-        
+
         $startDate = $this->getStartDate($dateRange, $dateFrom);
         $endDate = $dateTo ? Carbon::parse($dateTo)->endOfDay() : now();
-        
+
         $cacheKey = 'api_dashboard_chart_' . $chartType . '_' . md5($startDate . $endDate);
-        
+
         $data = Cache::remember($cacheKey, 300, function() use ($chartType, $startDate, $endDate) {
             switch ($chartType) {
                 case 'revenue':
@@ -102,33 +102,33 @@ class DashboardApiController extends Controller
                         ->groupBy('date')
                         ->orderBy('date', 'asc')
                         ->get();
-                        
+
                 case 'users':
                     return User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
                         ->whereBetween('created_at', [$startDate, $endDate])
                         ->groupBy('date')
                         ->orderBy('date', 'asc')
                         ->get();
-                        
+
                 case 'plays':
                     return PlayHistory::selectRaw('DATE(played_at) as date, COUNT(*) as count')
                         ->whereBetween('played_at', [$startDate, $endDate])
                         ->groupBy('date')
                         ->orderBy('date', 'asc')
                         ->get();
-                        
+
                 default:
                     return [];
             }
         });
-        
+
         return response()->json([
             'success' => true,
             'type' => $chartType,
             'data' => $data
         ]);
     }
-    
+
     /**
      * Get start date based on date range
      */

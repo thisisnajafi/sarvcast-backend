@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Category;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -189,5 +191,279 @@ class CategoryController extends Controller
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'دسته‌بندی با موفقیت حذف شد.');
+    }
+
+    // API Methods for Next dashboard
+    public function apiIndex(Request $request)
+    {
+        $query = $this->buildCategoryApiListQuery($request);
+        $query->withCount([
+            'stories as published_stories_count' => function ($q) {
+                $q->where('status', 'published');
+            },
+            'stories as total_stories_count',
+        ]);
+        $this->applyCategoryListSort($query, $request);
+
+        $perPage = $this->resolveCategoryListPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($paginator);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildCategoryApiListQuery($request);
+        $query->withCount([
+            'stories as published_stories_count' => function ($q) {
+                $q->where('status', 'published');
+            },
+            'stories as total_stories_count',
+        ]);
+        $this->applyCategoryListSort($query, $request);
+
+        $filename = 'categories-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'name', 'slug', 'is_active', 'sort_order', 'story_count', 'total_episodes', 'average_rating', 'created_at']);
+
+            $query->clone()->select([
+                'id', 'name', 'slug', 'is_active', 'sort_order', 'story_count', 'total_episodes', 'average_rating', 'created_at',
+            ])->chunk(500, function ($rows) use ($handle) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $row->id,
+                        $row->name,
+                        $row->slug,
+                        $row->is_active ? '1' : '0',
+                        $row->sort_order,
+                        $row->story_count,
+                        $row->total_episodes,
+                        $row->average_rating,
+                        $row->created_at?->toIso8601String(),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100|unique:categories,name',
+            'slug' => 'nullable|string|max:100|unique:categories,slug',
+            'description' => 'nullable|string|max:500',
+            'color' => 'nullable|string|max:7',
+            'is_active' => 'required|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+        ]);
+
+        $category = Category::create($validated);
+
+        return AdminApiResponse::success($category, 'Category created successfully', 201);
+    }
+
+    public function apiShow(Category $category)
+    {
+        $data = $category->loadCount([
+            'stories as published_stories_count' => function ($q) {
+                $q->where('status', 'published');
+            },
+            'stories as total_stories_count',
+        ]);
+
+        return AdminApiResponse::success($data);
+    }
+
+    public function apiUpdate(Request $request, Category $category)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:100|unique:categories,name,' . $category->id,
+            'slug' => 'nullable|string|max:100|unique:categories,slug,' . $category->id,
+            'description' => 'nullable|string|max:500',
+            'color' => 'nullable|string|max:7',
+            'is_active' => 'sometimes|required|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+        ]);
+
+        $category->update($validated);
+
+        return AdminApiResponse::success($category->fresh(), 'Category updated successfully');
+    }
+
+    public function apiDestroy(Category $category)
+    {
+        if ($category->stories()->count() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot delete category with existing stories',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $category->delete();
+
+        return AdminApiResponse::okMessage('Category deleted successfully');
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => 'required|in:delete,activate,deactivate',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'integer|exists:categories,id',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:categories,id',
+        ]);
+
+        $ids = $validated['category_ids'] ?? $validated['selected_items'] ?? [];
+        if (count($ids) === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ دسته‌بندی‌ای انتخاب نشده است.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $successCount = 0;
+        $failureCount = 0;
+
+        foreach ($ids as $id) {
+            $category = Category::find($id);
+            if (! $category) {
+                $failureCount++;
+                continue;
+            }
+
+            if ($validated['action'] === 'delete') {
+                if ($category->stories()->count() > 0) {
+                    $failureCount++;
+                    continue;
+                }
+                $category->delete();
+                $successCount++;
+            } elseif ($validated['action'] === 'activate') {
+                $category->update(['is_active' => true]);
+                $successCount++;
+            } else {
+                $category->update(['is_active' => false]);
+                $successCount++;
+            }
+        }
+
+        $message = "عملیات {$validated['action']} روی {$successCount} مورد انجام شد";
+        if ($failureCount > 0) {
+            $message .= "؛ {$failureCount} مورد ناموفق بود";
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'success_count' => $successCount,
+            'failure_count' => $failureCount,
+        ]);
+    }
+
+    public function apiStatistics()
+    {
+        return AdminApiResponse::success([
+            'total' => Category::count(),
+            'active' => Category::where('is_active', true)->count(),
+            'inactive' => Category::where('is_active', false)->count(),
+            'total_stories' => Category::sum('story_count'),
+            'total_episodes' => Category::sum('total_episodes'),
+            'avg_rating' => Category::avg('average_rating'),
+        ]);
+    }
+
+    private function buildCategoryApiListQuery(Request $request)
+    {
+        $query = Category::query();
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->string('status')->toString() === 'active');
+        }
+
+        if ($request->filled('is_active')) {
+            $val = $request->input('is_active');
+            $query->where('is_active', filter_var($val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $val);
+        }
+
+        if ($request->filled('dateFrom')) {
+            $query->whereDate('created_at', '>=', $request->dateFrom);
+        }
+
+        if ($request->filled('dateTo')) {
+            $query->whereDate('created_at', '<=', $request->dateTo);
+        }
+
+        if ($request->filled('date_range')) {
+            switch ($request->date_range) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', Carbon::now()->subWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', Carbon::now()->subMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', Carbon::now()->subYear());
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyCategoryListSort($query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', $request->input('sort_by', 'sort_order'));
+
+        $sortDir = 'asc';
+        if ($request->has('sortDir')) {
+            $sortDir = strtolower((string) $request->input('sortDir')) === 'desc' ? 'desc' : 'asc';
+        } else {
+            $legacyOrder = $request->input('sort_order');
+            if (is_string($legacyOrder) && in_array(strtolower($legacyOrder), ['asc', 'desc'], true)) {
+                $sortDir = strtolower($legacyOrder) === 'desc' ? 'desc' : 'asc';
+            }
+        }
+
+        $allowed = ['name', 'story_count', 'published_stories_count', 'total_episodes', 'average_rating', 'sort_order', 'created_at', 'id'];
+        if (! in_array($sortBy, $allowed, true)) {
+            $sortBy = 'sort_order';
+            $sortDir = 'asc';
+        }
+        $query->orderBy($sortBy, $sortDir);
+        if ($sortBy !== 'id') {
+            $query->orderBy('id', 'desc');
+        }
+    }
+
+    private function resolveCategoryListPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 15));
+
+        return min(100, max(1, $raw ?: 15));
     }
 }

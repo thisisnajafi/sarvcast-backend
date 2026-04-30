@@ -339,7 +339,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('vendor/chart.js/chart.umd.min.js') }}"></script>
 <script>
 // Daily Plays Chart
 const dailyPlaysCtx = document.getElementById('dailyPlaysChart').getContext('2d');

@@ -252,4 +252,49 @@ class SalesDashboardController extends Controller
         return redirect()->back()
             ->with('success', "گزارش فروش با فرمت {$format} آماده دانلود است.");
     }
+
+    public function apiOverview(Request $request)
+    {
+        $dateRange = (int) $request->get('date_range', 30);
+        $startDate = Carbon::now()->subDays($dateRange);
+
+        $stats = [
+            'total_revenue' => Payment::where('status', 'completed')->sum('amount'),
+            'monthly_revenue' => Payment::where('status', 'completed')->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
+            'daily_revenue' => Payment::where('status', 'completed')->whereDate('created_at', today())->sum('amount'),
+            'total_transactions' => Payment::where('status', 'completed')->count(),
+            'failed_transactions' => Payment::where('status', 'failed')->count(),
+            'avg_transaction_value' => Payment::where('status', 'completed')->avg('amount'),
+        ];
+
+        $revenueTrends = Payment::selectRaw('DATE(created_at) as date, SUM(amount) as total_amount, COUNT(*) as transaction_count')
+            ->where('status', 'completed')
+            ->where('created_at', '>=', $startDate)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        $topCustomers = User::withSum('payments as total_spent', 'amount')
+            ->whereHas('payments', function ($query) {
+                $query->where('status', 'completed');
+            })
+            ->orderBy('total_spent', 'desc')
+            ->limit(10)
+            ->get(['id', 'first_name', 'last_name', 'phone_number']);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+                'revenue_trends' => $revenueTrends,
+                'top_customers' => $topCustomers,
+                'date_range' => $dateRange,
+            ],
+        ]);
+    }
+
+    public function apiAnalytics(Request $request)
+    {
+        return $this->analytics($request);
+    }
 }

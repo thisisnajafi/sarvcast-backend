@@ -27,7 +27,9 @@ class PaymentController extends Controller
     public function initiate(Request $request)
     {
         $request->validate([
-            'subscription_id' => 'required|exists:subscriptions,id'
+            'subscription_id' => 'required|exists:subscriptions,id',
+            'source' => 'nullable|string|in:app,web',
+            'return_scheme' => 'nullable|string|max:60',
         ]);
 
         $user = Auth::user();
@@ -47,6 +49,9 @@ class PaymentController extends Controller
             ], 400);
         }
 
+        $source = $request->input('source', 'app');
+        $returnScheme = $request->input('return_scheme', config('services.sarvcast_app.return_scheme', 'sarvcast'));
+
         // Create payment record
         $payment = Payment::create([
             'user_id' => $user->id,
@@ -55,7 +60,11 @@ class PaymentController extends Controller
             'currency' => 'IRR',
             'payment_method' => 'zarinpal',
             'status' => 'pending',
-            'transaction_id' => $this->generateTransactionId()
+            'transaction_id' => $this->generateTransactionId(),
+            'payment_metadata' => [
+                'source' => $source,
+                'return_scheme' => $returnScheme,
+            ],
         ]);
 
         // Initiate payment with ZarinPal

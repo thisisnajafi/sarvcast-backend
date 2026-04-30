@@ -8,6 +8,7 @@ use App\Models\SystemAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -509,20 +510,25 @@ class PerformanceMonitoringController extends Controller
     // API Methods
     public function apiIndex(Request $request)
     {
-        $query = PerformanceAlert::query();
+        $query = SystemAlert::query();
 
         // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('message', 'like', "%{$search}%")
+                  ->orWhere('type', 'like', "%{$search}%");
             });
         }
 
         // Filter by status
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            if ($request->status === 'resolved') {
+                $query->where('resolved', true);
+            } elseif ($request->status === 'unresolved') {
+                $query->where('resolved', false);
+            }
         }
 
         // Filter by severity
@@ -530,18 +536,13 @@ class PerformanceMonitoringController extends Controller
             $query->where('severity', $request->severity);
         }
 
-        // Filter by feature
-        if ($request->filled('feature')) {
-            $query->where('feature', $request->feature);
-        }
-
         // Filter by date range
         if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+            $query->whereDate('triggered_at', '>=', $request->date_from);
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+            $query->whereDate('triggered_at', '<=', $request->date_to);
         }
 
         $alerts = $query->orderBy('created_at', 'desc')->paginate(20);
@@ -561,30 +562,29 @@ class PerformanceMonitoringController extends Controller
     public function apiStore(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'metric_type' => 'required|in:response_time,memory_usage,cpu_usage,disk_usage,error_rate,active_users',
-            'threshold_value' => 'required|numeric|min:0',
-            'threshold_operator' => 'required|in:>,<,>=,<=,==,!=',
-            'severity' => 'required|in:low,medium,high,critical',
-            'is_active' => 'boolean',
-            'notification_channels' => 'nullable|array',
-            'notification_channels.*' => 'string|in:email,sms,webhook',
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'severity' => 'required|in:info,warning,critical',
+            'type' => 'required|string|max:100',
+            'metadata' => 'nullable|array',
+            'resolved' => 'boolean',
+            'acknowledged' => 'boolean',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $alert = PerformanceAlert::create([
-                'name' => $request->name,
-                'description' => $request->description,
-                'metric_type' => $request->metric_type,
-                'threshold_value' => $request->threshold_value,
-                'threshold_operator' => $request->threshold_operator,
+            $alert = SystemAlert::create([
+                'title' => $request->title,
+                'message' => $request->message,
                 'severity' => $request->severity,
-                'status' => 'active',
-                'is_active' => $request->boolean('is_active', true),
-                'notification_channels' => $request->notification_channels ? json_encode($request->notification_channels) : null,
+                'type' => $request->type,
+                'metadata' => $request->metadata,
+                'acknowledged' => $request->boolean('acknowledged', false),
+                'acknowledged_at' => $request->boolean('acknowledged', false) ? now() : null,
+                'resolved' => $request->boolean('resolved', false),
+                'resolved_at' => $request->boolean('resolved', false) ? now() : null,
+                'triggered_at' => now(),
             ]);
 
             DB::commit();
@@ -606,7 +606,7 @@ class PerformanceMonitoringController extends Controller
         }
     }
 
-    public function apiShow(PerformanceAlert $performanceAlert)
+    public function apiShow(SystemAlert $performanceAlert)
     {
         return response()->json([
             'success' => true,
@@ -614,34 +614,31 @@ class PerformanceMonitoringController extends Controller
         ]);
     }
 
-    public function apiUpdate(Request $request, PerformanceAlert $performanceAlert)
+    public function apiUpdate(Request $request, SystemAlert $performanceAlert)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'metric_type' => 'required|in:response_time,memory_usage,cpu_usage,disk_usage,error_rate,active_users',
-            'threshold_value' => 'required|numeric|min:0',
-            'threshold_operator' => 'required|in:>,<,>=,<=,==,!=',
-            'severity' => 'required|in:low,medium,high,critical',
-            'status' => 'required|in:active,inactive,triggered',
-            'is_active' => 'boolean',
-            'notification_channels' => 'nullable|array',
-            'notification_channels.*' => 'string|in:email,sms,webhook',
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'severity' => 'required|in:info,warning,critical',
+            'type' => 'required|string|max:100',
+            'metadata' => 'nullable|array',
+            'resolved' => 'boolean',
+            'acknowledged' => 'boolean',
         ]);
 
         try {
             DB::beginTransaction();
 
             $performanceAlert->update([
-                'name' => $request->name,
-                'description' => $request->description,
-                'metric_type' => $request->metric_type,
-                'threshold_value' => $request->threshold_value,
-                'threshold_operator' => $request->threshold_operator,
+                'title' => $request->title,
+                'message' => $request->message,
                 'severity' => $request->severity,
-                'status' => $request->status,
-                'is_active' => $request->boolean('is_active'),
-                'notification_channels' => $request->notification_channels ? json_encode($request->notification_channels) : null,
+                'type' => $request->type,
+                'metadata' => $request->metadata,
+                'acknowledged' => $request->boolean('acknowledged', $performanceAlert->acknowledged),
+                'acknowledged_at' => $request->boolean('acknowledged', $performanceAlert->acknowledged) ? ($performanceAlert->acknowledged_at ?? now()) : null,
+                'resolved' => $request->boolean('resolved', $performanceAlert->resolved),
+                'resolved_at' => $request->boolean('resolved', $performanceAlert->resolved) ? now() : null,
             ]);
 
             DB::commit();
@@ -663,7 +660,7 @@ class PerformanceMonitoringController extends Controller
         }
     }
 
-    public function apiDestroy(PerformanceAlert $performanceAlert)
+    public function apiDestroy(SystemAlert $performanceAlert)
     {
         try {
             $performanceAlert->delete();
@@ -686,9 +683,9 @@ class PerformanceMonitoringController extends Controller
     public function apiBulkAction(Request $request)
     {
         $request->validate([
-            'action' => 'required|string|in:activate,deactivate,delete',
+            'action' => 'required|string|in:resolve,unresolve,delete',
             'alert_ids' => 'required|array|min:1',
-            'alert_ids.*' => 'integer|exists:performance_alerts,id',
+            'alert_ids.*' => 'integer|exists:system_alerts,id',
         ]);
 
         try {
@@ -701,15 +698,15 @@ class PerformanceMonitoringController extends Controller
 
             foreach ($alertIds as $alertId) {
                 try {
-                    $alert = PerformanceAlert::findOrFail($alertId);
+                    $alert = SystemAlert::findOrFail($alertId);
 
                     switch ($action) {
-                        case 'activate':
-                            $alert->update(['status' => 'active', 'is_active' => true]);
+                        case 'resolve':
+                            $alert->update(['resolved' => true, 'resolved_at' => now()]);
                             break;
 
-                        case 'deactivate':
-                            $alert->update(['status' => 'inactive', 'is_active' => false]);
+                        case 'unresolve':
+                            $alert->update(['resolved' => false, 'resolved_at' => null]);
                             break;
 
                         case 'delete':
@@ -732,8 +729,8 @@ class PerformanceMonitoringController extends Controller
             DB::commit();
 
             $actionLabels = [
-                'activate' => 'فعال‌سازی',
-                'deactivate' => 'غیرفعال‌سازی',
+                'resolve' => 'حل',
+                'unresolve' => 'بازگشایی',
                 'delete' => 'حذف',
             ];
 
@@ -767,21 +764,18 @@ class PerformanceMonitoringController extends Controller
     public function apiStatistics()
     {
         $stats = [
-            'total_alerts' => PerformanceAlert::count(),
-            'active_alerts' => PerformanceAlert::where('status', 'active')->count(),
-            'inactive_alerts' => PerformanceAlert::where('status', 'inactive')->count(),
-            'triggered_alerts' => PerformanceAlert::where('status', 'triggered')->count(),
-            'alerts_by_severity' => PerformanceAlert::selectRaw('severity, COUNT(*) as count')
+            'total_alerts' => SystemAlert::count(),
+            'resolved_alerts' => SystemAlert::where('resolved', true)->count(),
+            'unresolved_alerts' => SystemAlert::where('resolved', false)->count(),
+            'acknowledged_alerts' => SystemAlert::where('acknowledged', true)->count(),
+            'alerts_by_severity' => SystemAlert::selectRaw('severity, COUNT(*) as count')
                 ->groupBy('severity')
                 ->get(),
-            'alerts_by_metric_type' => PerformanceAlert::selectRaw('metric_type, COUNT(*) as count')
-                ->groupBy('metric_type')
+            'alerts_by_type' => SystemAlert::selectRaw('type, COUNT(*) as count')
+                ->groupBy('type')
                 ->get(),
-            'alerts_by_status' => PerformanceAlert::selectRaw('status, COUNT(*) as count')
-                ->groupBy('status')
-                ->get(),
-            'recent_alerts' => PerformanceAlert::orderBy('created_at', 'desc')->limit(10)->get(),
-            'alerts_by_month' => PerformanceAlert::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+            'recent_alerts' => SystemAlert::orderBy('triggered_at', 'desc')->limit(10)->get(),
+            'alerts_by_month' => SystemAlert::selectRaw('DATE_FORMAT(triggered_at, "%Y-%m") as month, COUNT(*) as count')
                 ->groupBy('month')
                 ->orderBy('month', 'desc')
                 ->limit(12)
@@ -807,7 +801,7 @@ class PerformanceMonitoringController extends Controller
             'disk_usage' => $this->getDiskUsage(),
             'active_connections' => $this->getActiveConnections(),
             'queue_size' => $this->getQueueSize(),
-            'system_health' => $this->getSystemHealth(),
+            'system_health' => $this->getSystemHealthStatus(),
             'performance_charts' => $this->getPerformanceChartData($request),
         ];
 
@@ -834,7 +828,7 @@ class PerformanceMonitoringController extends Controller
 
     public function apiHealth()
     {
-        $health = $this->getSystemHealth();
+        $health = $this->getSystemHealthStatus();
 
         return response()->json([
             'success' => true,

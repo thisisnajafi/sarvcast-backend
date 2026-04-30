@@ -28,6 +28,15 @@ class Subscription extends Model
         'auto_renew_enabled',
         'store_expiry_time',
         'store_metadata',
+        'cancellation_reason',
+        'cancelled_at',
+        'monthly_price',
+        'yearly_price',
+        'trial_days',
+        'renewal_count',
+        'total_revenue',
+        'avg_monthly_revenue',
+        'subscription_metadata',
     ];
 
     protected $casts = [
@@ -37,6 +46,8 @@ class Subscription extends Model
         'auto_renew' => 'boolean',
         'store_metadata' => 'array',
         'store_expiry_time' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'subscription_metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];

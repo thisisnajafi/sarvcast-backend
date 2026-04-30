@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Person;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -200,5 +202,223 @@ class PersonController extends Controller
 
         return redirect()->route('admin.people.index')
             ->with('success', 'فرد با موفقیت حذف شد');
+    }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = $this->buildPersonApiListQuery($request);
+        $this->applyPersonListSort($query, $request);
+
+        $perPage = $this->resolvePersonPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $people = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($people);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildPersonApiListQuery($request);
+        $this->applyPersonListSort($query, $request);
+
+        $filename = 'people-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'name', 'roles', 'is_verified', 'total_stories', 'total_episodes', 'created_at']);
+
+            $query->clone()->chunk(500, function ($rows) use ($handle) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $row->id,
+                        $row->name,
+                        implode('|', $row->roles ?? []),
+                        $row->is_verified ? '1' : '0',
+                        $row->total_stories,
+                        $row->total_episodes,
+                        $row->created_at?->toIso8601String(),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'bio' => 'nullable|string|max:1000',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'string|in:voice_actor,director,producer,author,narrator',
+            'is_verified' => 'boolean',
+            'image_url' => 'nullable|string|max:255',
+        ]);
+
+        $validated['is_verified'] = $request->boolean('is_verified', false);
+        $person = Person::create($validated);
+
+        return AdminApiResponse::success($person, 'فرد با موفقیت ایجاد شد', 201);
+    }
+
+    public function apiShow(Person $person)
+    {
+        return AdminApiResponse::success($person->load(['stories', 'episodes']));
+    }
+
+    public function apiUpdate(Request $request, Person $person)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:100',
+            'bio' => 'nullable|string|max:1000',
+            'roles' => 'sometimes|required|array|min:1',
+            'roles.*' => 'string|in:voice_actor,director,producer,author,narrator',
+            'is_verified' => 'boolean',
+            'image_url' => 'nullable|string|max:255',
+        ]);
+
+        if ($request->has('is_verified')) {
+            $validated['is_verified'] = $request->boolean('is_verified');
+        }
+
+        $person->update($validated);
+
+        return AdminApiResponse::success($person->fresh(), 'فرد با موفقیت به‌روزرسانی شد');
+    }
+
+    public function apiDestroy(Person $person)
+    {
+        if ($person->stories()->count() > 0 || $person->episodes()->count() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نمی‌توان فردی که داستان یا قسمت دارد را حذف کرد',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $person->delete();
+
+        return AdminApiResponse::okMessage('فرد با موفقیت حذف شد');
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $validated = $request->validate([
+            'action' => 'required|string|in:verify,unverify,delete',
+            'person_ids' => 'nullable|array',
+            'person_ids.*' => 'integer|exists:people,id',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'integer|exists:people,id',
+        ]);
+
+        $ids = $validated['person_ids'] ?? $validated['selected_items'] ?? [];
+        if ($ids === []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ موردی انتخاب نشده است.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        if ($validated['action'] === 'verify') {
+            Person::whereIn('id', $ids)->update(['is_verified' => true]);
+        } elseif ($validated['action'] === 'unverify') {
+            Person::whereIn('id', $ids)->update(['is_verified' => false]);
+        } else {
+            Person::whereIn('id', $ids)->delete();
+        }
+
+        return AdminApiResponse::okMessage('عملیات با موفقیت انجام شد');
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_people' => Person::count(),
+            'verified_people' => Person::where('is_verified', true)->count(),
+            'voice_actors' => Person::whereJsonContains('roles', 'voice_actor')->count(),
+            'authors' => Person::whereJsonContains('roles', 'author')->count(),
+            'directors' => Person::whereJsonContains('roles', 'director')->count(),
+        ];
+
+        return AdminApiResponse::success($stats);
+    }
+
+    private function buildPersonApiListQuery(Request $request)
+    {
+        $query = Person::query();
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('bio', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->whereJsonContains('roles', $request->role);
+        }
+
+        if ($request->filled('verified')) {
+            $query->where('is_verified', $request->boolean('verified'));
+        }
+
+        if ($request->filled('is_verified')) {
+            $query->where('is_verified', $request->boolean('is_verified'));
+        }
+
+        if ($request->filled('dateFrom')) {
+            $query->whereDate('created_at', '>=', $request->dateFrom);
+        }
+
+        if ($request->filled('dateTo')) {
+            $query->whereDate('created_at', '<=', $request->dateTo);
+        }
+
+        if ($request->filled('date_range')) {
+            switch ($request->date_range) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', Carbon::now()->subWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', Carbon::now()->subMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', Carbon::now()->subYear());
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyPersonListSort($query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', $request->input('sort_by', 'created_at'));
+        $sortDir = strtolower((string) $request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $allowed = ['created_at', 'id', 'name', 'total_stories', 'total_episodes', 'average_rating', 'is_verified'];
+        if (! in_array($sortBy, $allowed, true)) {
+            $sortBy = 'created_at';
+        }
+        $query->orderBy($sortBy, $sortDir);
+    }
+
+    private function resolvePersonPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 20));
+
+        return min(100, max(1, $raw ?: 20));
     }
 }

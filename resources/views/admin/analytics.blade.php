@@ -239,7 +239,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('vendor/chart.js/chart.umd.min.js') }}"></script>
 <script>
 function refreshAnalytics() {
     const dateRange = document.getElementById('date_range').value;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Story;
 use App\Models\Category;
 use App\Models\Person;
@@ -10,6 +11,7 @@ use App\Models\User;
 use App\Models\Episode;
 use App\Services\InAppNotificationService;
 use App\Services\NotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -995,29 +997,56 @@ class StoryController extends Controller
     // API Methods for Postman Collection
     public function apiIndex(Request $request)
     {
-        $stories = Story::with(['category', 'episodes'])
-            ->when($request->search, function ($query, $search) {
-                $query->where('title', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
-            })
-            ->when($request->category_id, function ($query, $categoryId) {
-                $query->where('category_id', $categoryId);
-            })
-            ->when($request->status, function ($query, $status) {
-                $query->where('status', $status);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->per_page ?? 15);
+        $query = $this->buildStoryApiListQuery($request);
+        $this->applyStoryListSort($query, $request);
 
-        return response()->json([
-            'success' => true,
-            'data' => $stories
+        $perPage = $this->resolveStoryListPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $paginator = $query->with(['category', 'episodes'])
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($paginator);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildStoryApiListQuery($request);
+        $this->applyStoryListSort($query, $request);
+
+        $filename = 'stories-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'title', 'category_id', 'status', 'is_premium', 'age_rating', 'created_at']);
+
+            $query->clone()->select(['id', 'title', 'category_id', 'status', 'is_premium', 'age_rating', 'created_at'])
+                ->chunk(500, function ($rows) use ($handle) {
+                    foreach ($rows as $row) {
+                        fputcsv($handle, [
+                            $row->id,
+                            $row->title,
+                            $row->category_id,
+                            $row->status,
+                            $row->is_premium ? '1' : '0',
+                            $row->age_rating,
+                            $row->created_at?->toIso8601String(),
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
     public function apiStore(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
@@ -1029,26 +1058,19 @@ class StoryController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        $story = Story::create($request->all());
+        $story = Story::create($validated);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Story created successfully',
-            'data' => $story->load('category')
-        ], 201);
+        return AdminApiResponse::success($story->load('category'), 'Story created successfully', 201);
     }
 
     public function apiShow(Story $story)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $story->load(['category', 'episodes'])
-        ]);
+        return AdminApiResponse::success($story->load(['category', 'episodes']));
     }
 
     public function apiUpdate(Request $request, Story $story)
     {
-        $request->validate([
+        $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
             'category_id' => 'sometimes|required|exists:categories,id',
@@ -1060,36 +1082,40 @@ class StoryController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        $story->update($request->all());
+        $story->update($validated);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Story updated successfully',
-            'data' => $story->load('category')
-        ]);
+        return AdminApiResponse::success($story->fresh()->load('category'), 'Story updated successfully');
     }
 
     public function apiDestroy(Story $story)
     {
         $story->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Story deleted successfully'
-        ]);
+        return AdminApiResponse::okMessage('Story deleted successfully');
     }
 
     public function apiBulkAction(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'action' => 'required|in:delete,publish,archive',
-            'story_ids' => 'required|array',
-            'story_ids.*' => 'exists:stories,id'
+            'story_ids' => 'nullable|array',
+            'story_ids.*' => 'integer|exists:stories,id',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'integer|exists:stories,id',
         ]);
 
-        $stories = Story::whereIn('id', $request->story_ids);
+        $ids = $validated['story_ids'] ?? $validated['selected_items'] ?? [];
+        if (count($ids) === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ داستانی انتخاب نشده است.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
 
-        switch ($request->action) {
+        $stories = Story::whereIn('id', $ids);
+
+        switch ($validated['action']) {
             case 'delete':
                 $stories->delete();
                 $message = 'Stories deleted successfully';
@@ -1098,16 +1124,77 @@ class StoryController extends Controller
                 $stories->update(['status' => 'published', 'published_at' => now()]);
                 $message = 'Stories published successfully';
                 break;
-            case 'archive':
+            default:
                 $stories->update(['status' => 'archived']);
                 $message = 'Stories archived successfully';
                 break;
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $message
-        ]);
+        return AdminApiResponse::okMessage($message);
+    }
+
+    public function apiPublish(Story $story)
+    {
+        try {
+            $story->update([
+                'status' => 'published',
+                'published_at' => now(),
+            ]);
+
+            return AdminApiResponse::success($story->fresh(['category']), 'Story published successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to publish story via API', [
+                'story_id' => $story->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to publish story',
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
+
+    public function apiDuplicate(Story $story)
+    {
+        try {
+            DB::beginTransaction();
+
+            $newStory = $story->replicate();
+            $newStory->title = $story->title . ' (کپی)';
+            $newStory->status = 'draft';
+            $newStory->published_at = null;
+            $newStory->play_count = 0;
+            $newStory->rating = 0;
+            $newStory->save();
+
+            foreach ($story->episodes as $episode) {
+                $newEpisode = $episode->replicate();
+                $newEpisode->story_id = $newStory->id;
+                $newEpisode->status = 'draft';
+                $newEpisode->published_at = null;
+                $newEpisode->play_count = 0;
+                $newEpisode->rating = 0;
+                $newEpisode->save();
+            }
+
+            DB::commit();
+
+            return AdminApiResponse::success($newStory->load(['category']), 'Story duplicated successfully', 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to duplicate story via API', [
+                'story_id' => $story->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to duplicate story',
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
     }
 
     public function apiStatistics()
@@ -1122,12 +1209,80 @@ class StoryController extends Controller
             'stories_by_category' => Story::with('category')
                 ->selectRaw('category_id, count(*) as count')
                 ->groupBy('category_id')
-                ->get()
+                ->get(),
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        return AdminApiResponse::success($stats);
+    }
+
+    private function buildStoryApiListQuery(Request $request)
+    {
+        $query = Story::query();
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('is_premium')) {
+            $val = $request->input('is_premium');
+            $query->where('is_premium', filter_var($val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $val);
+        }
+
+        if ($request->filled('dateFrom')) {
+            $query->whereDate('created_at', '>=', $request->dateFrom);
+        }
+
+        if ($request->filled('dateTo')) {
+            $query->whereDate('created_at', '<=', $request->dateTo);
+        }
+
+        if ($request->filled('date_range')) {
+            switch ($request->date_range) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', Carbon::now()->subWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', Carbon::now()->subMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', Carbon::now()->subYear());
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyStoryListSort($query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', 'created_at');
+        $sortDir = strtolower((string) $request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $allowed = ['created_at', 'id', 'title', 'status', 'is_premium', 'category_id'];
+        if (! in_array($sortBy, $allowed, true)) {
+            $sortBy = 'created_at';
+        }
+        $query->orderBy($sortBy, $sortDir);
+    }
+
+    private function resolveStoryListPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 15));
+
+        return min(100, max(1, $raw ?: 15));
     }
 }

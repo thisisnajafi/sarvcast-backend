@@ -130,4 +130,155 @@ class TimelineManagementController extends Controller
                 ->with('error', 'خطا در انجام عملیات گروهی: ' . $e->getMessage());
         }
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = ImageTimeline::with(['episode.story'])->orderBy('created_at', 'desc');
+
+        if ($request->filled('episode_id')) {
+            $query->where('episode_id', $request->episode_id);
+        }
+
+        if ($request->filled('story_id')) {
+            $query->whereHas('episode', function ($q) use ($request) {
+                $q->where('story_id', $request->story_id);
+            });
+        }
+
+        if ($request->filled('transition_type')) {
+            $query->where('transition_type', $request->transition_type);
+        }
+
+        if ($request->filled('is_key_frame')) {
+            $query->where('is_key_frame', $request->boolean('is_key_frame'));
+        }
+
+        $timelines = $query->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $timelines->items(),
+            'pagination' => [
+                'current_page' => $timelines->currentPage(),
+                'last_page' => $timelines->lastPage(),
+                'per_page' => $timelines->perPage(),
+                'total' => $timelines->total(),
+            ],
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $validated = $request->validate([
+            'story_id' => 'nullable|integer|exists:stories,id',
+            'episode_id' => 'nullable|integer|exists:episodes,id',
+            'voice_actor_id' => 'nullable|integer|exists:people,id',
+            'character_id' => 'nullable|integer|exists:people,id',
+            'scene_id' => 'nullable|integer',
+            'start_time' => 'required|integer|min:0',
+            'end_time' => 'required|integer|min:0',
+            'image_url' => 'required|string|max:500',
+            'image_order' => 'required|integer|min:1',
+            'scene_description' => 'nullable|string|max:1000',
+            'transition_type' => 'required|in:fade,cut,dissolve,slide',
+            'is_key_frame' => 'boolean',
+        ]);
+
+        $validated['is_key_frame'] = $request->boolean('is_key_frame', false);
+        $timeline = ImageTimeline::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تایم‌لاین با موفقیت ایجاد شد.',
+            'data' => $timeline->load(['episode.story']),
+        ]);
+    }
+
+    public function apiShow(ImageTimeline $timeline)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $timeline->load(['episode.story']),
+        ]);
+    }
+
+    public function apiUpdate(Request $request, ImageTimeline $timeline)
+    {
+        $validated = $request->validate([
+            'story_id' => 'nullable|integer|exists:stories,id',
+            'episode_id' => 'nullable|integer|exists:episodes,id',
+            'voice_actor_id' => 'nullable|integer|exists:people,id',
+            'character_id' => 'nullable|integer|exists:people,id',
+            'scene_id' => 'nullable|integer',
+            'start_time' => 'required|integer|min:0',
+            'end_time' => 'required|integer|min:0',
+            'image_url' => 'required|string|max:500',
+            'image_order' => 'required|integer|min:1',
+            'scene_description' => 'nullable|string|max:1000',
+            'transition_type' => 'required|in:fade,cut,dissolve,slide',
+            'is_key_frame' => 'boolean',
+        ]);
+
+        $validated['is_key_frame'] = $request->boolean('is_key_frame', false);
+        $timeline->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تایم‌لاین با موفقیت به‌روزرسانی شد.',
+            'data' => $timeline->load(['episode.story']),
+        ]);
+    }
+
+    public function apiDestroy(ImageTimeline $timeline)
+    {
+        $timeline->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تایم‌لاین با موفقیت حذف شد.',
+        ]);
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:delete,change_transition,change_key_frame',
+            'timeline_ids' => 'required|array|min:1',
+            'timeline_ids.*' => 'integer|exists:image_timelines,id',
+            'transition_type' => 'required_if:action,change_transition|in:fade,cut,dissolve,slide',
+            'is_key_frame' => 'required_if:action,change_key_frame|boolean',
+        ]);
+
+        $timelineIds = $request->timeline_ids;
+        $action = $request->action;
+
+        if ($action === 'delete') {
+            ImageTimeline::whereIn('id', $timelineIds)->delete();
+        } elseif ($action === 'change_transition') {
+            ImageTimeline::whereIn('id', $timelineIds)->update(['transition_type' => $request->transition_type]);
+        } else {
+            ImageTimeline::whereIn('id', $timelineIds)->update(['is_key_frame' => $request->boolean('is_key_frame')]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'عملیات گروهی تایم‌لاین انجام شد.',
+        ]);
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_timelines' => ImageTimeline::count(),
+            'total_episodes_with_timelines' => Episode::where('use_image_timeline', true)->count(),
+            'key_frames_count' => ImageTimeline::where('is_key_frame', true)->count(),
+            'transition_types' => ImageTimeline::selectRaw('transition_type, COUNT(*) as count')->groupBy('transition_type')->get(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats,
+        ]);
+    }
 }

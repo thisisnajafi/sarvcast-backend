@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Payments
+  version: 1.0.0
+
+paths:
+  /api/admin/payments:
+    get:
+      summary: List payments
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1 }
+        - in: query
+          name: perPage
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: sortBy
+          schema: { type: string }
+        - in: query
+          name: sortDir
+          schema: { type: string, enum: [asc, desc] }
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/payments/export:
+    get:
+      summary: Export payments CSV
+      responses:
+        "200":
+          description: CSV stream
+
+  /api/admin/payments/statistics/data:
+    get:
+      summary: Payment statistics
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/payments/bulk-action:
+    post:
+      summary: Bulk action on payments
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/payments/{id}:
+    get:
+      summary: Get payment detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update payment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete payment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

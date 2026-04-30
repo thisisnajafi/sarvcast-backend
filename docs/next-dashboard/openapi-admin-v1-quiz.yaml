@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Quiz
+  version: 1.0.0
+
+paths:
+  /api/admin/quiz:
+    get:
+      summary: List quiz questions
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create quiz question
+      responses:
+        "200":
+          description: Created
+  /api/admin/quiz/export:
+    get:
+      summary: Export quiz questions CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/quiz/statistics/data:
+    get:
+      summary: Quiz statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/quiz/bulk-action:
+    post:
+      summary: Bulk actions on quiz questions
+      responses:
+        "200":
+          description: OK
+  /api/admin/quiz/episodes:
+    get:
+      summary: Get episodes for a story (filter helper)
+      responses:
+        "200":
+          description: OK
+  /api/admin/quiz/{id}:
+    get:
+      summary: Quiz question detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update quiz question
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete quiz question
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

@@ -220,7 +220,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('vendor/chart.js/chart.umd.min.js') }}"></script>
 <script>
 // Partner Types Chart
 const partnerTypesCtx = document.getElementById('partnerTypesChart').getContext('2d');

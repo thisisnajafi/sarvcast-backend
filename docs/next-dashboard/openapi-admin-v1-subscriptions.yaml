@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Subscriptions
+  version: 1.0.0
+
+paths:
+  /api/admin/subscriptions:
+    get:
+      summary: List subscriptions
+      responses:
+        "200":
+          description: OK
+  /api/admin/subscriptions/export:
+    get:
+      summary: Export subscriptions CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/subscriptions/statistics/data:
+    get:
+      summary: Subscription statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/subscriptions/bulk-action:
+    post:
+      summary: Bulk action on subscriptions
+      responses:
+        "200":
+          description: OK
+  /api/admin/subscriptions/{id}:
+    get:
+      summary: Get subscription detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

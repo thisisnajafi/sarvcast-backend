@@ -130,11 +130,17 @@ class StoryController extends Controller
         // Note: people is not loaded and will be set to empty array in response
         if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
             $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
-                $query->whereHas('imageTimelines');
+                $query->whereHas('imageTimelines')
+                    ->with(['imageTimelines' => function ($q) {
+                        $q->orderBy('image_order');
+                    }]);
             }, 'characters.voiceActor']);
         } else {
             $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
-                $query->published()->whereHas('imageTimelines');
+                $query->published()->whereHas('imageTimelines')
+                    ->with(['imageTimelines' => function ($q) {
+                        $q->orderBy('image_order');
+                    }]);
             }, 'characters.voiceActor']);
         }
 
@@ -191,6 +197,8 @@ class StoryController extends Controller
         $accessibleEpisodesData = [];
         foreach ($accessibleEpisodes as $episode) {
             $episodeData = $episode->toArray();
+            $firstTimeline = $episode->imageTimelines->first();
+            $episodeData['first_timeline_image_url'] = $firstTimeline?->image_url;
             $episodeData['narrator'] = $story->narrator ? [
                 'id' => $story->narrator->id,
                 'first_name' => $story->narrator->first_name,

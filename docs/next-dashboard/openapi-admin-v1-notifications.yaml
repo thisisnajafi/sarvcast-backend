@@ -1,0 +1,72 @@
+﻿openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Notifications
+  version: 1.0.0
+
+paths:
+  /api/admin/notifications:
+    get:
+      summary: List notifications
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create notification
+      responses:
+        "201":
+          description: Created
+  /api/admin/notifications/export:
+    get:
+      summary: Export notifications CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/notifications/statistics/data:
+    get:
+      summary: Notification statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/notifications/bulk-action:
+    post:
+      summary: Bulk actions
+      responses:
+        "200":
+          description: OK
+  /api/admin/notifications/{id}:
+    get:
+      summary: Notification detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update notification
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete notification
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+  /api/admin/notifications/{id}/send:
+    post:
+      summary: Send notification now
+      responses:
+        "200":
+          description: OK

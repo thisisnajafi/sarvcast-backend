@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Subscription plans
+  version: 1.0.0
+
+paths:
+  /api/admin/subscription-plans:
+    get:
+      summary: List subscription plans
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create subscription plan
+      responses:
+        "201":
+          description: Created
+  /api/admin/subscription-plans/export:
+    get:
+      summary: Export plans CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/subscription-plans/statistics/data:
+    get:
+      summary: Plan statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/subscription-plans/bulk-action:
+    post:
+      summary: Bulk delete / activate / deactivate
+      responses:
+        "200":
+          description: OK
+  /api/admin/subscription-plans/{id}:
+    get:
+      summary: Plan detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update plan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete plan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('web', \App\Http\Middleware\EnsureSessionCookieSent::class);
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'api.admin' => \App\Http\Middleware\ApiAdminMiddleware::class,
+            'api.audit' => \App\Http\Middleware\ApiAdminAuditMiddleware::class,
+            'api.permission' => \App\Http\Middleware\ApiAdminPermissionMiddleware::class,
+            'admin.origin' => \App\Http\Middleware\EnsureAllowedAdminOrigin::class,
+            'legacy.api.deprecation' => \App\Http\Middleware\LegacyApiDeprecationHeaders::class,
             'cache.api' => \App\Http\Middleware\CacheApiResponses::class,
             'security' => \App\Http\Middleware\SecurityMiddleware::class,
             'premium.access' => \App\Http\Middleware\CheckPremiumAccess::class,

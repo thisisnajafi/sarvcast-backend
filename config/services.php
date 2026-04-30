@@ -43,6 +43,16 @@ return [
         'sandbox' => env('ZARINPAL_SANDBOX', false),
     ],
 
+    /** Next.js web app (app.sarvcast.ir) — Zarinpal callback redirects here after subscription payment. */
+    'sarvcast_web' => [
+        'app_url' => env('SARVCAST_WEB_APP_URL', env('FRONTEND_APP_URL', 'https://app.sarvcast.ir')),
+    ],
+
+    /** Deep-link defaults for Flutter app payment callbacks. */
+    'sarvcast_app' => [
+        'return_scheme' => env('SARVCAST_APP_RETURN_SCHEME', 'sarvcast'),
+    ],
+
     'cafebazaar' => [
         'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.sarvabi.sarvcast'),
         // API key from Pishkhan; sent in header CAFEBAZAAR-PISHKHAN-API-SECRET (doc: developers.cafebazaar.ir)

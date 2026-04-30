@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\SubscriptionService;
@@ -269,10 +270,7 @@ class SubscriptionController extends Controller
             'renewal_rate' => Subscription::where('auto_renew', true)->count() / max(Subscription::count(), 1) * 100
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        return AdminApiResponse::success($stats);
     }
 
     /**
@@ -280,33 +278,156 @@ class SubscriptionController extends Controller
      */
     public function apiIndex(Request $request): JsonResponse
     {
-        $query = Subscription::with(['user']);
+        $query = $this->buildSubscriptionApiQuery($request);
+        $this->applySubscriptionApiSort($query, $request);
 
-        // Apply filters
-        if ($request->has('status')) {
+        $perPage = $this->resolveSubscriptionPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $subscriptions = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($subscriptions);
+    }
+
+    /**
+     * Get a single subscription for API.
+     */
+    public function apiShow(Subscription $subscription): JsonResponse
+    {
+        return AdminApiResponse::success($subscription->load(['user', 'payments']));
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildSubscriptionApiQuery($request);
+        $this->applySubscriptionApiSort($query, $request);
+
+        $filename = 'subscriptions-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'user_id', 'type', 'status', 'price', 'start_date', 'end_date', 'auto_renew', 'created_at']);
+
+            $query->clone()->chunk(500, function ($rows) use ($handle) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $row->id,
+                        $row->user_id,
+                        $row->type,
+                        $row->status,
+                        $row->price,
+                        $row->start_date?->format('Y-m-d'),
+                        $row->end_date?->format('Y-m-d'),
+                        $row->auto_renew ? '1' : '0',
+                        $row->created_at?->toIso8601String(),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * Run bulk actions on subscriptions.
+     */
+    public function apiBulkAction(Request $request): JsonResponse
+    {
+        $ids = $request->input('subscription_ids', $request->input('selected_items', []));
+        $request->merge(['subscription_ids' => is_array($ids) ? $ids : []]);
+
+        $request->validate([
+            'action' => 'required|in:cancel,reactivate,delete',
+            'subscription_ids' => 'required|array|min:1',
+            'subscription_ids.*' => 'integer|exists:subscriptions,id',
+            'reason' => 'required_if:action,cancel|string|max:500',
+        ]);
+
+        $items = Subscription::whereIn('id', $request->subscription_ids)->get();
+        foreach ($items as $subscription) {
+            if ($request->action === 'cancel') {
+                $subscription->update([
+                    'status' => 'cancelled',
+                    'cancellation_reason' => $request->reason,
+                    'cancelled_at' => now(),
+                ]);
+            } elseif ($request->action === 'reactivate') {
+                $subscription->update([
+                    'status' => 'active',
+                    'cancellation_reason' => null,
+                    'cancelled_at' => null,
+                ]);
+            } elseif ($request->action === 'delete') {
+                $subscription->delete();
+            }
+        }
+
+        return AdminApiResponse::okMessage('Bulk action executed successfully.');
+    }
+
+    public function apiStatistics(): JsonResponse
+    {
+        return $this->statistics();
+    }
+
+    private function buildSubscriptionApiQuery(Request $request)
+    {
+        $query = Subscription::query()->with(['user']);
+
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('user_id')) {
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
-        $perPage = $request->input('per_page', 20);
-        $subscriptions = $query->latest()->paginate(min($perPage, 100));
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->whereHas('user', function ($q) use ($search) {
+                $q->where('first_name', 'like', '%'.$search.'%')
+                    ->orWhere('last_name', 'like', '%'.$search.'%')
+                    ->orWhere('phone_number', 'like', '%'.$search.'%');
+            });
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'اشتراک‌ها دریافت شد',
-            'data' => [
-                'subscriptions' => $subscriptions->items(),
-                'pagination' => [
-                    'current_page' => $subscriptions->currentPage(),
-                    'per_page' => $subscriptions->perPage(),
-                    'total' => $subscriptions->total(),
-                    'last_page' => $subscriptions->lastPage(),
-                    'has_more' => $subscriptions->hasMorePages(),
-                ]
-            ]
-        ]);
+        $dateFrom = $request->input('dateFrom', $request->input('date_from'));
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        $dateTo = $request->input('dateTo', $request->input('date_to'));
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        return $query;
+    }
+
+    private function applySubscriptionApiSort($query, Request $request): void
+    {
+        $sortBy = (string) $request->input('sortBy', $request->input('sort', 'created_at'));
+        $sortDir = strtolower((string) $request->input('sortDir', $request->input('direction', 'desc'))) === 'asc' ? 'asc' : 'desc';
+        $allowed = ['created_at', 'id', 'price', 'status', 'type', 'end_date'];
+        if (!in_array($sortBy, $allowed, true)) {
+            $sortBy = 'created_at';
+        }
+        $query->orderBy($sortBy, $sortDir);
+    }
+
+    private function resolveSubscriptionPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 20));
+
+        return min(100, max(1, $raw ?: 20));
     }
 }

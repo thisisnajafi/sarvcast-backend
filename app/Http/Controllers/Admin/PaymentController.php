@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\Subscription;
@@ -499,5 +500,242 @@ class PaymentController extends Controller
             return redirect()->back()
                 ->with('error', 'خطا در بازگشت پرداخت: ' . $e->getMessage());
         }
+    }
+
+    // API Methods for Next dashboard
+    public function apiIndex(Request $request)
+    {
+        $query = $this->buildPaymentApiQuery($request);
+        $this->applyPaymentApiSort($query, $request);
+
+        $perPage = $this->resolvePaymentPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($paginator);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildPaymentApiQuery($request);
+        $this->applyPaymentApiSort($query, $request);
+
+        $filename = 'payments-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'user_id', 'amount', 'currency', 'status', 'payment_method', 'payment_gateway', 'transaction_id', 'created_at']);
+
+            $query->clone()->chunk(500, function ($rows) use ($handle) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $row->id,
+                        $row->user_id,
+                        $row->amount,
+                        $row->currency,
+                        $row->status,
+                        $row->payment_method,
+                        $row->payment_gateway,
+                        $row->transaction_id,
+                        $row->created_at?->toIso8601String(),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function apiShow(Payment $payment)
+    {
+        return AdminApiResponse::success($payment->load(['user', 'subscription']));
+    }
+
+    public function apiUpdate(Request $request, Payment $payment)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:pending,completed,failed,refunded,cancelled',
+            'refund_reason' => 'nullable|string|max:500',
+            'refund_amount' => 'nullable|numeric|min:0|max:' . $payment->amount,
+        ]);
+
+        if ($validated['status'] === 'refunded' && !empty($validated['refund_amount'])) {
+            $validated['refunded_at'] = now();
+        }
+        if ($validated['status'] === 'completed' && $payment->status !== 'completed') {
+            $validated['processed_at'] = now();
+        }
+
+        $payment->update($validated);
+
+        if ($payment->status === 'completed' && $payment->subscription) {
+            $payment->subscription->update(['status' => 'active']);
+        }
+        if ($payment->status === 'refunded' && $payment->subscription) {
+            $payment->subscription->update(['status' => 'cancelled']);
+        }
+
+        return AdminApiResponse::success($payment->fresh(['user', 'subscription']), 'Payment updated successfully');
+    }
+
+    public function apiDestroy(Payment $payment)
+    {
+        if (!in_array($payment->status, ['failed', 'cancelled'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only failed or cancelled payments can be deleted.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $payment->delete();
+
+        return AdminApiResponse::okMessage('Payment deleted successfully');
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $ids = $request->input('payment_ids', $request->input('selected_items', []));
+        $request->merge(['payment_ids' => is_array($ids) ? $ids : []]);
+
+        $request->validate([
+            'action' => 'required|string|in:mark_completed,mark_failed,mark_refunded,delete',
+            'payment_ids' => 'required|array|min:1',
+            'payment_ids.*' => 'integer|exists:payments,id',
+            'refund_reason' => 'required_if:action,mark_refunded|string|max:500',
+            'refund_amount' => 'required_if:action,mark_refunded|numeric|min:0',
+        ]);
+
+        $payments = Payment::whereIn('id', $request->payment_ids)->get();
+        foreach ($payments as $payment) {
+            switch ($request->action) {
+                case 'mark_completed':
+                    if ($payment->status === 'pending') {
+                        $payment->update(['status' => 'completed', 'processed_at' => now()]);
+                        if ($payment->subscription) {
+                            $payment->subscription->update(['status' => 'active']);
+                        }
+                    }
+                    break;
+                case 'mark_failed':
+                    if (in_array($payment->status, ['pending', 'completed'], true)) {
+                        $payment->update(['status' => 'failed']);
+                    }
+                    break;
+                case 'mark_refunded':
+                    if ($payment->status === 'completed') {
+                        $payment->update([
+                            'status' => 'refunded',
+                            'refunded_at' => now(),
+                            'refund_reason' => $request->refund_reason,
+                            'refund_amount' => $request->refund_amount,
+                        ]);
+                        if ($payment->subscription) {
+                            $payment->subscription->update(['status' => 'cancelled']);
+                        }
+                    }
+                    break;
+                case 'delete':
+                    if (in_array($payment->status, ['failed', 'cancelled'], true)) {
+                        $payment->delete();
+                    }
+                    break;
+            }
+        }
+
+        return AdminApiResponse::okMessage('Bulk action executed successfully.');
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total_payments' => Payment::count(),
+            'completed_payments' => Payment::where('status', 'completed')->count(),
+            'pending_payments' => Payment::where('status', 'pending')->count(),
+            'failed_payments' => Payment::where('status', 'failed')->count(),
+            'refunded_payments' => Payment::where('status', 'refunded')->count(),
+            'total_amount' => Payment::where('status', 'completed')->sum('amount'),
+            'total_net_amount' => Payment::where('status', 'completed')->sum('net_amount'),
+            'avg_amount' => Payment::where('status', 'completed')->avg('amount'),
+            'success_rate' => Payment::count() > 0 ? round((Payment::where('status', 'completed')->count() / Payment::count()) * 100, 2) : 0,
+            'payments_by_status' => Payment::selectRaw('status, COUNT(*) as count')->groupBy('status')->get(),
+            'payments_by_method' => Payment::selectRaw('payment_method, COUNT(*) as count, SUM(amount) as total_amount')->groupBy('payment_method')->get(),
+            'recent_payments' => Payment::with(['user', 'subscription'])->latest()->limit(10)->get(),
+            'daily_revenue' => Payment::where('status', 'completed')->whereDate('created_at', today())->sum('amount'),
+            'monthly_revenue' => Payment::where('status', 'completed')->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->sum('amount'),
+        ];
+
+        return AdminApiResponse::success($stats);
+    }
+
+    private function buildPaymentApiQuery(Request $request)
+    {
+        $query = Payment::query()->with(['user', 'subscription']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('payment_gateway')) {
+            $query->where('payment_gateway', $request->payment_gateway);
+        }
+
+        if ($request->filled('currency')) {
+            $query->where('currency', $request->currency);
+        }
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('transaction_id', 'like', '%'.$search.'%')
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('first_name', 'like', '%'.$search.'%')
+                            ->orWhere('last_name', 'like', '%'.$search.'%')
+                            ->orWhere('phone_number', 'like', '%'.$search.'%');
+                    });
+            });
+        }
+
+        $dateFrom = $request->input('dateFrom', $request->input('date_from'));
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        $dateTo = $request->input('dateTo', $request->input('date_to'));
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        return $query;
+    }
+
+    private function applyPaymentApiSort($query, Request $request): void
+    {
+        $sortBy = (string) $request->input('sortBy', $request->input('sort', 'created_at'));
+        $sortDir = strtolower((string) $request->input('sortDir', $request->input('direction', 'desc'))) === 'asc' ? 'asc' : 'desc';
+        $allowed = ['created_at', 'id', 'amount', 'status', 'payment_method', 'processed_at'];
+
+        if (!in_array($sortBy, $allowed, true)) {
+            $sortBy = 'created_at';
+        }
+
+        $query->orderBy($sortBy, $sortDir);
+    }
+
+    private function resolvePaymentPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 20));
+
+        return min(100, max(1, $raw ?: 20));
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class BackupController extends Controller
@@ -508,15 +509,15 @@ class BackupController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:full,incremental,differential',
+            'type' => 'required|in:database,files,config,full',
             'description' => 'nullable|string|max:1000',
             'compression' => 'boolean',
             'encryption' => 'boolean',
             'schedule' => 'nullable|string|max:100',
-            'retention_days' => 'nullable|integer|min:1|max:365',
-            'include_files' => 'boolean',
-            'include_database' => 'boolean',
-            'include_media' => 'boolean',
+            'include_files' => 'nullable|array',
+            'include_files.*' => 'string|max:255',
+            'exclude_files' => 'nullable|array',
+            'exclude_files.*' => 'string|max:255',
         ]);
 
         try {
@@ -530,10 +531,9 @@ class BackupController extends Controller
                 'compression' => $request->boolean('compression', true),
                 'encryption' => $request->boolean('encryption', false),
                 'schedule' => $request->schedule,
-                'retention_days' => $request->retention_days,
-                'include_files' => $request->boolean('include_files', true),
-                'include_database' => $request->boolean('include_database', true),
-                'include_media' => $request->boolean('include_media', true),
+                'include_files' => $request->input('include_files'),
+                'exclude_files' => $request->input('exclude_files'),
+                'created_by' => auth()->id(),
             ]);
 
             // Start backup process
@@ -572,15 +572,15 @@ class BackupController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:full,incremental,differential',
+            'type' => 'required|in:database,files,config,full',
             'description' => 'nullable|string|max:1000',
             'compression' => 'boolean',
             'encryption' => 'boolean',
             'schedule' => 'nullable|string|max:100',
-            'retention_days' => 'nullable|integer|min:1|max:365',
-            'include_files' => 'boolean',
-            'include_database' => 'boolean',
-            'include_media' => 'boolean',
+            'include_files' => 'nullable|array',
+            'include_files.*' => 'string|max:255',
+            'exclude_files' => 'nullable|array',
+            'exclude_files.*' => 'string|max:255',
         ]);
 
         try {
@@ -593,10 +593,8 @@ class BackupController extends Controller
                 'compression' => $request->boolean('compression'),
                 'encryption' => $request->boolean('encryption'),
                 'schedule' => $request->schedule,
-                'retention_days' => $request->retention_days,
-                'include_files' => $request->boolean('include_files'),
-                'include_database' => $request->boolean('include_database'),
-                'include_media' => $request->boolean('include_media'),
+                'include_files' => $request->input('include_files'),
+                'exclude_files' => $request->input('exclude_files'),
             ]);
 
             DB::commit();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BaseController;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Episode;
 use App\Models\Story;
 use App\Models\Person;
@@ -11,6 +12,7 @@ use App\Services\InAppNotificationService;
 use App\Services\NotificationService;
 use App\Services\AudioProcessingService;
 use App\Services\ImageProcessingService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -1153,32 +1155,60 @@ class EpisodeController extends BaseController
         }
     }
 
-    // API Methods for Postman Collection
+    // API Methods for Postman Collection / Next dashboard
     public function apiIndex(Request $request)
     {
-        $episodes = Episode::with(['story', 'voiceActors'])
-            ->when($request->search, function ($query, $search) {
-                $query->where('title', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
-            })
-            ->when($request->story_id, function ($query, $storyId) {
-                $query->where('story_id', $storyId);
-            })
-            ->when($request->status, function ($query, $status) {
-                $query->where('status', $status);
-            })
-            ->orderBy('episode_number', 'asc')
-            ->paginate($request->per_page ?? 15);
+        $query = $this->buildEpisodeApiListQuery($request);
+        $this->applyEpisodeListSort($query, $request);
 
-        return response()->json([
-            'success' => true,
-            'data' => $episodes
+        $perPage = $this->resolveEpisodeListPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $paginator = $query->with(['story', 'voiceActors'])
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return AdminApiResponse::paginated($paginator);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildEpisodeApiListQuery($request);
+        $this->applyEpisodeListSort($query, $request);
+
+        $filename = 'episodes-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'story_id', 'title', 'episode_number', 'duration', 'status', 'is_premium', 'created_at']);
+
+            $query->clone()->select(['id', 'story_id', 'title', 'episode_number', 'duration', 'status', 'is_premium', 'created_at'])
+                ->chunk(500, function ($rows) use ($handle) {
+                    foreach ($rows as $row) {
+                        fputcsv($handle, [
+                            $row->id,
+                            $row->story_id,
+                            $row->title,
+                            $row->episode_number,
+                            $row->duration,
+                            $row->status,
+                            $row->is_premium ? '1' : '0',
+                            $row->created_at?->toIso8601String(),
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
     public function apiStore(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'story_id' => 'required|exists:stories,id',
             'title' => 'required|string|max:200',
             'description' => 'nullable|string|max:2000',
@@ -1192,26 +1222,19 @@ class EpisodeController extends BaseController
             'tags.*' => 'string|max:50',
         ]);
 
-        $episode = Episode::create($request->all());
+        $episode = Episode::create($validated);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Episode created successfully',
-            'data' => $episode->load('story')
-        ], 201);
+        return AdminApiResponse::success($episode->load('story'), 'Episode created successfully', 201);
     }
 
     public function apiShow(Episode $episode)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $episode->load(['story', 'voiceActors'])
-        ]);
+        return AdminApiResponse::success($episode->load(['story', 'voiceActors']));
     }
 
     public function apiUpdate(Request $request, Episode $episode)
     {
-        $request->validate([
+        $validated = $request->validate([
             'story_id' => 'sometimes|required|exists:stories,id',
             'title' => 'sometimes|required|string|max:200',
             'description' => 'nullable|string|max:2000',
@@ -1225,36 +1248,40 @@ class EpisodeController extends BaseController
             'tags.*' => 'string|max:50',
         ]);
 
-        $episode->update($request->all());
+        $episode->update($validated);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Episode updated successfully',
-            'data' => $episode->load('story')
-        ]);
+        return AdminApiResponse::success($episode->load('story'), 'Episode updated successfully');
     }
 
     public function apiDestroy(Episode $episode)
     {
         $episode->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Episode deleted successfully'
-        ]);
+        return AdminApiResponse::okMessage('Episode deleted successfully');
     }
 
     public function apiBulkAction(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'action' => 'required|in:delete,publish,archive',
-            'episode_ids' => 'required|array',
-            'episode_ids.*' => 'exists:episodes,id'
+            'episode_ids' => 'nullable|array',
+            'episode_ids.*' => 'integer|exists:episodes,id',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'integer|exists:episodes,id',
         ]);
 
-        $episodes = Episode::whereIn('id', $request->episode_ids);
+        $ids = $validated['episode_ids'] ?? $validated['selected_items'] ?? [];
+        if (count($ids) === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ اپیزودی انتخاب نشده است.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
 
-        switch ($request->action) {
+        $episodes = Episode::whereIn('id', $ids);
+
+        switch ($validated['action']) {
             case 'delete':
                 $episodes->delete();
                 $message = 'Episodes deleted successfully';
@@ -1263,16 +1290,95 @@ class EpisodeController extends BaseController
                 $episodes->update(['status' => 'published', 'published_at' => now()]);
                 $message = 'Episodes published successfully';
                 break;
-            case 'archive':
+            default:
                 $episodes->update(['status' => 'archived']);
                 $message = 'Episodes archived successfully';
                 break;
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $message
+        return AdminApiResponse::okMessage($message);
+    }
+
+    public function apiPublish(Episode $episode)
+    {
+        try {
+            $episode->update([
+                'status' => 'published',
+                'release_date' => now(),
+            ]);
+
+            return AdminApiResponse::success($episode->fresh(['story']), 'Episode published successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to publish episode via API', [
+                'episode_id' => $episode->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to publish episode',
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
+
+    public function apiDuplicate(Episode $episode)
+    {
+        try {
+            $newEpisode = $episode->replicate();
+            $newEpisode->title = $episode->title . ' (کپی)';
+            $newEpisode->status = 'draft';
+            $newEpisode->release_date = null;
+            $newEpisode->episode_number = (int) $episode->episode_number + 1;
+            $newEpisode->save();
+
+            return AdminApiResponse::success($newEpisode->load(['story']), 'Episode duplicated successfully', 201);
+        } catch (\Exception $e) {
+            Log::error('Failed to duplicate episode via API', [
+                'episode_id' => $episode->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to duplicate episode',
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
+
+    public function apiReorder(Request $request)
+    {
+        $request->validate([
+            'story_id' => 'required|exists:stories,id',
+            'episodes' => 'required|array',
+            'episodes.*.id' => 'required|integer|exists:episodes,id',
+            'episodes.*.episode_number' => 'required|integer|min:1',
         ]);
+
+        try {
+            DB::beginTransaction();
+            foreach ($request->episodes as $episodeData) {
+                Episode::where('id', $episodeData['id'])
+                    ->where('story_id', $request->story_id)
+                    ->update(['episode_number' => $episodeData['episode_number']]);
+            }
+            DB::commit();
+
+            return AdminApiResponse::okMessage('Episodes reordered successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to reorder episodes via API', [
+                'story_id' => $request->story_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reorder episodes',
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
     }
 
     public function apiStatistics()
@@ -1289,13 +1395,85 @@ class EpisodeController extends BaseController
             'episodes_by_story' => Episode::with('story')
                 ->selectRaw('story_id, count(*) as count')
                 ->groupBy('story_id')
-                ->get()
+                ->get(),
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        return AdminApiResponse::success($stats);
+    }
+
+    private function buildEpisodeApiListQuery(Request $request)
+    {
+        $query = Episode::query();
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('story_id')) {
+            $query->where('story_id', $request->input('story_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('is_premium')) {
+            $val = $request->input('is_premium');
+            $query->where('is_premium', filter_var($val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $val);
+        }
+
+        if ($request->filled('dateFrom')) {
+            $query->whereDate('created_at', '>=', $request->dateFrom);
+        }
+
+        if ($request->filled('dateTo')) {
+            $query->whereDate('created_at', '<=', $request->dateTo);
+        }
+
+        if ($request->filled('date_range')) {
+            switch ($request->date_range) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', Carbon::now()->subWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', Carbon::now()->subMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', Carbon::now()->subYear());
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyEpisodeListSort($query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', 'episode_number');
+        $sortDir = strtolower((string) $request->input('sortDir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $allowed = ['episode_number', 'created_at', 'id', 'title', 'duration', 'status', 'story_id'];
+        if (! in_array($sortBy, $allowed, true)) {
+            $sortBy = 'episode_number';
+            $sortDir = 'asc';
+        }
+        $query->orderBy($sortBy, $sortDir);
+        if ($sortBy !== 'id') {
+            $query->orderBy('id', 'asc');
+        }
+    }
+
+    private function resolveEpisodeListPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 15));
+
+        return min(100, max(1, $raw ?: 15));
     }
 
     /**

@@ -1,0 +1,66 @@
+﻿openapi: 3.0.3
+info:
+  title: SarvCast Admin API — People
+  version: 1.0.0
+
+paths:
+  /api/admin/people:
+    get:
+      summary: List people
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create person
+      responses:
+        "201":
+          description: Created
+  /api/admin/people/export:
+    get:
+      summary: Export people CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/people/statistics/data:
+    get:
+      summary: People statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/people/bulk-action:
+    post:
+      summary: Verify/unverify/delete in bulk
+      responses:
+        "200":
+          description: OK
+  /api/admin/people/{id}:
+    get:
+      summary: Person detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update person
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete person
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

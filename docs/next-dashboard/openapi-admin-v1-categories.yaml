@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Categories
+  version: 1.0.0
+
+paths:
+  /api/admin/categories:
+    get:
+      summary: List categories
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create category
+      responses:
+        "201":
+          description: Created
+  /api/admin/categories/export:
+    get:
+      summary: Export categories CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/categories/statistics/data:
+    get:
+      summary: Category statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/categories/bulk-action:
+    post:
+      summary: Bulk actions
+      responses:
+        "200":
+          description: OK
+  /api/admin/categories/{id}:
+    get:
+      summary: Category detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    put:
+      summary: Update category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    delete:
+      summary: Delete category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

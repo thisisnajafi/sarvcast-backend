@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Comment moderation
+  version: 1.0.0
+
+paths:
+  /api/admin/comment-moderation:
+    get:
+      summary: List story comments for moderation
+      responses:
+        "200":
+          description: OK
+  /api/admin/comment-moderation/export:
+    get:
+      summary: Export comments CSV
+      responses:
+        "200":
+          description: CSV stream
+  /api/admin/comment-moderation/statistics/data:
+    get:
+      summary: Comment moderation statistics
+      responses:
+        "200":
+          description: OK
+  /api/admin/comment-moderation/bulk-action:
+    post:
+      summary: Bulk approve/reject/pin/unpin/delete
+      responses:
+        "200":
+          description: OK
+  /api/admin/comment-moderation/{id}:
+    get:
+      summary: Comment detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK

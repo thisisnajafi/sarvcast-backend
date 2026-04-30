@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\Referral;
 use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -577,65 +581,132 @@ class ReferralController extends Controller
         return $labels[$status] ?? $status;
     }
 
-    // API Methods
-    public function apiIndex(Request $request)
-    {
-        $query = Referral::with(['referrer', 'referred']);
+    // --- API helpers ---
 
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
+    private function resolveReferralPerPage(Request $request): int
+    {
+        $raw = $request->input('perPage', $request->input('per_page', 20));
+        return max(1, min(100, is_numeric($raw) ? (int) $raw : 20));
+    }
+
+    private function buildReferralApiListQuery(Request $request): Builder
+    {
+        $query = Referral::query()->with(['referrer', 'referred']);
+
+        $search = $request->filled('q')
+            ? $request->string('q')->toString()
+            : ($request->filled('search') ? $request->string('search')->toString() : null);
+
+        if ($search !== null && $search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('referral_code', 'like', "%{$search}%")
-                  ->orWhereHas('referrer', function ($q) use ($search) {
-                      $q->where('first_name', 'like', "%{$search}%")
+                $q->where('referrals.referral_code', 'like', "%{$search}%")
+                  ->orWhereHas('referrer', function ($uq) use ($search) {
+                      $uq->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
                   });
             });
         }
 
-        // Filter by status
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('referrals.status', $request->string('status')->toString());
         }
-
-        // Filter by referral type
         if ($request->filled('referral_type')) {
-            $query->where('referral_type', $request->referral_type);
+            $query->where('referrals.referral_type', $request->string('referral_type')->toString());
         }
-
-        // Filter by reward status
         if ($request->filled('reward_status')) {
-            $query->where('reward_status', $request->reward_status);
+            $query->where('referrals.reward_status', $request->string('reward_status')->toString());
         }
 
-        // Filter by date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->filled('date_range')) {
+            $now = Carbon::now();
+            match ($request->string('date_range')->toString()) {
+                'today' => $query->whereDate('referrals.created_at', $now->toDateString()),
+                'week'  => $query->where('referrals.created_at', '>=', $now->copy()->subWeek()),
+                'month' => $query->where('referrals.created_at', '>=', $now->copy()->subMonth()),
+                'year'  => $query->where('referrals.created_at', '>=', $now->copy()->subYear()),
+                default => null,
+            };
+        } else {
+            if ($request->filled('dateFrom') || $request->filled('date_from')) {
+                $query->whereDate('referrals.created_at', '>=', $request->input('dateFrom', $request->input('date_from')));
+            }
+            if ($request->filled('dateTo') || $request->filled('date_to')) {
+                $query->whereDate('referrals.created_at', '<=', $request->input('dateTo', $request->input('date_to')));
+            }
         }
 
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+        return $query;
+    }
+
+    private function applyReferralListSort(Builder $query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', $request->input('sort_by', 'created_at'));
+        $sortDir = strtolower((string) $request->input('sortDir', $request->input('sort_direction', 'desc'))) === 'asc' ? 'asc' : 'desc';
+
+        $column = match ($sortBy) {
+            'id' => 'referrals.id',
+            'status' => 'referrals.status',
+            'reward_amount' => 'referrals.reward_amount',
+            'referral_type' => 'referrals.referral_type',
+            default => 'referrals.created_at',
+        };
+
+        $query->orderBy($column, $sortDir)->orderBy('referrals.id', 'desc');
+    }
+
+    // --- API Methods ---
+
+    public function apiIndex(Request $request)
+    {
+        try {
+            $query = $this->buildReferralApiListQuery($request);
+            $this->applyReferralListSort($query, $request);
+            $perPage = $this->resolveReferralPerPage($request);
+
+            return AdminApiResponse::paginated(
+                $query->paginate($perPage)->appends($request->query())
+            );
+        } catch (\Throwable $e) {
+            Log::error('Referral apiIndex failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در بارگذاری معرفی‌ها.', 'error' => 'SERVER_ERROR'], 500);
         }
+    }
 
-        $referrals = $query->orderBy('created_at', 'desc')->paginate(20);
+    public function apiExport(Request $request)
+    {
+        try {
+            $query = $this->buildReferralApiListQuery($request);
+            $this->applyReferralListSort($query, $request);
 
-        return response()->json([
-            'success' => true,
-            'data' => $referrals->items(),
-            'pagination' => [
-                'current_page' => $referrals->currentPage(),
-                'last_page' => $referrals->lastPage(),
-                'per_page' => $referrals->perPage(),
-                'total' => $referrals->total(),
-            ]
-        ]);
+            $filename = 'referrals-' . now()->format('Y-m-d-His') . '.csv';
+
+            return response()->streamDownload(function () use ($query) {
+                $handle = fopen('php://output', 'w');
+                if ($handle === false) return;
+                fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+                fputcsv($handle, ['id', 'referral_code', 'referrer_id', 'referred_email', 'referral_type', 'reward_amount', 'status', 'reward_status', 'created_at', 'expires_at']);
+
+                $query->clone()->chunk(500, function ($rows) use ($handle) {
+                    foreach ($rows as $row) {
+                        fputcsv($handle, [
+                            $row->id, $row->referral_code, $row->referrer_id, $row->referred_email,
+                            $row->referral_type, $row->reward_amount, $row->status, $row->reward_status,
+                            $row->created_at?->toIso8601String(), $row->expires_at?->toIso8601String(),
+                        ]);
+                    }
+                });
+                fclose($handle);
+            }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        } catch (\Throwable $e) {
+            Log::error('Referral apiExport failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در خروجی CSV.', 'error' => 'SERVER_ERROR'], 500);
+        }
     }
 
     public function apiStore(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'referrer_id' => 'required|exists:users,id',
             'referred_email' => 'required|email',
             'referral_type' => 'required|in:user_registration,subscription_purchase,content_engagement',
@@ -643,6 +714,10 @@ class ReferralController extends Controller
             'expires_at' => 'nullable|date|after:now',
             'notes' => 'nullable|string|max:1000',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'error' => 'VALIDATION_ERROR', 'errors' => $validator->errors()->toArray()], 422);
+        }
 
         try {
             DB::beginTransaction();
@@ -661,36 +736,32 @@ class ReferralController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'معرفی با موفقیت ایجاد شد.',
-                'data' => $referral->load(['referrer', 'referred'])
-            ]);
-
-        } catch (\Exception $e) {
+            return AdminApiResponse::success(
+                $referral->load(['referrer', 'referred']),
+                'معرفی با موفقیت ایجاد شد.'
+            );
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error creating referral: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در ایجاد معرفی: ' . $e->getMessage()
-            ], 500);
+            Log::error('Referral apiStore failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در ایجاد معرفی.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
     public function apiShow(Referral $referral)
     {
-        $referral->load(['referrer', 'referred']);
-
-        return response()->json([
-            'success' => true,
-            'data' => $referral
-        ]);
+        try {
+            return AdminApiResponse::success(
+                $referral->load(['referrer', 'referred'])
+            );
+        } catch (\Throwable $e) {
+            Log::error('Referral apiShow failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در بارگذاری معرفی.', 'error' => 'SERVER_ERROR'], 500);
+        }
     }
 
     public function apiUpdate(Request $request, Referral $referral)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'referrer_id' => 'required|exists:users,id',
             'referred_email' => 'required|email',
             'referral_type' => 'required|in:user_registration,subscription_purchase,content_engagement',
@@ -703,38 +774,28 @@ class ReferralController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'error' => 'VALIDATION_ERROR', 'errors' => $validator->errors()->toArray()], 422);
+        }
+
         try {
             DB::beginTransaction();
 
-            $referral->update([
-                'referrer_id' => $request->referrer_id,
-                'referred_email' => $request->referred_email,
-                'referral_type' => $request->referral_type,
-                'reward_amount' => $request->reward_amount,
-                'status' => $request->status,
-                'reward_status' => $request->reward_status,
-                'expires_at' => $request->expires_at,
-                'completed_at' => $request->completed_at,
-                'paid_at' => $request->paid_at,
-                'notes' => $request->notes,
-            ]);
+            $referral->update($request->only([
+                'referrer_id', 'referred_email', 'referral_type', 'reward_amount',
+                'status', 'reward_status', 'expires_at', 'completed_at', 'paid_at', 'notes',
+            ]));
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'معرفی با موفقیت به‌روزرسانی شد.',
-                'data' => $referral->load(['referrer', 'referred'])
-            ]);
-
-        } catch (\Exception $e) {
+            return AdminApiResponse::success(
+                $referral->load(['referrer', 'referred']),
+                'معرفی با موفقیت به‌روزرسانی شد.'
+            );
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error updating referral: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در به‌روزرسانی معرفی: ' . $e->getMessage()
-            ], 500);
+            Log::error('Referral apiUpdate failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در به‌روزرسانی معرفی.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
@@ -742,34 +803,33 @@ class ReferralController extends Controller
     {
         try {
             $referral->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'معرفی با موفقیت حذف شد.'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error deleting referral: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در حذف معرفی: ' . $e->getMessage()
-            ], 500);
+            return AdminApiResponse::okMessage('معرفی با موفقیت حذف شد.');
+        } catch (\Throwable $e) {
+            Log::error('Referral apiDestroy failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در حذف معرفی.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
     public function apiBulkAction(Request $request)
     {
-        $request->validate([
-            'action' => 'required|string|in:approve,reject,pay_rewards,delete',
-            'referral_ids' => 'required|array|min:1',
-            'referral_ids.*' => 'integer|exists:referrals,id',
-        ]);
+        $referralIds = $request->input('referral_ids', $request->input('selected_items', []));
+        if (!is_array($referralIds)) $referralIds = [];
+
+        $validator = Validator::make(
+            ['action' => $request->input('action'), 'referral_ids' => $referralIds],
+            [
+                'action' => 'required|string|in:approve,reject,pay_rewards,delete',
+                'referral_ids' => 'required|array|min:1',
+                'referral_ids.*' => 'integer|exists:referrals,id',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'error' => 'VALIDATION_ERROR', 'errors' => $validator->errors()->toArray()], 422);
+        }
 
         try {
             DB::beginTransaction();
-
-            $referralIds = $request->referral_ids;
             $action = $request->action;
             $successCount = 0;
             $failureCount = 0;
@@ -777,133 +837,59 @@ class ReferralController extends Controller
             foreach ($referralIds as $referralId) {
                 try {
                     $referral = Referral::findOrFail($referralId);
-
                     switch ($action) {
                         case 'approve':
-                            $referral->update([
-                                'status' => 'completed',
-                                'reward_status' => 'paid',
-                                'completed_at' => now(),
-                            ]);
-                            
-                            if ($referral->referrer) {
-                                $referral->referrer->increment('coins', $referral->reward_amount);
-                            }
+                            $referral->update(['status' => 'completed', 'reward_status' => 'paid', 'completed_at' => now()]);
+                            if ($referral->referrer) $referral->referrer->increment('coins', $referral->reward_amount);
                             break;
-
                         case 'reject':
-                            $referral->update([
-                                'status' => 'cancelled',
-                                'reward_status' => 'cancelled',
-                            ]);
+                            $referral->update(['status' => 'cancelled', 'reward_status' => 'cancelled']);
                             break;
-
                         case 'pay_rewards':
-                            $referral->update([
-                                'reward_status' => 'paid',
-                                'paid_at' => now(),
-                            ]);
-                            
-                            if ($referral->referrer) {
-                                $referral->referrer->increment('coins', $referral->reward_amount);
-                            }
+                            $referral->update(['reward_status' => 'paid', 'paid_at' => now()]);
+                            if ($referral->referrer) $referral->referrer->increment('coins', $referral->reward_amount);
                             break;
-
                         case 'delete':
                             $referral->delete();
                             break;
                     }
-
                     $successCount++;
-
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $failureCount++;
-                    Log::error('Bulk action failed for referral', [
-                        'referral_id' => $referralId,
-                        'action' => $action,
-                        'error' => $e->getMessage()
-                    ]);
+                    Log::error('Referral bulk action failed', ['referral_id' => $referralId, 'action' => $action, 'error' => $e->getMessage()]);
                 }
             }
 
             DB::commit();
 
-            $actionLabels = [
-                'approve' => 'تأیید',
-                'reject' => 'رد',
-                'pay_rewards' => 'پرداخت پاداش',
-                'delete' => 'حذف',
-            ];
+            $message = "عملیات روی {$successCount} معرفی انجام شد";
+            if ($failureCount > 0) $message .= " و {$failureCount} معرفی ناموفق بود";
 
-            $message = "عملیات {$actionLabels[$action]} روی {$successCount} معرفی انجام شد";
-            if ($failureCount > 0) {
-                $message .= " و {$failureCount} معرفی ناموفق بود";
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'success_count' => $successCount,
-                'failure_count' => $failureCount
-            ]);
-
-        } catch (\Exception $e) {
+            return AdminApiResponse::okMessage($message);
+        } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Bulk action failed', [
-                'action' => $request->action,
-                'referral_ids' => $request->referral_ids,
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
-            ], 500);
+            Log::error('Referral apiBulkAction failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در انجام عملیات گروهی.', 'error' => 'SERVER_ERROR'], 500);
         }
     }
 
     public function apiStatistics()
     {
-        $stats = [
-            'total_referrals' => Referral::count(),
-            'pending_referrals' => Referral::where('status', 'pending')->count(),
-            'completed_referrals' => Referral::where('status', 'completed')->count(),
-            'expired_referrals' => Referral::where('status', 'expired')->count(),
-            'cancelled_referrals' => Referral::where('status', 'cancelled')->count(),
-            'total_rewards_paid' => Referral::where('reward_status', 'paid')->sum('reward_amount'),
-            'pending_rewards' => Referral::where('reward_status', 'pending')->sum('reward_amount'),
-            'cancelled_rewards' => Referral::where('reward_status', 'cancelled')->sum('reward_amount'),
-            'top_referrers' => Referral::select('referrer_id')
-                ->selectRaw('COUNT(*) as referral_count')
-                ->selectRaw('SUM(reward_amount) as total_rewards')
-                ->with('referrer')
-                ->groupBy('referrer_id')
-                ->orderBy('referral_count', 'desc')
-                ->limit(10)
-                ->get(),
-            'referrals_by_type' => Referral::selectRaw('referral_type, COUNT(*) as count')
-                ->groupBy('referral_type')
-                ->get(),
-            'referrals_by_status' => Referral::selectRaw('status, COUNT(*) as count')
-                ->groupBy('status')
-                ->get(),
-            'referrals_by_reward_status' => Referral::selectRaw('reward_status, COUNT(*) as count')
-                ->groupBy('reward_status')
-                ->get(),
-            'referrals_by_month' => Referral::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
-                ->groupBy('month')
-                ->orderBy('month', 'desc')
-                ->limit(12)
-                ->get(),
-            'recent_referrals' => Referral::with(['referrer', 'referred'])
-                ->latest()
-                ->limit(10)
-                ->get(),
-        ];
-
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        try {
+            return AdminApiResponse::success([
+                'total_referrals' => Referral::count(),
+                'pending_referrals' => Referral::where('status', 'pending')->count(),
+                'completed_referrals' => Referral::where('status', 'completed')->count(),
+                'expired_referrals' => Referral::where('status', 'expired')->count(),
+                'cancelled_referrals' => Referral::where('status', 'cancelled')->count(),
+                'total_rewards_paid' => Referral::where('reward_status', 'paid')->sum('reward_amount'),
+                'pending_rewards' => Referral::where('reward_status', 'pending')->sum('reward_amount'),
+                'referrals_by_type' => Referral::selectRaw('referral_type, COUNT(*) as count')
+                    ->groupBy('referral_type')->get(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Referral apiStatistics failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'خطا در بارگذاری آمار.', 'error' => 'SERVER_ERROR'], 500);
+        }
     }
 }

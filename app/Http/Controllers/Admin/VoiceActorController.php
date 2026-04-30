@@ -420,4 +420,180 @@ class VoiceActorController extends Controller
 
         return redirect()->back()->with('success', $message);
     }
+
+    // API Methods
+    public function apiIndex(Request $request)
+    {
+        $query = Person::whereJsonContains('roles', 'voice_actor');
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "%{$searchTerm}%")
+                    ->orWhere('bio', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        if ($request->filled('verified')) {
+            $query->where('is_verified', $request->boolean('verified'));
+        }
+
+        if ($request->filled('active')) {
+            $query->where('is_active', $request->boolean('active'));
+        }
+
+        $voiceActors = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $voiceActors->items(),
+            'pagination' => [
+                'current_page' => $voiceActors->currentPage(),
+                'last_page' => $voiceActors->lastPage(),
+                'per_page' => $voiceActors->perPage(),
+                'total' => $voiceActors->total(),
+            ],
+        ]);
+    }
+
+    public function apiStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'bio' => 'nullable|string|max:1000',
+            'voice_type' => 'nullable|string|max:100',
+            'voice_range' => 'nullable|string|max:100',
+            'specialties' => 'nullable|array',
+            'specialties.*' => 'string|max:100',
+            'languages' => 'nullable|array',
+            'languages.*' => 'string|max:50',
+            'experience_years' => 'nullable|integer|min:0|max:100',
+            'hourly_rate' => 'nullable|numeric|min:0',
+            'is_verified' => 'boolean',
+            'is_active' => 'boolean',
+            'image_path' => 'nullable|string|max:255',
+        ]);
+
+        $validated['roles'] = ['voice_actor'];
+        $validated['is_verified'] = $request->boolean('is_verified', false);
+        $validated['is_active'] = $request->boolean('is_active', true);
+
+        $voiceActor = Person::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'صداپیشه با موفقیت ایجاد شد.',
+            'data' => $voiceActor,
+        ]);
+    }
+
+    public function apiShow(Person $voiceActor)
+    {
+        $voiceActor->load(['episodeVoiceActors' => function ($query) {
+            $query->with(['episode.story'])->orderBy('created_at', 'desc');
+        }]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $voiceActor,
+        ]);
+    }
+
+    public function apiUpdate(Request $request, Person $voiceActor)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'bio' => 'nullable|string|max:1000',
+            'voice_type' => 'nullable|string|max:100',
+            'voice_range' => 'nullable|string|max:100',
+            'specialties' => 'nullable|array',
+            'specialties.*' => 'string|max:100',
+            'languages' => 'nullable|array',
+            'languages.*' => 'string|max:50',
+            'experience_years' => 'nullable|integer|min:0|max:100',
+            'hourly_rate' => 'nullable|numeric|min:0',
+            'is_verified' => 'boolean',
+            'is_active' => 'boolean',
+            'image_path' => 'nullable|string|max:255',
+        ]);
+
+        $validated['is_verified'] = $request->boolean('is_verified', false);
+        $validated['is_active'] = $request->boolean('is_active', true);
+
+        $voiceActor->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'صداپیشه با موفقیت به‌روزرسانی شد.',
+            'data' => $voiceActor,
+        ]);
+    }
+
+    public function apiDestroy(Person $voiceActor)
+    {
+        if ($voiceActor->episodeVoiceActors()->count() > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نمی‌توان صداپیشه‌ای که در اپیزودها استفاده شده را حذف کرد.',
+            ], 422);
+        }
+
+        $voiceActor->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'صداپیشه با موفقیت حذف شد.',
+        ]);
+    }
+
+    public function apiBulkAction(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|string|in:verify,unverify,activate,deactivate,delete',
+            'voice_actor_ids' => 'required|array|min:1',
+            'voice_actor_ids.*' => 'exists:people,id',
+        ]);
+
+        $ids = $request->voice_actor_ids;
+        $action = $request->action;
+
+        switch ($action) {
+            case 'verify':
+                Person::whereIn('id', $ids)->update(['is_verified' => true]);
+                break;
+            case 'unverify':
+                Person::whereIn('id', $ids)->update(['is_verified' => false]);
+                break;
+            case 'activate':
+                Person::whereIn('id', $ids)->update(['is_active' => true]);
+                break;
+            case 'deactivate':
+                Person::whereIn('id', $ids)->update(['is_active' => false]);
+                break;
+            case 'delete':
+                Person::whereIn('id', $ids)->delete();
+                break;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'عملیات با موفقیت انجام شد',
+        ]);
+    }
+
+    public function apiStatistics()
+    {
+        $stats = [
+            'total' => Person::whereJsonContains('roles', 'voice_actor')->count(),
+            'verified' => Person::whereJsonContains('roles', 'voice_actor')->where('is_verified', true)->count(),
+            'unverified' => Person::whereJsonContains('roles', 'voice_actor')->where('is_verified', false)->count(),
+            'active' => Person::whereJsonContains('roles', 'voice_actor')->where('is_active', true)->count(),
+            'total_episodes' => EpisodeVoiceActor::count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $stats,
+        ]);
+    }
 }

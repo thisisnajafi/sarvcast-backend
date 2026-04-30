@@ -1998,7 +1998,7 @@
 
 @push('scripts')
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ asset('vendor/chart.js/chart.umd.min.js') }}"></script>
 
 <script>
 // Global chart instances for updating

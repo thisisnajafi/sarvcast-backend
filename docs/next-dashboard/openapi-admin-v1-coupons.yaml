@@ -1,0 +1,277 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Coupons (Dashboard)
+  description: Contract for coupon management under /api/admin/coupons
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+    description: Production (replace host)
+  - url: http://localhost:8000/api/admin
+    description: Local
+
+security:
+  - bearerAuth: []
+
+paths:
+  /coupons:
+    get:
+      summary: List coupons (paginated)
+      tags: [Admin — Coupons]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: perPage
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, enum: [percentage, fixed_amount, free_coins] }
+        - name: is_active
+          in: query
+          schema: { type: string }
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [created_at, id, code, type, discount_value, is_active]
+            default: created_at
+        - name: sortDir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: dateFrom
+          in: query
+          schema: { type: string, format: date }
+        - name: dateTo
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponListResponse"
+    post:
+      summary: Create coupon
+      tags: [Admin — Coupons]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CouponCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponMutationResponse"
+
+  /coupons/export:
+    get:
+      summary: Export coupons as CSV
+      tags: [Admin — Coupons]
+      responses:
+        "200":
+          description: CSV stream
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /coupons/statistics/data:
+    get:
+      summary: Coupon statistics
+      tags: [Admin — Coupons]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponStatisticsResponse"
+
+  /coupons/bulk-action:
+    post:
+      summary: Bulk delete / activate / deactivate
+      tags: [Admin — Coupons]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [delete, activate, deactivate]
+                coupon_ids:
+                  type: array
+                  items: { type: integer }
+                selected_items:
+                  type: array
+                  items: { type: integer }
+                  description: Alias for coupon_ids
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /coupons/{id}:
+    get:
+      summary: Coupon detail
+      tags: [Admin — Coupons]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponDetailResponse"
+    put:
+      summary: Update coupon
+      tags: [Admin — Coupons]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponMutationResponse"
+    delete:
+      summary: Delete coupon
+      tags: [Admin — Coupons]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  schemas:
+    CouponListResponse:
+      type: object
+      required: [success, data, meta, pagination]
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Coupon" }
+        meta:
+          type: object
+          required: [page, perPage, total, lastPage]
+          properties:
+            page: { type: integer }
+            perPage: { type: integer }
+            total: { type: integer }
+            lastPage: { type: integer }
+        pagination:
+          type: object
+          properties:
+            current_page: { type: integer }
+            last_page: { type: integer }
+            per_page: { type: integer }
+            total: { type: integer }
+
+    CouponDetailResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/Coupon" }
+
+    CouponMutationResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/Coupon" }
+
+    CouponStatisticsResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            total_coupons: { type: integer }
+            active_coupons: { type: integer }
+            inactive_coupons: { type: integer }
+            expired_coupons: { type: integer }
+
+    MessageResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+
+    Coupon:
+      type: object
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        type: { type: string }
+        discount_value: { type: number }
+        is_active: { type: boolean }
+
+    CouponCreateRequest:
+      type: object
+      required: [code, type, value, is_active]
+      properties:
+        code: { type: string }
+        type:
+          type: string
+          enum: [percentage, fixed_amount, free_coins]
+        value: { type: number, minimum: 0 }
+        description: { type: string }
+        usage_limit: { type: integer }
+        expires_at: { type: string, format: date-time }
+        is_active: { type: boolean }

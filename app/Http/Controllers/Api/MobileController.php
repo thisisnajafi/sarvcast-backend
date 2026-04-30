@@ -613,6 +613,40 @@ class MobileController extends Controller
     }
 
     /**
+     * List registered push-notification devices for the current user.
+     */
+    public function listDevices(Request $request)
+    {
+        $user = Auth::user();
+
+        $rows = DB::table('user_devices')
+            ->where('user_id', $user->id)
+            ->orderByDesc('last_active')
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id' => (int) $row->id,
+                    'device_id' => $row->device_id,
+                    'device_type' => $row->device_type,
+                    'device_model' => $row->device_model,
+                    'os_version' => $row->os_version,
+                    'app_version' => $row->app_version,
+                    'has_push_token' => !empty($row->fcm_token),
+                    'last_active' => $row->last_active ? (string) $row->last_active : null,
+                    'created_at' => $row->created_at ? (string) $row->created_at : null,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'devices' => $rows,
+            ],
+        ]);
+    }
+
+    /**
      * Unregister device
      */
     public function unregisterDevice(Request $request)

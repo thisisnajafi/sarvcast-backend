@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Models\Subscription;
@@ -12,8 +13,10 @@ use App\Models\Favorite;
 use App\Models\Rating;
 use App\Models\Permission;
 use App\Services\InAppNotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -835,63 +838,63 @@ class UserController extends Controller
     // API Methods
     public function apiIndex(Request $request)
     {
-        $query = User::with(['profiles', 'activeSubscription', 'subscriptions', 'payments']);
+        $query = $this->buildUserApiListQuery($request);
+        $this->applyUserListSort($query, $request);
 
-        // Search
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('phone_number', 'like', "%{$search}%");
-            });
-        }
+        $perPage = $this->resolveUserListPerPage($request);
+        $page = max(1, (int) $request->input('page', 1));
+        $paginator = $query->with(['profiles', 'activeSubscription', 'subscriptions', 'payments'])
+            ->paginate($perPage, ['*'], 'page', $page);
 
-        // Filter by role
-        if ($request->filled('role')) {
-            $query->where('role', $request->role);
-        }
+        return AdminApiResponse::paginated($paginator);
+    }
 
-        // Filter by status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+    public function apiExport(Request $request)
+    {
+        $query = $this->buildUserApiListQuery($request);
+        $this->applyUserListSort($query, $request);
 
-        // Filter by subscription
-        if ($request->filled('has_subscription')) {
-            if ($request->boolean('has_subscription')) {
-                $query->whereHas('subscriptions', function($q) {
-                    $q->where('status', 'active')->where('end_date', '>', now());
-                });
-            } else {
-                $query->whereDoesntHave('subscriptions', function($q) {
-                    $q->where('status', 'active')->where('end_date', '>', now());
-                });
+        $filename = 'users-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
             }
-        }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'first_name', 'last_name', 'phone_number', 'role', 'status', 'created_at']);
 
-        $users = $query->orderBy('created_at', 'desc')->paginate(20);
+            $query->clone()->select(['id', 'first_name', 'last_name', 'phone_number', 'role', 'status', 'created_at'])
+                ->chunk(500, function ($rows) use ($handle) {
+                    foreach ($rows as $row) {
+                        fputcsv($handle, [
+                            $row->id,
+                            $row->first_name,
+                            $row->last_name,
+                            $row->phone_number,
+                            $row->role,
+                            $row->status,
+                            $row->created_at?->toIso8601String(),
+                        ]);
+                    }
+                });
 
-        return response()->json([
-            'success' => true,
-            'data' => $users->items(),
-            'pagination' => [
-                'current_page' => $users->currentPage(),
-                'last_page' => $users->lastPage(),
-                'per_page' => $users->perPage(),
-                'total' => $users->total(),
-            ]
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
     public function apiStore(Request $request)
     {
+        $roleValues = ['parent', 'child', 'admin', 'basic', 'super_admin', 'voice_actor'];
+
         $request->validate([
             'phone_number' => 'nullable|string|unique:users',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:parent,child,admin',
+            'role' => ['required', Rule::in($roleValues)],
             'parent_id' => 'nullable|exists:users,id',
             'status' => 'required|in:active,inactive,suspended,pending',
             'language' => 'nullable|string|max:10',
@@ -903,31 +906,30 @@ class UserController extends Controller
 
         $user = User::create($data);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'کاربر با موفقیت ایجاد شد.',
-            'data' => $user->load(['profiles', 'activeSubscription'])
-        ]);
+        return AdminApiResponse::success(
+            $user->load(['profiles', 'activeSubscription']),
+            'کاربر با موفقیت ایجاد شد.',
+            201
+        );
     }
 
     public function apiShow(User $user)
     {
         $user->load(['profiles', 'activeSubscription', 'subscriptions', 'payments', 'playHistories', 'favorites', 'ratings']);
 
-        return response()->json([
-            'success' => true,
-            'data' => $user
-        ]);
+        return AdminApiResponse::success($user);
     }
 
     public function apiUpdate(Request $request, User $user)
     {
+        $roleValues = ['parent', 'child', 'admin', 'basic', 'super_admin', 'voice_actor'];
+
         $request->validate([
             'phone_number' => 'nullable|string|unique:users,phone_number,' . $user->id,
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'password' => 'nullable|string|min:8',
-            'role' => 'required|in:parent,child,admin',
+            'role' => ['required', Rule::in($roleValues)],
             'parent_id' => 'nullable|exists:users,id',
             'status' => 'required|in:active,inactive,suspended,pending',
             'language' => 'nullable|string|max:10',
@@ -944,11 +946,10 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'کاربر با موفقیت به‌روزرسانی شد.',
-            'data' => $user->load(['profiles', 'activeSubscription'])
-        ]);
+        return AdminApiResponse::success(
+            $user->load(['profiles', 'activeSubscription']),
+            'کاربر با موفقیت به‌روزرسانی شد.'
+        );
     }
 
     public function apiDestroy(User $user)
@@ -957,36 +958,44 @@ class UserController extends Controller
         if ($user->isAdmin()) {
             return response()->json([
                 'success' => false,
-                'message' => 'نمی‌توان کاربران مدیر را حذف کرد.'
+                'message' => 'نمی‌توان کاربران مدیر را حذف کرد.',
+                'error' => 'FORBIDDEN',
             ], 403);
         }
 
         $user->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'کاربر با موفقیت حذف شد.'
-        ]);
+        return AdminApiResponse::okMessage('کاربر با موفقیت حذف شد.');
     }
 
     public function apiBulkAction(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'action' => 'required|string|in:activate,deactivate,suspend,delete,change_role,change_status,send_notification',
-            'user_ids' => 'required|array|min:1',
+            'user_ids' => 'nullable|array',
             'user_ids.*' => 'integer|exists:users,id',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'integer|exists:users,id',
             'status' => 'required_if:action,change_status|string|in:active,inactive,suspended,pending',
-            'role' => 'required_if:action,change_role|string|in:parent,child,admin',
+            'role' => 'required_if:action,change_role|string|in:parent,child,admin,basic,voice_actor',
             'notification_title' => 'required_if:action,send_notification|string|max:255',
             'notification_message' => 'required_if:action,send_notification|string|max:1000',
             'notification_type' => 'required_if:action,send_notification|string|in:info,success,warning,error',
-            'notification_priority' => 'nullable|string|in:low,normal,high,urgent'
+            'notification_priority' => 'nullable|string|in:low,normal,high,urgent',
         ]);
+
+        $userIds = $validated['user_ids'] ?? $validated['selected_items'] ?? [];
+        if (count($userIds) === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ کاربری انتخاب نشده است.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
 
         try {
             DB::beginTransaction();
 
-            $userIds = $request->user_ids;
             $action = $request->action;
             $successCount = 0;
             $failureCount = 0;
@@ -1070,13 +1079,14 @@ class UserController extends Controller
             DB::rollBack();
             Log::error('Bulk action failed', [
                 'action' => $request->action,
-                'user_ids' => $request->user_ids,
-                'error' => $e->getMessage()
+                'user_ids' => $userIds,
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در انجام عملیات گروهی: ' . $e->getMessage()
+                'message' => 'خطا در انجام عملیات گروهی: '.$e->getMessage(),
+                'error' => 'SERVER_ERROR',
             ], 500);
         }
     }
@@ -1132,9 +1142,85 @@ class UserController extends Controller
                 ->get()
         ];
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        return AdminApiResponse::success($stats);
+    }
+
+    private function buildUserApiListQuery(Request $request)
+    {
+        $query = User::query();
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', '%'.$search.'%')
+                    ->orWhere('last_name', 'like', '%'.$search.'%')
+                    ->orWhere('phone_number', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('has_subscription')) {
+            if ($request->boolean('has_subscription')) {
+                $query->whereHas('subscriptions', function ($q) {
+                    $q->where('status', 'active')->where('end_date', '>', now());
+                });
+            } else {
+                $query->whereDoesntHave('subscriptions', function ($q) {
+                    $q->where('status', 'active')->where('end_date', '>', now());
+                });
+            }
+        }
+
+        if ($request->filled('dateFrom')) {
+            $query->whereDate('created_at', '>=', $request->dateFrom);
+        }
+
+        if ($request->filled('dateTo')) {
+            $query->whereDate('created_at', '<=', $request->dateTo);
+        }
+
+        if ($request->filled('date_range')) {
+            switch ($request->date_range) {
+                case 'today':
+                    $query->whereDate('created_at', Carbon::today());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', Carbon::now()->subWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', Carbon::now()->subMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', Carbon::now()->subYear());
+                    break;
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyUserListSort($query, Request $request): void
+    {
+        $sortBy = $request->input('sortBy', 'created_at');
+        $sortDir = strtolower((string) $request->input('sortDir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $allowed = ['created_at', 'id', 'first_name', 'last_name', 'role', 'status', 'phone_number'];
+        if (! in_array($sortBy, $allowed, true)) {
+            $sortBy = 'created_at';
+        }
+        $query->orderBy($sortBy, $sortDir);
+    }
+
+    private function resolveUserListPerPage(Request $request): int
+    {
+        $raw = (int) $request->input('perPage', $request->input('per_page', 20));
+
+        return min(100, max(1, $raw ?: 20));
     }
 }
