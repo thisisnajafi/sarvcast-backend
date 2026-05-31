@@ -17,6 +17,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک یک ماهه',
                 'slug' => '1month',
+                'cafebazaar_product_id' => '1-month-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای یک ماه',
                 'duration_days' => 30,
                 'price' => 50000,
@@ -35,6 +36,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک سه‌ماهه',
                 'slug' => '3months',
+                'cafebazaar_product_id' => '3-month-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای سه ماه',
                 'duration_days' => 90,
                 'price' => 135000,
@@ -54,6 +56,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک شش‌ماهه',
                 'slug' => '6months',
+                'cafebazaar_product_id' => '6-month-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای شش ماه',
                 'duration_days' => 180,
                 'price' => 240000,
@@ -74,6 +77,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک یک ساله',
                 'slug' => '1year',
+                'cafebazaar_product_id' => '1-year-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای یک سال',
                 'duration_days' => 365,
                 'price' => 400000,

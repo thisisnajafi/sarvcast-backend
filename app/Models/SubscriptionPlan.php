@@ -133,6 +133,20 @@ class SubscriptionPlan extends Model
     }
 
     /**
+     * Default CafeBazaar SKU for this plan slug (matches Pishkhan + Flutter fallback).
+     */
+    public function getDefaultCafeBazaarProductId(): ?string
+    {
+        return match ($this->slug) {
+            '1month' => '1-month-sub',
+            '3months' => '3-month-sub',
+            '6months' => '6-month-sub',
+            '1year' => '1-year-sub',
+            default => null,
+        };
+    }
+
+    /**
      * Get product ID for a specific flavor
      * 
      * @param string $flavor 'website'|'myket'|'cafebazaar'
@@ -143,7 +157,9 @@ class SubscriptionPlan extends Model
         return match($flavor) {
             'website' => $this->slug, // Use slug as product ID for website
             'myket' => $this->myket_product_id,
-            'cafebazaar' => $this->cafebazaar_product_id,
+            'cafebazaar' => filled($this->cafebazaar_product_id)
+                ? $this->cafebazaar_product_id
+                : $this->getDefaultCafeBazaarProductId(),
             default => null
         };
     }
@@ -206,7 +222,7 @@ class SubscriptionPlan extends Model
             ],
             'cafebazaar' => [
                 'price' => $this->cafebazaar_price ?? $this->price,
-                'product_id' => $this->cafebazaar_product_id,
+                'product_id' => $this->getProductIdForFlavor('cafebazaar'),
                 'final_price' => $this->getFinalPriceForFlavor('cafebazaar'),
                 'available' => $this->isAvailableForFlavor('cafebazaar')
             ]
