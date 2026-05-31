@@ -18,11 +18,29 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, xml, ctype, json, bcmath, curl, gd, zip, intl, fileinfo, pdo, pdo_mysql
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
@@ -33,7 +51,7 @@ jobs:
           server-dir: /
           protocol: ftp
           port: 21
-          timeout: 300000
+          timeout: 600000
           log-level: standard
           exclude: |
             **/.git*
@@ -42,7 +60,6 @@ jobs:
             .env
             .env.*
             .env.example
-            vendor/**
             node_modules/**
             tests/**
             docs/**
