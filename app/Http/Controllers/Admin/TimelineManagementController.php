@@ -6,9 +6,71 @@ use App\Http\Controllers\Controller;
 use App\Models\Episode;
 use App\Models\ImageTimeline;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class TimelineManagementController extends Controller
 {
+    private function validateTimelinePayload(Request $request, ?ImageTimeline $current = null): array
+    {
+        $validated = $request->validate([
+            'story_id' => 'nullable|integer|exists:stories,id',
+            'episode_id' => 'nullable|integer|exists:episodes,id',
+            'voice_actor_id' => 'nullable|integer|exists:people,id',
+            'character_id' => 'nullable|integer|exists:people,id',
+            'scene_id' => 'nullable|integer',
+            'start_time' => 'required|integer|min:0',
+            'end_time' => 'required|integer|min:0',
+            'image_url' => 'required|string|max:500',
+            'image_order' => 'required|integer|min:1',
+            'scene_description' => 'nullable|string|max:1000',
+            'transition_type' => 'required|in:fade,cut,dissolve,slide',
+            'is_key_frame' => 'boolean',
+        ]);
+
+        $start = (int) $validated['start_time'];
+        $end = (int) $validated['end_time'];
+        if ($end <= $start) {
+            throw ValidationException::withMessages([
+                'end_time' => ['زمان پایان باید بزرگ‌تر از زمان شروع باشد.'],
+            ]);
+        }
+
+        $episodeId = isset($validated['episode_id']) ? (int) $validated['episode_id'] : null;
+        if ($episodeId) {
+            $episode = Episode::find($episodeId);
+            if ($episode && (int) $episode->duration > 0) {
+                // Episode duration is stored in minutes; timeline uses seconds.
+                $maxSeconds = (int) $episode->duration * 60;
+                if ($end > $maxSeconds) {
+                    throw ValidationException::withMessages([
+                        'end_time' => ["زمان پایان نباید از مدت اپیزود ({$maxSeconds} ثانیه) بیشتر باشد."],
+                    ]);
+                }
+            }
+
+            $overlapQuery = ImageTimeline::query()
+                ->where('episode_id', $episodeId)
+                ->where('start_time', '<', $end)
+                ->where('end_time', '>', $start);
+
+            if ($current) {
+                $overlapQuery->where('id', '!=', $current->id);
+            }
+
+            if ($overlapQuery->exists()) {
+                throw ValidationException::withMessages([
+                    'start_time' => ['این بازه زمانی با فریم‌های موجود همپوشانی دارد.'],
+                    'end_time' => ['این بازه زمانی با فریم‌های موجود همپوشانی دارد.'],
+                ]);
+            }
+        }
+
+        $validated['is_key_frame'] = $request->boolean('is_key_frame', false);
+
+        return $validated;
+    }
+
     /**
      * Display all timelines across all episodes
      */
@@ -170,22 +232,7 @@ class TimelineManagementController extends Controller
 
     public function apiStore(Request $request)
     {
-        $validated = $request->validate([
-            'story_id' => 'nullable|integer|exists:stories,id',
-            'episode_id' => 'nullable|integer|exists:episodes,id',
-            'voice_actor_id' => 'nullable|integer|exists:people,id',
-            'character_id' => 'nullable|integer|exists:people,id',
-            'scene_id' => 'nullable|integer',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:0',
-            'image_url' => 'required|string|max:500',
-            'image_order' => 'required|integer|min:1',
-            'scene_description' => 'nullable|string|max:1000',
-            'transition_type' => 'required|in:fade,cut,dissolve,slide',
-            'is_key_frame' => 'boolean',
-        ]);
-
-        $validated['is_key_frame'] = $request->boolean('is_key_frame', false);
+        $validated = $this->validateTimelinePayload($request);
         $timeline = ImageTimeline::create($validated);
 
         return response()->json([
@@ -193,6 +240,46 @@ class TimelineManagementController extends Controller
             'message' => 'تایم‌لاین با موفقیت ایجاد شد.',
             'data' => $timeline->load(['episode.story']),
         ]);
+    }
+
+    public function apiUploadImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp,gif|max:5120',
+        ]);
+
+        try {
+            $image = $request->file('image');
+            $directory = public_path('images/timeline');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            $filename = now()->format('YmdHis') . '_' . uniqid('timeline_', true) . '.' . $image->getClientOriginalExtension();
+            $image->move($directory, $filename);
+
+            $relativePath = '/images/timeline/' . $filename;
+            $publicUrl = url($relativePath);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تصویر تایم‌لاین با موفقیت آپلود شد.',
+                'data' => [
+                    'image_url' => $publicUrl,
+                    'relative_path' => $relativePath,
+                    'file_name' => $filename,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Timeline image upload failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'آپلود تصویر تایم‌لاین ناموفق بود.',
+            ], 500);
+        }
     }
 
     public function apiShow(ImageTimeline $timeline)
@@ -205,22 +292,7 @@ class TimelineManagementController extends Controller
 
     public function apiUpdate(Request $request, ImageTimeline $timeline)
     {
-        $validated = $request->validate([
-            'story_id' => 'nullable|integer|exists:stories,id',
-            'episode_id' => 'nullable|integer|exists:episodes,id',
-            'voice_actor_id' => 'nullable|integer|exists:people,id',
-            'character_id' => 'nullable|integer|exists:people,id',
-            'scene_id' => 'nullable|integer',
-            'start_time' => 'required|integer|min:0',
-            'end_time' => 'required|integer|min:0',
-            'image_url' => 'required|string|max:500',
-            'image_order' => 'required|integer|min:1',
-            'scene_description' => 'nullable|string|max:1000',
-            'transition_type' => 'required|in:fade,cut,dissolve,slide',
-            'is_key_frame' => 'boolean',
-        ]);
-
-        $validated['is_key_frame'] = $request->boolean('is_key_frame', false);
+        $validated = $this->validateTimelinePayload($request, $timeline);
         $timeline->update($validated);
 
         return response()->json([

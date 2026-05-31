@@ -66,9 +66,9 @@ class FlavorHelper
         if ($billingPlatform === 'myket') {
             return true;
         }
-        
-        $packageName = $request->input('package_name');
-        if ($packageName && str_contains($packageName, '.myket')) {
+
+        $userAgent = $request->header('User-Agent', '');
+        if (str_contains(strtolower($userAgent), 'myket')) {
             return true;
         }
         

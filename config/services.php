@@ -82,11 +82,15 @@ return [
     ],
 
     'myket' => [
-        'package_name' => env('MYKET_PACKAGE_NAME', 'ir.sarvcast.app'),
+        'package_name' => env('MYKET_PACKAGE_NAME', 'com.sarvabi.sarvcast'),
+        // X-Access-Token from Myket developer panel → In-App Billing (server-side only)
         'api_key' => env('MYKET_API_KEY'),
-        'api_url' => env('MYKET_API_URL', 'https://developer.myket.ir/api/applications/validatePurchase'),
-        'subscription_api_url' => env('MYKET_SUBSCRIPTION_API_URL', 'https://developer.myket.ir/api/applications/validateSubscription'),
+        'api_base_url' => env('MYKET_API_BASE_URL', 'https://developer.myket.ir/api/partners/applications'),
         'product_mapping' => [
+            '1-month-sub' => '1month',
+            '3-month-sub' => '3months',
+            '6-month-sub' => '6months',
+            '1-year-sub' => '1year',
             'subscription_1month' => '1month',
             'subscription_3months' => '3months',
             'subscription_6months' => '6months',

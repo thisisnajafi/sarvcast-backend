@@ -108,132 +108,45 @@ class InAppPurchaseController extends Controller
         $user = Auth::user();
 
         try {
-            // Verify purchase with Myket
-            $verification = $this->myketService->verifyPurchase(
+            $request->merge(['billing_platform' => 'myket']);
+            $result = $this->myketService->verifyAndFulfillSubscription(
+                $user,
                 $request->purchase_token,
-                $request->product_id
+                $request->product_id,
+                $request->order_id
             );
 
-            if (!$verification['success']) {
+            if (!$result['success']) {
+                $statusCode = 400;
+                if (isset($result['error_code']) && $result['error_code'] === MyketService::ERROR_API_KEY_NOT_CONFIGURED) {
+                    $statusCode = 503;
+                }
                 return response()->json([
                     'success' => false,
-                    'message' => $verification['message'] ?? 'تایید خرید ناموفق بود'
-                ], 400);
+                    'message' => $result['message'] ?? 'تایید خرید ناموفق بود',
+                    'error_code' => $result['error_code'] ?? null,
+                ], $statusCode);
             }
 
-            // Check if payment already exists
-            $existingPayment = Payment::where('purchase_token', $request->purchase_token)
-                ->where('billing_platform', 'myket')
-                ->first();
-
-            if ($existingPayment) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'این خرید قبلاً ثبت شده است',
-                    'data' => [
-                        'payment' => $existingPayment->load('subscription'),
-                        'subscription' => $existingPayment->subscription
-                    ]
-                ]);
-            }
-
-            // Map product ID to subscription type
-            $subscriptionType = $this->myketService->mapProductIdToSubscriptionType($request->product_id);
-            
-            if (!$subscriptionType) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'شناسه محصول نامعتبر است'
-                ], 400);
-            }
-
-            // Get subscription plan
-            $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
-            
-            if (!$plan) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'پلن اشتراک یافت نشد'
-                ], 404);
-            }
-
-            DB::beginTransaction();
-
-            try {
-                // Create payment record
-                $payment = Payment::create([
-                    'user_id' => $user->id,
-                    'amount' => $plan->final_price,
-                    'currency' => $plan->currency,
-                    'payment_method' => 'in_app_purchase',
-                    'payment_gateway' => 'myket',
-                    'billing_platform' => 'myket',
-                    'status' => 'completed',
-                    'transaction_id' => $request->order_id ?? 'MK_' . time() . '_' . rand(1000, 9999),
-                    'purchase_token' => $request->purchase_token,
-                    'order_id' => $verification['order_id'] ?? $request->order_id,
-                    'product_id' => $request->product_id,
-                    'package_name' => config('services.myket.package_name'),
-                    'purchase_state' => $verification['purchase_state'] ?? 'purchased',
-                    'purchase_time' => $verification['purchase_time'] ?? now(),
-                    'store_response' => $verification['raw_response'] ?? null,
-                    'is_acknowledged' => true, // Myket doesn't require explicit acknowledgment
-                    'acknowledged_at' => now(),
-                    'processed_at' => now(),
-                    'payment_metadata' => [
-                        'verification_time' => now()->toISOString(),
-                        'developer_payload' => $verification['developer_payload'] ?? null,
-                    ]
-                ]);
-
-                // Create or update subscription
-                $subscription = $this->subscriptionService->createOrUpdateSubscription(
-                    $user->id,
-                    $subscriptionType,
-                    $plan->final_price,
-                    $plan->currency,
-                    [
-                        'billing_platform' => 'myket',
-                        'payment_id' => $payment->id,
-                        'store_subscription_id' => $verification['order_id'] ?? null,
-                    ]
-                );
-
-                $payment->update(['subscription_id' => $subscription->id]);
-
-                DB::commit();
-
-                Log::info('Myket purchase verified and subscription activated', [
-                    'user_id' => $user->id,
-                    'payment_id' => $payment->id,
-                    'subscription_id' => $subscription->id,
-                    'product_id' => $request->product_id
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'خرید با موفقیت تایید و اشتراک فعال شد',
-                    'data' => [
-                        'payment' => $payment->fresh()->load('subscription'),
-                        'subscription' => $subscription->fresh()
-                    ]
-                ]);
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-                throw $e;
-            }
-
+            return response()->json([
+                'success' => true,
+                'message' => !empty($result['is_duplicate'])
+                    ? 'این خرید قبلاً ثبت شده است'
+                    : 'خرید با موفقیت تایید و اشتراک فعال شد',
+                'data' => [
+                    'payment' => $result['payment'],
+                    'subscription' => $result['subscription'],
+                ],
+            ]);
         } catch (\Exception $e) {
             Log::error('Myket purchase verification failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در پردازش خرید: ' . $e->getMessage()
+                'message' => 'خطا در پردازش خرید: ' . $e->getMessage(),
             ], 500);
         }
     }

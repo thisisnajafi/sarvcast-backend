@@ -397,8 +397,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
                 Route::post('restore', [\App\Http\Controllers\Api\CafeBazaarSubscriptionController::class, 'restorePurchases']);
             });
 
-            // Myket subscription routes
+            // Myket subscription routes (unified subscriptions table — same pattern as cafebazaar)
             Route::prefix('myket')->group(function () {
+                Route::post('verify', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'verifySubscription']);
+                Route::get('status', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'getSubscriptionStatus']);
+                Route::post('restore', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'restorePurchases']);
+                // Legacy routes (myket_plans table — deprecated, kept for backward compatibility)
                 Route::get('plans', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'listPlans']);
                 Route::post('subscribe', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'subscribe']);
                 Route::get('subscription-status', [\App\Http\Controllers\Api\MyketSubscriptionController::class, 'subscriptionStatus']);
@@ -1170,6 +1174,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::prefix('timeline-management')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiStore']);
+            Route::post('/upload-image', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiUploadImage']);
             Route::get('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiShow']);
             Route::put('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiUpdate']);
             Route::delete('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiDestroy']);

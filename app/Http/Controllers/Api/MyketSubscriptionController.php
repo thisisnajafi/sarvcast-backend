@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\FlavorHelper;
 use App\Models\MyketPlan;
 use App\Models\MyketSubscription;
 use App\Models\MyketUserSubscription;
 use App\Models\Payment;
+use App\Models\Subscription;
 use App\Services\MyketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,8 +19,9 @@ use Carbon\Carbon;
 
 /**
  * Myket Subscription Controller
- * 
- * Handles Myket subscription plan management, purchase verification, and status updates.
+ *
+ * Unified verify/status/restore endpoints write to the main `subscriptions` table
+ * (same as CafeBazaar). Legacy subscribe/plans routes use deprecated myket_* tables.
  */
 class MyketSubscriptionController extends Controller
 {
@@ -27,6 +30,219 @@ class MyketSubscriptionController extends Controller
     public function __construct(MyketService $myketService)
     {
         $this->myketService = $myketService;
+    }
+
+    /**
+     * Verify Myket purchase and activate subscription.
+     *
+     * POST /api/v1/subscriptions/myket/verify
+     */
+    public function verifySubscription(Request $request)
+    {
+        if (!FlavorHelper::isMyket($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'این endpoint فقط برای درخواست‌های مایکت قابل استفاده است.',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'purchase_token' => 'required|string|max:500',
+            'product_id' => 'required|string|max:100',
+            'order_id' => 'nullable|string|max:100',
+            'billing_platform' => 'nullable|string|in:myket',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'داده‌های ورودی نامعتبر است',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = Auth::user();
+        $purchaseToken = $request->input('purchase_token');
+        $productId = $request->input('product_id');
+        $orderId = $request->input('order_id');
+
+        try {
+            $result = $this->myketService->verifyAndFulfillSubscription(
+                $user,
+                $purchaseToken,
+                $productId,
+                $orderId
+            );
+
+            if (!$result['success']) {
+                $statusCode = 400;
+                if (isset($result['error_code']) && $result['error_code'] === MyketService::ERROR_API_KEY_NOT_CONFIGURED) {
+                    $statusCode = 503;
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => $result['message'] ?? 'تایید خرید ناموفق بود',
+                    'error_code' => $result['error_code'] ?? null,
+                ], $statusCode);
+            }
+
+            $payment = $result['payment'];
+            $subscription = $result['subscription'];
+            $paymentArray = $payment->toArray();
+            $subscriptionArray = $subscription->toArray();
+            $this->normalizeNumericFieldsForApi($paymentArray, $subscriptionArray);
+
+            return response()->json([
+                'success' => true,
+                'message' => !empty($result['is_duplicate'])
+                    ? 'این خرید قبلاً ثبت و تایید شده است'
+                    : 'خرید با موفقیت تایید و اشتراک فعال شد',
+                'data' => [
+                    'payment' => $paymentArray,
+                    'subscription' => $subscriptionArray,
+                    'is_duplicate' => $result['is_duplicate'] ?? false,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Myket subscription verification failed', [
+                'user_id' => $user->id,
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در پردازش خرید: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * GET /api/v1/subscriptions/myket/status
+     */
+    public function getSubscriptionStatus(Request $request)
+    {
+        $user = Auth::user();
+
+        try {
+            $subscription = Subscription::where('user_id', $user->id)
+                ->where('billing_platform', 'myket')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'has_subscription' => false,
+                        'subscription' => null,
+                        'is_active' => false,
+                    ],
+                ], 200);
+            }
+
+            $isActive = $subscription->grantsAccess();
+            $subscriptionArray = $subscription->toArray();
+            if (array_key_exists('price', $subscriptionArray) && $subscriptionArray['price'] !== null) {
+                $subscriptionArray['price'] = (float) $subscriptionArray['price'];
+            }
+            $subscriptionArray['plan_source'] = 'myket';
+            $subscriptionArray['source_label'] = 'مایکت';
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'has_subscription' => true,
+                    'subscription' => $subscriptionArray,
+                    'is_active' => $isActive,
+                    'days_remaining' => $isActive ? max(0, now()->diffInDays($subscription->end_date, false)) : 0,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Failed to get Myket subscription status', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در دریافت وضعیت اشتراک',
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/v1/subscriptions/myket/restore
+     */
+    public function restorePurchases(Request $request)
+    {
+        if (!FlavorHelper::isMyket($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'این endpoint فقط برای درخواست‌های مایکت قابل استفاده است.',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'purchases' => 'required|array|min:1',
+            'purchases.*.purchase_token' => 'required|string|max:500',
+            'purchases.*.product_id' => 'required|string|max:100',
+            'purchases.*.order_id' => 'nullable|string|max:100',
+            'billing_platform' => 'nullable|string|in:myket',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'داده‌های ورودی نامعتبر است',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = Auth::user();
+        $restored = [];
+
+        foreach ($request->input('purchases') as $purchase) {
+            $result = $this->myketService->verifyAndFulfillSubscription(
+                $user,
+                $purchase['purchase_token'],
+                $purchase['product_id'],
+                $purchase['order_id'] ?? null
+            );
+
+            if ($result['success'] && isset($result['subscription'])) {
+                $restored[] = [
+                    'product_id' => $purchase['product_id'],
+                    'subscription_id' => $result['subscription']->id,
+                    'is_duplicate' => $result['is_duplicate'] ?? false,
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => count($restored) > 0 ? 'خریدهای قبلی بازیابی شد' : 'خرید قابل بازیابی یافت نشد',
+            'data' => [
+                'restored_count' => count($restored),
+                'purchases' => $restored,
+            ],
+        ], 200);
+    }
+
+    private function normalizeNumericFieldsForApi(array &$payment, array &$subscription): void
+    {
+        $decimalKeys = ['amount', 'gateway_fee', 'net_amount', 'exchange_rate', 'refund_amount'];
+        foreach ($decimalKeys as $key) {
+            if (array_key_exists($key, $payment) && $payment[$key] !== null) {
+                $payment[$key] = (float) $payment[$key];
+            }
+        }
+        if (array_key_exists('price', $subscription) && $subscription['price'] !== null) {
+            $subscription['price'] = (float) $subscription['price'];
+        }
+        $subscription['plan_source'] = 'myket';
+        $subscription['source_label'] = 'مایکت';
     }
 
     /**
