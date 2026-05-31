@@ -53,37 +53,15 @@ jobs:
           exclude: |
             **/.git*
             **/.git*/**
-            .github/**
+            **/node_modules/**
             .env
             .env.*
-            .env.example
-            node_modules/**
+            .github/**
             tests/**
-            docs/**
-            scripts/**
             storage/logs/**
             storage/framework/sessions/**
             storage/framework/views/**
             storage/framework/cache/data/**
-            **/*.md
-            *.sh
-            *.bat
-            phpunit.xml
-            phpunit.xml.*
-            .styleci.yml
-            .editorconfig
-            .phpunit*
-            .cursor/**
-            .idea/**
-            .vscode/**
-            .fleet/**
-            .zed/**
-            .nova/**
-            .ftp-deploy-sync-state.json
-            docker-compose*
-            Dockerfile*
-            Makefile*
-            .gitlab-ci.yml
 
       - name: Clear and cache configurations
         run: |
