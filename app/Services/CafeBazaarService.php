@@ -443,24 +443,23 @@ class CafeBazaarService
                         ]);
                         $refreshed = $this->refreshSubscriptionFromBazaar($user, $sub, $existingPayment, $purchaseToken, $productId, $orderId);
                         if ($refreshed) {
-                            return [
-                                'success' => true,
-                                'payment' => $existingPayment->fresh()->load('subscription'),
-                                'subscription' => $existingPayment->subscription,
-                                'is_duplicate' => true,
-                            ];
+                            $sub = $existingPayment->subscription->fresh();
+                        } else {
+                            $sub = $this->ensureSubscriptionGrantsAccess($sub);
                         }
+                    } else {
+                        $sub = $this->ensureSubscriptionGrantsAccess($sub);
                     }
                     Log::info('CafeBazaar verifyAndFulfill: idempotent return', [
                         'user_id' => $user->id,
                         'payment_id' => $existingPayment->id,
-                        'subscription_id' => $existingPayment->subscription->id,
+                        'subscription_id' => $sub->id,
                         'purchase_token_preview' => substr($purchaseToken, 0, 12) . '...',
                     ]);
                     return [
                         'success' => true,
-                        'payment' => $existingPayment,
-                        'subscription' => $existingPayment->subscription,
+                        'payment' => $existingPayment->fresh()->load('subscription'),
+                        'subscription' => $sub->fresh(),
                         'is_duplicate' => true,
                     ];
                 }
@@ -645,6 +644,26 @@ class CafeBazaarService
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * If end_date is still in the future but status is stale (e.g. cancelled), reactivate so access checks pass.
+     */
+    private function ensureSubscriptionGrantsAccess(Subscription $subscription): Subscription
+    {
+        if ($subscription->end_date
+            && Carbon::parse($subscription->end_date)->isFuture()
+            && !in_array($subscription->status, ['active', 'trial'], true)) {
+            Log::info('CafeBazaar ensureSubscriptionGrantsAccess: reactivating subscription with future end_date', [
+                'subscription_id' => $subscription->id,
+                'previous_status' => $subscription->status,
+                'end_date' => $subscription->end_date,
+            ]);
+            $subscription->update(['status' => 'active']);
+            return $subscription->fresh();
+        }
+
+        return $subscription;
     }
 
     /**

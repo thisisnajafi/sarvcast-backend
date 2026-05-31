@@ -235,7 +235,7 @@ class CafeBazaarSubscriptionController extends Controller
                 ], 200);
             }
 
-            $isActive = $subscription->status === 'active' && $subscription->end_date > now();
+            $isActive = $subscription->grantsAccess();
             $subscriptionArray = $subscription->toArray();
             if (array_key_exists('price', $subscriptionArray) && $subscriptionArray['price'] !== null) {
                 $subscriptionArray['price'] = (float) $subscriptionArray['price'];

@@ -70,9 +70,9 @@ class SubscriptionController extends Controller
     {
         try {
             $user = $request->user();
-            $currentSubscription = $this->subscriptionService->getActiveSubscription($user->id);
+            $currentSubscription = $this->subscriptionService->getGrantingSubscription($user->id);
 
-            if (!$currentSubscription) {
+            if (!$currentSubscription || !$currentSubscription->grantsAccess()) {
                 return response()->json([
                     'success' => true,
                     'data' => [

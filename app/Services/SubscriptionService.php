@@ -317,6 +317,17 @@ class SubscriptionService
     }
 
     /**
+     * Subscription that currently grants premium access (includes cancelled until end_date).
+     */
+    public function getGrantingSubscription(int $userId): ?Subscription
+    {
+        return Subscription::where('user_id', $userId)
+            ->grantingAccess()
+            ->orderByDesc('end_date')
+            ->first();
+    }
+
+    /**
      * Get user's subscription history
      */
     public function getUserSubscriptions(int $userId, int $perPage = 20): \Illuminate\Contracts\Pagination\LengthAwarePaginator

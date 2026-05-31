@@ -78,6 +78,27 @@ class Subscription extends Model
     }
 
     /**
+     * Subscriptions that currently grant premium access (paid period not ended).
+     * Includes cancelled subs until end_date — cancelled means no renewal, not instant revoke.
+     */
+    public function scopeGrantingAccess($query)
+    {
+        return $query->where('end_date', '>', now());
+    }
+
+    /**
+     * Whether this subscription currently grants premium access.
+     */
+    public function grantsAccess(): bool
+    {
+        if ($this->end_date && Carbon::parse($this->end_date)->isFuture()) {
+            return true;
+        }
+
+        return in_array($this->status, ['active', 'trial'], true) && !$this->end_date;
+    }
+
+    /**
      * Scope to get expired subscriptions
      */
     public function scopeExpired($query)

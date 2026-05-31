@@ -32,32 +32,20 @@ class AccessControlService
                 return true;
             }
 
-            // Preferred: use the same logic as User model's activeSubscription relationship
-            $activeSubscription = $user->activeSubscription;
+            // Any subscription whose paid period has not ended grants access
+            // (cancelled but future end_date = access until expiry, no renewal).
+            $grantingSubscription = Subscription::where('user_id', $userId)
+                ->grantingAccess()
+                ->orderByDesc('end_date')
+                ->first();
 
-            if ($activeSubscription) {
-                Log::info('hasPremiumAccess: Active subscription found via User model', [
+            if ($grantingSubscription && $grantingSubscription->grantsAccess()) {
+                Log::info('hasPremiumAccess: Subscription granting access found', [
                     'user_id' => $userId,
-                    'subscription_id' => $activeSubscription->id,
-                    'status' => $activeSubscription->status,
-                    'end_date' => $activeSubscription->end_date,
-                    'current_time' => now()
-                ]);
-                return true;
-            }
-
-            // Also accept explicit trial subscriptions
-            $trialSubscription = Subscription::where('user_id', $userId)
-                                           ->where('status', 'trial')
-                                           ->where('end_date', '>', now())
-                                           ->first();
-
-            if ($trialSubscription) {
-                Log::info('hasPremiumAccess: Trial subscription found', [
-                    'user_id' => $userId,
-                    'subscription_id' => $trialSubscription->id,
-                    'status' => $trialSubscription->status,
-                    'end_date' => $trialSubscription->end_date
+                    'subscription_id' => $grantingSubscription->id,
+                    'status' => $grantingSubscription->status,
+                    'end_date' => $grantingSubscription->end_date,
+                    'current_time' => now(),
                 ]);
                 return true;
             }
