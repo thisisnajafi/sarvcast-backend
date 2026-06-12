@@ -199,6 +199,8 @@ Route::prefix('admin/v1/auth')->middleware(['security', 'admin.origin'])->group(
     Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function () {
         Route::get('me', [AuthController::class, 'profile']);
         Route::middleware('api.audit')->group(function () {
+            Route::put('profile', [AuthController::class, 'updateProfile']);
+            Route::post('change-password', [AuthController::class, 'changePassword']);
             Route::post('logout', [AuthController::class, 'logout']);
             Route::post('logout-all', [AuthController::class, 'logoutAllSessions']);
             Route::post('refresh', [AuthController::class, 'refresh']);
@@ -1000,6 +1002,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::post('/', [\App\Http\Controllers\Admin\RoleController::class, 'apiStore']);
         Route::get('/export', [\App\Http\Controllers\Admin\RoleController::class, 'apiExport']);
         Route::get('/statistics/data', [\App\Http\Controllers\Admin\RoleController::class, 'apiStatistics']);
+        Route::get('/permissions', [\App\Http\Controllers\Admin\RoleController::class, 'apiPermissions']);
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\RoleController::class, 'apiBulkAction']);
         Route::get('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'apiShow']);
         Route::put('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'apiUpdate']);
@@ -1030,6 +1033,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'apiShow']);
             Route::put('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'apiUpdate']);
             Route::delete('/{user}', [\App\Http\Controllers\Admin\UserController::class, 'apiDestroy']);
+            Route::post('/{user}/send-notification', [\App\Http\Controllers\Admin\UserController::class, 'apiSendNotification']);
         });
 
         // User Analytics API
@@ -1038,6 +1042,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/registration', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiRegistration']);
             Route::get('/engagement', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiEngagement']);
             Route::get('/demographics', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiDemographics']);
+            Route::get('/retention', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiRetention']);
+            Route::get('/behavior', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiBehavior']);
+            Route::get('/trends', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiTrends']);
+            Route::get('/segments', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiSegments']);
+            Route::get('/real-time', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiRealTime']);
+            Route::get('/activity', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiActivity']);
+            Route::get('/subscription', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiSubscription']);
+            Route::get('/summary', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiSummary']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiStatistics']);
         });
 
@@ -1069,23 +1081,25 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::prefix('quiz')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\QuizController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\QuizController::class, 'apiStore']);
-            Route::get('/{quizQuestion}', [\App\Http\Controllers\Admin\QuizController::class, 'apiShow']);
-            Route::put('/{quizQuestion}', [\App\Http\Controllers\Admin\QuizController::class, 'apiUpdate']);
-            Route::delete('/{quizQuestion}', [\App\Http\Controllers\Admin\QuizController::class, 'apiDestroy']);
+            Route::get('/export', [\App\Http\Controllers\Admin\QuizController::class, 'apiExport']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\QuizController::class, 'apiBulkAction']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\QuizController::class, 'apiStatistics']);
             Route::get('/episodes', [\App\Http\Controllers\Admin\QuizController::class, 'getEpisodes']);
+            Route::get('/{quizQuestion}', [\App\Http\Controllers\Admin\QuizController::class, 'apiShow']);
+            Route::put('/{quizQuestion}', [\App\Http\Controllers\Admin\QuizController::class, 'apiUpdate']);
+            Route::delete('/{quizQuestion}', [\App\Http\Controllers\Admin\QuizController::class, 'apiDestroy']);
         });
 
         // Referral System API
         Route::prefix('referrals')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\ReferralController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\ReferralController::class, 'apiStore']);
+            Route::get('/export', [\App\Http\Controllers\Admin\ReferralController::class, 'apiExport']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\ReferralController::class, 'apiBulkAction']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\ReferralController::class, 'apiStatistics']);
             Route::get('/{referral}', [\App\Http\Controllers\Admin\ReferralController::class, 'apiShow']);
             Route::put('/{referral}', [\App\Http\Controllers\Admin\ReferralController::class, 'apiUpdate']);
             Route::delete('/{referral}', [\App\Http\Controllers\Admin\ReferralController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\ReferralController::class, 'apiBulkAction']);
-            Route::get('/statistics/data', [\App\Http\Controllers\Admin\ReferralController::class, 'apiStatistics']);
         });
 
         // Gamification System API - DISABLED
@@ -1103,11 +1117,12 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::prefix('content-moderation')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiStore']);
+            Route::get('/export', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiExport']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiBulkAction']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiStatistics']);
             Route::get('/{contentModeration}', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiShow']);
             Route::put('/{contentModeration}', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiUpdate']);
             Route::delete('/{contentModeration}', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiBulkAction']);
-            Route::get('/statistics/data', [\App\Http\Controllers\Admin\ContentModerationController::class, 'apiStatistics']);
         });
 
         // Comment Moderation API (static paths before /{comment})
@@ -1273,5 +1288,34 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::get('/dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'apiStats']);
         Route::get('/dashboard/charts', [\App\Http\Controllers\Admin\DashboardController::class, 'apiCharts']);
         Route::get('/online-users', [\App\Http\Controllers\Admin\DashboardController::class, 'apiOnlineUsers']);
+
+        // Flavor analytics
+        Route::get('/flavor-analytics', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'api']);
+
+        // Partner programs
+        Route::prefix('teachers')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersIndex']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersStatistics']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersBulkAction']);
+            Route::get('/{teacher}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersShow']);
+        });
+        Route::prefix('schools')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsIndex']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsStatistics']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsBulkAction']);
+            Route::get('/{school}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsShow']);
+        });
+        Route::prefix('influencers')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersIndex']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersStatistics']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersBulkAction']);
+            Route::get('/{influencer}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersShow']);
+        });
+        Route::prefix('corporate')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateIndex']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateStatistics']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateBulkAction']);
+            Route::get('/{corporate}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateShow']);
+        });
     });
 

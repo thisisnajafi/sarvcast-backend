@@ -446,6 +446,16 @@ class RoleController extends Controller
         ]);
     }
 
+    public function apiPermissions()
+    {
+        $permissions = Permission::query()
+            ->orderBy('group')
+            ->orderBy('name')
+            ->get(['id', 'name', 'display_name', 'group']);
+
+        return AdminApiResponse::success($permissions);
+    }
+
     private function buildRoleApiQuery(Request $request)
     {
         $query = Role::query();

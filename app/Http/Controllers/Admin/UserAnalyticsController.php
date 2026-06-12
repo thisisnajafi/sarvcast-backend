@@ -4,11 +4,32 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class UserAnalyticsController extends Controller
 {
+    public function __construct(protected UserAnalyticsService $analyticsService)
+    {
+    }
+
+    /** @return array{0: Carbon, 1: Carbon, 2: int} */
+    private function resolveDateRange(Request $request): array
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+
+        return [Carbon::now()->subDays($dateRange), Carbon::now(), $dateRange];
+    }
+
+    private function jsonAnalyticsPayload(array $data, int $dateRange)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'date_range' => $dateRange,
+        ]);
+    }
     /**
      * Display the user analytics dashboard
      */
@@ -343,5 +364,85 @@ class UserAnalyticsController extends Controller
             'success' => true,
             'data' => $stats
         ]);
+    }
+
+    public function apiRetention(Request $request)
+    {
+        [$dateFrom, $dateTo, $dateRange] = $this->resolveDateRange($request);
+
+        return $this->jsonAnalyticsPayload(
+            $this->analyticsService->getRetentionMetrics($dateFrom, $dateTo),
+            $dateRange
+        );
+    }
+
+    public function apiBehavior(Request $request)
+    {
+        [$dateFrom, $dateTo, $dateRange] = $this->resolveDateRange($request);
+
+        return $this->jsonAnalyticsPayload(
+            $this->analyticsService->getBehaviorMetrics($dateFrom, $dateTo),
+            $dateRange
+        );
+    }
+
+    public function apiTrends(Request $request)
+    {
+        [$dateFrom, $dateTo, $dateRange] = $this->resolveDateRange($request);
+
+        return $this->jsonAnalyticsPayload(
+            $this->analyticsService->getTrendMetrics($dateFrom, $dateTo),
+            $dateRange
+        );
+    }
+
+    public function apiSegments(Request $request)
+    {
+        [$dateFrom, $dateTo, $dateRange] = $this->resolveDateRange($request);
+
+        return $this->jsonAnalyticsPayload(
+            $this->analyticsService->getUserSegments($dateFrom, $dateTo),
+            $dateRange
+        );
+    }
+
+    public function apiRealTime()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->analyticsService->getRealTimeMetrics(),
+        ]);
+    }
+
+    public function apiActivity(Request $request)
+    {
+        [$dateFrom, $dateTo, $dateRange] = $this->resolveDateRange($request);
+
+        return $this->jsonAnalyticsPayload(
+            $this->analyticsService->getActivityMetrics($dateFrom, $dateTo),
+            $dateRange
+        );
+    }
+
+    public function apiSubscription(Request $request)
+    {
+        [$dateFrom, $dateTo, $dateRange] = $this->resolveDateRange($request);
+
+        return $this->jsonAnalyticsPayload(
+            $this->analyticsService->getSubscriptionMetrics($dateFrom, $dateTo),
+            $dateRange
+        );
+    }
+
+    public function apiSummary(Request $request)
+    {
+        [$dateFrom, $dateTo, $dateRange] = $this->resolveDateRange($request);
+
+        return $this->jsonAnalyticsPayload([
+            'overview' => $this->analyticsService->getOverviewMetrics($dateFrom, $dateTo),
+            'retention' => $this->analyticsService->getRetentionMetrics($dateFrom, $dateTo),
+            'segments' => $this->analyticsService->getUserSegments($dateFrom, $dateTo),
+            'real_time' => $this->analyticsService->getRealTimeMetrics(),
+        ], $dateRange);
     }
 }

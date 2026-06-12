@@ -1,0 +1,226 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Http\Support\AdminApiResponse;
+use App\Models\CorporateSponsorship;
+use App\Models\InfluencerCampaign;
+use App\Models\SchoolPartnership;
+use App\Models\TeacherAccount;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class PartnerProgramsApiController extends Controller
+{
+    public function teachersIndex(Request $request)
+    {
+        $query = TeacherAccount::with('user');
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('institution_name', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($u) => $u->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('phone_number', 'like', "%{$search}%"));
+            });
+        }
+
+        return AdminApiResponse::paginated(
+            $query->orderByDesc('created_at')->paginate(min((int) $request->input('per_page', 15), 100))
+        );
+    }
+
+    public function teachersShow(TeacherAccount $teacher)
+    {
+        return AdminApiResponse::success($teacher->load('user'));
+    }
+
+    public function teachersStatistics()
+    {
+        return AdminApiResponse::success([
+            'total' => TeacherAccount::count(),
+            'verified' => TeacherAccount::where('is_verified', true)->count(),
+            'pending' => TeacherAccount::where('status', 'pending')->count(),
+            'active' => TeacherAccount::where('status', 'active')->count(),
+            'suspended' => TeacherAccount::where('status', 'suspended')->count(),
+        ]);
+    }
+
+    public function teachersBulkAction(Request $request)
+    {
+        return $this->runBulk($request, 'teacher_ids', TeacherAccount::class, [
+            'verify' => fn ($q) => $q->update(['is_verified' => true, 'verified_at' => now(), 'status' => 'active']),
+            'suspend' => fn ($q) => $q->update(['status' => 'suspended']),
+            'activate' => fn ($q) => $q->update(['status' => 'active']),
+            'delete' => fn ($q) => $q->delete(),
+        ]);
+    }
+
+    public function schoolsIndex(Request $request)
+    {
+        $query = SchoolPartnership::with(['affiliatePartner', 'assignedTeacher']);
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('school_name', 'like', "%{$search}%");
+        }
+
+        return AdminApiResponse::paginated(
+            $query->orderByDesc('created_at')->paginate(min((int) $request->input('per_page', 15), 100))
+        );
+    }
+
+    public function schoolsShow(SchoolPartnership $school)
+    {
+        return AdminApiResponse::success($school->load(['affiliatePartner', 'assignedTeacher']));
+    }
+
+    public function schoolsStatistics()
+    {
+        return AdminApiResponse::success([
+            'total' => SchoolPartnership::count(),
+            'verified' => SchoolPartnership::where('is_verified', true)->count(),
+            'pending' => SchoolPartnership::where('status', 'pending')->count(),
+            'active' => SchoolPartnership::where('status', 'active')->count(),
+            'suspended' => SchoolPartnership::where('status', 'suspended')->count(),
+        ]);
+    }
+
+    public function schoolsBulkAction(Request $request)
+    {
+        return $this->runBulk($request, 'school_ids', SchoolPartnership::class, [
+            'verify' => fn ($q) => $q->update(['is_verified' => true, 'verified_at' => now(), 'status' => 'active']),
+            'suspend' => fn ($q) => $q->update(['status' => 'suspended']),
+            'activate' => fn ($q) => $q->update(['status' => 'active']),
+            'delete' => fn ($q) => $q->delete(),
+        ]);
+    }
+
+    public function influencersIndex(Request $request)
+    {
+        $query = InfluencerCampaign::with('affiliatePartner');
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('campaign_name', 'like', "%{$search}%");
+        }
+
+        return AdminApiResponse::paginated(
+            $query->orderByDesc('created_at')->paginate(min((int) $request->input('per_page', 15), 100))
+        );
+    }
+
+    public function influencersShow(InfluencerCampaign $influencer)
+    {
+        return AdminApiResponse::success($influencer->load('affiliatePartner'));
+    }
+
+    public function influencersStatistics()
+    {
+        return AdminApiResponse::success([
+            'total' => InfluencerCampaign::count(),
+            'pending' => InfluencerCampaign::where('status', 'pending')->count(),
+            'active' => InfluencerCampaign::where('status', 'active')->count(),
+            'suspended' => InfluencerCampaign::where('status', 'suspended')->count(),
+        ]);
+    }
+
+    public function influencersBulkAction(Request $request)
+    {
+        return $this->runBulk($request, 'influencer_ids', InfluencerCampaign::class, [
+            'verify' => fn ($q) => $q->update(['status' => 'active']),
+            'suspend' => fn ($q) => $q->update(['status' => 'suspended']),
+            'activate' => fn ($q) => $q->update(['status' => 'active']),
+            'delete' => fn ($q) => $q->delete(),
+        ]);
+    }
+
+    public function corporateIndex(Request $request)
+    {
+        $query = CorporateSponsorship::with('affiliatePartner');
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $query->where('company_name', 'like', '%'.$request->search.'%');
+        }
+
+        return AdminApiResponse::paginated(
+            $query->orderByDesc('created_at')->paginate(min((int) $request->input('per_page', 15), 100))
+        );
+    }
+
+    public function corporateShow(CorporateSponsorship $corporate)
+    {
+        return AdminApiResponse::success($corporate->load('affiliatePartner'));
+    }
+
+    public function corporateStatistics()
+    {
+        return AdminApiResponse::success([
+            'total' => CorporateSponsorship::count(),
+            'verified' => CorporateSponsorship::where('is_verified', true)->count(),
+            'pending' => CorporateSponsorship::where('status', 'pending')->count(),
+            'active' => CorporateSponsorship::where('status', 'active')->count(),
+            'suspended' => CorporateSponsorship::where('status', 'suspended')->count(),
+            'total_amount' => (float) CorporateSponsorship::sum('sponsorship_amount'),
+        ]);
+    }
+
+    public function corporateBulkAction(Request $request)
+    {
+        return $this->runBulk($request, 'corporate_ids', CorporateSponsorship::class, [
+            'verify' => fn ($q) => $q->update(['is_verified' => true, 'verified_at' => now(), 'status' => 'active']),
+            'suspend' => fn ($q) => $q->update(['status' => 'suspended']),
+            'activate' => fn ($q) => $q->update(['status' => 'active']),
+            'delete' => fn ($q) => $q->delete(),
+        ]);
+    }
+
+    private function runBulk(Request $request, string $idsKey, string $modelClass, array $actions)
+    {
+        $ids = $request->input($idsKey, $request->input('selected_items', []));
+        $validator = validator([
+            'action' => $request->input('action'),
+            $idsKey => $ids,
+        ], [
+            'action' => 'required|in:'.implode(',', array_keys($actions)),
+            $idsKey => 'required|array|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+            $query = $modelClass::whereIn('id', $ids);
+            $actions[$request->action]($query);
+            DB::commit();
+
+            return AdminApiResponse::okMessage('عملیات گروهی انجام شد.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Partner bulk action failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در عملیات گروهی.',
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
+}

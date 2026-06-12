@@ -968,6 +968,34 @@ class UserController extends Controller
         return AdminApiResponse::okMessage('کاربر با موفقیت حذف شد.');
     }
 
+    public function apiSendNotification(Request $request, User $user)
+    {
+        $request->validate([
+            'type' => 'required|string|in:info,success,warning,error,subscription,payment,content,system',
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'priority' => 'nullable|string|in:low,normal,high,urgent',
+        ]);
+
+        try {
+            $notification = $this->notificationService->createNotification(
+                $user->id,
+                $request->type,
+                $request->title,
+                $request->message,
+                ['priority' => $request->priority ?? 'normal']
+            );
+
+            return AdminApiResponse::success($notification, 'اعلان با موفقیت ارسال شد.');
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در ارسال اعلان: '.$e->getMessage(),
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
+    }
+
     public function apiBulkAction(Request $request)
     {
         $validated = $request->validate([
