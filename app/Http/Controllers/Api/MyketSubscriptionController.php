@@ -255,6 +255,8 @@ class MyketSubscriptionController extends Controller
      */
     public function listPlans(Request $request)
     {
+        Log::warning('Deprecated Myket endpoint called: GET plans — use GET /api/v1/subscriptions/plans?billing_platform=myket');
+
         try {
             $plans = MyketPlan::active()
                 ->orderBy('price', 'asc')
@@ -303,6 +305,8 @@ class MyketSubscriptionController extends Controller
      */
     public function subscribe(Request $request)
     {
+        Log::warning('Deprecated Myket endpoint called: POST subscribe — use POST /api/v1/subscriptions/myket/verify');
+
         // Validate request
         $validator = Validator::make($request->all(), [
             'purchase_token' => 'required|string|max:500',

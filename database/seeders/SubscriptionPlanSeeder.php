@@ -17,6 +17,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک یک ماهه',
                 'slug' => '1month',
+                'myket_product_id' => '1-month-sub',
                 'cafebazaar_product_id' => '1-month-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای یک ماه',
                 'duration_days' => 30,
@@ -36,6 +37,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک سه‌ماهه',
                 'slug' => '3months',
+                'myket_product_id' => '3-month-sub',
                 'cafebazaar_product_id' => '3-month-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای سه ماه',
                 'duration_days' => 90,
@@ -56,6 +58,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک شش‌ماهه',
                 'slug' => '6months',
+                'myket_product_id' => '6-month-sub',
                 'cafebazaar_product_id' => '6-month-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای شش ماه',
                 'duration_days' => 180,
@@ -77,6 +80,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'اشتراک یک ساله',
                 'slug' => '1year',
+                'myket_product_id' => '1-year-sub',
                 'cafebazaar_product_id' => '1-year-sub',
                 'description' => 'دسترسی کامل به تمام محتوا برای یک سال',
                 'duration_days' => 365,
@@ -99,7 +103,7 @@ class SubscriptionPlanSeeder extends Seeder
         ];
 
         foreach ($plans as $planData) {
-            SubscriptionPlan::firstOrCreate(
+            SubscriptionPlan::updateOrCreate(
                 ['slug' => $planData['slug']],
                 $planData
             );

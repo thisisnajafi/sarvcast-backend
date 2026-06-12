@@ -147,6 +147,20 @@ class SubscriptionPlan extends Model
     }
 
     /**
+     * Default Myket SKU for this plan slug (matches Myket panel + Flutter fallback).
+     */
+    public function getDefaultMyketProductId(): ?string
+    {
+        return match ($this->slug) {
+            '1month' => '1-month-sub',
+            '3months' => '3-month-sub',
+            '6months' => '6-month-sub',
+            '1year' => '1-year-sub',
+            default => null,
+        };
+    }
+
+    /**
      * Get product ID for a specific flavor
      * 
      * @param string $flavor 'website'|'myket'|'cafebazaar'
@@ -156,7 +170,9 @@ class SubscriptionPlan extends Model
     {
         return match($flavor) {
             'website' => $this->slug, // Use slug as product ID for website
-            'myket' => $this->myket_product_id,
+            'myket' => filled($this->myket_product_id)
+                ? $this->myket_product_id
+                : $this->getDefaultMyketProductId(),
             'cafebazaar' => filled($this->cafebazaar_product_id)
                 ? $this->cafebazaar_product_id
                 : $this->getDefaultCafeBazaarProductId(),
@@ -216,7 +232,7 @@ class SubscriptionPlan extends Model
             ],
             'myket' => [
                 'price' => $this->myket_price ?? $this->price,
-                'product_id' => $this->myket_product_id,
+                'product_id' => $this->getProductIdForFlavor('myket'),
                 'final_price' => $this->getFinalPriceForFlavor('myket'),
                 'available' => $this->isAvailableForFlavor('myket')
             ],

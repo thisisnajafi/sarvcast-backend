@@ -128,7 +128,7 @@ class CafeBazaarService
             $errorMsg = is_array($body) ? ($body['error_description'] ?? $body['error'] ?? $body['message'] ?? null) : null;
             if (!is_string($errorMsg) || $errorMsg === '') {
                 $errorMsg = $response->status() === 404
-                    ? 'آدرس تایید خرید در کافه‌بازار یافت نشد (404). برای اشتراک از endpoint وضعیت اشتراک استفاده می‌شود.'
+                    ? 'تایید خرید با کافه‌بازار هنوز آماده نیست. لطفاً چند لحظه دیگر تلاش کنید.'
                     : 'خطا در ارتباط با کافه‌بازار';
             }
             Log::error('CafeBazaar verifyPurchase: API request failed', [

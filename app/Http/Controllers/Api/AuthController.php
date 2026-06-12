@@ -623,6 +623,8 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'status' => $user->status,
                 'profile_image_url' => $user->profile_image_url,
+                'background_photo_url' => $user->background_photo_url,
+                'bio' => $user->bio,
                 'parent_id' => $user->parent_id,
                 'timezone' => $user->timezone,
                 'preferences' => $user->preferences,
