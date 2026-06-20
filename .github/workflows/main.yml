@@ -5,6 +5,11 @@ on:
 
 name: Deploy Laravel Backend via FTP
 
+# Prevent overlapping deploys; a new push cancels a slow in-progress upload.
+concurrency:
+  group: sarvcast-backend-deploy
+  cancel-in-progress: true
+
 env:
   FTP_SERVER: "ftp.sarvcast.ir"
   FTP_USERNAME: "my@sarvcast.ir"
@@ -18,7 +23,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
@@ -30,17 +35,10 @@ jobs:
           php-version: "8.2"
           extensions: mbstring, xml, ctype, json, bcmath, curl, gd, zip, intl, fileinfo, pdo, pdo_mysql
           coverage: none
+          tools: composer:v2
 
-      - name: Cache Composer packages
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Install dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+      - name: Validate Composer lock file
+        run: composer validate --strict --no-check-publish
 
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
@@ -50,10 +48,13 @@ jobs:
           password: ${{ env.FTP_PASSWORD }}
           server-dir: /
           timeout: 600000
+          log-level: minimal
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
+            **/vendor/**
+            vendor/**
             .env
             .env.*
             .github/**
@@ -63,14 +64,14 @@ jobs:
             storage/framework/views/**
             storage/framework/cache/data/**
 
-      - name: Clear and cache configurations
+      - name: Install dependencies and cache on server
         run: |
-          echo "::group::Clear and cache configurations (server)"
-          echo "Calling deploy helper: clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
+          echo "::group::Install dependencies and cache configurations (server)"
+          echo "Calling deploy helper: composer install, clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 90 --connect-timeout 15)
+            --max-time 300 --connect-timeout 15)
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
@@ -84,20 +85,19 @@ jobs:
             exit 1
           fi
 
-          # Log each command result from the helper so we can confirm all steps ran
           if command -v jq &>/dev/null; then
             STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
             echo "Helper status: $STATUS"
             echo "Command results:"
             echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do
               echo "  - $line"
-              if echo "$line" | grep -q "FAILED"; then
+              if echo "$line" | grep -qE "FAILED|failed"; then
                 echo "::warning::$line"
               fi
             done
-            FAILED=$(echo "$BODY" | jq -r '[.results[]? | select(. | test("FAILED"))] | length' 2>/dev/null || echo "0")
+            FAILED=$(echo "$BODY" | jq -r '[.results[]? | select(. | test("FAILED|failed"))] | length' 2>/dev/null || echo "0")
             if [[ "$FAILED" != "0" ]]; then
-              echo "::error::Clear cache incomplete: $FAILED command(s) failed on server"
+              echo "::error::Server post-deploy failed: $FAILED step(s) failed"
               echo "::endgroup::"
               exit 1
             fi
@@ -105,7 +105,7 @@ jobs:
             echo "Raw response: $BODY"
           fi
 
-          echo "✅ Clear and cache configurations completed successfully (clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link)"
+          echo "✅ Dependencies installed and caches rebuilt on server"
           echo "::endgroup::"
 
       - name: Notify Telegram (success)

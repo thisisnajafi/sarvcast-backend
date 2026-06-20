@@ -7,6 +7,8 @@
 /storage/pail
 /storage/app/firebase-service-account.json
 /vendor
+/composer.phar
+/composer-setup.php
 vendor.zip
 .env
 .env.backup
