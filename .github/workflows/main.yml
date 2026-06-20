@@ -23,7 +23,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -39,6 +39,28 @@ jobs:
 
       - name: Validate Composer lock file
         run: composer validate --no-check-publish
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Package vendor directory
+        run: |
+          echo "Vendor size before packaging:"
+          du -sh vendor
+          (cd vendor && zip -r -9 -q ../vendor.zip .)
+          ls -lh vendor.zip
 
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
@@ -67,42 +89,35 @@ jobs:
       - name: Install dependencies and cache on server
         run: |
           echo "::group::Install dependencies and cache configurations (server)"
-          echo "Calling deploy helper: composer install, clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
+          echo "Calling deploy helper: extract vendor.zip, clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 300 --connect-timeout 15)
+            --max-time 600 --connect-timeout 15)
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
 
           echo "HTTP status: $HTTP_CODE"
+          echo "Raw response: $BODY"
 
           if [[ "$HTTP_CODE" != "200" ]]; then
-            echo "::warning::Deploy helper returned HTTP $HTTP_CODE — may need manual cache clear"
-            echo "Raw response: $BODY"
+            echo "::error::Deploy helper returned HTTP $HTTP_CODE"
             echo "::endgroup::"
             exit 1
           fi
 
-          if command -v jq &>/dev/null; then
-            STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
-            echo "Helper status: $STATUS"
-            echo "Command results:"
-            echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do
-              echo "  - $line"
-              if echo "$line" | grep -qE "FAILED|failed"; then
-                echo "::warning::$line"
-              fi
-            done
-            FAILED=$(echo "$BODY" | jq -r '[.results[]? | select(. | test("FAILED|failed"))] | length' 2>/dev/null || echo "0")
-            if [[ "$FAILED" != "0" ]]; then
-              echo "::error::Server post-deploy failed: $FAILED step(s) failed"
-              echo "::endgroup::"
-              exit 1
-            fi
-          else
-            echo "Raw response: $BODY"
+          STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
+          echo "Helper status: $STATUS"
+          echo "Command results:"
+          echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do
+            echo "  - $line"
+          done
+
+          if [[ "$STATUS" != "success" ]]; then
+            echo "::error::Server post-deploy failed"
+            echo "::endgroup::"
+            exit 1
           fi
 
           echo "✅ Dependencies installed and caches rebuilt on server"

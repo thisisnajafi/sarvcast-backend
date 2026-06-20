@@ -1,5 +1,7 @@
 <?php
 
+set_time_limit(0);
+
 header('Content-Type: application/json');
 
 $token = isset($_GET['token']) ? $_GET['token'] : '';
@@ -13,108 +15,67 @@ if ($token !== $expected) {
 $basePath = dirname(__DIR__);
 $results = [];
 
-function runShellCommand(string $command, string $cwd): array
+function extractVendorArchive(string $basePath): array
 {
-    if (function_exists('proc_open')) {
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
+    $zipPath = $basePath . '/vendor.zip';
+    $vendorDir = $basePath . '/vendor';
+    $hashFile = $vendorDir . '/.deploy-package-hash';
 
-        $process = @proc_open($command, $descriptors, $pipes, $cwd);
-
-        if (is_resource($process)) {
-            fclose($pipes[0]);
-            $stdout = stream_get_contents($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-
-            $exitCode = proc_close($process);
-            $output = trim($stdout . "\n" . $stderr);
-
-            return [
-                'ok' => $exitCode === 0,
-                'output' => $output !== '' ? $output : '(no output)',
-            ];
+    if (!file_exists($zipPath)) {
+        if (is_file($vendorDir . '/autoload.php')) {
+            return ['vendor archive skipped (using existing vendor/)'];
         }
+
+        return ['vendor extract FAILED: vendor.zip missing and vendor/ is not installed'];
     }
 
-    if (function_exists('shell_exec')) {
-        $output = (string) shell_exec('cd ' . escapeshellarg($cwd) . ' && ' . $command);
-        $output = trim($output);
-
-        return [
-            'ok' => is_file($cwd . '/vendor/autoload.php'),
-            'output' => $output !== '' ? $output : '(no output)',
-        ];
-    }
-
-    return ['ok' => false, 'output' => 'Shell execution is disabled on this server'];
-}
-
-function ensureComposerPhar(string $basePath): ?string
-{
-    $composerPhar = $basePath . '/composer.phar';
-
-    if (file_exists($composerPhar)) {
-        return $composerPhar;
-    }
-
-    $installer = @file_get_contents('https://getcomposer.org/installer');
-    if ($installer === false) {
-        return null;
-    }
-
-    $saved = getcwd();
-    chdir($basePath);
-
-    $installerPath = $basePath . '/composer-setup.php';
-    if (@file_put_contents($installerPath, $installer) === false) {
-        chdir($saved);
-        return null;
-    }
-
-    $installResult = runShellCommand('php composer-setup.php --quiet', $basePath);
-    @unlink($installerPath);
-
-    chdir($saved);
-
-    return ($installResult['ok'] && file_exists($composerPhar)) ? $composerPhar : null;
-}
-
-function runComposerInstall(string $basePath): array
-{
-    $results = [];
-    $installArgs = 'install --no-dev --optimize-autoloader --no-interaction --no-ansi 2>&1';
-
-    $commands = [
-        'composer ' . $installArgs,
-        'php composer.phar ' . $installArgs,
-        '/usr/local/bin/composer ' . $installArgs,
-        '/usr/bin/composer ' . $installArgs,
-    ];
-
-    $composerPhar = ensureComposerPhar($basePath);
-    if ($composerPhar !== null) {
-        array_unshift($commands, 'php ' . escapeshellarg($composerPhar) . ' ' . $installArgs);
-    }
-
-    $lastOutput = 'No composer command succeeded';
-
-    foreach ($commands as $command) {
-        $result = runShellCommand($command, $basePath);
-        if ($result['ok']) {
-            $results[] = 'composer install OK';
-            return $results;
+    if (!class_exists('ZipArchive')) {
+        if (is_file($vendorDir . '/autoload.php')) {
+            return ['ZipArchive unavailable; using existing vendor/'];
         }
-        $lastOutput = $result['output'];
+
+        return ['vendor extract FAILED: ZipArchive extension is not enabled'];
     }
 
-    $results[] = 'composer install FAILED: ' . substr($lastOutput, 0, 500);
+    $zipHash = @md5_file($zipPath);
+    if ($zipHash === false) {
+        return ['vendor extract FAILED: unable to read vendor.zip'];
+    }
 
-    return $results;
+    if (
+        is_file($vendorDir . '/autoload.php')
+        && is_file($hashFile)
+        && trim((string) file_get_contents($hashFile)) === $zipHash
+    ) {
+        return ['vendor archive unchanged; skipped extraction'];
+    }
+
+    if (!is_dir($vendorDir) && !@mkdir($vendorDir, 0755, true)) {
+        return ['vendor extract FAILED: unable to create vendor directory'];
+    }
+
+    $zip = new ZipArchive();
+    $opened = $zip->open($zipPath);
+
+    if ($opened !== true) {
+        return ['vendor extract FAILED: unable to open vendor.zip (code ' . $opened . ')'];
+    }
+
+    if (!$zip->extractTo($vendorDir)) {
+        $zip->close();
+
+        return ['vendor extract FAILED: ZipArchive::extractTo failed'];
+    }
+
+    $zip->close();
+
+    if (!is_file($vendorDir . '/autoload.php')) {
+        return ['vendor extract FAILED: vendor/autoload.php missing after extraction'];
+    }
+
+    @file_put_contents($hashFile, $zipHash);
+
+    return ['vendor extract OK'];
 }
 
 // 1. Create necessary directories
@@ -144,8 +105,8 @@ foreach ($dirs as $dir) {
     }
 }
 
-// 2. Install / update Composer dependencies on the server (vendor is not uploaded via FTP)
-$results = array_merge($results, runComposerInstall($basePath));
+// 2. Extract vendor.zip uploaded by CI (shared hosting disables shell/composer over HTTP)
+$results = array_merge($results, extractVendorArchive($basePath));
 
 // 3. Delete stale cache files before bootstrapping Laravel
 $staleFiles = [
@@ -204,7 +165,6 @@ try {
 } catch (Throwable $e) {
     $results[] = 'Laravel bootstrap failed: ' . $e->getMessage();
 
-    // Fallback: create storage symlink manually
     $link = $basePath . '/public/storage';
     if (is_link($link)) {
         @unlink($link);
@@ -219,7 +179,15 @@ try {
     }
 }
 
-// 5. Clear OPcache
+// 5. Remove vendor.zip after successful extraction to save disk space
+$zipPath = $basePath . '/vendor.zip';
+if (is_file($zipPath) && is_file($basePath . '/vendor/autoload.php')) {
+    if (@unlink($zipPath)) {
+        $results[] = 'Removed vendor.zip after extraction';
+    }
+}
+
+// 6. Clear OPcache
 if (function_exists('opcache_reset')) {
     @opcache_reset();
     $results[] = 'OPcache cleared';
@@ -232,6 +200,8 @@ foreach ($results as $line) {
         break;
     }
 }
+
+http_response_code($hasFailure ? 500 : 200);
 
 echo json_encode([
     'status' => $hasFailure ? 'error' : 'success',
