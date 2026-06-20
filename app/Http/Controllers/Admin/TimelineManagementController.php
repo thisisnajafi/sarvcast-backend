@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminCsvExport;
 use App\Models\Episode;
 use App\Models\ImageTimeline;
 use Illuminate\Http\Request;
@@ -352,5 +353,41 @@ class TimelineManagementController extends Controller
             'success' => true,
             'data' => $stats,
         ]);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = ImageTimeline::with(['episode.story'])->orderByDesc('created_at');
+
+        if ($request->filled('episode_id')) {
+            $query->where('episode_id', $request->episode_id);
+        }
+        if ($request->filled('story_id')) {
+            $query->whereHas('episode', fn ($q) => $q->where('story_id', $request->story_id));
+        }
+        if ($request->filled('transition_type')) {
+            $query->where('transition_type', $request->transition_type);
+        }
+        if ($request->filled('is_key_frame')) {
+            $query->where('is_key_frame', $request->boolean('is_key_frame'));
+        }
+
+        return AdminCsvExport::streamQuery(
+            'timeline-management-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'episode_id', 'story_title', 'episode_title', 'start_time', 'end_time', 'image_order', 'transition_type', 'is_key_frame', 'created_at'],
+            $query,
+            fn ($row) => [
+                $row->id,
+                $row->episode_id,
+                $row->episode?->story?->title,
+                $row->episode?->title,
+                $row->start_time,
+                $row->end_time,
+                $row->image_order,
+                $row->transition_type,
+                $row->is_key_frame ? '1' : '0',
+                $row->created_at?->toIso8601String(),
+            ]
+        );
     }
 }

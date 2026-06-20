@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AnalyticsCsvExport;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
@@ -296,5 +297,39 @@ class SalesDashboardController extends Controller
     public function apiAnalytics(Request $request)
     {
         return $this->analytics($request);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $stats = [
+            'total_revenue' => Payment::where('status', 'completed')->sum('amount'),
+            'monthly_revenue' => Payment::where('status', 'completed')->where('created_at', '>=', now()->startOfMonth())->sum('amount'),
+            'daily_revenue' => Payment::where('status', 'completed')->whereDate('created_at', today())->sum('amount'),
+            'total_transactions' => Payment::where('status', 'completed')->count(),
+            'failed_transactions' => Payment::where('status', 'failed')->count(),
+            'avg_transaction_value' => round((float) Payment::where('status', 'completed')->avg('amount'), 2),
+        ];
+
+        $rows = User::withSum(['payments as total_spent' => fn ($q) => $q->where('status', 'completed')], 'amount')
+            ->whereHas('payments', fn ($q) => $q->where('status', 'completed'))
+            ->orderByDesc('total_spent')
+            ->limit(50)
+            ->get(['id', 'first_name', 'last_name', 'phone_number'])
+            ->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+                'phone_number' => $user->phone_number,
+                'total_spent' => $user->total_spent ?? 0,
+            ])
+            ->all();
+
+        return AnalyticsCsvExport::stream(
+            'specialized-sales-'.now()->format('Y-m-d-His').'.csv',
+            $stats,
+            ['id', 'name', 'phone_number', 'total_spent'],
+            $rows,
+            $dateRange,
+        );
     }
 }

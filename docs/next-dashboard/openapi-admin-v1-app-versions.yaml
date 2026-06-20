@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — App Versions (Dashboard)
+  description: Contract for mobile app version management under /api/admin/app-versions
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+  - url: http://localhost:8000/api/admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /app-versions:
+    get:
+      summary: List app versions
+      tags: [Admin — App Versions]
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: platform, in: query, schema: { type: string, enum: [android, ios, both] } }
+        - { name: is_active, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AppVersionListResponse" } } } }
+    post:
+      summary: Create app version
+      tags: [Admin — App Versions]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppVersionCreateRequest" }
+      responses:
+        "200": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AppVersionMutationResponse" } } } }
+
+  /app-versions/statistics/data:
+    get:
+      summary: Version statistics
+      tags: [Admin — App Versions]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/StatisticsResponse" } } } }
+
+  /app-versions/bulk-action:
+    post:
+      summary: Bulk activate, deactivate, or delete
+      tags: [Admin — App Versions]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [delete, activate, deactivate, set_latest] }
+                version_ids: { type: array, items: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /app-versions/{id}:
+    get:
+      summary: Version detail
+      tags: [Admin — App Versions]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AppVersionDetailResponse" } } } }
+    put:
+      summary: Update version
+      tags: [Admin — App Versions]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppVersionCreateRequest" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AppVersionMutationResponse" } } } }
+    delete:
+      summary: Delete version
+      tags: [Admin — App Versions]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Sanctum }
+  schemas:
+    AppVersion:
+      type: object
+      properties:
+        id: { type: integer }
+        platform: { type: string }
+        version: { type: string }
+        update_type: { type: string }
+        title: { type: string }
+        download_url: { type: string }
+        is_active: { type: boolean }
+        is_latest: { type: boolean }
+    AppVersionCreateRequest:
+      type: object
+      required: [platform, version, update_type, title, download_url]
+      properties:
+        platform: { type: string, enum: [android, ios, both] }
+        version: { type: string }
+        build_number: { type: string }
+        update_type: { type: string, enum: [optional, force] }
+        title: { type: string }
+        description: { type: string }
+        download_url: { type: string, format: uri }
+        update_message: { type: string }
+        release_notes: { type: string }
+        is_active: { type: boolean }
+        is_latest: { type: boolean }
+    AppVersionListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: array, items: { $ref: "#/components/schemas/AppVersion" } }
+        pagination: { type: object }
+    AppVersionDetailResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/AppVersion" }
+    AppVersionMutationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/AppVersion" }
+    StatisticsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    MessageResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }

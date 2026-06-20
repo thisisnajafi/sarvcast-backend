@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminCsvExport;
 use App\Models\AudioFile;
 use App\Models\Episode;
 use Illuminate\Http\Request;
@@ -587,5 +588,43 @@ class AudioManagementController extends Controller
                 'message' => 'خطا در شروع پردازش فایل صوتی: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = AudioFile::with(['episode', 'story']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('original_name', 'like', "%{$search}%")
+                    ->orWhere('file_name', 'like', "%{$search}%")
+                    ->orWhereHas('episode', fn ($eq) => $eq->where('title', 'like', "%{$search}%"))
+                    ->orWhereHas('story', fn ($sq) => $sq->where('title', 'like', "%{$search}%"));
+            });
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('file_type')) {
+            $query->where('file_type', $request->file_type);
+        }
+
+        return AdminCsvExport::streamQuery(
+            'audio-management-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'original_name', 'file_name', 'status', 'file_type', 'file_size', 'episode_id', 'story_id', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->original_name,
+                $row->file_name,
+                $row->status,
+                $row->file_type,
+                $row->file_size,
+                $row->episode_id,
+                $row->story_id,
+                $row->created_at?->toIso8601String(),
+            ]
+        );
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminCsvExport;
 use App\Models\PerformanceMetric;
 use App\Models\SystemAlert;
 use Illuminate\Http\Request;
@@ -834,5 +835,129 @@ class PerformanceMonitoringController extends Controller
             'success' => true,
             'data' => $health
         ]);
+    }
+
+    public function apiRealTime(Request $request)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'current_metrics' => $this->getCurrentMetrics(),
+                'trends' => $this->getPerformanceTrends(),
+                'recent_alerts' => SystemAlert::orderBy('created_at', 'desc')->limit(10)->get(),
+                'system_health' => $this->getSystemHealthStatus(),
+                'stats' => [
+                    'total_requests' => $this->getTotalRequests(),
+                    'average_response_time' => $this->getAverageResponseTime(),
+                    'error_rate' => $this->getErrorRate(),
+                    'uptime_percentage' => $this->getUptimePercentage(),
+                    'active_users' => $this->getActiveUsers(),
+                ],
+                'timestamp' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function apiReport(Request $request)
+    {
+        $query = PerformanceMetric::query();
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        if ($request->filled('feature')) {
+            $query->where('feature', $request->feature);
+        }
+
+        $metrics = $query->orderBy('created_at', 'desc')->paginate(50);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => [
+                    'total_metrics' => PerformanceMetric::count(),
+                    'avg_response_time' => PerformanceMetric::avg('response_time'),
+                    'avg_memory_usage' => PerformanceMetric::avg('memory_usage'),
+                    'avg_database_queries' => PerformanceMetric::avg('database_queries'),
+                    'total_alerts' => SystemAlert::count(),
+                    'critical_alerts' => SystemAlert::where('severity', 'critical')->count(),
+                    'warning_alerts' => SystemAlert::where('severity', 'warning')->count(),
+                    'info_alerts' => SystemAlert::where('severity', 'info')->count(),
+                ],
+                'chart_data' => $this->getPerformanceChartData($request),
+                'metrics' => $metrics->items(),
+            ],
+            'pagination' => [
+                'current_page' => $metrics->currentPage(),
+                'last_page' => $metrics->lastPage(),
+                'per_page' => $metrics->perPage(),
+                'total' => $metrics->total(),
+            ],
+        ]);
+    }
+
+    public function apiCleanup(Request $request)
+    {
+        $validated = $request->validate([
+            'days' => 'sometimes|integer|min:1|max:365',
+        ]);
+
+        $days = (int) ($validated['days'] ?? 30);
+        $cutoff = Carbon::now()->subDays($days);
+        $deleted = PerformanceMetric::where('created_at', '<', $cutoff)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "تعداد {$deleted} رکورد متریک قدیمی حذف شد.",
+            'data' => [
+                'deleted' => $deleted,
+                'days' => $days,
+            ],
+        ]);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = SystemAlert::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('message', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%");
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'resolved') {
+                $query->where('resolved', true);
+            } elseif ($request->status === 'unresolved') {
+                $query->where('resolved', false);
+            }
+        }
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->severity);
+        }
+
+        return AdminCsvExport::streamQuery(
+            'performance-alerts-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'title', 'type', 'severity', 'resolved', 'acknowledged', 'triggered_at', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->title,
+                $row->type,
+                $row->severity,
+                $row->resolved ? '1' : '0',
+                $row->acknowledged ? '1' : '0',
+                $row->triggered_at?->toIso8601String(),
+                $row->created_at?->toIso8601String(),
+            ]
+        );
     }
 }

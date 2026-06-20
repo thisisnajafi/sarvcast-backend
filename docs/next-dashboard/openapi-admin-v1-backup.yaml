@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Backup (Dashboard)
+  description: Contract for backup & recovery under /api/admin/backup
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+  - url: http://localhost:8000/api/admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /backup:
+    get:
+      summary: List backups (paginated)
+      tags: [Admin — Backup]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string, enum: [database, files, config, full] } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BackupListResponse" }
+    post:
+      summary: Create backup job
+      tags: [Admin — Backup]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BackupCreateRequest" }
+      responses:
+        "200": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/BackupMutationResponse" } } } }
+
+  /backup/statistics/data:
+    get:
+      summary: Backup statistics
+      tags: [Admin — Backup]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/StatisticsResponse" } } } }
+
+  /backup/bulk-action:
+    post:
+      summary: Bulk download, delete, or restore
+      tags: [Admin — Backup]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, backup_ids]
+              properties:
+                action: { type: string, enum: [download, delete, restore] }
+                backup_ids: { type: array, items: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /backup/{id}:
+    get:
+      summary: Backup detail
+      tags: [Admin — Backup]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BackupDetailResponse" } } } }
+    put:
+      summary: Update backup metadata
+      tags: [Admin — Backup]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BackupCreateRequest" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/BackupMutationResponse" } } } }
+    delete:
+      summary: Delete backup
+      tags: [Admin — Backup]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /backup/{id}/download:
+    get:
+      summary: Download backup archive
+      tags: [Admin — Backup]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: File stream, content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+
+  /backup/{id}/restore:
+    post:
+      summary: Restore from backup
+      tags: [Admin — Backup]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Sanctum }
+  schemas:
+    Backup:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        compression: { type: boolean }
+        encryption: { type: boolean }
+    BackupCreateRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string }
+        type: { type: string, enum: [database, files, config, full] }
+        description: { type: string }
+        compression: { type: boolean }
+        encryption: { type: boolean }
+        schedule: { type: string }
+        include_files: { type: array, items: { type: string } }
+        exclude_files: { type: array, items: { type: string } }
+    BackupListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: array, items: { $ref: "#/components/schemas/Backup" } }
+        pagination: { type: object }
+    BackupDetailResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/Backup" }
+    BackupMutationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/Backup" }
+    StatisticsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    MessageResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }

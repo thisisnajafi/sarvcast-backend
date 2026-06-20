@@ -11,6 +11,8 @@ class AdminDashboardCanonicalEndpointsTest extends TestCase
         $cases = [
             ['GET', '/api/admin/v1/dashboard/stats'],
             ['GET', '/api/admin/v1/dashboard/charts'],
+            ['GET', '/api/admin/v1/dashboard/export'],
+            ['GET', '/api/admin/v1/dashboard/online-users'],
         ];
 
         foreach ($cases as [$method, $uri]) {

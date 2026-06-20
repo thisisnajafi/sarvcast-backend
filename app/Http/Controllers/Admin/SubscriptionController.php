@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Carbon\Carbon;
 
 class SubscriptionController extends Controller
 {
@@ -288,12 +289,87 @@ class SubscriptionController extends Controller
         return AdminApiResponse::paginated($subscriptions);
     }
 
+    public function apiStore(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'type' => 'required|string|max:64',
+            'status' => 'sometimes|in:active,pending,trial',
+            'auto_renew' => 'sometimes|boolean',
+            'start_date' => 'sometimes|date',
+        ]);
+
+        try {
+            $subscription = $this->subscriptionService->createSubscription(
+                (int) $validated['user_id'],
+                $validated['type'],
+                [
+                    'status' => $validated['status'] ?? 'active',
+                    'auto_renew' => $validated['auto_renew'] ?? false,
+                    'start_date' => isset($validated['start_date']) ? Carbon::parse($validated['start_date']) : now(),
+                    'payment_method' => 'admin',
+                ]
+            );
+
+            return AdminApiResponse::success(
+                $subscription->load('user'),
+                'اشتراک با موفقیت ایجاد شد.',
+                201
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
     /**
      * Get a single subscription for API.
      */
     public function apiShow(Subscription $subscription): JsonResponse
     {
         return AdminApiResponse::success($subscription->load(['user', 'payments']));
+    }
+
+    public function apiUpdate(Request $request, Subscription $subscription): JsonResponse
+    {
+        if ($request->input('action') === 'cancel') {
+            $request->validate([
+                'cancellation_reason' => 'required|string|max:500',
+            ]);
+            $subscription->update([
+                'status' => 'cancelled',
+                'cancellation_reason' => $request->cancellation_reason,
+                'cancelled_at' => now(),
+            ]);
+        } elseif ($request->input('action') === 'reactivate') {
+            $subscription->update([
+                'status' => 'active',
+                'cancellation_reason' => null,
+                'cancelled_at' => null,
+            ]);
+        } else {
+            $validated = $request->validate([
+                'status' => 'sometimes|in:active,expired,cancelled,pending,trial',
+                'auto_renew' => 'sometimes|boolean',
+                'end_date' => 'sometimes|date',
+            ]);
+            $update = $validated;
+            if (isset($update['status']) && $update['status'] === 'cancelled') {
+                $update['cancelled_at'] = now();
+            }
+            if (isset($update['status']) && $update['status'] === 'active') {
+                $update['cancellation_reason'] = null;
+                $update['cancelled_at'] = null;
+            }
+            $subscription->update($update);
+        }
+
+        return AdminApiResponse::success(
+            $subscription->fresh(['user', 'payments']),
+            'اشتراک به‌روزرسانی شد.'
+        );
     }
 
     public function apiExport(Request $request)

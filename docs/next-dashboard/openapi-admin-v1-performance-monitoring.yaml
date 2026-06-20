@@ -1,0 +1,229 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Performance Monitoring (Dashboard)
+  description: Contract for performance alerts & metrics under /api/admin/performance-monitoring
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+  - url: http://localhost:8000/api/admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /performance-monitoring:
+    get:
+      summary: List performance alerts
+      tags: [Admin — Performance]
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [resolved, unresolved] } }
+        - { name: severity, in: query, schema: { type: string, enum: [info, warning, critical] } }
+        - { name: date_from, in: query, schema: { type: string, format: date } }
+        - { name: date_to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AlertListResponse" } } } }
+    post:
+      summary: Create alert
+      tags: [Admin — Performance]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AlertCreateRequest" }
+      responses:
+        "200": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AlertMutationResponse" } } } }
+
+  /performance-monitoring/statistics/data:
+    get:
+      summary: Alert statistics
+      tags: [Admin — Performance]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/StatisticsResponse" } } } }
+
+  /performance-monitoring/overview:
+    get:
+      summary: System overview metrics
+      tags: [Admin — Performance]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/OverviewResponse" } } } }
+
+  /performance-monitoring/metrics:
+    get:
+      summary: Historical performance metrics
+      tags: [Admin — Performance]
+      parameters:
+        - { name: date_from, in: query, schema: { type: string, format: date } }
+        - { name: date_to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MetricsResponse" } } } }
+
+  /performance-monitoring/health:
+    get:
+      summary: System health status
+      tags: [Admin — Performance]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/HealthResponse" } } } }
+
+  /performance-monitoring/real-time:
+    get:
+      summary: Real-time metrics snapshot
+      tags: [Admin — Performance]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/RealTimeResponse" } } } }
+
+  /performance-monitoring/report:
+    get:
+      summary: Performance report with charts
+      tags: [Admin — Performance]
+      parameters:
+        - { name: date_from, in: query, schema: { type: string, format: date } }
+        - { name: date_to, in: query, schema: { type: string, format: date } }
+        - { name: feature, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/ReportResponse" } } } }
+
+  /performance-monitoring/cleanup:
+    post:
+      summary: Delete performance metrics older than N days
+      tags: [Admin — Performance]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /performance-monitoring/bulk-action:
+    post:
+      summary: Bulk resolve, unresolve, or delete alerts
+      tags: [Admin — Performance]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, alert_ids]
+              properties:
+                action: { type: string, enum: [resolve, unresolve, delete] }
+                alert_ids: { type: array, items: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /performance-monitoring/{id}:
+    get:
+      summary: Alert detail
+      tags: [Admin — Performance]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AlertDetailResponse" } } } }
+    put:
+      summary: Update alert
+      tags: [Admin — Performance]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AlertCreateRequest" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AlertMutationResponse" } } } }
+    delete:
+      summary: Delete alert
+      tags: [Admin — Performance]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Sanctum }
+  schemas:
+    Alert:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        message: { type: string }
+        severity: { type: string }
+        type: { type: string }
+        resolved: { type: boolean }
+    AlertCreateRequest:
+      type: object
+      required: [title, message, severity, type]
+      properties:
+        title: { type: string }
+        message: { type: string }
+        severity: { type: string, enum: [info, warning, critical] }
+        type: { type: string }
+        metadata: { type: object }
+        resolved: { type: boolean }
+        acknowledged: { type: boolean }
+    AlertListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: array, items: { $ref: "#/components/schemas/Alert" } }
+        pagination: { type: object }
+    AlertDetailResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/Alert" }
+    AlertMutationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/Alert" }
+    StatisticsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    OverviewResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    MetricsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: array, items: { type: object } }
+    HealthResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    RealTimeResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            current_metrics: { type: object }
+            trends: { type: object }
+            recent_alerts: { type: array, items: { $ref: "#/components/schemas/Alert" } }
+            system_health: { type: object }
+            timestamp: { type: string, format: date-time }
+    ReportResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            stats: { type: object }
+            chart_data: { type: object }
+            metrics: { type: array, items: { type: object } }
+        pagination: { type: object }
+    MessageResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }

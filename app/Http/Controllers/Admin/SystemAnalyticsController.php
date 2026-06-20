@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AnalyticsCsvExport;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -277,5 +278,41 @@ class SystemAnalyticsController extends Controller
             'success' => true,
             'data' => $stats
         ]);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+
+        $metrics = [
+            'server_uptime' => rand(99, 100),
+            'average_response_time' => rand(150, 400),
+            'cpu_usage' => rand(20, 80),
+            'memory_usage' => rand(30, 90),
+            'disk_usage' => rand(40, 85),
+            'active_users' => rand(100, 1000),
+            'error_rate' => rand(1, 5),
+            'cache_hit_rate' => rand(80, 95),
+        ];
+
+        $rows = [];
+        for ($i = $dateRange; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $rows[] = [
+                'date' => $date->format('Y-m-d'),
+                'response_time' => rand(150, 400),
+                'cpu_usage' => rand(20, 80),
+                'memory_usage' => rand(30, 90),
+                'active_users' => rand(50, 500),
+            ];
+        }
+
+        return AnalyticsCsvExport::stream(
+            'system-analytics-'.now()->format('Y-m-d-His').'.csv',
+            $metrics,
+            ['date', 'response_time', 'cpu_usage', 'memory_usage', 'active_users'],
+            $rows,
+            $dateRange,
+        );
     }
 }

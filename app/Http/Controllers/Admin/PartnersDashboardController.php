@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AnalyticsCsvExport;
 use App\Models\AffiliatePartner;
 use App\Models\InfluencerCampaign;
 use App\Models\TeacherAccount;
@@ -255,5 +256,40 @@ class PartnersDashboardController extends Controller
     public function apiAnalytics(Request $request)
     {
         return $this->analytics($request);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $stats = [
+            'total_partners' => AffiliatePartner::count(),
+            'active_partners' => AffiliatePartner::where('status', 'active')->count(),
+            'pending_partners' => AffiliatePartner::where('status', 'pending')->count(),
+            'verified_partners' => AffiliatePartner::where('is_verified', true)->count(),
+            'total_commission_paid' => Commission::where('status', 'paid')->sum('commission_amount'),
+            'pending_commissions' => Commission::where('status', 'pending')->sum('commission_amount'),
+        ];
+
+        $rows = AffiliatePartner::withCount(['influencerCampaigns as campaigns_count'])
+            ->withSum('commissions as total_earnings', 'commission_amount')
+            ->orderByDesc('total_earnings')
+            ->limit(50)
+            ->get()
+            ->map(fn ($partner) => [
+                'id' => $partner->id,
+                'name' => $partner->name ?? '',
+                'status' => $partner->status,
+                'campaigns_count' => $partner->campaigns_count ?? 0,
+                'total_earnings' => $partner->total_earnings ?? 0,
+            ])
+            ->all();
+
+        return AnalyticsCsvExport::stream(
+            'specialized-partners-'.now()->format('Y-m-d-His').'.csv',
+            $stats,
+            ['id', 'name', 'status', 'campaigns_count', 'total_earnings'],
+            $rows,
+            $dateRange,
+        );
     }
 }

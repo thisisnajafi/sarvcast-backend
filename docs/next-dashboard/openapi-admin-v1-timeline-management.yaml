@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Timeline Management (Dashboard)
+  description: Contract for episode image timeline CRUD under /api/admin/timeline-management
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+  - url: http://localhost:8000/api/admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /timeline-management:
+    get:
+      summary: List timeline entries
+      tags: [Admin — Timeline]
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: episode_id, in: query, schema: { type: integer } }
+        - { name: story_id, in: query, schema: { type: integer } }
+        - { name: transition_type, in: query, schema: { type: string, enum: [fade, cut, dissolve, slide] } }
+        - { name: is_key_frame, in: query, schema: { type: boolean } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TimelineListResponse" } } } }
+    post:
+      summary: Create timeline entry
+      tags: [Admin — Timeline]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimelineCreateRequest" }
+      responses:
+        "200": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/TimelineMutationResponse" } } } }
+
+  /timeline-management/upload-image:
+    post:
+      summary: Upload timeline image (multipart)
+      tags: [Admin — Timeline]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TimelineImageUploadResponse" } } } }
+
+  /timeline-management/statistics/data:
+    get:
+      summary: Timeline statistics
+      tags: [Admin — Timeline]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/StatisticsResponse" } } } }
+
+  /timeline-management/bulk-action:
+    post:
+      summary: Bulk delete or update transition/key-frame
+      tags: [Admin — Timeline]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, timeline_ids]
+              properties:
+                action: { type: string, enum: [delete, change_transition, change_key_frame] }
+                timeline_ids: { type: array, items: { type: integer } }
+                transition_type: { type: string, enum: [fade, cut, dissolve, slide] }
+                is_key_frame: { type: boolean }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /timeline-management/{id}:
+    get:
+      summary: Timeline entry detail
+      tags: [Admin — Timeline]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TimelineDetailResponse" } } } }
+    put:
+      summary: Update timeline entry
+      tags: [Admin — Timeline]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TimelineCreateRequest" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/TimelineMutationResponse" } } } }
+    delete:
+      summary: Delete timeline entry
+      tags: [Admin — Timeline]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Sanctum }
+  schemas:
+    TimelineEntry:
+      type: object
+      properties:
+        id: { type: integer }
+        episode_id: { type: integer, nullable: true }
+        start_time: { type: integer }
+        end_time: { type: integer }
+        image_url: { type: string }
+        image_order: { type: integer }
+        transition_type: { type: string }
+        is_key_frame: { type: boolean }
+    TimelineCreateRequest:
+      type: object
+      required: [start_time, end_time, image_url, image_order, transition_type]
+      properties:
+        story_id: { type: integer }
+        episode_id: { type: integer }
+        voice_actor_id: { type: integer }
+        character_id: { type: integer }
+        scene_id: { type: integer }
+        start_time: { type: integer, minimum: 0 }
+        end_time: { type: integer, minimum: 0 }
+        image_url: { type: string }
+        image_order: { type: integer, minimum: 1 }
+        scene_description: { type: string }
+        transition_type: { type: string, enum: [fade, cut, dissolve, slide] }
+        is_key_frame: { type: boolean }
+    TimelineListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: array, items: { $ref: "#/components/schemas/TimelineEntry" } }
+        pagination: { type: object }
+    TimelineDetailResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/TimelineEntry" }
+    TimelineMutationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/TimelineEntry" }
+    TimelineImageUploadResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            image_url: { type: string }
+            relative_path: { type: string }
+            file_name: { type: string }
+    StatisticsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    MessageResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }

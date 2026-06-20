@@ -319,7 +319,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
 
     // Admin Dashboard API Routes
     Route::prefix('api')->name('api.')->group(function () {
-        Route::get('dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'stats'])->name('dashboard.stats');
+        Route::get('dashboard/stats', [\App\Http\Controllers\Api\AdminDashboardController::class, 'stats'])->name('dashboard.stats');
+        Route::get('online-users', [\App\Http\Controllers\Api\AdminDashboardController::class, 'onlineUsers'])->name('online-users');
 
         // Admin Image Timeline API routes
         Route::prefix('episodes/{episode}/timeline')->name('timeline.')->group(function () {

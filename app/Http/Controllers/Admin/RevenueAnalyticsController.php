@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AnalyticsCsvExport;
 use App\Models\Subscription;
 use App\Models\CoinTransaction;
 use App\Models\CouponCode;
@@ -277,5 +278,35 @@ class RevenueAnalyticsController extends Controller
             'success' => true,
             'data' => $stats
         ]);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $startDate = Carbon::now()->subDays($dateRange);
+
+        $metrics = [
+            'total_subscriptions' => Subscription::count(),
+            'active_subscriptions' => Subscription::where('status', 'active')->count(),
+            'new_subscriptions' => Subscription::where('created_at', '>=', $startDate)->count(),
+            'cancelled_subscriptions' => Subscription::where('status', 'cancelled')->count(),
+        ];
+
+        $rows = [];
+        for ($i = $dateRange; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $rows[] = [
+                'date' => $date->format('Y-m-d'),
+                'new_subscriptions' => Subscription::whereDate('created_at', $date)->count(),
+            ];
+        }
+
+        return AnalyticsCsvExport::stream(
+            'revenue-analytics-'.now()->format('Y-m-d-His').'.csv',
+            $metrics,
+            ['date', 'new_subscriptions'],
+            $rows,
+            $dateRange,
+        );
     }
 }

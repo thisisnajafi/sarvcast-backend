@@ -596,4 +596,57 @@ class VoiceActorController extends Controller
             'data' => $stats,
         ]);
     }
+
+    public function apiExport(Request $request)
+    {
+        $query = Person::whereJsonContains('roles', 'voice_actor');
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "%{$searchTerm}%")
+                    ->orWhere('bio', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        if ($request->filled('verified')) {
+            $query->where('is_verified', $request->boolean('verified'));
+        }
+
+        if ($request->filled('active')) {
+            $query->where('is_active', $request->boolean('active'));
+        }
+
+        $filename = 'voice-actors-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['id', 'name', 'voice_type', 'voice_range', 'is_verified', 'is_active', 'experience_years', 'hourly_rate', 'created_at']);
+
+            $query->orderBy('created_at', 'desc')->chunk(500, function ($rows) use ($handle) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, [
+                        $row->id,
+                        $row->name,
+                        $row->voice_type,
+                        $row->voice_range,
+                        $row->is_verified ? '1' : '0',
+                        $row->is_active ? '1' : '0',
+                        $row->experience_years,
+                        $row->hourly_rate,
+                        $row->created_at?->toIso8601String(),
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

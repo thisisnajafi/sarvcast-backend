@@ -1,0 +1,84 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Specialized Dashboards (Dashboard)
+  description: Contract for stories, partners, and sales specialized dashboards under /api/admin/specialized-dashboards
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+  - url: http://localhost:8000/api/admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /specialized-dashboards/stories:
+    get:
+      summary: Stories dashboard overview
+      tags: [Admin — Specialized Dashboards]
+      parameters:
+        - { name: date_range, in: query, schema: { type: integer, default: 30 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DashboardResponse" } } } }
+
+  /specialized-dashboards/stories/analytics:
+    get:
+      summary: Stories dashboard analytics
+      tags: [Admin — Specialized Dashboards]
+      parameters:
+        - { name: date_range, in: query, schema: { type: integer, default: 30 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DashboardResponse" } } } }
+
+  /specialized-dashboards/partners:
+    get:
+      summary: Partners dashboard overview
+      tags: [Admin — Specialized Dashboards]
+      parameters:
+        - { name: date_range, in: query, schema: { type: integer, default: 30 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DashboardResponse" } } } }
+
+  /specialized-dashboards/partners/analytics:
+    get:
+      summary: Partners dashboard analytics
+      tags: [Admin — Specialized Dashboards]
+      parameters:
+        - { name: date_range, in: query, schema: { type: integer, default: 30 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DashboardResponse" } } } }
+
+  /specialized-dashboards/sales:
+    get:
+      summary: Sales dashboard overview
+      tags: [Admin — Specialized Dashboards]
+      parameters:
+        - { name: date_range, in: query, schema: { type: integer, default: 30 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DashboardResponse" } } } }
+
+  /specialized-dashboards/sales/analytics:
+    get:
+      summary: Sales dashboard analytics
+      tags: [Admin — Specialized Dashboards]
+      parameters:
+        - { name: date_range, in: query, schema: { type: integer, default: 30 } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/DashboardResponse" } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Sanctum }
+  schemas:
+    DashboardResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          description: Module-specific KPIs, charts, and trend arrays
+          additionalProperties: true
+        date_range:
+          type: integer
+          description: Echo of requested date_range when applicable

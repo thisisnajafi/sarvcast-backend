@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AnalyticsCsvExport;
 use App\Models\Subscription;
 use App\Models\Payment;
 use App\Models\User;
@@ -418,5 +419,49 @@ class FlavorAnalyticsController extends Controller
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
         ]);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $startDate = Carbon::now()->subDays($dateRange);
+        $endDate = Carbon::now();
+        $flavors = ['website', 'cafebazaar', 'myket'];
+        $flavorData = [];
+
+        foreach ($flavors as $flavor) {
+            $flavorData[$flavor] = $this->getFlavorAnalytics($flavor, $startDate, $endDate);
+        }
+
+        $totalRevenue = array_sum(array_column($flavorData, 'total_revenue'));
+        $metrics = [
+            'total_revenue' => $totalRevenue,
+            'total_subscriptions' => array_sum(array_column($flavorData, 'total_subscriptions')),
+            'active_subscriptions' => array_sum(array_column($flavorData, 'active_subscriptions')),
+            'start_date' => $startDate->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d'),
+        ];
+
+        $rows = [];
+        foreach ($flavorData as $flavor => $analytics) {
+            $rows[] = [
+                'flavor' => $flavor,
+                'total_revenue' => $analytics['total_revenue'] ?? 0,
+                'active_subscriptions' => $analytics['active_subscriptions'] ?? 0,
+                'total_subscriptions' => $analytics['total_subscriptions'] ?? 0,
+                'total_users' => $analytics['total_users'] ?? 0,
+                'market_share_percent' => $totalRevenue > 0
+                    ? round((($analytics['total_revenue'] ?? 0) / $totalRevenue) * 100, 2)
+                    : 0,
+            ];
+        }
+
+        return AnalyticsCsvExport::stream(
+            'flavor-analytics-'.now()->format('Y-m-d-His').'.csv',
+            $metrics,
+            ['flavor', 'total_revenue', 'active_subscriptions', 'total_subscriptions', 'total_users', 'market_share_percent'],
+            $rows,
+            $dateRange,
+        );
     }
 }

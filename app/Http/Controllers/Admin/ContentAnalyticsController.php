@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AnalyticsCsvExport;
 use App\Models\Story;
 use App\Models\Episode;
 use App\Models\Category;
@@ -264,5 +265,39 @@ class ContentAnalyticsController extends Controller
             'success' => true,
             'data' => $stats,
         ]);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $startDate = Carbon::now()->subDays($dateRange);
+
+        $contentStats = [
+            'total_stories' => Story::count(),
+            'total_episodes' => Episode::count(),
+            'total_categories' => Category::count(),
+            'published_content' => Story::where('status', 'published')->count(),
+            'recent_content' => Story::where('created_at', '>=', $startDate)->count(),
+        ];
+
+        $rows = Story::query()
+            ->orderByDesc('listens_count')
+            ->limit(20)
+            ->get(['id', 'title', 'listens_count', 'status'])
+            ->map(fn ($story) => [
+                'id' => $story->id,
+                'title' => $story->title,
+                'listens_count' => $story->listens_count,
+                'status' => $story->status,
+            ])
+            ->all();
+
+        return AnalyticsCsvExport::stream(
+            'content-analytics-'.now()->format('Y-m-d-His').'.csv',
+            $contentStats,
+            ['id', 'title', 'listens_count', 'status'],
+            $rows,
+            $dateRange,
+        );
     }
 }

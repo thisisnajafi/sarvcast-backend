@@ -73,6 +73,20 @@ class AdminDashboardMiddlewareAlignmentTest extends TestCase
             'auth:sanctum',
             'role:admin,super_admin',
         ]);
+
+        $this->assertRouteHasMiddleware('GET', '/api/admin/v1/dashboard/export', [
+            'security',
+            'admin.origin',
+            'auth:sanctum',
+            'role:admin,super_admin',
+        ]);
+
+        $this->assertRouteHasMiddleware('GET', '/api/admin/v1/dashboard/online-users', [
+            'security',
+            'admin.origin',
+            'auth:sanctum',
+            'role:admin,super_admin',
+        ]);
     }
 
     public function test_admin_resource_routes_enforce_auth_and_admin_permission_stack(): void

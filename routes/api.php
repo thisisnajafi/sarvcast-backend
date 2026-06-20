@@ -215,6 +215,8 @@ Route::prefix('admin/v1/dashboard')
     ->group(function () {
         Route::get('stats', [AdminDashboardController::class, 'stats']);
         Route::get('charts', [AdminDashboardController::class, 'charts']);
+        Route::get('export', [AdminDashboardController::class, 'export']);
+        Route::get('online-users', [AdminDashboardController::class, 'onlineUsers']);
     });
 
 // Optional legacy compatibility aliases for old dashboard clients.
@@ -916,6 +918,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 // Admin API Routes
 Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission', 'throttle:120,1', 'api.audit'])->group(function () {
 
+    Route::get('/search', [\App\Http\Controllers\Admin\DashboardController::class, 'globalSearch']);
+
     // Coin Management API (static paths before /{coin})
     Route::prefix('coins')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\CoinController::class, 'apiIndex']);
@@ -990,10 +994,12 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
     // Subscriptions API
     Route::prefix('subscriptions')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\SubscriptionController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\SubscriptionController::class, 'apiStore']);
         Route::get('/export', [\App\Http\Controllers\Admin\SubscriptionController::class, 'apiExport']);
         Route::get('/statistics/data', [\App\Http\Controllers\Admin\SubscriptionController::class, 'apiStatistics']);
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\SubscriptionController::class, 'apiBulkAction']);
         Route::get('/{subscription}', [\App\Http\Controllers\Admin\SubscriptionController::class, 'apiShow']);
+        Route::put('/{subscription}', [\App\Http\Controllers\Admin\SubscriptionController::class, 'apiUpdate']);
     });
 
     // Role Management API (static paths before /{role})
@@ -1051,6 +1057,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/subscription', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiSubscription']);
             Route::get('/summary', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiSummary']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiStatistics']);
+            Route::get('/export', [\App\Http\Controllers\Admin\UserAnalyticsController::class, 'apiExport']);
         });
 
         // Revenue Analytics API
@@ -1059,6 +1066,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/subscriptions', [\App\Http\Controllers\Admin\RevenueAnalyticsController::class, 'apiSubscriptions']);
             Route::get('/payments', [\App\Http\Controllers\Admin\RevenueAnalyticsController::class, 'apiPayments']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\RevenueAnalyticsController::class, 'apiStatistics']);
+            Route::get('/export', [\App\Http\Controllers\Admin\RevenueAnalyticsController::class, 'apiExport']);
         });
 
         // Content Analytics API
@@ -1067,6 +1075,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/performance', [\App\Http\Controllers\Admin\ContentAnalyticsController::class, 'apiPerformance']);
             Route::get('/popularity', [\App\Http\Controllers\Admin\ContentAnalyticsController::class, 'apiPopularity']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\ContentAnalyticsController::class, 'apiStatistics']);
+            Route::get('/export', [\App\Http\Controllers\Admin\ContentAnalyticsController::class, 'apiExport']);
         });
 
         // System Analytics API
@@ -1075,6 +1084,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/performance', [\App\Http\Controllers\Admin\SystemAnalyticsController::class, 'apiPerformance']);
             Route::get('/health', [\App\Http\Controllers\Admin\SystemAnalyticsController::class, 'apiHealth']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\SystemAnalyticsController::class, 'apiStatistics']);
+            Route::get('/export', [\App\Http\Controllers\Admin\SystemAnalyticsController::class, 'apiExport']);
         });
 
         // Quiz System API
@@ -1134,37 +1144,43 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/{comment}', [\App\Http\Controllers\Admin\CommentModerationController::class, 'apiShow']);
         });
 
-        // Backup System API
+        // Backup System API (static paths before /{backup})
         Route::prefix('backup')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\BackupController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\BackupController::class, 'apiStore']);
+            Route::get('/export', [\App\Http\Controllers\Admin\BackupController::class, 'apiExport']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\BackupController::class, 'apiStatistics']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\BackupController::class, 'apiBulkAction']);
             Route::get('/{backup}', [\App\Http\Controllers\Admin\BackupController::class, 'apiShow']);
             Route::put('/{backup}', [\App\Http\Controllers\Admin\BackupController::class, 'apiUpdate']);
             Route::delete('/{backup}', [\App\Http\Controllers\Admin\BackupController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\BackupController::class, 'apiBulkAction']);
-            Route::get('/statistics/data', [\App\Http\Controllers\Admin\BackupController::class, 'apiStatistics']);
             Route::get('/{backup}/download', [\App\Http\Controllers\Admin\BackupController::class, 'apiDownload']);
             Route::post('/{backup}/restore', [\App\Http\Controllers\Admin\BackupController::class, 'apiRestore']);
         });
 
-        // Performance Monitoring API
+        // Performance Monitoring API (static paths before /{performanceAlert})
         Route::prefix('performance-monitoring')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiStore']);
-            Route::get('/{performanceAlert}', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiShow']);
-            Route::put('/{performanceAlert}', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiUpdate']);
-            Route::delete('/{performanceAlert}', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiBulkAction']);
+            Route::get('/export', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiStatistics']);
             Route::get('/overview', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiOverview']);
             Route::get('/metrics', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiMetrics']);
             Route::get('/health', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiHealth']);
+            Route::get('/real-time', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiRealTime']);
+            Route::get('/report', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiReport']);
+            Route::post('/cleanup', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiCleanup']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiBulkAction']);
+            Route::get('/{performanceAlert}', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiShow']);
+            Route::put('/{performanceAlert}', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiUpdate']);
+            Route::delete('/{performanceAlert}', [\App\Http\Controllers\Admin\PerformanceMonitoringController::class, 'apiDestroy']);
         });
 
-        // Version Management API
+        // Version Management API (static paths before /{appVersion})
         Route::prefix('app-versions')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\AppVersionController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\AppVersionController::class, 'apiStore']);
+            Route::get('/export', [\App\Http\Controllers\Admin\AppVersionController::class, 'apiExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\AppVersionController::class, 'apiStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\AppVersionController::class, 'apiBulkAction']);
             Route::get('/{appVersion}', [\App\Http\Controllers\Admin\AppVersionController::class, 'apiShow']);
@@ -1172,40 +1188,43 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::delete('/{appVersion}', [\App\Http\Controllers\Admin\AppVersionController::class, 'apiDestroy']);
         });
 
-        // Audio Management API
+        // Audio Management API (static paths before /{audioFile})
         Route::prefix('audio-management')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiStore']);
+            Route::get('/export', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiExport']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiStatistics']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiBulkAction']);
             Route::get('/{audioFile}', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiShow']);
             Route::put('/{audioFile}', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiUpdate']);
             Route::delete('/{audioFile}', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiBulkAction']);
-            Route::get('/statistics/data', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiStatistics']);
             Route::get('/{audioFile}/download', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiDownload']);
             Route::post('/{audioFile}/process', [\App\Http\Controllers\Admin\AudioManagementController::class, 'apiProcess']);
         });
 
-        // Timeline Management API
+        // Timeline Management API (static paths before /{timeline})
         Route::prefix('timeline-management')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiStore']);
+            Route::get('/export', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiExport']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiStatistics']);
             Route::post('/upload-image', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiUploadImage']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiBulkAction']);
             Route::get('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiShow']);
             Route::put('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiUpdate']);
             Route::delete('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiBulkAction']);
-            Route::get('/statistics/data', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiStatistics']);
         });
 
-        // File Upload API
+        // File Upload API (static paths before /{fileUpload})
         Route::prefix('file-upload')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiStore']);
+            Route::get('/export', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiExport']);
+            Route::get('/statistics/data', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiStatistics']);
+            Route::post('/bulk-action', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiBulkAction']);
             Route::get('/{fileUpload}', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiShow']);
             Route::put('/{fileUpload}', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiUpdate']);
             Route::delete('/{fileUpload}', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiDestroy']);
-            Route::post('/bulk-action', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiBulkAction']);
-            Route::get('/statistics/data', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiStatistics']);
             Route::get('/{fileUpload}/download', [\App\Http\Controllers\Admin\FileUploadController::class, 'apiDownload']);
         });
 
@@ -1234,32 +1253,46 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::delete('/{person}', [\App\Http\Controllers\Admin\PersonController::class, 'apiDestroy']);
     });
 
-    // Voice Actors API
+    // Voice Actors API (static paths before /{voiceActor})
     Route::prefix('voice-actors')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiIndex']);
         Route::post('/', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiStore']);
+        Route::get('/export', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiExport']);
+        Route::get('/statistics/data', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiStatistics']);
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiBulkAction']);
         Route::get('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiShow']);
         Route::put('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiUpdate']);
         Route::delete('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiDestroy']);
-        Route::post('/bulk-action', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiBulkAction']);
-        Route::get('/statistics/data', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiStatistics']);
     });
 
     // Specialized Dashboards API
     Route::prefix('specialized-dashboards')->group(function () {
+        Route::get('/stories/export', [\App\Http\Controllers\Admin\StoriesDashboardController::class, 'apiExport']);
         Route::get('/stories', [\App\Http\Controllers\Admin\StoriesDashboardController::class, 'apiOverview']);
         Route::get('/stories/analytics', [\App\Http\Controllers\Admin\StoriesDashboardController::class, 'apiAnalytics']);
+        Route::get('/partners/export', [\App\Http\Controllers\Admin\PartnersDashboardController::class, 'apiExport']);
         Route::get('/partners', [\App\Http\Controllers\Admin\PartnersDashboardController::class, 'apiOverview']);
         Route::get('/partners/analytics', [\App\Http\Controllers\Admin\PartnersDashboardController::class, 'apiAnalytics']);
+        Route::get('/sales/export', [\App\Http\Controllers\Admin\SalesDashboardController::class, 'apiExport']);
         Route::get('/sales', [\App\Http\Controllers\Admin\SalesDashboardController::class, 'apiOverview']);
         Route::get('/sales/analytics', [\App\Http\Controllers\Admin\SalesDashboardController::class, 'apiAnalytics']);
     });
+
+        // Story markdown editor API (filesystem source in sarvcast-stories)
+        Route::prefix('story-editor')->group(function () {
+            Route::get('/stories', [\App\Http\Controllers\Admin\StoryEditorController::class, 'index']);
+            Route::get('/stories/{storyId}/episodes', [\App\Http\Controllers\Admin\StoryEditorController::class, 'episodes']);
+            Route::get('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'show']);
+            Route::put('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'update']);
+        });
 
         // Story Management API (static paths before /{story})
         Route::prefix('stories')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\StoryController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\StoryController::class, 'apiStore']);
             Route::get('/export', [\App\Http\Controllers\Admin\StoryController::class, 'apiExport']);
+            Route::get('/export/json', [\App\Http\Controllers\Admin\StoryExportController::class, 'apiExportJson']);
+            Route::post('/import/json', [\App\Http\Controllers\Admin\StoryExportController::class, 'apiImportJson']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\StoryController::class, 'apiStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryController::class, 'apiBulkAction']);
             Route::get('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiShow']);
@@ -1284,35 +1317,41 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::post('/{episode}/duplicate', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiDuplicate']);
         });
 
-        // Dashboard API
-        Route::get('/dashboard/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'apiStats']);
-        Route::get('/dashboard/charts', [\App\Http\Controllers\Admin\DashboardController::class, 'apiCharts']);
-        Route::get('/online-users', [\App\Http\Controllers\Admin\DashboardController::class, 'apiOnlineUsers']);
+        // Dashboard API (legacy aliases — canonical paths are /api/admin/v1/dashboard/*)
+        Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
+        Route::get('/dashboard/charts', [AdminDashboardController::class, 'charts']);
+        Route::get('/dashboard/export', [AdminDashboardController::class, 'export']);
+        Route::get('/online-users', [AdminDashboardController::class, 'onlineUsers']);
 
         // Flavor analytics
+        Route::get('/flavor-analytics/export', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'apiExport']);
         Route::get('/flavor-analytics', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'api']);
 
         // Partner programs
         Route::prefix('teachers')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersIndex']);
+            Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersBulkAction']);
             Route::get('/{teacher}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersShow']);
         });
         Route::prefix('schools')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsIndex']);
+            Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsBulkAction']);
             Route::get('/{school}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsShow']);
         });
         Route::prefix('influencers')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersIndex']);
+            Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersBulkAction']);
             Route::get('/{influencer}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersShow']);
         });
         Route::prefix('corporate')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateIndex']);
+            Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateBulkAction']);
             Route::get('/{corporate}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateShow']);

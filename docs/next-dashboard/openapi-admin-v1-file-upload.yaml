@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — File Upload (Dashboard)
+  description: Contract for general file uploads under /api/admin/file-upload
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+  - url: http://localhost:8000/api/admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /file-upload:
+    get:
+      summary: List uploaded files
+      tags: [Admin — File Upload]
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: file_type, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/FileListResponse" } } } }
+    post:
+      summary: Upload file (multipart)
+      tags: [Admin — File Upload]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, category]
+              properties:
+                file: { type: string, format: binary }
+                category: { type: string, enum: [story, episode, character, background, music, sound_effect] }
+                title: { type: string }
+                description: { type: string }
+                tags: { type: string }
+                is_public: { type: boolean }
+      responses:
+        "200": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/FileMutationResponse" } } } }
+
+  /file-upload/statistics/data:
+    get:
+      summary: Upload statistics
+      tags: [Admin — File Upload]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/StatisticsResponse" } } } }
+
+  /file-upload/bulk-action:
+    post:
+      summary: Bulk delete or status change
+      tags: [Admin — File Upload]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, file_upload_ids]
+              properties:
+                action: { type: string, enum: [delete, activate, deactivate] }
+                file_upload_ids: { type: array, items: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /file-upload/{id}:
+    get:
+      summary: File detail
+      tags: [Admin — File Upload]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/FileDetailResponse" } } } }
+    put:
+      summary: Update file metadata
+      tags: [Admin — File Upload]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, status]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                category: { type: string, enum: [story, episode, character, background, music, sound_effect] }
+                tags: { type: string }
+                status: { type: string, enum: [active, inactive, pending] }
+                is_public: { type: boolean }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/FileMutationResponse" } } } }
+    delete:
+      summary: Delete file
+      tags: [Admin — File Upload]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /file-upload/{id}/download:
+    get:
+      summary: Download file
+      tags: [Admin — File Upload]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: File stream, content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Sanctum }
+  schemas:
+    FileUpload:
+      type: object
+      properties:
+        id: { type: integer }
+        original_name: { type: string }
+        file_name: { type: string }
+        category: { type: string }
+        status: { type: string }
+        file_size: { type: integer }
+        mime_type: { type: string }
+        is_public: { type: boolean }
+    FileListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: array, items: { $ref: "#/components/schemas/FileUpload" } }
+        pagination: { type: object }
+    FileDetailResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/FileUpload" }
+    FileMutationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/FileUpload" }
+    StatisticsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    MessageResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }

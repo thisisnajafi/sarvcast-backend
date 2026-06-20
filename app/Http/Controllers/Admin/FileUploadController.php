@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminCsvExport;
 use App\Models\FileUpload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -773,5 +774,47 @@ class FileUploadController extends Controller
         }
 
         return Storage::disk('public')->download($fileUpload->file_path, $fileUpload->original_name);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = FileUpload::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('original_name', 'like', "%{$search}%")
+                    ->orWhere('file_name', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+        if ($request->filled('file_type')) {
+            $query->where('file_type', $request->file_type);
+        }
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        return AdminCsvExport::streamQuery(
+            'file-uploads-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'title', 'original_name', 'file_name', 'file_type', 'category', 'status', 'file_size', 'is_public', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->title,
+                $row->original_name,
+                $row->file_name,
+                $row->file_type,
+                $row->category,
+                $row->status,
+                $row->file_size,
+                $row->is_public ? '1' : '0',
+                $row->created_at?->toIso8601String(),
+            ]
+        );
     }
 }

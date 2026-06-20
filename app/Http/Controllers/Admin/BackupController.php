@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminCsvExport;
 use App\Models\Backup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -807,5 +808,40 @@ class BackupController extends Controller
                 'message' => 'خطا در شروع بازیابی: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = Backup::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        return AdminCsvExport::streamQuery(
+            'backups-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'name', 'type', 'status', 'file_size', 'compression', 'encryption', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->name,
+                $row->type,
+                $row->status,
+                $row->size,
+                $row->compression ? '1' : '0',
+                $row->encryption ? '1' : '0',
+                $row->created_at?->toIso8601String(),
+            ]
+        );
     }
 }

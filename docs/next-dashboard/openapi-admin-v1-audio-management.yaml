@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: SarvCast Admin API — Audio Management (Dashboard)
+  description: Contract for audio file management under /api/admin/audio-management
+  version: 1.0.0
+
+servers:
+  - url: https://example.com/api/admin
+  - url: http://localhost:8000/api/admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /audio-management:
+    get:
+      summary: List audio files
+      tags: [Admin — Audio]
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: file_type, in: query, schema: { type: string } }
+        - { name: episode_id, in: query, schema: { type: integer } }
+        - { name: story_id, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AudioListResponse" } } } }
+    post:
+      summary: Upload audio file (multipart)
+      tags: [Admin — Audio]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                episode_id: { type: integer }
+                story_id: { type: integer }
+                title: { type: string }
+                description: { type: string }
+                tags: { type: string }
+                is_public: { type: boolean }
+      responses:
+        "200": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AudioMutationResponse" } } } }
+
+  /audio-management/statistics/data:
+    get:
+      summary: Audio statistics
+      tags: [Admin — Audio]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/StatisticsResponse" } } } }
+
+  /audio-management/bulk-action:
+    post:
+      summary: Bulk delete or process
+      tags: [Admin — Audio]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, audio_file_ids]
+              properties:
+                action: { type: string, enum: [delete, process, activate, deactivate] }
+                audio_file_ids: { type: array, items: { type: integer } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /audio-management/{id}:
+    get:
+      summary: Audio file detail
+      tags: [Admin — Audio]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AudioDetailResponse" } } } }
+    put:
+      summary: Update audio metadata
+      tags: [Admin — Audio]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AudioMutationResponse" } } } }
+    delete:
+      summary: Delete audio file
+      tags: [Admin — Audio]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+  /audio-management/{id}/download:
+    get:
+      summary: Download audio file
+      tags: [Admin — Audio]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: File stream, content: { application/octet-stream: { schema: { type: string, format: binary } } } }
+
+  /audio-management/{id}/process:
+    post:
+      summary: Trigger audio processing
+      tags: [Admin — Audio]
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/MessageResponse" } } } }
+
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Sanctum }
+  schemas:
+    AudioFile:
+      type: object
+      properties:
+        id: { type: integer }
+        original_name: { type: string }
+        file_name: { type: string }
+        status: { type: string }
+        file_size: { type: integer }
+        episode_id: { type: integer, nullable: true }
+        story_id: { type: integer, nullable: true }
+    AudioListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: array, items: { $ref: "#/components/schemas/AudioFile" } }
+        pagination: { type: object }
+    AudioDetailResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/AudioFile" }
+    AudioMutationResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/AudioFile" }
+    StatisticsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+    MessageResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }

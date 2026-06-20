@@ -10,9 +10,13 @@ use App\Models\StoryComment;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminDashboardController extends Controller
 {
+    private const ONLINE_WINDOW_MINUTES = 15;
+
     public function stats(): JsonResponse
     {
         $data = [
@@ -57,6 +61,26 @@ class AdminDashboardController extends Controller
                 'daily' => $series,
             ],
         ]);
+    }
+
+    public function onlineUsers(): JsonResponse
+    {
+        $count = User::where('last_activity_at', '>=', now()->subMinutes(self::ONLINE_WINDOW_MINUTES))->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Online users count loaded successfully.',
+            'count' => $count,
+            'data' => [
+                'count' => $count,
+                'window_minutes' => self::ONLINE_WINDOW_MINUTES,
+            ],
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        return app(\App\Http\Controllers\Admin\DashboardController::class)->export($request);
     }
 }
 

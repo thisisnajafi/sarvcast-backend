@@ -445,4 +445,48 @@ class UserAnalyticsController extends Controller
             'real_time' => $this->analyticsService->getRealTimeMetrics(),
         ], $dateRange);
     }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $startDate = Carbon::now()->subDays($dateRange);
+
+        $userStats = [
+            'total_users' => User::count(),
+            'active_users' => User::where('status', 'active')->count(),
+            'new_users' => User::where('created_at', '>=', $startDate)->count(),
+            'verified_users' => User::whereNotNull('email_verified_at')->count(),
+            'suspended_users' => User::where('status', 'suspended')->count(),
+            'pending_users' => User::where('status', 'pending')->count(),
+        ];
+
+        $trends = User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', $startDate)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        $filename = 'user-analytics-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($userStats, $trends, $dateRange) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['metric', 'value']);
+            foreach ($userStats as $key => $value) {
+                fputcsv($handle, [$key, $value]);
+            }
+            fputcsv($handle, []);
+            fputcsv($handle, ['date_range_days', $dateRange]);
+            fputcsv($handle, ['date', 'registrations']);
+            foreach ($trends as $row) {
+                fputcsv($handle, [$row->date, $row->count]);
+            }
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
 }

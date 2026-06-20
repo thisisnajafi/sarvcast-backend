@@ -11,6 +11,7 @@ use App\Models\TeacherAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PartnerProgramsApiController extends Controller
 {
@@ -61,6 +62,46 @@ class PartnerProgramsApiController extends Controller
         ]);
     }
 
+    public function teachersExport(Request $request): StreamedResponse
+    {
+        $query = TeacherAccount::with('user');
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('institution_name', 'like', "%{$search}%")
+                    ->orWhereHas('user', fn ($u) => $u->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('phone_number', 'like', "%{$search}%"));
+            });
+        }
+
+        return $this->streamPartnerExport(
+            'teachers-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'institution_name', 'institution_type', 'user_name', 'user_phone', 'status', 'is_verified', 'student_count', 'created_at'],
+            $query->orderByDesc('created_at'),
+            function ($row) {
+                $userName = $row->user
+                    ? trim(($row->user->first_name ?? '').' '.($row->user->last_name ?? ''))
+                    : '';
+
+                return [
+                    $row->id,
+                    $row->institution_name,
+                    $row->institution_type,
+                    $userName,
+                    $row->user?->phone_number ?? '',
+                    $row->status,
+                    $row->is_verified ? '1' : '0',
+                    $row->student_count,
+                    $row->created_at?->toIso8601String(),
+                ];
+            }
+        );
+    }
+
     public function schoolsIndex(Request $request)
     {
         $query = SchoolPartnership::with(['affiliatePartner', 'assignedTeacher']);
@@ -101,6 +142,35 @@ class PartnerProgramsApiController extends Controller
             'activate' => fn ($q) => $q->update(['status' => 'active']),
             'delete' => fn ($q) => $q->delete(),
         ]);
+    }
+
+    public function schoolsExport(Request $request): StreamedResponse
+    {
+        $query = SchoolPartnership::query();
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $query->where('school_name', 'like', '%'.$request->search.'%');
+        }
+
+        return $this->streamPartnerExport(
+            'schools-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'school_name', 'school_type', 'school_level', 'status', 'is_verified', 'student_count', 'contact_person', 'contact_phone', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->school_name,
+                $row->school_type,
+                $row->school_level,
+                $row->status,
+                $row->is_verified ? '1' : '0',
+                $row->student_count,
+                $row->contact_person,
+                $row->contact_phone,
+                $row->created_at?->toIso8601String(),
+            ]
+        );
     }
 
     public function influencersIndex(Request $request)
@@ -144,6 +214,34 @@ class PartnerProgramsApiController extends Controller
         ]);
     }
 
+    public function influencersExport(Request $request): StreamedResponse
+    {
+        $query = InfluencerCampaign::query();
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $query->where('campaign_name', 'like', '%'.$request->search.'%');
+        }
+
+        return $this->streamPartnerExport(
+            'influencers-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'campaign_name', 'campaign_type', 'content_type', 'status', 'start_date', 'end_date', 'compensation_per_post', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->campaign_name,
+                $row->campaign_type,
+                $row->content_type,
+                $row->status,
+                $row->start_date?->format('Y-m-d'),
+                $row->end_date?->format('Y-m-d'),
+                $row->compensation_per_post,
+                $row->created_at?->toIso8601String(),
+            ]
+        );
+    }
+
     public function corporateIndex(Request $request)
     {
         $query = CorporateSponsorship::with('affiliatePartner');
@@ -183,6 +281,61 @@ class PartnerProgramsApiController extends Controller
             'suspend' => fn ($q) => $q->update(['status' => 'suspended']),
             'activate' => fn ($q) => $q->update(['status' => 'active']),
             'delete' => fn ($q) => $q->delete(),
+        ]);
+    }
+
+    public function corporateExport(Request $request): StreamedResponse
+    {
+        $query = CorporateSponsorship::query();
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $query->where('company_name', 'like', '%'.$request->search.'%');
+        }
+
+        return $this->streamPartnerExport(
+            'corporate-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'company_name', 'company_type', 'industry', 'status', 'is_verified', 'sponsorship_amount', 'currency', 'contact_person', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->company_name,
+                $row->company_type,
+                $row->industry,
+                $row->status,
+                $row->is_verified ? '1' : '0',
+                $row->sponsorship_amount,
+                $row->currency,
+                $row->contact_person,
+                $row->created_at?->toIso8601String(),
+            ]
+        );
+    }
+
+    /**
+     * @param  callable(mixed): array<int, scalar|null>  $mapRow
+     */
+    private function streamPartnerExport(string $filename, array $headers, $query, callable $mapRow): StreamedResponse
+    {
+        return response()->streamDownload(function () use ($headers, $query, $mapRow) {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, $headers);
+
+            $query->chunk(500, function ($rows) use ($handle, $mapRow) {
+                foreach ($rows as $row) {
+                    fputcsv($handle, $mapRow($row));
+                }
+            });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

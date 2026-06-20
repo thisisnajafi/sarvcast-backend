@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AdminCsvExport;
 use App\Models\AppVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -575,5 +576,51 @@ class AppVersionController extends Controller
                 'optional_updates' => AppVersion::optionalUpdate()->count(),
             ],
         ]);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $query = AppVersion::query();
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('version', 'like', "%{$search}%")
+                    ->orWhere('platform', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+        if ($request->filled('platform')) {
+            $query->where('platform', $request->platform);
+        }
+        if ($request->filled('update_type')) {
+            $query->where('update_type', $request->update_type);
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            } elseif ($request->status === 'latest') {
+                $query->where('is_latest', true);
+            }
+        }
+
+        return AdminCsvExport::streamQuery(
+            'app-versions-'.now()->format('Y-m-d-His').'.csv',
+            ['id', 'platform', 'version', 'build_number', 'update_type', 'title', 'is_active', 'is_latest', 'created_at'],
+            $query->orderByDesc('created_at'),
+            fn ($row) => [
+                $row->id,
+                $row->platform,
+                $row->version,
+                $row->build_number,
+                $row->update_type,
+                $row->title,
+                $row->is_active ? '1' : '0',
+                $row->is_latest ? '1' : '0',
+                $row->created_at?->toIso8601String(),
+            ]
+        );
     }
 }

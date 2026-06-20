@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Support\AnalyticsCsvExport;
 use App\Models\Story;
 use App\Models\Episode;
 use App\Models\Category;
@@ -293,5 +294,40 @@ class StoriesDashboardController extends Controller
     public function apiAnalytics(Request $request)
     {
         return $this->analytics($request);
+    }
+
+    public function apiExport(Request $request)
+    {
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $stats = [
+            'total_stories' => Story::count(),
+            'published_stories' => Story::where('status', 'published')->count(),
+            'total_episodes' => Episode::count(),
+            'total_plays' => PlayHistory::count(),
+            'avg_rating' => round((float) Rating::avg('rating'), 2),
+            'total_comments' => StoryComment::count(),
+        ];
+
+        $rows = Story::withCount(['playHistories as plays_count'])
+            ->withAvg('ratings', 'rating')
+            ->orderByDesc('plays_count')
+            ->limit(50)
+            ->get()
+            ->map(fn ($story) => [
+                'id' => $story->id,
+                'title' => $story->title,
+                'status' => $story->status,
+                'plays_count' => $story->plays_count ?? 0,
+                'avg_rating' => round((float) ($story->ratings_avg_rating ?? 0), 2),
+            ])
+            ->all();
+
+        return AnalyticsCsvExport::stream(
+            'specialized-stories-'.now()->format('Y-m-d-His').'.csv',
+            $stats,
+            ['id', 'title', 'status', 'plays_count', 'avg_rating'],
+            $rows,
+            $dateRange,
+        );
     }
 }
