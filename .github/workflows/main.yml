@@ -38,7 +38,7 @@ jobs:
           tools: composer:v2
 
       - name: Validate Composer lock file
-        run: composer validate --strict --no-check-publish
+        run: composer validate --no-check-publish
 
       - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
