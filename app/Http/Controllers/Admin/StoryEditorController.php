@@ -24,6 +24,14 @@ class StoryEditorController extends Controller
             $stories = $this->repository->listStories();
 
             return AdminApiResponse::success($stories);
+        } catch (\RuntimeException $e) {
+            Log::error('Story editor list stories failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'error' => 'STORIES_PATH_NOT_FOUND',
+            ], 500);
         } catch (\Throwable $e) {
             Log::error('Story editor list stories failed', ['error' => $e->getMessage()]);
 
