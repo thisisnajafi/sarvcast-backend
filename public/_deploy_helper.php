@@ -145,18 +145,30 @@ try {
     $kernel->bootstrap();
 
     $commands = [
-        'clear-compiled' => [],
-        'config:cache'   => [],
-        'route:cache'    => [],
-        'view:cache'     => [],
-        'optimize'       => [],
-        'storage:link'   => ['--force' => true],
+        'clear-compiled'  => [],
+        'migrate:status'  => [],
+        'migrate'         => ['--force' => true],
+        'config:cache'    => [],
+        'route:cache'     => [],
+        'view:cache'      => [],
+        'optimize'        => [],
+        'storage:link'    => ['--force' => true],
     ];
 
     foreach ($commands as $cmd => $args) {
         try {
-            $kernel->call($cmd, $args);
-            $results[] = $cmd . ' OK';
+            $exitCode = $kernel->call($cmd, $args);
+            $output = trim($kernel->output());
+
+            if ($exitCode !== 0) {
+                $results[] = $cmd . ' FAILED (exit ' . $exitCode . ')'
+                    . ($output ? ': ' . $output : '');
+
+                continue;
+            }
+
+            $suffix = $output !== '' ? ': ' . $output : '';
+            $results[] = $cmd . ' OK' . $suffix;
         } catch (Throwable $e) {
             $results[] = $cmd . ' FAILED: ' . $e->getMessage();
         }

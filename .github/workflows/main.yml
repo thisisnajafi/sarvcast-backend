@@ -86,10 +86,10 @@ jobs:
             storage/framework/views/**
             storage/framework/cache/data/**
 
-      - name: Install dependencies and cache on server
+      - name: Run migrations and finalize server deploy
         run: |
-          echo "::group::Install dependencies and cache configurations (server)"
-          echo "Calling deploy helper: extract vendor.zip, clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
+          echo "::group::Migrations, dependencies, and cache (server)"
+          echo "Calling deploy helper: extract vendor.zip, migrate, clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
@@ -120,7 +120,12 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Dependencies installed and caches rebuilt on server"
+          PENDING=$(echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -c "Pending" || true)
+          if [[ "$PENDING" -gt 0 ]]; then
+            echo "⚠️ $PENDING pending migration(s) reported before migrate step"
+          fi
+
+          echo "✅ Migrations applied, dependencies installed, and caches rebuilt on server"
           echo "::endgroup::"
 
       - name: Notify Telegram (success)
