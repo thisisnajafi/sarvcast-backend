@@ -212,6 +212,17 @@ class StoryEditorRepository
         return Str::slug($folderName, '_');
     }
 
+    public function findEpisodeDirectory(string $storyDir, string $episodeSlug): ?string
+    {
+        foreach (glob($storyDir . '/episode*', GLOB_ONLYDIR) ?: [] as $episodeDir) {
+            if ($this->episodeIdFromFolder(basename($episodeDir)) === $episodeSlug) {
+                return $episodeDir;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * @return array{name_persian: string, name_english: string, target_age: string|null}
      */

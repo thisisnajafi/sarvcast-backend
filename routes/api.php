@@ -1281,6 +1281,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         // Story markdown editor API (filesystem source in sarvcast-stories)
         Route::prefix('story-editor')->group(function () {
             Route::get('/stories', [\App\Http\Controllers\Admin\StoryEditorController::class, 'index']);
+            Route::get('/stories/{storyId}/package', [\App\Http\Controllers\Admin\StoryEditorController::class, 'package']);
+            Route::get('/stories/{storyId}/assets', [\App\Http\Controllers\Admin\StoryEditorController::class, 'assets']);
+            Route::post('/stories/{storyId}/import', [\App\Http\Controllers\Admin\StoryEditorController::class, 'import']);
+            Route::post('/stories/{storyId}/episodes/{episodeId}/import', [\App\Http\Controllers\Admin\StoryEditorController::class, 'import']);
+            Route::post('/stories/{storyId}/assets/{assetType}/{assetKey}/image', [\App\Http\Controllers\Admin\StoryEditorController::class, 'uploadAssetImage']);
             Route::get('/stories/{storyId}/episodes', [\App\Http\Controllers\Admin\StoryEditorController::class, 'episodes']);
             Route::get('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'show']);
             Route::put('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'update']);
