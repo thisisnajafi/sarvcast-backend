@@ -1046,6 +1046,8 @@ class StoryController extends Controller
 
     public function apiStore(Request $request)
     {
+        $this->normalizeApiStoryCoverInput($request);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -1058,7 +1060,7 @@ class StoryController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        $story = Story::create($validated);
+        $story = Story::create($this->prepareApiStoryAttributes($validated));
 
         return AdminApiResponse::success($story->load('category'), 'Story created successfully', 201);
     }
@@ -1070,6 +1072,8 @@ class StoryController extends Controller
 
     public function apiUpdate(Request $request, Story $story)
     {
+        $this->normalizeApiStoryCoverInput($request);
+
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
@@ -1082,9 +1086,59 @@ class StoryController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        $story->update($validated);
+        $story->update($this->prepareApiStoryAttributes($validated, $story));
 
         return AdminApiResponse::success($story->fresh()->load('category'), 'Story updated successfully');
+    }
+
+    private function normalizeApiStoryCoverInput(Request $request): void
+    {
+        if ($request->input('cover_image_url') === '') {
+            $request->merge(['cover_image_url' => null]);
+        }
+    }
+
+    /**
+     * Map dashboard story payload fields to DB columns required by stories table.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function prepareApiStoryAttributes(array $validated, ?Story $existing = null): array
+    {
+        $cover = array_key_exists('cover_image_url', $validated)
+            ? $validated['cover_image_url']
+            : $existing?->cover_image_url;
+
+        $imageUrl = $cover ?? $existing?->image_url ?? '';
+
+        $attributes = [
+            'image_url' => is_string($imageUrl) ? $imageUrl : '',
+            'age_group' => $validated['age_rating']
+                ?? $validated['age_group']
+                ?? $existing?->age_group
+                ?? 'all',
+            'language' => $validated['language'] ?? $existing?->language ?? 'fa',
+            'duration' => $validated['duration'] ?? $existing?->duration ?? 0,
+            'workflow_status' => $validated['workflow_status'] ?? $existing?->workflow_status ?? 'written',
+            'is_premium' => $validated['is_premium'] ?? $existing?->is_premium ?? false,
+        ];
+
+        foreach (['title', 'description', 'category_id', 'status', 'tags'] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $attributes[$field] = $validated[$field];
+            }
+        }
+
+        if (array_key_exists('cover_image_url', $validated) || $cover !== null) {
+            $attributes['cover_image_url'] = $cover;
+        }
+
+        if (array_key_exists('age_rating', $validated)) {
+            $attributes['age_rating'] = $validated['age_rating'];
+        }
+
+        return $attributes;
     }
 
     public function apiDestroy(Story $story)
