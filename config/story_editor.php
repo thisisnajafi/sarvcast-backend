@@ -1,5 +1,7 @@
 <?php
 
+$storageStoriesPath = storage_path('app/sarvcast-stories');
+
 return [
 
     /*
@@ -7,33 +9,27 @@ return [
     | Source stories directory
     |--------------------------------------------------------------------------
     |
-    | Priority:
-    |   1. STORY_EDITOR_STORIES_PATH in .env
-    |   2. default_stories_path below (edit on server if you prefer config over .env)
-    |   3. discovery_paths (relative to Laravel base_path, or absolute)
+    | Canonical markdown episodes and characters_and_objects.json are stored
+    | under Laravel storage (not the public web root).
     |
-    | Production: upload the sarvcast-stories repo on the server, then either set
-    | STORY_EDITOR_STORIES_PATH in .env or set default_stories_path here.
+    | Priority:
+    |   1. STORY_EDITOR_STORIES_PATH in .env (optional override)
+    |   2. default_stories_path below (storage/app/sarvcast-stories)
+    |   3. discovery_paths (local dev: sibling sarvcast-stories repo)
     |
     */
     'stories_path' => env('STORY_EDITOR_STORIES_PATH'),
 
-    /*
-    | Fallback when STORY_EDITOR_STORIES_PATH is not set in .env.
-    | Example on shared hosting (adjust to your account):
-    | 'default_stories_path' => '/home/my@sarvcast.ir/sarvcast-stories',
-    */
-    'default_stories_path' => null,
+    'storage_subdirectory' => 'sarvcast-stories',
+
+    'default_stories_path' => $storageStoriesPath,
 
     /*
-    | Paths tried in order when neither env nor default_stories_path resolves.
-    | Relative paths are resolved from Laravel base_path().
+    | Local dev only — used when storage folder is empty and sibling repo exists.
     */
     'discovery_paths' => [
         '../sarvcast-stories',
         '../../sarvcast-stories',
-        'sarvcast-stories',
-        'storage/app/sarvcast-stories',
     ],
 
     'exclude_directory_patterns' => [

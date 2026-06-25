@@ -36,10 +36,28 @@ class StoryEditorPaths
             }
         }
 
+        $storageDefault = config('story_editor.default_stories_path');
+        if (is_string($storageDefault) && $storageDefault !== '') {
+            self::ensureDirectory($storageDefault);
+
+            if (is_dir($storageDefault)) {
+                return realpath($storageDefault) ?: $storageDefault;
+            }
+        }
+
         throw new \RuntimeException(
-            'Stories directory not found. Set STORY_EDITOR_STORIES_PATH in .env '
-            . 'or default_stories_path in config/story_editor.php, then upload sarvcast-stories to that path.'
+            'Stories directory not found. Expected storage path: '
+            . (is_string($storageDefault) ? $storageDefault : storage_path('app/sarvcast-stories'))
         );
+    }
+
+    private static function ensureDirectory(string $path): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        @mkdir($path, 0755, true);
     }
 
     private static function normalizePath(string $path): string
