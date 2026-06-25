@@ -229,4 +229,117 @@ class MediaLibraryApiTest extends TestCase
 
         @unlink($legacyFile);
     }
+
+    public function test_media_library_imports_story_editor_markdown(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        $storiesRoot = storage_path('app/testing-sarvcast-stories');
+        $episodeDir = $storiesRoot . '/1-test-story/episode_1';
+        if (! is_dir($episodeDir)) {
+            mkdir($episodeDir, 0755, true);
+        }
+
+        $mdFile = $episodeDir . '/episode_1_story.md';
+        file_put_contents($mdFile, "# اپیزود تست\n");
+
+        config(['story_editor.stories_path' => $storiesRoot]);
+
+        $import = $this->postJson('/api/admin/media/import-legacy', ['limit' => 50]);
+        $import->assertOk()->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('media_assets', [
+            'original_name' => 'episode_1_story.md',
+            'media_type' => MediaAsset::TYPE_DOCUMENT,
+            'disk' => \App\Services\MediaLegacyImportService::STORY_EDITOR_DISK,
+            'folder' => 'production',
+        ]);
+
+        @unlink($mdFile);
+        @rmdir($episodeDir);
+        @rmdir($storiesRoot . '/1-test-story');
+        @rmdir($storiesRoot);
+    }
+
+    public function test_media_library_imports_timeline_images_into_timeline_folder(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        $timelineDir = public_path('images/episodes/timeline');
+        if (! is_dir($timelineDir)) {
+            mkdir($timelineDir, 0755, true);
+        }
+
+        $legacyFile = $timelineDir . '/timeline-' . uniqid() . '.jpg';
+        file_put_contents($legacyFile, UploadedFile::fake()->image('frame.jpg')->getContent());
+
+        $import = $this->postJson('/api/admin/media/import-legacy', ['limit' => 20]);
+        $import->assertOk()->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('media_assets', [
+            'folder' => 'timeline',
+            'media_type' => MediaAsset::TYPE_IMAGE,
+        ]);
+
+        @unlink($legacyFile);
+    }
+
+    public function test_media_library_filters_documents(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        MediaAsset::create([
+            'uuid' => fake()->uuid(),
+            'disk' => \App\Services\MediaLegacyImportService::STORY_EDITOR_DISK,
+            'path' => '1-test/episode_1/story.md',
+            'url' => 'https://example.test/api/admin/media/' . fake()->uuid() . '/stream',
+            'original_name' => 'story.md',
+            'mime_type' => 'text/markdown',
+            'extension' => 'md',
+            'media_type' => MediaAsset::TYPE_DOCUMENT,
+            'size_bytes' => 128,
+            'folder' => 'production',
+            'status' => MediaAsset::STATUS_ACTIVE,
+        ]);
+
+        $response = $this->getJson('/api/admin/media?media_type=document');
+        $response->assertOk()->assertJsonPath('success', true);
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame('document', $response->json('data.0.media_type'));
+    }
+
+    public function test_media_library_renames_asset_title(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        $asset = MediaAsset::create([
+            'uuid' => fake()->uuid(),
+            'disk' => 'public',
+            'path' => 'media/2026/06/rename-me.jpg',
+            'url' => 'https://example.test/storage/media/2026/06/rename-me.jpg',
+            'original_name' => 'rename-me.jpg',
+            'mime_type' => 'image/jpeg',
+            'extension' => 'jpg',
+            'media_type' => MediaAsset::TYPE_IMAGE,
+            'size_bytes' => 1024,
+            'folder' => 'stories',
+            'title' => 'Old Title',
+            'status' => MediaAsset::STATUS_ACTIVE,
+        ]);
+
+        $response = $this->putJson("/api/admin/media/{$asset->id}", [
+            'title' => 'کاور جدید',
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true)->assertJsonPath('data.title', 'کاور جدید');
+        $this->assertDatabaseHas('media_assets', [
+            'id' => $asset->id,
+            'title' => 'کاور جدید',
+            'original_name' => 'rename-me.jpg',
+        ]);
+    }
 }

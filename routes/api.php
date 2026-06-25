@@ -1023,6 +1023,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::get('/import-legacy/preview', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'legacyImportPreview']);
         Route::post('/import-legacy', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'legacyImport']);
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'bulkAction']);
+        Route::get('/{mediaAsset}/stream', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'stream']);
         Route::get('/{mediaAsset}', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'show']);
         Route::put('/{mediaAsset}', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'update']);
         Route::delete('/{mediaAsset}', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'destroy']);

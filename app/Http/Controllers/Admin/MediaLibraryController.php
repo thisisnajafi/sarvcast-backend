@@ -26,7 +26,7 @@ class MediaLibraryController extends Controller
             'per_page' => 'nullable|integer|min:1|max:96',
             'search' => 'nullable|string|max:200',
             'folder' => ['nullable', 'string', Rule::in(config('media_library.folders', ['general']))],
-            'media_type' => 'nullable|in:image,audio',
+            'media_type' => 'nullable|in:image,audio,document',
             'status' => 'nullable|in:active,archived',
             'sort' => 'nullable|in:created_at,-created_at,size_bytes,-size_bytes,title,-title',
         ]);
@@ -120,7 +120,7 @@ class MediaLibraryController extends Controller
     public function update(Request $request, MediaAsset $mediaAsset)
     {
         $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
+            'title' => 'sometimes|required|string|min:1|max:255',
             'alt_text' => 'nullable|string|max:255',
             'folder' => ['nullable', 'string', Rule::in(config('media_library.folders', ['general']))],
             'tags' => 'nullable|array',
@@ -195,7 +195,11 @@ class MediaLibraryController extends Controller
             ->count();
         $legacy = MediaAsset::query()
             ->where('status', MediaAsset::STATUS_ACTIVE)
-            ->where('disk', MediaLegacyImportService::LEGACY_DISK)
+            ->whereIn('disk', [
+                MediaLegacyImportService::LEGACY_DISK,
+                MediaLegacyImportService::LEGACY_STORAGE_DISK,
+                MediaLegacyImportService::STORY_EDITOR_DISK,
+            ])
             ->count();
         $imageCount = MediaAsset::query()
             ->where('status', MediaAsset::STATUS_ACTIVE)
@@ -206,6 +210,10 @@ class MediaLibraryController extends Controller
         $audioCount = MediaAsset::query()
             ->where('status', MediaAsset::STATUS_ACTIVE)
             ->where('media_type', MediaAsset::TYPE_AUDIO)
+            ->count();
+        $documentCount = MediaAsset::query()
+            ->where('status', MediaAsset::STATUS_ACTIVE)
+            ->where('media_type', MediaAsset::TYPE_DOCUMENT)
             ->count();
         $recentWeek = MediaAsset::query()
             ->where('created_at', '>=', now()->subDays(7))
@@ -248,6 +256,7 @@ class MediaLibraryController extends Controller
             'legacy_imported' => $legacy,
             'image_count' => $imageCount,
             'audio_count' => $audioCount,
+            'document_count' => $documentCount,
             'uploads_last_7_days' => $recentWeek,
             'by_folder' => $byFolder,
             'usage_by_type' => $usageByType,
@@ -272,5 +281,26 @@ class MediaLibraryController extends Controller
         );
 
         return AdminApiResponse::success($result, $result['dry_run'] ? 'Legacy import preview completed' : 'Legacy import completed');
+    }
+
+    public function stream(string $mediaAsset)
+    {
+        $asset = MediaAsset::query()->where('uuid', $mediaAsset)->first();
+        if ($asset === null && ctype_digit($mediaAsset)) {
+            $asset = MediaAsset::query()->find($mediaAsset);
+        }
+        if ($asset === null) {
+            abort(404, 'Media asset not found');
+        }
+
+        $absolutePath = $this->legacyImport->resolveAbsolutePath($asset);
+        if ($absolutePath === null || ! is_file($absolutePath)) {
+            abort(404, 'File not found');
+        }
+
+        return response()->file($absolutePath, [
+            'Content-Type' => $asset->mime_type,
+            'Content-Disposition' => 'inline; filename="' . addslashes($asset->original_name) . '"',
+        ]);
     }
 }

@@ -45,4 +45,8 @@ return [
         'characters' => 'characters',
     ],
 
+    'legacy_storage_scan_dirs' => ['images', 'media', 'stories', 'audio'],
+
+    'legacy_document_extensions' => ['md', 'txt', 'json'],
+
 ];

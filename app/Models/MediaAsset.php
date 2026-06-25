@@ -16,6 +16,8 @@ class MediaAsset extends Model
 
     public const TYPE_AUDIO = 'audio';
 
+    public const TYPE_DOCUMENT = 'document';
+
     protected $fillable = [
         'uuid',
         'disk',
@@ -56,9 +58,15 @@ class MediaAsset extends Model
             || str_starts_with((string) $this->mime_type, 'audio/');
     }
 
+    public function isDocument(): bool
+    {
+        return $this->media_type === self::TYPE_DOCUMENT
+            || in_array(strtolower((string) $this->extension), ['md', 'txt', 'json'], true);
+    }
+
     public function isImage(): bool
     {
-        return ! $this->isAudio();
+        return ! $this->isAudio() && ! $this->isDocument();
     }
 
     public function uploader(): BelongsTo
@@ -77,17 +85,18 @@ class MediaAsset extends Model
     public function toApiArray(): array
     {
         $isAudio = $this->isAudio();
+        $isDocument = $this->isDocument();
 
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
             'url' => $this->url,
-            'thumbnail_url' => $isAudio ? null : ($this->thumbnail_url ?? $this->url),
+            'thumbnail_url' => $isAudio || $isDocument ? null : ($this->thumbnail_url ?? $this->url),
             'original_name' => $this->original_name,
             'title' => $this->title,
             'alt_text' => $this->alt_text,
             'folder' => $this->folder,
-            'media_type' => $this->media_type ?? ($isAudio ? self::TYPE_AUDIO : self::TYPE_IMAGE),
+            'media_type' => $this->media_type ?? ($isAudio ? self::TYPE_AUDIO : ($isDocument ? self::TYPE_DOCUMENT : self::TYPE_IMAGE)),
             'width' => $this->width,
             'height' => $this->height,
             'duration_seconds' => $this->duration_seconds,

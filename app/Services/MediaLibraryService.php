@@ -94,7 +94,11 @@ class MediaLibraryService
         }
 
         if ($hard) {
-            if ($asset->disk !== MediaLegacyImportService::LEGACY_DISK) {
+            if (! in_array($asset->disk, [
+                MediaLegacyImportService::LEGACY_DISK,
+                MediaLegacyImportService::LEGACY_STORAGE_DISK,
+                MediaLegacyImportService::STORY_EDITOR_DISK,
+            ], true)) {
                 $disk = $asset->disk;
                 if ($asset->path && Storage::disk($disk)->exists($asset->path)) {
                     Storage::disk($disk)->delete($asset->path);
