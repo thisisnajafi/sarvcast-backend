@@ -7,9 +7,15 @@ use Illuminate\Support\Facades\Blade;
 use Carbon\Carbon;
 use App\Helpers\JalaliHelper;
 use App\Models\Episode;
+use App\Models\MediaAsset;
 use App\Models\Story;
+use App\Models\User;
+use App\Observers\EpisodeActivityLogObserver;
 use App\Observers\EpisodeObserver;
+use App\Observers\MediaAssetActivityLogObserver;
+use App\Observers\StoryActivityLogObserver;
 use App\Observers\StoryObserver;
+use App\Observers\UserActivityLogObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,6 +46,10 @@ class AppServiceProvider extends ServiceProvider
         // Register observers
         Episode::observe(EpisodeObserver::class);
         Story::observe(StoryObserver::class);
+        Story::observe(StoryActivityLogObserver::class);
+        Episode::observe(EpisodeActivityLogObserver::class);
+        User::observe(UserActivityLogObserver::class);
+        MediaAsset::observe(MediaAssetActivityLogObserver::class);
 
         // Register Blade directives for Jalali dates
         Blade::directive('jalali', function ($expression) {

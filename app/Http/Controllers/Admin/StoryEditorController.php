@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateStoryEpisodeRequest;
 use App\Http\Support\AdminApiResponse;
+use App\Services\ActivityLogService;
 use App\Services\StoryEditorRepository;
 use App\Services\StoryProductionImportService;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class StoryEditorController extends Controller
     public function __construct(
         private readonly StoryEditorRepository $repository,
         private readonly StoryProductionImportService $importService,
+        private readonly ActivityLogService $activityLog,
     ) {}
 
     public function index()
@@ -153,6 +155,13 @@ class StoryEditorController extends Controller
                 $request->filled('db_episode_id') ? $request->integer('db_episode_id') : null,
             );
 
+            $this->activityLog->recordStoryEditorImport(
+                $request,
+                $storyId,
+                $episodeId,
+                $request->file('file')->getClientOriginalName(),
+            );
+
             return AdminApiResponse::success($result, 'فایل با موفقیت import شد.');
         } catch (\InvalidArgumentException $e) {
             return response()->json([
@@ -247,6 +256,7 @@ class StoryEditorController extends Controller
     public function update(UpdateStoryEpisodeRequest $request, string $storyId, string $episodeId)
     {
         try {
+            $before = $this->repository->getEpisode($storyId, $episodeId);
             $payload = $request->validated();
             $result = $this->repository->saveEpisode($storyId, $episodeId, $payload);
 
@@ -256,6 +266,17 @@ class StoryEditorController extends Controller
                     'message' => 'قسمت یافت نشد.',
                     'error' => 'NOT_FOUND',
                 ], 404);
+            }
+
+            if ($before !== null) {
+                $this->activityLog->recordStoryEditorEpisodeSaved(
+                    $request,
+                    $storyId,
+                    $episodeId,
+                    $before['episode'] ?? [],
+                    $result['episode'] ?? [],
+                    $result['backup_path'] ?? null,
+                );
             }
 
             return AdminApiResponse::success($result, 'قسمت با موفقیت ذخیره شد. نسخه پشتیبان ایجاد شد.');

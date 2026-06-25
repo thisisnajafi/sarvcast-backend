@@ -291,6 +291,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('change-password', [AuthController::class, 'changePassword']);
     });
 
+    // Mobile app activity telemetry
+    Route::prefix('activity')->middleware('throttle:60,1')->group(function () {
+        Route::post('batch', [\App\Http\Controllers\Api\ActivityIngestController::class, 'batch']);
+        Route::get('/', [\App\Http\Controllers\Api\ActivityIngestController::class, 'index']);
+    });
+
     // User routes
     Route::prefix('user')->group(function () {
         Route::get('favorites', [UserController::class, 'favorites']);
@@ -919,6 +925,14 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission', 'throttle:120,1', 'api.audit'])->group(function () {
 
     Route::get('/search', [\App\Http\Controllers\Admin\DashboardController::class, 'globalSearch']);
+
+    // Activity / audit logs (static paths before /{activityLog})
+    Route::prefix('activity-logs')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index']);
+        Route::get('/stats', [\App\Http\Controllers\Admin\ActivityLogController::class, 'stats']);
+        Route::get('/export', [\App\Http\Controllers\Admin\ActivityLogController::class, 'export']);
+        Route::get('/{activityLog}', [\App\Http\Controllers\Admin\ActivityLogController::class, 'show']);
+    });
 
     // Coin Management API (static paths before /{coin})
     Route::prefix('coins')->group(function () {

@@ -32,6 +32,8 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'media.create', 'display_name' => 'آپلود رسانه', 'group' => 'media_library'],
             ['name' => 'media.update', 'display_name' => 'ویرایش رسانه', 'group' => 'media_library'],
             ['name' => 'media.delete', 'display_name' => 'حذف رسانه', 'group' => 'media_library'],
+            ['name' => 'audit.view', 'display_name' => 'مشاهده گزارش فعالیت', 'group' => 'audit'],
+            ['name' => 'audit.export', 'display_name' => 'خروجی گزارش فعالیت', 'group' => 'audit'],
         ];
 
         foreach ($permissions as $permission) {
@@ -55,6 +57,11 @@ class RolePermissionSeeder extends Seeder
             'payment_management', 'partner_management', 'analytics',
             'user_management', 'media_library',
         ])->pluck('id'));
+
+        $auditView = Permission::where('name', 'audit.view')->first();
+        if ($auditView) {
+            $adminRole->permissions()->syncWithoutDetaching([$auditView->id]);
+        }
 
         // Assign Super Admin role to Abolfazl
         $abolfazl = User::where('phone_number', '09136708883')->first();

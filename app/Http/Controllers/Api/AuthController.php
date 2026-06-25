@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\SmsService;
 use App\Events\NewUserRegistrationEvent;
 use Illuminate\Http\Request;
@@ -17,9 +19,12 @@ class AuthController extends Controller
 {
     protected $smsService;
 
-    public function __construct(SmsService $smsService)
+    protected ActivityLogService $activityLog;
+
+    public function __construct(SmsService $smsService, ActivityLogService $activityLog)
     {
         $this->smsService = $smsService;
+        $this->activityLog = $activityLog;
     }
 
     /**
@@ -314,6 +319,14 @@ class AuthController extends Controller
                    ->first();
 
         if (!$user) {
+            $this->activityLog->recordSecurityEvent(
+                'login_failed',
+                $request,
+                ActivityLog::STATUS_FAILED,
+                'ورود ناموفق مدیر — شماره یافت نشد',
+                ['reason' => 'admin_not_found', 'phone' => $phoneNumber],
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'شماره تلفن مدیر یافت نشد'
@@ -321,6 +334,15 @@ class AuthController extends Controller
         }
 
         if ($user->status !== 'active') {
+            $this->activityLog->recordSecurityEvent(
+                'login_failed',
+                $request,
+                ActivityLog::STATUS_FAILED,
+                'ورود ناموفق مدیر — حساب غیرفعال',
+                ['reason' => 'inactive_account', 'user_id' => $user->id],
+                $user->id,
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'حساب کاربری شما غیرفعال است'
@@ -331,6 +353,15 @@ class AuthController extends Controller
         $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'admin_login');
 
         if (!$verification) {
+            $this->activityLog->recordSecurityEvent(
+                'login_failed',
+                $request,
+                ActivityLog::STATUS_FAILED,
+                'ورود ناموفق مدیر — کد تایید نامعتبر',
+                ['reason' => 'invalid_otp', 'user_id' => $user->id],
+                $user->id,
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'کد تایید نامعتبر یا منقضی شده است'
@@ -339,6 +370,15 @@ class AuthController extends Controller
 
         // Update last login
         $user->update(['last_login_at' => now()]);
+
+        $this->activityLog->recordSecurityEvent(
+            'logged_in',
+            $request,
+            ActivityLog::STATUS_SUCCESS,
+            'ورود موفق مدیر',
+            ['method' => 'phone_otp'],
+            $user->id,
+        );
 
         $token = $user->createToken('admin-auth-token')->plainTextToken;
         $twoFactorRequired = (bool) ($user->requires_2fa ?? false);
@@ -466,6 +506,18 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $user = $request->user();
+        if ($user && ($user->isAdmin() || $user->isSuperAdmin())) {
+            $this->activityLog->recordSecurityEvent(
+                'logged_out',
+                $request,
+                ActivityLog::STATUS_SUCCESS,
+                'خروج مدیر',
+                [],
+                $user->id,
+            );
+        }
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([

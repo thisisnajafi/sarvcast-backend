@@ -153,14 +153,18 @@ class AdminSecurityTest extends TestCase
     {
         Sanctum::actingAs($this->admin);
 
-        $response = $this->getJson('/api/admin/coins');
+        $response = $this->postJson('/api/admin/coins', [
+            'user_id' => $this->user->id,
+            'amount' => 50,
+            'type' => 'earned',
+            'description' => 'Security audit log test',
+        ]);
         $response->assertStatus(200);
 
-        // Check if activity was logged
-        $this->assertDatabaseHas('admin_activity_logs', [
-            'user_id' => $this->admin->id,
-            'method' => 'GET',
-            'route_name' => 'api.admin.coins.index'
+        $this->assertDatabaseHas('activity_logs', [
+            'channel' => 'admin',
+            'actor_user_id' => $this->admin->id,
+            'action' => 'created',
         ]);
     }
 

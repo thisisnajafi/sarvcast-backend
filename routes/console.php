@@ -33,3 +33,10 @@ Schedule::command('telegram:daily-sales-summary')
     ->name('daily-sales-summary')
     ->description('Send daily sales summary to Telegram')
     ->appendOutputTo(storage_path('logs/scheduler.log'));
+
+// Prune old activity logs according to retention policy
+Schedule::command('activity-logs:prune')
+    ->dailyAt('03:30')
+    ->name('prune-activity-logs')
+    ->description('Delete expired activity log rows by channel retention')
+    ->appendOutputTo(storage_path('logs/scheduler.log'));
