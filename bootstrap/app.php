@@ -31,7 +31,55 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, $request) {
-            // Handle specific HTTP exceptions with custom error pages
+            $wantsJson = $request->is('api/*') || $request->expectsJson();
+
+            if ($wantsJson) {
+                if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                    return response()->json(['message' => 'Unauthenticated.'], 401);
+                }
+
+                if ($e instanceof \Illuminate\Database\QueryException) {
+                    $sql = $e->getMessage();
+                    if ($request->bearerToken() && str_contains($sql, 'personal_access_tokens')) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Unauthenticated.',
+                        ], 401);
+                    }
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'سرویس موقتاً در دسترس نیست.',
+                    ], 503);
+                }
+            }
+
+            // Handle specific HTTP exceptions with custom error pages (web only)
+            if ($wantsJson) {
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
+                    return response()->json(['success' => false, 'message' => 'Not found.'], 404);
+                }
+
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException) {
+                    return response()->json(['success' => false, 'message' => 'Forbidden.'], 403);
+                }
+
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException) {
+                    return response()->json(['success' => false, 'message' => 'Too many requests.'], 429);
+                }
+
+                if ($e instanceof \Illuminate\Session\TokenMismatchException) {
+                    return response()->json(['success' => false, 'message' => 'Session expired.'], 419);
+                }
+
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $e->getMessage() ?: 'Request failed.',
+                    ], $e->getStatusCode());
+                }
+            }
+
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException) {
                 return response()->view('errors.404', [], 404);
             }

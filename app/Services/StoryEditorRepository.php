@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\StoryEditorPaths;
 use Illuminate\Support\Str;
 
 class StoryEditorRepository
@@ -12,24 +13,7 @@ class StoryEditorRepository
 
     public function resolveStoriesPath(): string
     {
-        $configured = config('story_editor.stories_path');
-        if (is_string($configured) && $configured !== '' && is_dir($configured)) {
-            return realpath($configured) ?: $configured;
-        }
-
-        $candidates = [
-            base_path('../sarvcast-stories'),
-            base_path('../../sarvcast-stories'),
-            base_path('sarvcast-stories'),
-        ];
-
-        foreach ($candidates as $path) {
-            if (is_dir($path)) {
-                return realpath($path) ?: $path;
-            }
-        }
-
-        throw new \RuntimeException('Stories directory not found. Set STORY_EDITOR_STORIES_PATH in .env.');
+        return StoryEditorPaths::resolve();
     }
 
     /**
