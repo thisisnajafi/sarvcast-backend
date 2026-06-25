@@ -176,20 +176,31 @@ class StoryEditorController extends Controller
     public function uploadAssetImage(Request $request, string $storyId, string $assetType, string $assetKey)
     {
         $request->validate([
-            'image' => ['required', 'image', 'max:10240'],
+            'image' => ['required_without:image_url', 'image', 'max:10240'],
+            'image_url' => ['required_without:image', 'string', 'url', 'max:500'],
             'episode_slug' => ['nullable', 'string', 'max:191'],
         ]);
 
         try {
-            $result = $this->importService->uploadAssetImage(
-                $storyId,
-                $assetType,
-                $assetKey,
-                $request->file('image'),
-                $request->input('episode_slug'),
-            );
+            if ($request->hasFile('image')) {
+                $result = $this->importService->uploadAssetImage(
+                    $storyId,
+                    $assetType,
+                    $assetKey,
+                    $request->file('image'),
+                    $request->input('episode_slug'),
+                );
+            } else {
+                $result = $this->importService->assignAssetImageUrl(
+                    $storyId,
+                    $assetType,
+                    $assetKey,
+                    (string) $request->input('image_url'),
+                    $request->input('episode_slug'),
+                );
+            }
 
-            return AdminApiResponse::success($result, 'تصویر با موفقیت آپلود شد.');
+            return AdminApiResponse::success($result, 'تصویر با موفقیت ثبت شد.');
         } catch (\Throwable $e) {
             Log::error('Story editor asset upload failed', [
                 'story_id' => $storyId,

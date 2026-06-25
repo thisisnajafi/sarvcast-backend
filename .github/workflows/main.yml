@@ -89,7 +89,7 @@ jobs:
       - name: Run migrations and finalize server deploy
         run: |
           echo "::group::Migrations, dependencies, and cache (server)"
-          echo "Calling deploy helper: extract vendor.zip, migrate, clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
+          echo "Calling deploy helper: extract vendor.zip, migrate, seed permissions, clear-compiled, config:cache, route:cache, view:cache, optimize, storage:link"
 
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \

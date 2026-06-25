@@ -28,6 +28,10 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'roles.edit', 'display_name' => 'ویرایش نقش', 'group' => 'role_management'],
             ['name' => 'roles.delete', 'display_name' => 'حذف نقش', 'group' => 'role_management'],
             ['name' => 'roles.assign', 'display_name' => 'اختصاص نقش', 'group' => 'role_management'],
+            ['name' => 'media.read', 'display_name' => 'مشاهده کتابخانه رسانه', 'group' => 'media_library'],
+            ['name' => 'media.create', 'display_name' => 'آپلود رسانه', 'group' => 'media_library'],
+            ['name' => 'media.update', 'display_name' => 'ویرایش رسانه', 'group' => 'media_library'],
+            ['name' => 'media.delete', 'display_name' => 'حذف رسانه', 'group' => 'media_library'],
         ];
 
         foreach ($permissions as $permission) {
@@ -49,7 +53,7 @@ class RolePermissionSeeder extends Seeder
         $adminRole->permissions()->sync(Permission::whereIn('group', [
             'dashboard', 'coin_management', 'coupon_management', 
             'payment_management', 'partner_management', 'analytics',
-            'user_management'
+            'user_management', 'media_library',
         ])->pluck('id'));
 
         // Assign Super Admin role to Abolfazl

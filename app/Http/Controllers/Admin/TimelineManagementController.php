@@ -6,12 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Support\AdminCsvExport;
 use App\Models\Episode;
 use App\Models\ImageTimeline;
+use App\Services\MediaLibraryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class TimelineManagementController extends Controller
 {
+    public function __construct(
+        private readonly MediaLibraryService $mediaLibrary,
+    ) {}
+
     private function validateTimelinePayload(Request $request, ?ImageTimeline $current = null): array
     {
         $validated = $request->validate([
@@ -235,6 +240,7 @@ class TimelineManagementController extends Controller
     {
         $validated = $this->validateTimelinePayload($request);
         $timeline = ImageTimeline::create($validated);
+        $this->mediaLibrary->syncUsageFor($timeline, 'image_url', $timeline->image_url);
 
         return response()->json([
             'success' => true,
@@ -250,28 +256,23 @@ class TimelineManagementController extends Controller
         ]);
 
         try {
-            $image = $request->file('image');
-            $directory = public_path('images/timeline');
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true);
-            }
-
-            $filename = now()->format('YmdHis') . '_' . uniqid('timeline_', true) . '.' . $image->getClientOriginalExtension();
-            $image->move($directory, $filename);
-
-            $relativePath = '/images/timeline/' . $filename;
-            $publicUrl = url($relativePath);
+            $mediaAsset = $this->mediaLibrary->upload($request->file('image'), [
+                'folder' => 'timeline',
+                'uploaded_by' => auth()->id(),
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'تصویر تایم‌لاین با موفقیت آپلود شد.',
                 'data' => [
-                    'image_url' => $publicUrl,
-                    'relative_path' => $relativePath,
-                    'file_name' => $filename,
+                    'image_url' => $mediaAsset->url,
+                    'thumbnail_url' => $mediaAsset->thumbnail_url,
+                    'media_asset_id' => $mediaAsset->id,
+                    'relative_path' => $mediaAsset->path,
+                    'file_name' => $mediaAsset->original_name,
                 ],
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Timeline image upload failed', [
                 'error' => $e->getMessage(),
             ]);
@@ -295,6 +296,7 @@ class TimelineManagementController extends Controller
     {
         $validated = $this->validateTimelinePayload($request, $timeline);
         $timeline->update($validated);
+        $this->mediaLibrary->syncUsageFor($timeline->fresh(), 'image_url', $timeline->image_url);
 
         return response()->json([
             'success' => true,

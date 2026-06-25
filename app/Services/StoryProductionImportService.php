@@ -17,6 +17,7 @@ class StoryProductionImportService
     public function __construct(
         private readonly StoryEditorRepository $editorRepository,
         private readonly StoryMarkdownService $markdownService,
+        private readonly MediaLibraryService $mediaLibrary,
     ) {}
 
     /**
@@ -218,6 +219,25 @@ class StoryProductionImportService
         UploadedFile $image,
         ?string $episodeSlug = null,
     ): array {
+        $mediaAsset = $this->mediaLibrary->upload($image, [
+            'folder' => 'production',
+            'title' => $assetKey,
+            'uploaded_by' => auth()->id(),
+        ]);
+
+        return $this->assignAssetImageUrl($storySlug, $assetType, $assetKey, $mediaAsset->url, $episodeSlug);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function assignAssetImageUrl(
+        string $storySlug,
+        string $assetType,
+        string $assetKey,
+        string $imageUrl,
+        ?string $episodeSlug = null,
+    ): array {
         $asset = StoryProductionAsset::where('story_slug', $storySlug)
             ->where('episode_slug', $episodeSlug)
             ->where('asset_type', $assetType)
@@ -228,24 +248,23 @@ class StoryProductionImportService
             throw new \RuntimeException('دارایی یافت نشد. ابتدا فایل JSON مربوطه را import کنید.');
         }
 
-        $ext = $image->getClientOriginalExtension() ?: 'webp';
-        $directory = "stories/production/{$storySlug}/images/{$assetType}";
-        $filename = Str::slug($assetKey, '_') . '.' . strtolower($ext);
-        $path = $image->storeAs($directory, $filename, 'public');
-        $url = Storage::url($path);
+        $mediaAsset = $this->mediaLibrary->findByUrl($imageUrl);
+        $storagePath = $mediaAsset?->path;
 
         $asset->update([
-            'image_url' => $url,
-            'storage_path' => $path,
+            'image_url' => $imageUrl,
+            'storage_path' => $storagePath,
         ]);
 
+        $this->mediaLibrary->syncUsageFor($asset->fresh(), 'image_url', $imageUrl);
+
         if ($assetType === StoryProductionAsset::TYPE_CHARACTER && $asset->character_id) {
-            Character::whereKey($asset->character_id)->update(['image_url' => $url]);
+            Character::whereKey($asset->character_id)->update(['image_url' => $imageUrl]);
         }
 
         return [
             'asset' => $asset->fresh(),
-            'image_url' => $url,
+            'image_url' => $imageUrl,
         ];
     }
 

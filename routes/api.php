@@ -1015,6 +1015,19 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::delete('/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'apiDestroy']);
     });
 
+    // Media Library API (static paths before /{mediaAsset})
+    Route::prefix('media')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'store']);
+        Route::get('/statistics/data', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'statistics']);
+        Route::get('/import-legacy/preview', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'legacyImportPreview']);
+        Route::post('/import-legacy', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'legacyImport']);
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'bulkAction']);
+        Route::get('/{mediaAsset}', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'show']);
+        Route::put('/{mediaAsset}', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'update']);
+        Route::delete('/{mediaAsset}', [\App\Http\Controllers\Admin\MediaLibraryController::class, 'destroy']);
+    });
+
     // Category Management API
     // Category Management API (static paths before /{category})
     Route::prefix('categories')->group(function () {
