@@ -30,12 +30,13 @@ class MediaLibraryService
 
     public function upload(UploadedFile $file, array $meta = []): MediaAsset
     {
-        $this->validateImage($file);
+        $mediaType = $this->resolveMediaType($file);
+        $this->validateFile($file, $mediaType);
 
         $disk = (string) config('media_library.disk', 'public');
         $folder = $this->resolveFolder($meta['folder'] ?? 'general');
         $uuid = (string) Str::uuid();
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
+        $extension = strtolower($file->getClientOriginalExtension() ?: ($mediaType === MediaAsset::TYPE_AUDIO ? 'mp3' : 'jpg'));
         $datePath = now()->format('Y/m');
         $filename = $uuid . '.' . $extension;
         $relativeDir = "media/{$datePath}";
@@ -43,8 +44,14 @@ class MediaLibraryService
 
         Storage::disk($disk)->putFileAs($relativeDir, $file, $filename);
 
-        [$width, $height] = $this->readDimensions($disk, $path);
-        $thumbnail = $this->generateThumbnail($disk, $path, $uuid, $relativeDir, $extension);
+        $width = null;
+        $height = null;
+        $thumbnail = ['path' => null, 'url' => null];
+
+        if ($mediaType === MediaAsset::TYPE_IMAGE) {
+            [$width, $height] = $this->readDimensions($disk, $path);
+            $thumbnail = $this->generateThumbnail($disk, $path, $uuid, $relativeDir, $extension);
+        }
 
         $url = Storage::disk($disk)->url($path);
 
@@ -54,13 +61,15 @@ class MediaLibraryService
             'path' => $path,
             'url' => $url,
             'thumbnail_path' => $thumbnail['path'] ?? null,
-            'thumbnail_url' => $thumbnail['url'] ?? $url,
+            'thumbnail_url' => $thumbnail['url'] ?? null,
             'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType() ?: 'image/jpeg',
+            'mime_type' => $file->getMimeType() ?: ($mediaType === MediaAsset::TYPE_AUDIO ? 'audio/mpeg' : 'image/jpeg'),
             'extension' => $extension,
+            'media_type' => $mediaType,
             'size_bytes' => $file->getSize(),
             'width' => $width,
             'height' => $height,
+            'duration_seconds' => null,
             'folder' => $folder,
             'alt_text' => $meta['alt_text'] ?? null,
             'title' => $meta['title'] ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
@@ -155,10 +164,38 @@ class MediaLibraryService
             ->all();
     }
 
-    private function validateImage(UploadedFile $file): void
+    private function resolveMediaType(UploadedFile $file): string
     {
-        $allowed = config('media_library.allowed_extensions', ['jpg', 'jpeg', 'png', 'webp', 'gif']);
         $ext = strtolower($file->getClientOriginalExtension() ?: '');
+        $audioExtensions = config('media_library.allowed_audio_extensions', ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac']);
+
+        if (in_array($ext, $audioExtensions, true) || str_starts_with((string) $file->getMimeType(), 'audio/')) {
+            return MediaAsset::TYPE_AUDIO;
+        }
+
+        return MediaAsset::TYPE_IMAGE;
+    }
+
+    private function validateFile(UploadedFile $file, string $mediaType): void
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: '');
+
+        if ($mediaType === MediaAsset::TYPE_AUDIO) {
+            $allowed = config('media_library.allowed_audio_extensions', ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac']);
+            $maxKb = (int) config('media_library.max_audio_upload_kb', 102400);
+
+            if (! in_array($ext, $allowed, true)) {
+                throw new \InvalidArgumentException('فرمت فایل صوتی مجاز نیست.');
+            }
+
+            if ($file->getSize() > $maxKb * 1024) {
+                throw new \InvalidArgumentException('حجم فایل صوتی بیش از حد مجاز است.');
+            }
+
+            return;
+        }
+
+        $allowed = config('media_library.allowed_extensions', ['jpg', 'jpeg', 'png', 'webp', 'gif']);
         $maxKb = (int) config('media_library.max_upload_kb', 5120);
 
         if (! in_array($ext, $allowed, true)) {

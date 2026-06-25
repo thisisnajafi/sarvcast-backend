@@ -34,6 +34,7 @@ class MediaLibraryApiTest extends TestCase
             'original_name' => 'test.jpg',
             'mime_type' => 'image/jpeg',
             'extension' => 'jpg',
+            'media_type' => MediaAsset::TYPE_IMAGE,
             'size_bytes' => 1024,
             'folder' => 'general',
             'status' => MediaAsset::STATUS_ACTIVE,
@@ -70,8 +71,77 @@ class MediaLibraryApiTest extends TestCase
         $this->assertDatabaseHas('media_assets', [
             'folder' => 'stories',
             'title' => 'کاور تست',
+            'media_type' => MediaAsset::TYPE_IMAGE,
             'uploaded_by' => $admin->id,
         ]);
+    }
+
+    public function test_media_library_uploads_mp3_audio(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        $file = UploadedFile::fake()->create('episode.mp3', 512, 'audio/mpeg');
+
+        $response = $this->postJson('/api/admin/media', [
+            'files' => [$file],
+            'folder' => 'episodes',
+            'title' => 'اپیزود تست',
+        ]);
+
+        $response->assertCreated()->assertJsonPath('success', true);
+        $this->assertDatabaseHas('media_assets', [
+            'folder' => 'episodes',
+            'title' => 'اپیزود تست',
+            'media_type' => MediaAsset::TYPE_AUDIO,
+            'mime_type' => 'audio/mpeg',
+            'extension' => 'mp3',
+            'uploaded_by' => $admin->id,
+        ]);
+    }
+
+    public function test_media_library_filters_by_media_type_audio(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        MediaAsset::create([
+            'uuid' => fake()->uuid(),
+            'disk' => 'public',
+            'path' => 'media/2026/06/audio.mp3',
+            'url' => 'https://example.test/storage/media/2026/06/audio.mp3',
+            'original_name' => 'audio.mp3',
+            'mime_type' => 'audio/mpeg',
+            'extension' => 'mp3',
+            'media_type' => MediaAsset::TYPE_AUDIO,
+            'size_bytes' => 2048,
+            'folder' => 'episodes',
+            'status' => MediaAsset::STATUS_ACTIVE,
+        ]);
+
+        MediaAsset::create([
+            'uuid' => fake()->uuid(),
+            'disk' => 'public',
+            'path' => 'media/2026/06/photo.jpg',
+            'url' => 'https://example.test/storage/media/2026/06/photo.jpg',
+            'original_name' => 'photo.jpg',
+            'mime_type' => 'image/jpeg',
+            'extension' => 'jpg',
+            'media_type' => MediaAsset::TYPE_IMAGE,
+            'size_bytes' => 1024,
+            'folder' => 'general',
+            'status' => MediaAsset::STATUS_ACTIVE,
+        ]);
+
+        $audioResponse = $this->getJson('/api/admin/media?media_type=audio');
+        $audioResponse->assertOk()->assertJsonPath('success', true);
+        $this->assertCount(1, $audioResponse->json('data'));
+        $this->assertSame('audio', $audioResponse->json('data.0.media_type'));
+
+        $imageResponse = $this->getJson('/api/admin/media?media_type=image');
+        $imageResponse->assertOk()->assertJsonPath('success', true);
+        $this->assertCount(1, $imageResponse->json('data'));
+        $this->assertSame('image', $imageResponse->json('data.0.media_type'));
     }
 
     public function test_media_library_archives_asset(): void

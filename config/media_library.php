@@ -6,7 +6,11 @@ return [
 
     'max_upload_kb' => (int) env('MEDIA_LIBRARY_MAX_KB', 5120),
 
+    'max_audio_upload_kb' => (int) env('MEDIA_LIBRARY_MAX_AUDIO_KB', 102400),
+
     'allowed_extensions' => ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+
+    'allowed_audio_extensions' => ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'],
 
     'thumbnail' => [
         'width' => 300,

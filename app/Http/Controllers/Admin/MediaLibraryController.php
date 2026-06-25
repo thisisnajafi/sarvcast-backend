@@ -26,6 +26,7 @@ class MediaLibraryController extends Controller
             'per_page' => 'nullable|integer|min:1|max:96',
             'search' => 'nullable|string|max:200',
             'folder' => ['nullable', 'string', Rule::in(config('media_library.folders', ['general']))],
+            'media_type' => 'nullable|in:image,audio',
             'status' => 'nullable|in:active,archived',
             'sort' => 'nullable|in:created_at,-created_at,size_bytes,-size_bytes,title,-title',
         ]);
@@ -50,6 +51,10 @@ class MediaLibraryController extends Controller
             $query->where('folder', $validated['folder']);
         }
 
+        if (! empty($validated['media_type'])) {
+            $query->where('media_type', $validated['media_type']);
+        }
+
         if (! empty($validated['status'])) {
             $query->where('status', $validated['status']);
         } else {
@@ -67,10 +72,13 @@ class MediaLibraryController extends Controller
     public function store(Request $request)
     {
         $maxFiles = (int) config('media_library.max_files_per_upload', 20);
+        $maxImageKb = (int) config('media_library.max_upload_kb', 5120);
+        $maxAudioKb = (int) config('media_library.max_audio_upload_kb', 102400);
+        $maxKb = max($maxImageKb, $maxAudioKb);
 
         $validated = $request->validate([
             'files' => 'required|array|min:1|max:' . $maxFiles,
-            'files.*' => 'required|file|image|max:' . (int) config('media_library.max_upload_kb', 5120),
+            'files.*' => 'required|file|max:' . $maxKb,
             'folder' => ['nullable', 'string', Rule::in(config('media_library.folders', ['general']))],
             'title' => 'nullable|string|max:255',
             'alt_text' => 'nullable|string|max:255',
@@ -189,6 +197,16 @@ class MediaLibraryController extends Controller
             ->where('status', MediaAsset::STATUS_ACTIVE)
             ->where('disk', MediaLegacyImportService::LEGACY_DISK)
             ->count();
+        $imageCount = MediaAsset::query()
+            ->where('status', MediaAsset::STATUS_ACTIVE)
+            ->where(function ($q) {
+                $q->where('media_type', MediaAsset::TYPE_IMAGE)->orWhereNull('media_type');
+            })
+            ->count();
+        $audioCount = MediaAsset::query()
+            ->where('status', MediaAsset::STATUS_ACTIVE)
+            ->where('media_type', MediaAsset::TYPE_AUDIO)
+            ->count();
         $recentWeek = MediaAsset::query()
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
@@ -228,6 +246,8 @@ class MediaLibraryController extends Controller
             'in_use' => $inUse,
             'unused' => max(0, $active - $inUse),
             'legacy_imported' => $legacy,
+            'image_count' => $imageCount,
+            'audio_count' => $audioCount,
             'uploads_last_7_days' => $recentWeek,
             'by_folder' => $byFolder,
             'usage_by_type' => $usageByType,

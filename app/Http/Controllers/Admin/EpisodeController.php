@@ -12,6 +12,7 @@ use App\Services\InAppNotificationService;
 use App\Services\NotificationService;
 use App\Services\AudioProcessingService;
 use App\Services\ImageProcessingService;
+use App\Services\MediaLibraryService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -1214,7 +1215,7 @@ class EpisodeController extends BaseController
             'description' => 'nullable|string|max:2000',
             'episode_number' => 'required|integer|min:1',
             'duration' => 'required|integer|min:1',
-            'audio_file_url' => 'nullable|url|max:500',
+            'audio_file_url' => 'nullable|string|max:500',
             'status' => 'required|in:draft,published,archived',
             'is_premium' => 'boolean',
             'age_rating' => 'required|in:all,3+,7+,12+,16+,18+',
@@ -1222,14 +1223,18 @@ class EpisodeController extends BaseController
             'tags.*' => 'string|max:50',
         ]);
 
-        $episode = Episode::create($validated);
+        $episode = Episode::create($this->prepareApiEpisodeAttributes($validated));
 
-        return AdminApiResponse::success($episode->load('story'), 'Episode created successfully', 201);
+        if (! empty($validated['audio_file_url'])) {
+            app(MediaLibraryService::class)->syncUsageFor($episode, 'audio_url', $validated['audio_file_url']);
+        }
+
+        return AdminApiResponse::success($this->formatApiEpisode($episode->load('story')), 'Episode created successfully', 201);
     }
 
     public function apiShow(Episode $episode)
     {
-        return AdminApiResponse::success($episode->load(['story', 'voiceActors']));
+        return AdminApiResponse::success($this->formatApiEpisode($episode->load(['story', 'voiceActors'])));
     }
 
     public function apiUpdate(Request $request, Episode $episode)
@@ -1240,7 +1245,7 @@ class EpisodeController extends BaseController
             'description' => 'nullable|string|max:2000',
             'episode_number' => 'sometimes|required|integer|min:1',
             'duration' => 'sometimes|required|integer|min:1',
-            'audio_file_url' => 'nullable|url|max:500',
+            'audio_file_url' => 'nullable|string|max:500',
             'status' => 'sometimes|required|in:draft,published,archived',
             'is_premium' => 'boolean',
             'age_rating' => 'sometimes|required|in:all,3+,7+,12+,16+,18+',
@@ -1248,9 +1253,13 @@ class EpisodeController extends BaseController
             'tags.*' => 'string|max:50',
         ]);
 
-        $episode->update($validated);
+        $episode->update($this->prepareApiEpisodeAttributes($validated, $episode));
 
-        return AdminApiResponse::success($episode->load('story'), 'Episode updated successfully');
+        if (array_key_exists('audio_file_url', $validated)) {
+            app(MediaLibraryService::class)->syncUsageFor($episode, 'audio_url', $validated['audio_file_url'] ?: null);
+        }
+
+        return AdminApiResponse::success($this->formatApiEpisode($episode->load('story')), 'Episode updated successfully');
     }
 
     public function apiDestroy(Episode $episode)
@@ -1534,8 +1543,35 @@ class EpisodeController extends BaseController
         } catch (\Exception $e) {
             Log::error('Failed to notify voice actors about episode published', [
                 'episode_id' => $episode->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function prepareApiEpisodeAttributes(array $validated, ?Episode $existing = null): array
+    {
+        $attributes = $validated;
+        unset($attributes['audio_file_url']);
+
+        if (array_key_exists('audio_file_url', $validated)) {
+            $attributes['audio_url'] = $validated['audio_file_url'] ?: ($existing?->getRawOriginal('audio_url') ?? '');
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatApiEpisode(Episode $episode): array
+    {
+        $data = $episode->toArray();
+        $data['audio_file_url'] = $episode->audio_url;
+
+        return $data;
     }
 }
