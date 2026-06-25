@@ -150,6 +150,7 @@ try {
         'migrate:status'  => [],
         'migrate'         => ['--force' => true],
         'db:seed'         => ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true],
+        'queue:work'      => ['--stop-when-empty' => true, '--max-jobs' => 500, '--max-time' => 120],
         'config:cache'    => [],
         'route:cache'     => [],
         'view:cache'      => [],
@@ -163,6 +164,14 @@ try {
             $output = trim($kernel->output());
 
             if ($exitCode !== 0) {
+                // queue:work exits 0 when empty; non-zero may mean no worker table — do not fail deploy
+                if ($cmd === 'queue:work') {
+                    $results[] = $cmd . ' skipped or partial (exit ' . $exitCode . ')'
+                        . ($output ? ': ' . $output : '');
+
+                    continue;
+                }
+
                 $results[] = $cmd . ' FAILED (exit ' . $exitCode . ')'
                     . ($output ? ': ' . $output : '');
 
@@ -172,8 +181,34 @@ try {
             $suffix = $output !== '' ? ': ' . $output : '';
             $results[] = $cmd . ' OK' . $suffix;
         } catch (Throwable $e) {
+            if ($cmd === 'queue:work') {
+                $results[] = $cmd . ' skipped: ' . $e->getMessage();
+
+                continue;
+            }
+
             $results[] = $cmd . ' FAILED: ' . $e->getMessage();
         }
+    }
+
+    if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+        $results[] = 'Verified activity_logs table exists';
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('activity_logs', 'event_uuid')) {
+            $results[] = 'Verified activity_logs.event_uuid column exists';
+        } else {
+            $results[] = 'activity_logs verification FAILED: event_uuid column missing';
+        }
+    } else {
+        $results[] = 'activity_logs verification FAILED: table missing after migrate';
+    }
+
+    $auditViewExists = \App\Models\Permission::query()->where('name', 'audit.view')->exists();
+    $auditExportExists = \App\Models\Permission::query()->where('name', 'audit.export')->exists();
+    if ($auditViewExists && $auditExportExists) {
+        $results[] = 'Verified audit.view and audit.export permissions exist';
+    } else {
+        $results[] = 'audit permissions verification FAILED: run RolePermissionSeeder';
     }
 
 } catch (Throwable $e) {

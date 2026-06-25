@@ -16,6 +16,13 @@ class ActivityLogService
     public function record(ActivityLogEntry $entry): void
     {
         $payload = $this->sanitizeEntry($entry);
+
+        if (config('activity_log.dispatch_sync', true)) {
+            LogActivityJob::dispatchSync($payload);
+
+            return;
+        }
+
         LogActivityJob::dispatch($payload);
     }
 

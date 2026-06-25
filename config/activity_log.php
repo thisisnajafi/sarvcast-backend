@@ -51,6 +51,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Dispatch mode
+    |--------------------------------------------------------------------------
+    | FTP/shared hosting usually has no queue worker. Sync dispatch (default)
+    | writes immediately. Set ACTIVITY_LOG_SYNC=false when queue workers run.
+    */
+    'dispatch_sync' => env('ACTIVITY_LOG_SYNC', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Admin HTTP paths skipped (no audit row)
     |--------------------------------------------------------------------------
     */
