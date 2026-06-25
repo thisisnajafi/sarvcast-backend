@@ -35,7 +35,7 @@ class MediaLibraryController extends Controller
         $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
         $column = ltrim($sort, '-');
 
-        $query = MediaAsset::query()->with('uploader:id,name');
+        $query = MediaAsset::query();
 
         if (! empty($validated['search'])) {
             $search = $validated['search'];
