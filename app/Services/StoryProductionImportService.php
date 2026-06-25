@@ -49,8 +49,13 @@ class StoryProductionImportService
     /**
      * @return array<string, mixed>
      */
-    public function importStoryFile(string $storySlug, UploadedFile $file, ?string $episodeSlug = null): array
-    {
+    public function importStoryFile(
+        string $storySlug,
+        UploadedFile $file,
+        ?string $episodeSlug = null,
+        ?int $forceStoryId = null,
+        ?int $forceEpisodeId = null,
+    ): array {
         $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
         if ($storyDir === null) {
             throw new \RuntimeException('داستان یافت نشد.');
@@ -76,7 +81,11 @@ class StoryProductionImportService
             throw new \InvalidArgumentException('برای فایل قسمت، پوشه اپیزود مشخص نیست.');
         }
 
-        return DB::transaction(function () use ($storySlug, $episodeSlug, $file, $content, $fileType, $storyDir) {
+        if ($episodeSlug !== null && $this->editorRepository->findEpisodeDirectory($storyDir, $episodeSlug) === null) {
+            throw new \InvalidArgumentException('پوشه قسمت یافت نشد. ابتدا قسمت را در storage ایجاد کنید.');
+        }
+
+        return DB::transaction(function () use ($storySlug, $episodeSlug, $file, $content, $fileType, $storyDir, $forceStoryId, $forceEpisodeId) {
             $storagePath = $this->storeFile($storySlug, $episodeSlug, $fileType, $file, $content);
             $sourcePath = $this->mirrorToSourceRepo($storyDir, $episodeSlug, $fileType, $file, $content);
 
@@ -86,12 +95,12 @@ class StoryProductionImportService
                 StoryProductionFile::TYPE_STORY_SCRIPT => $this->importStoryScript($storySlug, $episodeSlug, $content),
             };
 
-            $storyId = $this->resolveDbStoryId($storySlug, $summary);
+            $storyId = $forceStoryId ?? $this->resolveDbStoryId($storySlug, $summary);
             $episodeId = null;
             $episodeNumber = $summary['episode_number'] ?? null;
 
             if ($episodeSlug !== null) {
-                $episodeId = $this->resolveDbEpisodeId($storyId, $storySlug, $episodeSlug, $summary);
+                $episodeId = $forceEpisodeId ?? $this->resolveDbEpisodeId($storyId, $storySlug, $episodeSlug, $summary);
             }
 
             $record = StoryProductionFile::updateOrCreate(
@@ -192,6 +201,11 @@ class StoryProductionImportService
             ],
             'episodes' => $episodePackages,
         ];
+    }
+
+    public function resolveStorySlugByDbStoryId(int $storyId): ?string
+    {
+        return $this->editorRepository->findStorySlugByDbStoryId($storyId);
     }
 
     /**

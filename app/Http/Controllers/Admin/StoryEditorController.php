@@ -42,6 +42,66 @@ class StoryEditorController extends Controller
         }
     }
 
+    public function storeStory(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'db_story_id' => ['nullable', 'integer', 'exists:stories,id'],
+        ]);
+
+        try {
+            $scaffold = $this->repository->createStoryScaffold(
+                $validated['title'],
+                $validated['db_story_id'] ?? null,
+            );
+
+            return AdminApiResponse::success($scaffold, 'پوشه داستان در storage ایجاد شد.', 201);
+        } catch (\Throwable $e) {
+            Log::error('Story editor create story scaffold failed', ['error' => $e->getMessage()]);
+
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function storeEpisode(Request $request, string $storyId)
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'episode_number' => ['required', 'integer', 'min:1'],
+        ]);
+
+        try {
+            $scaffold = $this->repository->createEpisodeScaffold(
+                $storyId,
+                (int) $validated['episode_number'],
+                $validated['title'],
+            );
+
+            return AdminApiResponse::success($scaffold, 'پوشه قسمت در storage ایجاد شد.', 201);
+        } catch (\Throwable $e) {
+            Log::error('Story editor create episode scaffold failed', [
+                'story_id' => $storyId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function resolveSlug(Request $request)
+    {
+        $validated = $request->validate([
+            'story_id' => ['required', 'integer', 'exists:stories,id'],
+        ]);
+
+        $slug = $this->importService->resolveStorySlugByDbStoryId((int) $validated['story_id']);
+
+        return AdminApiResponse::success([
+            'story_slug' => $slug,
+            'found' => $slug !== null,
+        ]);
+    }
+
     public function package(string $storyId)
     {
         try {
@@ -80,6 +140,8 @@ class StoryEditorController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'max:10240'],
+            'db_story_id' => ['nullable', 'integer', 'exists:stories,id'],
+            'db_episode_id' => ['nullable', 'integer', 'exists:episodes,id'],
         ]);
 
         try {
@@ -87,6 +149,8 @@ class StoryEditorController extends Controller
                 $storyId,
                 $request->file('file'),
                 $episodeId,
+                $request->filled('db_story_id') ? $request->integer('db_story_id') : null,
+                $request->filled('db_episode_id') ? $request->integer('db_episode_id') : null,
             );
 
             return AdminApiResponse::success($result, 'فایل با موفقیت import شد.');

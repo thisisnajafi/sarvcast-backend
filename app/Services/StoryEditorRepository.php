@@ -208,6 +208,133 @@ class StoryEditorRepository
     }
 
     /**
+     * @return array{id: string, folder_name: string, path: string, created: bool}
+     */
+    public function createStoryScaffold(string $title, ?int $dbStoryId = null): array
+    {
+        $basePath = $this->resolveStoriesPath();
+        $existingSlug = $dbStoryId !== null ? $this->findStorySlugByDbStoryId($dbStoryId) : null;
+
+        if ($existingSlug !== null) {
+            $dir = $this->findStoryDirectory($existingSlug);
+
+            return [
+                'id' => $existingSlug,
+                'folder_name' => $dir !== null ? basename($dir) : $existingSlug,
+                'path' => $dir,
+                'created' => false,
+            ];
+        }
+
+        $folderName = $this->buildStoryFolderName($title);
+        $path = $basePath . DIRECTORY_SEPARATOR . $folderName;
+
+        if (! is_dir($path) && ! mkdir($path, 0755, true) && ! is_dir($path)) {
+            throw new \RuntimeException('امکان ایجاد پوشه داستان وجود ندارد.');
+        }
+
+        return [
+            'id' => $this->storyIdFromFolder($folderName),
+            'folder_name' => $folderName,
+            'path' => $path,
+            'created' => true,
+        ];
+    }
+
+    /**
+     * @return array{id: string, folder_name: string, path: string, created: bool}
+     */
+    public function createEpisodeScaffold(string $storySlug, int $episodeNumber, string $title): array
+    {
+        $storyDir = $this->findStoryDirectory($storySlug);
+        if ($storyDir === null) {
+            throw new \RuntimeException('داستان یافت نشد.');
+        }
+
+        foreach (glob($storyDir . '/episode*', GLOB_ONLYDIR) ?: [] as $episodeDir) {
+            if (preg_match('/episode[_\s-]*(\d+)/i', basename($episodeDir), $matches)
+                && (int) $matches[1] === $episodeNumber) {
+                $folderName = basename($episodeDir);
+
+                return [
+                    'id' => $this->episodeIdFromFolder($folderName),
+                    'folder_name' => $folderName,
+                    'path' => $episodeDir,
+                    'created' => false,
+                ];
+            }
+        }
+
+        $folderName = $this->buildEpisodeFolderName($episodeNumber, $title);
+        $path = $storyDir . DIRECTORY_SEPARATOR . $folderName;
+
+        if (! is_dir($path) && ! mkdir($path, 0755, true) && ! is_dir($path)) {
+            throw new \RuntimeException('امکان ایجاد پوشه قسمت وجود ندارد.');
+        }
+
+        return [
+            'id' => $this->episodeIdFromFolder($folderName),
+            'folder_name' => $folderName,
+            'path' => $path,
+            'created' => true,
+        ];
+    }
+
+    public function findStorySlugByDbStoryId(int $storyId): ?string
+    {
+        $fromProduction = \App\Models\StoryProductionFile::query()
+            ->where('story_id', $storyId)
+            ->whereNotNull('story_slug')
+            ->value('story_slug');
+
+        if (is_string($fromProduction) && $fromProduction !== '') {
+            return $fromProduction;
+        }
+
+        $story = \App\Models\Story::query()->find($storyId);
+        if ($story === null) {
+            return null;
+        }
+
+        foreach ($this->listStories() as $item) {
+            if ($item['name_persian'] === $story->title) {
+                return $item['id'];
+            }
+        }
+
+        return null;
+    }
+
+    public function buildStoryFolderName(string $title): string
+    {
+        return $this->nextStoryOrdinal() . ' - ' . trim($title);
+    }
+
+    public function buildEpisodeFolderName(int $episodeNumber, string $title): string
+    {
+        $slug = Str::slug($title, '_');
+        if ($slug === '') {
+            $slug = 'episode';
+        }
+
+        return 'episode_' . $episodeNumber . '_' . $slug;
+    }
+
+    public function nextStoryOrdinal(): int
+    {
+        $basePath = $this->resolveStoriesPath();
+        $max = 0;
+
+        foreach (glob($basePath . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
+            if (preg_match('/^(\d+)\s*-/', basename($dir), $matches)) {
+                $max = max($max, (int) $matches[1]);
+            }
+        }
+
+        return $max + 1;
+    }
+
+    /**
      * @return array{name_persian: string, name_english: string, target_age: string|null}
      */
     private function readStoryMeta(string $storyDir): array
