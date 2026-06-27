@@ -145,15 +145,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'ثبت‌نام با موفقیت انجام شد',
             'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'phone_number' => $user->phone_number,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name,
-                    'role' => $user->role,
-                    'status' => $user->status,
-                    'onboarding_completed' => (bool) $user->onboarding_completed,
-                ],
+                'user' => $this->authUserPayload($user),
                 'token' => $token
             ]
         ], 201);

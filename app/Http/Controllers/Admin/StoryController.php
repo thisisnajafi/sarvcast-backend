@@ -1068,7 +1068,34 @@ class StoryController extends Controller
 
     public function apiShow(Story $story)
     {
-        return AdminApiResponse::success($story->load(['category', 'episodes']));
+        return AdminApiResponse::success($story->load(['category', 'episodes', 'sponsor']));
+    }
+
+    public function apiUpdateSponsor(Request $request, Story $story)
+    {
+        $validated = $request->validate([
+            'sponsor_id' => ['nullable', 'uuid', 'exists:sponsors,id'],
+        ]);
+
+        $sponsorId = $validated['sponsor_id'] ?? null;
+
+        if ($sponsorId) {
+            $sponsor = \App\Models\Sponsor::find($sponsorId);
+            if (! $sponsor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sponsor not found',
+                    'error' => 'VALIDATION_ERROR',
+                ], 422);
+            }
+        }
+
+        $story->update(['sponsor_id' => $sponsorId]);
+
+        return AdminApiResponse::success(
+            $story->fresh()->load(['category', 'episodes', 'sponsor']),
+            'Story sponsor updated successfully'
+        );
     }
 
     public function apiUpdate(Request $request, Story $story)
@@ -1085,6 +1112,7 @@ class StoryController extends Controller
             'age_rating' => 'sometimes|required|in:all,3+,7+,12+,16+,18+',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
+            'sponsor_id' => 'nullable|uuid|exists:sponsors,id',
         ]);
 
         $statusService = app(StoryEpisodeStatusService::class);
@@ -1101,7 +1129,7 @@ class StoryController extends Controller
             $story->update($this->prepareApiStoryAttributes($validated, $story));
         }
 
-        return AdminApiResponse::success($story->fresh()->load(['category', 'episodes']), 'Story updated successfully');
+        return AdminApiResponse::success($story->fresh()->load(['category', 'episodes', 'sponsor']), 'Story updated successfully');
     }
 
     private function normalizeApiStoryCoverInput(Request $request): void
@@ -1137,7 +1165,7 @@ class StoryController extends Controller
             'is_premium' => $validated['is_premium'] ?? $existing?->is_premium ?? false,
         ];
 
-        foreach (['title', 'description', 'category_id', 'status', 'tags'] as $field) {
+        foreach (['title', 'description', 'category_id', 'status', 'tags', 'sponsor_id'] as $field) {
             if (array_key_exists($field, $validated)) {
                 $attributes[$field] = $validated[$field];
             }

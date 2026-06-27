@@ -18,6 +18,7 @@ use App\Models\StoryRating;
 use App\Models\PlayHistory;
 use App\Models\User;
 use App\Models\Character;
+use App\Models\Sponsor;
 
 class Story extends Model
 {
@@ -44,6 +45,7 @@ class Story extends Model
         'image_url',
         'cover_image_url',
         'category_id',
+        'sponsor_id',
         'director_id',
         'author_id',
         'narrator_id',
@@ -228,6 +230,11 @@ class Story extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function sponsor()
+    {
+        return $this->belongsTo(Sponsor::class);
     }
 
     /**

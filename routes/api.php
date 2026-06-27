@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\TeacherController;
 use App\Http\Controllers\Api\InfluencerController;
 use App\Http\Controllers\Api\SchoolController;
 use App\Http\Controllers\Api\CorporateController;
+use App\Http\Controllers\Api\SponsorController as PublicSponsorController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\HomeController;
 use App\Http\Controllers\Api\SearchHistoryController;
@@ -85,6 +86,8 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('stories/recommendations', [StoryController::class, 'recommendations'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/{story}', [StoryController::class, 'show'])->middleware('cache.api:180'); // 3 minutes
     Route::get('stories/{story}/episodes', [StoryController::class, 'episodes'])->middleware('cache.api:180'); // 3 minutes
+
+    Route::get('sponsors/{sponsor}', [PublicSponsorController::class, 'show'])->middleware('cache.api:180');
 
     /** Web app advanced search (no auth; same handler as authenticated mobile route). */
     Route::get('search/stories', [\App\Http\Controllers\Api\SearchController::class, 'searchStories'])->middleware('cache.api:60');
@@ -1073,6 +1076,18 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::delete('/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'apiDestroy']);
     });
 
+    // Sponsor Management API (static paths before /{sponsor})
+    Route::prefix('sponsors')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SponsorController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\SponsorController::class, 'apiStore']);
+        Route::get('/{sponsor}', [\App\Http\Controllers\Admin\SponsorController::class, 'apiShow']);
+        Route::put('/{sponsor}', [\App\Http\Controllers\Admin\SponsorController::class, 'apiUpdate']);
+        Route::patch('/{sponsor}', [\App\Http\Controllers\Admin\SponsorController::class, 'apiUpdate']);
+        Route::delete('/{sponsor}', [\App\Http\Controllers\Admin\SponsorController::class, 'apiDestroy']);
+        Route::post('/{sponsor}/logo', [\App\Http\Controllers\Admin\SponsorController::class, 'apiReplaceLogo']);
+        Route::get('/{sponsor}/stories', [\App\Http\Controllers\Admin\SponsorController::class, 'apiStories']);
+    });
+
     // SMS overview + management API
     Route::prefix('sms')->group(function () {
         Route::get('/overview/statistics/data', [\App\Http\Controllers\Admin\SmsOverviewController::class, 'apiStatistics']);
@@ -1384,6 +1399,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryController::class, 'apiBulkAction']);
             Route::get('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiShow']);
             Route::put('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdate']);
+            Route::put('/{story}/sponsor', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdateSponsor']);
             Route::delete('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiDestroy']);
             Route::post('/{story}/publish', [\App\Http\Controllers\Admin\StoryController::class, 'apiPublish']);
             Route::post('/{story}/duplicate', [\App\Http\Controllers\Admin\StoryController::class, 'apiDuplicate']);

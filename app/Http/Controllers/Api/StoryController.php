@@ -129,14 +129,14 @@ class StoryController extends Controller
         // Only load episodes that have at least one timeline
         // Note: people is not loaded and will be set to empty array in response
         if ($user && ($user->isAdmin() || $user->isSuperAdmin() || $user->isVoiceActor())) {
-            $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
+            $story->load(['category', 'sponsor', 'director', 'author', 'narrator', 'episodes' => function($query) {
                 $query->whereHas('imageTimelines')
                     ->with(['imageTimelines' => function ($q) {
                         $q->orderBy('image_order');
                     }]);
             }, 'characters.voiceActor']);
         } else {
-            $story->load(['category', 'director', 'author', 'narrator', 'episodes' => function($query) {
+            $story->load(['category', 'sponsor', 'director', 'author', 'narrator', 'episodes' => function($query) {
                 $query->published()->whereHas('imageTimelines')
                     ->with(['imageTimelines' => function ($q) {
                         $q->orderBy('image_order');
@@ -192,6 +192,10 @@ class StoryController extends Controller
         // Prepare story data with empty people
         $storyData = $story->toArray();
         $storyData['people'] = [];
+        $storyData['sponsor'] = ($story->sponsor && $story->sponsor->is_active)
+            ? $story->sponsor->toStorySummary()
+            : null;
+        unset($storyData['sponsor_id']);
 
         // Update accessible episodes to use story narrator and empty people
         $accessibleEpisodesData = [];
