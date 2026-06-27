@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,8 +47,8 @@ class AdminMiddleware
             abort(403, 'دسترسی غیرمجاز');
         }
 
-        // Check if admin account is active
-        if ($user->status !== 'active') {
+        // Check if admin account may access the panel (active or profile onboarding)
+        if (! in_array($user->status, User::loginAllowedStatuses(), true)) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,

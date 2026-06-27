@@ -279,9 +279,13 @@ class AuthController extends Controller
         }
 
         if (! $this->adminMayLogin($user)) {
+            $message = ! in_array($user->status, User::loginAllowedStatuses(), true)
+                ? 'حساب کاربری شما غیرفعال است'
+                : 'دسترسی پنل مدیریت برای این حساب مجاز نیست';
+
             return response()->json([
                 'success' => false,
-                'message' => 'حساب کاربری شما غیرفعال است'
+                'message' => $message,
             ], 403);
         }
 
