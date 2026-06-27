@@ -12,6 +12,7 @@ use App\Models\PlayHistory;
 use App\Models\Favorite;
 use App\Models\Rating;
 use App\Models\Permission;
+use App\Models\Role;
 use App\Services\InAppNotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -467,6 +468,7 @@ class UserController extends Controller
 
                         case 'change_role':
                             $user->update(['role' => $request->role]);
+                            $user->update2FARequirement();
                             break;
 
                         case 'send_notification':
@@ -915,9 +917,9 @@ class UserController extends Controller
 
     public function apiShow(User $user)
     {
-        $user->load(['profiles', 'activeSubscription', 'subscriptions', 'payments', 'playHistories', 'favorites', 'ratings']);
+        $user->load(['profiles', 'activeSubscription', 'subscriptions', 'payments', 'playHistories', 'favorites', 'ratings', 'roles.permissions', 'directPermissions']);
 
-        return AdminApiResponse::success($user);
+        return AdminApiResponse::success($this->formatUserForApi($user));
     }
 
     public function apiUpdate(Request $request, User $user)
@@ -934,20 +936,39 @@ class UserController extends Controller
             'status' => 'required|in:active,inactive,suspended,pending',
             'language' => 'nullable|string|max:10',
             'timezone' => 'nullable|string|max:50',
+            'role_ids' => 'nullable|array',
+            'role_ids.*' => 'integer|exists:roles,id',
+            'direct_permission_ids' => 'nullable|array',
+            'direct_permission_ids.*' => 'integer|exists:permissions,id',
         ]);
 
-        $data = $request->except(['password_confirmation']);
-        
+        $data = $request->except(['password_confirmation', 'role_ids', 'direct_permission_ids']);
+
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
         } else {
             unset($data['password']);
         }
 
+        $previousRole = $user->role;
         $user->update($data);
 
+        if ($request->has('role_ids')) {
+            $user->syncRoles($request->input('role_ids', []));
+        }
+
+        if ($request->has('direct_permission_ids')) {
+            $user->directPermissions()->sync($request->input('direct_permission_ids', []));
+        }
+
+        if ($previousRole !== $user->role || $request->has('role_ids')) {
+            $user->update2FARequirement();
+        }
+
+        $user->load(['profiles', 'activeSubscription', 'roles.permissions', 'directPermissions']);
+
         return AdminApiResponse::success(
-            $user->load(['profiles', 'activeSubscription']),
+            $this->formatUserForApi($user),
             'کاربر با موفقیت به‌روزرسانی شد.'
         );
     }
@@ -1005,7 +1026,7 @@ class UserController extends Controller
             'selected_items' => 'nullable|array',
             'selected_items.*' => 'integer|exists:users,id',
             'status' => 'required_if:action,change_status|string|in:active,inactive,suspended,pending',
-            'role' => 'required_if:action,change_role|string|in:parent,child,admin,basic,voice_actor',
+            'role' => 'required_if:action,change_role|string|in:parent,child,admin,basic,voice_actor,super_admin',
             'notification_title' => 'required_if:action,send_notification|string|max:255',
             'notification_message' => 'required_if:action,send_notification|string|max:1000',
             'notification_type' => 'required_if:action,send_notification|string|in:info,success,warning,error',
@@ -1061,6 +1082,7 @@ class UserController extends Controller
 
                         case 'change_role':
                             $user->update(['role' => $request->role]);
+                            $user->update2FARequirement();
                             break;
 
                         case 'send_notification':
@@ -1250,5 +1272,41 @@ class UserController extends Controller
         $raw = (int) $request->input('perPage', $request->input('per_page', 20));
 
         return min(100, max(1, $raw ?: 20));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatUserForApi(User $user): array
+    {
+        $user->loadMissing(['roles.permissions', 'directPermissions']);
+
+        $data = $user->toArray();
+        $data['role_ids'] = $user->roles->pluck('id')->values()->all();
+        $data['direct_permission_ids'] = $user->directPermissions->pluck('id')->values()->all();
+        $data['assigned_roles'] = $user->roles->map(static fn (Role $role) => [
+            'id' => $role->id,
+            'name' => $role->name,
+            'display_name' => $role->display_name,
+        ])->values()->all();
+        $data['direct_permissions'] = $user->directPermissions->map(static fn (Permission $permission) => [
+            'id' => $permission->id,
+            'name' => $permission->name,
+            'display_name' => $permission->display_name,
+            'group' => $permission->group,
+        ])->values()->all();
+
+        $rolePermissionNames = $user->roles
+            ->flatMap(static fn (Role $role) => $role->permissions->pluck('name'))
+            ->unique()
+            ->values();
+
+        $data['effective_permissions'] = $rolePermissionNames
+            ->merge($user->directPermissions->pluck('name'))
+            ->unique()
+            ->values()
+            ->all();
+
+        return $data;
     }
 }

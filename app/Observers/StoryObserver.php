@@ -20,12 +20,14 @@ class StoryObserver
      */
     public function updated(Story $story): void
     {
-        // Check if category_id or status changed
-        if ($story->isDirty(['category_id', 'status'])) {
+        if ($story->wasChanged('status')) {
+            app(\App\Services\StoryEpisodeStatusService::class)->cascadeEpisodesFromStory($story);
+        }
+
+        if ($story->wasChanged(['category_id', 'status'])) {
             $this->updateCategoryStatistics($story);
-            
-            // If category changed, update the old category too
-            if ($story->isDirty('category_id')) {
+
+            if ($story->wasChanged('category_id')) {
                 $oldCategoryId = $story->getOriginal('category_id');
                 if ($oldCategoryId) {
                     $this->updateCategoryStatisticsById($oldCategoryId);

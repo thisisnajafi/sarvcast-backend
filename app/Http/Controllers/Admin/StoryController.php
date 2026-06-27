@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Episode;
 use App\Services\InAppNotificationService;
 use App\Services\NotificationService;
+use App\Services\StoryEpisodeStatusService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -1086,9 +1087,21 @@ class StoryController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        $story->update($this->prepareApiStoryAttributes($validated, $story));
+        $statusService = app(StoryEpisodeStatusService::class);
 
-        return AdminApiResponse::success($story->fresh()->load('category'), 'Story updated successfully');
+        if (array_key_exists('status', $validated)) {
+            $newStatus = $validated['status'];
+            unset($validated['status']);
+            $attributes = $this->prepareApiStoryAttributes($validated, $story);
+            if ($attributes !== []) {
+                $story->update($attributes);
+            }
+            $statusService->applyStoryStatus($story->fresh(), $newStatus);
+        } else {
+            $story->update($this->prepareApiStoryAttributes($validated, $story));
+        }
+
+        return AdminApiResponse::success($story->fresh()->load(['category', 'episodes']), 'Story updated successfully');
     }
 
     private function normalizeApiStoryCoverInput(Request $request): void
@@ -1151,7 +1164,8 @@ class StoryController extends Controller
     public function apiBulkAction(Request $request)
     {
         $validated = $request->validate([
-            'action' => 'required|in:delete,publish,archive',
+            'action' => 'required|in:delete,publish,archive,draft,unpublish,change_status',
+            'status' => 'required_if:action,change_status|in:draft,published,archived',
             'story_ids' => 'nullable|array',
             'story_ids.*' => 'integer|exists:stories,id',
             'selected_items' => 'nullable|array',
@@ -1167,20 +1181,30 @@ class StoryController extends Controller
             ], 422);
         }
 
-        $stories = Story::whereIn('id', $ids);
+        $stories = Story::whereIn('id', $ids)->get();
+        $statusService = app(StoryEpisodeStatusService::class);
 
         switch ($validated['action']) {
             case 'delete':
-                $stories->delete();
+                Story::whereIn('id', $ids)->delete();
                 $message = 'Stories deleted successfully';
                 break;
             case 'publish':
-                $stories->update(['status' => 'published', 'published_at' => now()]);
+                $statusService->bulkApplyStoryStatus($stories, 'published');
                 $message = 'Stories published successfully';
                 break;
-            default:
-                $stories->update(['status' => 'archived']);
+            case 'archive':
+                $statusService->bulkApplyStoryStatus($stories, 'archived');
                 $message = 'Stories archived successfully';
+                break;
+            case 'draft':
+            case 'unpublish':
+                $statusService->bulkApplyStoryStatus($stories, 'draft');
+                $message = 'Stories moved to draft successfully';
+                break;
+            default:
+                $statusService->bulkApplyStoryStatus($stories, $validated['status']);
+                $message = 'Story status updated successfully';
                 break;
         }
 
@@ -1190,10 +1214,7 @@ class StoryController extends Controller
     public function apiPublish(Story $story)
     {
         try {
-            $story->update([
-                'status' => 'published',
-                'published_at' => now(),
-            ]);
+            app(StoryEpisodeStatusService::class)->applyStoryStatus($story, 'published');
 
             return AdminApiResponse::success($story->fresh(['category']), 'Story published successfully');
         } catch (\Exception $e) {

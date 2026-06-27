@@ -13,6 +13,7 @@ use App\Services\NotificationService;
 use App\Services\AudioProcessingService;
 use App\Services\ImageProcessingService;
 use App\Services\MediaLibraryService;
+use App\Services\StoryEpisodeStatusService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -1253,7 +1254,19 @@ class EpisodeController extends BaseController
             'tags.*' => 'string|max:50',
         ]);
 
-        $episode->update($this->prepareApiEpisodeAttributes($validated, $episode));
+        $statusService = app(StoryEpisodeStatusService::class);
+
+        if (array_key_exists('status', $validated)) {
+            $newStatus = $validated['status'];
+            unset($validated['status']);
+            $attributes = $this->prepareApiEpisodeAttributes($validated, $episode);
+            if ($attributes !== []) {
+                $episode->update($attributes);
+            }
+            $statusService->applyEpisodeStatus($episode->fresh()->loadMissing('story'), $newStatus);
+        } else {
+            $episode->update($this->prepareApiEpisodeAttributes($validated, $episode));
+        }
 
         if (array_key_exists('audio_file_url', $validated)) {
             app(MediaLibraryService::class)->syncUsageFor($episode, 'audio_url', $validated['audio_file_url'] ?: null);
@@ -1272,7 +1285,8 @@ class EpisodeController extends BaseController
     public function apiBulkAction(Request $request)
     {
         $validated = $request->validate([
-            'action' => 'required|in:delete,publish,archive',
+            'action' => 'required|in:delete,publish,archive,draft,unpublish,change_status',
+            'status' => 'required_if:action,change_status|in:draft,published,archived',
             'episode_ids' => 'nullable|array',
             'episode_ids.*' => 'integer|exists:episodes,id',
             'selected_items' => 'nullable|array',
@@ -1288,20 +1302,30 @@ class EpisodeController extends BaseController
             ], 422);
         }
 
-        $episodes = Episode::whereIn('id', $ids);
+        $episodes = Episode::with('story')->whereIn('id', $ids)->get();
+        $statusService = app(StoryEpisodeStatusService::class);
 
         switch ($validated['action']) {
             case 'delete':
-                $episodes->delete();
+                Episode::whereIn('id', $ids)->delete();
                 $message = 'Episodes deleted successfully';
                 break;
             case 'publish':
-                $episodes->update(['status' => 'published', 'published_at' => now()]);
+                $statusService->bulkApplyEpisodeStatus($episodes, 'published');
                 $message = 'Episodes published successfully';
                 break;
-            default:
-                $episodes->update(['status' => 'archived']);
+            case 'archive':
+                $statusService->bulkApplyEpisodeStatus($episodes, 'archived');
                 $message = 'Episodes archived successfully';
+                break;
+            case 'draft':
+            case 'unpublish':
+                $statusService->bulkApplyEpisodeStatus($episodes, 'draft');
+                $message = 'Episodes moved to draft successfully';
+                break;
+            default:
+                $statusService->bulkApplyEpisodeStatus($episodes, $validated['status']);
+                $message = 'Episode status updated successfully';
                 break;
         }
 
@@ -1311,10 +1335,7 @@ class EpisodeController extends BaseController
     public function apiPublish(Episode $episode)
     {
         try {
-            $episode->update([
-                'status' => 'published',
-                'release_date' => now(),
-            ]);
+            app(StoryEpisodeStatusService::class)->applyEpisodeStatus($episode->loadMissing('story'), 'published');
 
             return AdminApiResponse::success($episode->fresh(['story']), 'Episode published successfully');
         } catch (\Exception $e) {
