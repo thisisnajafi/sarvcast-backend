@@ -3,11 +3,16 @@
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasColumn('users', 'onboarding_completed')) {
+            return;
+        }
+
         DB::table('users')
             ->where('status', User::STATUS_ACTIVE)
             ->where(function ($query) {
@@ -19,6 +24,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasColumn('users', 'onboarding_completed')) {
+            return;
+        }
+
         DB::table('users')
             ->where('status', User::STATUS_PROFILE_COMPLETION_NEEDED)
             ->update(['status' => User::STATUS_ACTIVE]);

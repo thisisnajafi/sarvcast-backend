@@ -64,6 +64,9 @@ jobs:
 
       - name: Verify migration files are present in deploy bundle
         run: |
+          test -f database/migrations/2026_06_27_100000_add_onboarding_fields_to_users_table.php
+          test -f database/migrations/2026_06_27_100001_set_profile_completion_needed_for_incomplete_users.php
+          test -f database/migrations/2026_06_27_100002_create_search_histories_table.php
           test -f database/migrations/2026_06_27_120000_create_sponsors_table.php
           test -f database/migrations/2026_06_27_120001_add_sponsor_id_to_stories_table.php
           test -f database/migrations/2026_06_29_100000_create_activity_logs_table.php

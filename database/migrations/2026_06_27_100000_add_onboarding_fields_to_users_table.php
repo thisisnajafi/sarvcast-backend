@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'onboarding_completed')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->string('name', 100)->nullable()->after('last_name');
             $table->enum('gender', ['male', 'female', 'unspecified'])->nullable()->after('name');
@@ -21,6 +25,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasColumn('users', 'onboarding_completed')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn([
                 'name',
