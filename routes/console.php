@@ -40,3 +40,10 @@ Schedule::command('activity-logs:prune')
     ->name('prune-activity-logs')
     ->description('Delete expired activity log rows by channel retention')
     ->appendOutputTo(storage_path('logs/scheduler.log'));
+
+// Poll Melipayamak delivery status for sent SMS logs
+Schedule::command('sms:poll-deliveries')
+    ->everyTenMinutes()
+    ->name('poll-sms-deliveries')
+    ->description('Update SMS log delivery status from Melipayamak')
+    ->appendOutputTo(storage_path('logs/scheduler.log'));

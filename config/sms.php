@@ -148,4 +148,34 @@ return [
         'track_templates' => env('SMS_TRACK_TEMPLATES', true),
         'track_delivery' => env('SMS_TRACK_DELIVERY', true),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS Campaign Settings
+    |--------------------------------------------------------------------------
+    */
+
+    'campaign' => [
+        'queue' => env('SMS_CAMPAIGN_QUEUE', 'sms'),
+        'max_recipients' => (int) env('SMS_CAMPAIGN_MAX_RECIPIENTS', 10000),
+        'daily_dispatch_limit' => (int) env('SMS_CAMPAIGN_DAILY_LIMIT', 3),
+        'send_delay_ms' => (int) env('SMS_CAMPAIGN_SEND_DELAY_MS', 200),
+        'chunk_size' => (int) env('SMS_CAMPAIGN_CHUNK_SIZE', 50),
+        'preview_sample_size' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS Delivery Polling (Melipayamak GetDeliveries2)
+    |--------------------------------------------------------------------------
+    */
+
+    'delivery' => [
+        'polling_enabled' => env('SMS_DELIVERY_POLLING_ENABLED', true),
+        'initial_delay_seconds' => (int) env('SMS_DELIVERY_INITIAL_DELAY_SECONDS', 60),
+        'max_age_hours' => (int) env('SMS_DELIVERY_MAX_AGE_HOURS', 48),
+        'batch_size' => (int) env('SMS_DELIVERY_BATCH_SIZE', 100),
+        'job_tries' => (int) env('SMS_DELIVERY_JOB_TRIES', 5),
+        'job_backoff_seconds' => (int) env('SMS_DELIVERY_JOB_BACKOFF_SECONDS', 120),
+    ],
 ];

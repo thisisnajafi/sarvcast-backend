@@ -1056,6 +1056,40 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::delete('/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'apiDestroy']);
     });
 
+    // SMS overview + management API
+    Route::prefix('sms')->group(function () {
+        Route::get('/overview/statistics/data', [\App\Http\Controllers\Admin\SmsOverviewController::class, 'apiStatistics']);
+    });
+
+    // SMS Template Management API
+    Route::prefix('sms-templates')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiStore']);
+        Route::get('/export', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiExport']);
+        Route::get('/statistics/data', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiStatistics']);
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiBulkAction']);
+        Route::get('/{smsTemplate}', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiShow']);
+        Route::put('/{smsTemplate}', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiUpdate']);
+        Route::delete('/{smsTemplate}', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiDestroy']);
+        Route::post('/{smsTemplate}/test-send', [\App\Http\Controllers\Admin\SmsTemplateController::class, 'apiTestSend']);
+    });
+
+    // SMS Campaign Management API
+    Route::prefix('sms-campaigns')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiStore']);
+        Route::get('/export', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiExport']);
+        Route::get('/statistics/data', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiStatistics']);
+        Route::get('/{smsCampaign}/recipients/export', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiExportRecipients']);
+        Route::get('/{smsCampaign}/recipients', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiRecipients']);
+        Route::post('/{smsCampaign}/preview', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiPreview']);
+        Route::post('/{smsCampaign}/dispatch', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiDispatch']);
+        Route::post('/{smsCampaign}/cancel', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiCancel']);
+        Route::get('/{smsCampaign}', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiShow']);
+        Route::put('/{smsCampaign}', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiUpdate']);
+        Route::delete('/{smsCampaign}', [\App\Http\Controllers\Admin\SmsCampaignController::class, 'apiDestroy']);
+    });
+
         // User Management API
         // User Management API (static paths before /{user})
         Route::prefix('users')->group(function () {

@@ -57,6 +57,18 @@ class ApiAdminPermissionMiddleware
             return 'bulk';
         }
 
+        if (str_contains($path, '/test-send')) {
+            return 'send_test';
+        }
+
+        if (str_contains($path, '/preview')) {
+            return 'read';
+        }
+
+        if (str_contains($path, '/dispatch') || str_contains($path, '/cancel')) {
+            return 'send';
+        }
+
         if (str_contains($path, '/export') || str_contains($path, '/download')) {
             return 'export';
         }

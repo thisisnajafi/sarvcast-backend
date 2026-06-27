@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
 
@@ -12,8 +13,11 @@ class SmsLog extends Model
 
     protected $fillable = [
         'phone_number',
+        'user_id',
         'message',
         'template_key',
+        'sms_template_id',
+        'sms_campaign_id',
         'variables',
         'provider',
         'status',
@@ -22,7 +26,7 @@ class SmsLog extends Model
         'error_code',
         'sent_at',
         'delivered_at',
-        'response_data'
+        'response_data',
     ];
 
     protected $casts = [
@@ -33,6 +37,21 @@ class SmsLog extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function smsTemplate(): BelongsTo
+    {
+        return $this->belongsTo(SmsTemplate::class);
+    }
+
+    public function smsCampaign(): BelongsTo
+    {
+        return $this->belongsTo(SmsCampaign::class);
+    }
 
     /**
      * Scope to get sent SMS

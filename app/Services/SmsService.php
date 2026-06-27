@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Melipayamak\MelipayamakApi;
+use App\Models\SmsLog;
+use App\Models\SmsTemplate;
 
 class SmsService
 {
@@ -106,14 +108,14 @@ class SmsService
      * Send SMS using Melipayamk service with template
      * Based on: https://github.com/Melipayamak/melipayamak-php
      */
-    public function sendSmsWithTemplate(string $to, int $templateId, array $parameters = []): array
+    public function sendSmsWithTemplate(string $to, int $templateId, array $parameters = [], array $logContext = []): array
     {
         // Use procedural PHP method as primary (it works!)
         try {
             $text = implode(';', $parameters);
             $proceduralResult = $this->sendSmsWithProceduralPhp($to, $templateId, $text);
             if ($proceduralResult['success']) {
-                return $proceduralResult;
+                return $this->finalizeTemplateResult($to, $templateId, $parameters, $proceduralResult, $logContext);
             }
         } catch (\Exception $proceduralError) {
             Log::error('Procedural PHP method failed in sendSmsWithTemplate', [
@@ -164,11 +166,11 @@ class SmsService
                 'message_id' => $json->Value ?? null
             ]);
 
-            return [
+            return $this->finalizeTemplateResult($to, $templateId, $parameters, [
                 'success' => isset($json->RetStatus) && $json->RetStatus == 1,
                 'response' => $json,
                 'message_id' => $json->Value ?? $json->StrRetStatus ?? null
-            ];
+            ], $logContext);
 
         } catch (\Exception $e) {
             // Prepare sending data for error logging
@@ -189,11 +191,78 @@ class SmsService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return [
+            return $this->finalizeTemplateResult($to, $templateId, $parameters, [
                 'success' => false,
                 'error' => $e->getMessage()
-            ];
+            ], $logContext);
         }
+    }
+
+    /**
+     * Persist an SMS send attempt when logging context is provided.
+     *
+     * @param  array<string, mixed>  $sendResult
+     * @param  array<string, mixed>  $context
+     */
+    public function writeSmsLog(string $phoneNumber, array $sendResult, array $context = []): ?SmsLog
+    {
+        if (! config('sms.logging.enabled', true)) {
+            return null;
+        }
+
+        if ($context === [] && ! config('sms.logging.log_all', false)) {
+            return null;
+        }
+
+        $success = (bool) ($sendResult['success'] ?? false);
+
+        return SmsLog::create([
+            'phone_number' => $phoneNumber,
+            'user_id' => $context['user_id'] ?? null,
+            'message' => $context['message'] ?? ($context['preview_text'] ?? ''),
+            'template_key' => $context['template_key'] ?? null,
+            'sms_template_id' => $context['sms_template_id'] ?? null,
+            'sms_campaign_id' => $context['sms_campaign_id'] ?? null,
+            'variables' => $context['variables'] ?? null,
+            'provider' => $context['provider'] ?? 'melipayamak',
+            'status' => $success ? 'sent' : 'failed',
+            'message_id' => $sendResult['message_id'] ?? null,
+            'error_message' => $sendResult['error'] ?? null,
+            'response_data' => isset($sendResult['response'])
+                ? (array) json_decode(json_encode($sendResult['response']), true)
+                : null,
+            'sent_at' => $success ? now() : null,
+        ]);
+    }
+
+    /**
+     * @param  array<int, string>  $parameters
+     * @param  array<string, mixed>  $result
+     * @param  array<string, mixed>  $logContext
+     * @return array<string, mixed>
+     */
+    private function finalizeTemplateResult(
+        string $to,
+        int $templateId,
+        array $parameters,
+        array $result,
+        array $logContext
+    ): array {
+        if ($logContext !== []) {
+            $log = $this->writeSmsLog($to, $result, array_merge($logContext, [
+                'variables' => $parameters,
+            ]));
+
+            if ($log) {
+                $result['sms_log_id'] = $log->id;
+
+                if ($result['success'] ?? false) {
+                    $this->scheduleDeliveryPoll($log->id);
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -240,7 +309,7 @@ class SmsService
      */
     private function sendOtpWithTemplate(string $phoneNumber, string $otpCode, string $purpose): array
     {
-        $templateId = config('services.melipayamk.templates.verification', 372382);
+        $templateId = $this->resolveVerificationTemplateId();
 
         // Use procedural PHP method as primary (it works!)
         try {
@@ -568,5 +637,142 @@ class SmsService
                 'method' => 'procedural_php'
             ];
         }
+    }
+
+    public function resolveVerificationTemplateId(): int
+    {
+        $template = SmsTemplate::query()
+            ->where('slug', 'verification-otp')
+            ->where('is_active', true)
+            ->first();
+
+        if ($template) {
+            return (int) $template->melipayamak_body_id;
+        }
+
+        return (int) config('services.melipayamk.templates.verification', 372382);
+    }
+
+    /**
+     * @return array{success: bool, delivered: bool, status: int|null, response: mixed, error?: string}
+     */
+    public function checkDeliveryStatus(string|int $recId): array
+    {
+        try {
+            $data = [
+                'username' => $this->username,
+                'password' => $this->apiToken,
+                'recId' => (string) $recId,
+            ];
+
+            $handle = curl_init('https://rest.payamak-panel.com/api/SendSMS/GetDeliveries2');
+            curl_setopt($handle, CURLOPT_HTTPHEADER, ['content-type: application/x-www-form-urlencoded']);
+            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($handle, CURLOPT_POST, true);
+            curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($data));
+            curl_setopt($handle, CURLOPT_TIMEOUT, 20);
+            curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 10);
+
+            $response = curl_exec($handle);
+            $curlError = curl_error($handle);
+            curl_close($handle);
+
+            if ($curlError) {
+                throw new \RuntimeException($curlError);
+            }
+
+            $json = json_decode($response ?? '');
+            $status = isset($json->Value) ? (int) $json->Value : null;
+            $delivered = $status === 1;
+
+            return [
+                'success' => true,
+                'delivered' => $delivered,
+                'status' => $status,
+                'response' => $json,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('SMS delivery status check failed', [
+                'rec_id' => $recId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'delivered' => false,
+                'status' => null,
+                'response' => null,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    public function pollSmsLogDelivery(SmsLog $log): bool
+    {
+        if ($log->status === 'delivered' || empty($log->message_id)) {
+            return true;
+        }
+
+        $result = $this->checkDeliveryStatus($log->message_id);
+
+        if (! ($result['success'] ?? false)) {
+            return false;
+        }
+
+        if ($result['delivered'] ?? false) {
+            $log->update([
+                'status' => 'delivered',
+                'delivered_at' => now(),
+                'response_data' => array_merge($log->response_data ?? [], [
+                    'delivery_poll' => json_decode(json_encode($result['response']), true),
+                ]),
+            ]);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function pollPendingDeliveries(?int $limit = null): int
+    {
+        if (! config('sms.delivery.polling_enabled', true)) {
+            return 0;
+        }
+
+        $limit = $limit ?? (int) config('sms.delivery.batch_size', 100);
+        $maxAgeHours = (int) config('sms.delivery.max_age_hours', 48);
+
+        $logs = SmsLog::query()
+            ->where('status', 'sent')
+            ->whereNotNull('message_id')
+            ->whereNull('delivered_at')
+            ->where('sent_at', '>=', now()->subHours($maxAgeHours))
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
+
+        $deliveredCount = 0;
+
+        foreach ($logs as $log) {
+            if ($this->pollSmsLogDelivery($log)) {
+                $deliveredCount++;
+            }
+        }
+
+        return $deliveredCount;
+    }
+
+    public function scheduleDeliveryPoll(?int $smsLogId): void
+    {
+        if (! $smsLogId || ! config('sms.delivery.polling_enabled', true)) {
+            return;
+        }
+
+        \App\Jobs\PollSmsLogDeliveryJob::dispatch($smsLogId)
+            ->delay(now()->addSeconds((int) config('sms.delivery.initial_delay_seconds', 60)))
+            ->onQueue(config('sms.campaign.queue', 'sms'));
     }
 }
