@@ -13,6 +13,8 @@ return new class extends Migration
             return;
         }
 
+        $this->ensureProfileCompletionStatusEnum();
+
         DB::table('users')
             ->where('status', User::STATUS_ACTIVE)
             ->where(function ($query) {
@@ -31,5 +33,33 @@ return new class extends Migration
         DB::table('users')
             ->where('status', User::STATUS_PROFILE_COMPLETION_NEEDED)
             ->update(['status' => User::STATUS_ACTIVE]);
+
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement(
+                "ALTER TABLE `users` MODIFY COLUMN `status` ENUM(
+                    'active',
+                    'inactive',
+                    'suspended',
+                    'pending'
+                ) NOT NULL DEFAULT 'pending'"
+            );
+        }
+    }
+
+    private function ensureProfileCompletionStatusEnum(): void
+    {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
+        DB::statement(
+            "ALTER TABLE `users` MODIFY COLUMN `status` ENUM(
+                'active',
+                'inactive',
+                'suspended',
+                'pending',
+                'profile_completion_needed'
+            ) NOT NULL DEFAULT 'pending'"
+        );
     }
 };
