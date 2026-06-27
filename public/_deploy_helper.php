@@ -86,6 +86,7 @@ $dirs = [
     'storage/app/public/images',
     'storage/app/public/images/stories',
     'storage/app/public/images/categories',
+    'storage/app/public/sponsors/logos',
     'storage/app/public/images/episodes',
     'storage/app/public/media',
     'storage/framework/cache',

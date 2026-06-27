@@ -14,7 +14,7 @@ env:
   FTP_SERVER: "ftp.sarvcast.ir"
   FTP_USERNAME: "my@sarvcast.ir"
   FTP_PASSWORD: "Prof48017421@#"
-  SITE_URL: "https://my.manji.ir"
+  SITE_URL: "https://my.sarvcast.ir"
   DEPLOY_TOKEN: "manji-ftp-deploy-x7k9m2"
   TELEGRAM_BOT_TOKEN: "7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc"
   TELEGRAM_CHAT_ID: "-1002796302613_97"
@@ -64,6 +64,8 @@ jobs:
 
       - name: Verify migration files are present in deploy bundle
         run: |
+          test -f database/migrations/2026_06_27_120000_create_sponsors_table.php
+          test -f database/migrations/2026_06_27_120001_add_sponsor_id_to_stories_table.php
           test -f database/migrations/2026_06_29_100000_create_activity_logs_table.php
           test -f database/migrations/2026_06_29_110000_add_event_uuid_to_activity_logs_table.php
           test -f database/migrations/2026_06_30_100000_add_archived_status_to_episodes_table.php
@@ -99,9 +101,18 @@ jobs:
           echo "::group::php artisan migrate --force (via deploy helper)"
           echo "Post-deploy on server: extract vendor.zip, php artisan migrate --force, RolePermissionSeeder, cache rebuild"
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
+          set +e
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 600 --connect-timeout 15)
+            --max-time 600 --connect-timeout 30)
+          CURL_EXIT=$?
+          set -e
+
+          if [[ "$CURL_EXIT" -ne 0 ]]; then
+            echo "::error::Could not reach deploy helper at ${{ env.SITE_URL }} (curl exit ${CURL_EXIT}). Check DNS/SSL for the server URL used in CI."
+            echo "::endgroup::"
+            exit 1
+          fi
 
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')

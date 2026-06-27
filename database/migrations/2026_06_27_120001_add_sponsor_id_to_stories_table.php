@@ -8,19 +8,29 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('sponsors') || ! Schema::hasTable('stories')) {
+            return;
+        }
+
+        if (Schema::hasColumn('stories', 'sponsor_id')) {
+            return;
+        }
+
         Schema::table('stories', function (Blueprint $table) {
-            $table->foreignUuid('sponsor_id')
-                ->nullable()
-                ->after('category_id')
-                ->constrained('sponsors')
-                ->nullOnDelete();
+            $table->uuid('sponsor_id')->nullable()->after('category_id');
+            $table->foreign('sponsor_id')->references('id')->on('sponsors')->nullOnDelete();
         });
     }
 
     public function down(): void
     {
+        if (! Schema::hasTable('stories') || ! Schema::hasColumn('stories', 'sponsor_id')) {
+            return;
+        }
+
         Schema::table('stories', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('sponsor_id');
+            $table->dropForeign(['sponsor_id']);
+            $table->dropColumn('sponsor_id');
         });
     }
 };
