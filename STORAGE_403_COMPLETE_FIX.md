@@ -1,7 +1,7 @@
 # Storage 403 Error - Complete Fix Guide
 
 ## Problem Analysis
-Images are saved correctly but return 403 error when accessing `https://my.sarvcast.ir/storage/...`
+Images are saved correctly but return 403 error when accessing `https://my.manji.ir/storage/...`
 
 ## Root Cause
 The web server is not properly configured to serve files from the `public/storage` directory.
@@ -44,7 +44,7 @@ Add this to your Apache virtual host:
 
 ```apache
 <VirtualHost *:80>
-    ServerName my.sarvcast.ir
+    ServerName my.manji.ir
     DocumentRoot /path/to/your/project/public
     
     # Allow direct access to storage files
@@ -77,7 +77,7 @@ Add this to your Nginx server block:
 ```nginx
 server {
     listen 80;
-    server_name my.sarvcast.ir;
+    server_name my.manji.ir;
     root /path/to/your/project/public;
     index index.php;
 
@@ -128,7 +128,7 @@ php artisan storage:link
 ## Testing
 
 1. Upload a test image through the admin panel
-2. Check the direct URL: `https://my.sarvcast.ir/storage/categories/filename.webp`
+2. Check the direct URL: `https://my.manji.ir/storage/categories/filename.webp`
 3. Verify the image displays correctly
 
 ## What's Working

@@ -4,7 +4,7 @@
 
 ### Step 1: Get Service Account JSON
 
-1. Go to: https://console.firebase.google.com/project/sarvcast-20d5c/settings/serviceaccounts/adminsdk
+1. Go to: https://console.firebase.google.com/project/manji-20d5c/settings/serviceaccounts/adminsdk
 2. Click **"Generate new private key"**
 3. Click **"Generate Key"**
 4. Save the downloaded JSON file
@@ -18,17 +18,17 @@ storage/app/firebase-service-account.json
 
 ### Step 3: Update .env
 
-Add to `sarvcast-laravel/.env`:
+Add to `manji-laravel/.env`:
 
 ```env
-FIREBASE_PROJECT_ID=sarvcast-20d5c
+FIREBASE_PROJECT_ID=manji-20d5c
 FIREBASE_SERVICE_ACCOUNT_PATH=storage/app/firebase-service-account.json
 FIREBASE_USE_V1_API=true
 ```
 
 ### Step 4: Enable FCM API
 
-1. Go to: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=sarvcast-20d5c
+1. Go to: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=manji-20d5c
 2. Click **"Enable"**
 
 ### Step 5: Clear Cache & Test

@@ -1,11 +1,11 @@
-# SarvCast Kids Podcast App - Backend API Documentation
+# Manji Kids Podcast App - Backend API Documentation
 
 ## Overview
-This document outlines the backend API requirements to support the comprehensive UI/UX improvements for the SarvCast kids podcast app.
+This document outlines the backend API requirements to support the comprehensive UI/UX improvements for the Manji kids podcast app.
 
 ## Base URL
 ```
-https://api.sarvcast.com/v1
+https://api.manji.com/v1
 ```
 
 ## Authentication
@@ -499,7 +499,7 @@ This section implements real-time communication for live updates and interactive
 
 ### Real-time Updates
 ```
-ws://api.sarvcast.com/v1/ws/{userId}
+ws://api.manji.com/v1/ws/{userId}
 ```
 
 Events:
@@ -512,7 +512,7 @@ Events:
 ## Database Schema Requirements
 
 **PROMPT FOR BACKEND DEVELOPER:**
-This section defines the complete database schema for the SarvCast application. Design a scalable, normalized database structure that supports all the features implemented in the frontend. Implement proper indexing for performance optimization, especially for user queries and recommendation algorithms. Use JSON fields for flexible data storage where appropriate (user preferences, metadata, etc.). Implement database migrations and versioning for schema updates. Consider implementing read replicas for analytics queries and ensure proper backup and disaster recovery procedures. Use appropriate data types and constraints to maintain data integrity.
+This section defines the complete database schema for the Manji application. Design a scalable, normalized database structure that supports all the features implemented in the frontend. Implement proper indexing for performance optimization, especially for user queries and recommendation algorithms. Use JSON fields for flexible data storage where appropriate (user preferences, metadata, etc.). Implement database migrations and versioning for schema updates. Consider implementing read replicas for analytics queries and ensure proper backup and disaster recovery procedures. Use appropriate data types and constraints to maintain data integrity.
 
 ### Users Table
 ```sql
@@ -605,7 +605,7 @@ This section provides critical implementation guidelines for building a robust, 
 ## Deployment Requirements
 
 **PROMPT FOR BACKEND DEVELOPER:**
-This section outlines the production deployment requirements for the SarvCast backend. Choose technologies that provide high availability, scalability, and security for a children's application. Implement proper CI/CD pipelines for automated testing and deployment. Use containerization for consistent deployment across environments. Implement proper load balancing and auto-scaling for high traffic scenarios. Ensure all services are properly monitored and have health checks. Implement proper backup strategies and disaster recovery procedures. Consider implementing blue-green deployments for zero-downtime updates.
+This section outlines the production deployment requirements for the Manji backend. Choose technologies that provide high availability, scalability, and security for a children's application. Implement proper CI/CD pipelines for automated testing and deployment. Use containerization for consistent deployment across environments. Implement proper load balancing and auto-scaling for high traffic scenarios. Ensure all services are properly monitored and have health checks. Implement proper backup strategies and disaster recovery procedures. Consider implementing blue-green deployments for zero-downtime updates.
 
 - **Server**: Node.js/Express or Python/Django
 - **Database**: PostgreSQL with Redis for caching

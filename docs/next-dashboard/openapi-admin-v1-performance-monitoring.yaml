@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Performance Monitoring (Dashboard)
+  title: Manji Admin API — Performance Monitoring (Dashboard)
   description: Contract for performance alerts & metrics under /api/admin/performance-monitoring
   version: 1.0.0
 

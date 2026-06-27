@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-The Coupon Code Management System is a comprehensive revenue sharing platform that enables SarvCast to distribute unique coupon codes to partners, influencers, teachers, and affiliates. The system automatically calculates and processes commission payments while providing detailed analytics and management capabilities.
+The Coupon Code Management System is a comprehensive revenue sharing platform that enables Manji to distribute unique coupon codes to partners, influencers, teachers, and affiliates. The system automatically calculates and processes commission payments while providing detailed analytics and management capabilities.
 
 ## 🎯 System Architecture
 
@@ -332,10 +332,10 @@ CREATE TABLE commission_payments (
 ## 📞 Contact Information
 
 For technical support or questions about the Coupon Code Management System:
-- **Email**: support@sarvcast.com
+- **Email**: support@manji.com
 - **Phone**: +98-21-1234-5678
-- **Documentation**: https://docs.sarvcast.com/coupon-management
-- **Admin Panel**: https://admin.sarvcast.com/coupons
+- **Documentation**: https://docs.manji.com/coupon-management
+- **Admin Panel**: https://admin.manji.com/coupons
 
 ---
 

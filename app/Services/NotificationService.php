@@ -82,7 +82,7 @@ class NotificationService
                             'priority' => 'high',
                             'notification' => [
                                 'sound' => 'default',
-                                'channel_id' => 'sarvcast_notifications',
+                                'channel_id' => 'manji_notifications',
                                 'icon' => 'ic_notification',
                                 'color' => '#00BCD4',
                             ],
@@ -190,7 +190,7 @@ class NotificationService
             Mail::send($template, $data, function ($message) use ($user, $subject) {
                 $message->to($user->email, $user->first_name . ' ' . $user->last_name)
                         ->subject($subject)
-                        ->from($this->emailFrom, 'سروکست');
+                        ->from($this->emailFrom, 'مانجی');
             });
 
             // Log notification

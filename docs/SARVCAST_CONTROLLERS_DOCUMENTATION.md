@@ -1,7 +1,7 @@
-# SarvCast Controllers Documentation
+# Manji Controllers Documentation
 
 ## Overview
-SarvCast - Persian Children's Audio Story Platform has a comprehensive set of custom controllers designed specifically for the audio story streaming service. All controllers are purpose-built and there are no default Laravel controllers present in the system.
+Manji - Persian Children's Audio Story Platform has a comprehensive set of custom controllers designed specifically for the audio story streaming service. All controllers are purpose-built and there are no default Laravel controllers present in the system.
 
 ## Controller Architecture
 
@@ -161,7 +161,7 @@ SarvCast - Persian Children's Audio Story Platform has a comprehensive set of cu
 - Image optimization and multiple size generation
 - CDN integration for media delivery
 
-## Unique SarvCast Features
+## Unique Manji Features
 
 ### Voice Actor Management
 - Multiple voice actors per episode
@@ -186,8 +186,8 @@ SarvCast - Persian Children's Audio Story Platform has a comprehensive set of cu
 
 ## Conclusion
 
-SarvCast has a completely custom controller architecture designed specifically for the Persian children's audio story platform. Every controller serves a specific purpose in the business model, from content creation and management to revenue generation and user engagement. The system is built to scale and support the complex requirements of a modern audio streaming service with multiple revenue streams and partnership programs.
+Manji has a completely custom controller architecture designed specifically for the Persian children's audio story platform. Every controller serves a specific purpose in the business model, from content creation and management to revenue generation and user engagement. The system is built to scale and support the complex requirements of a modern audio streaming service with multiple revenue streams and partnership programs.
 
 **Total Controllers**: 50+ custom controllers
 **Default Laravel Controllers**: 0 (none present)
-**Architecture**: Fully custom, purpose-built for SarvCast
+**Architecture**: Fully custom, purpose-built for Manji

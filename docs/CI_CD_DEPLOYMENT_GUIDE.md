@@ -1,6 +1,6 @@
 # CI/CD Deployment Guide with Database Backup
 
-This guide explains the CI/CD pipeline setup for SarvCast that ensures safe deployments with database backups and data preservation.
+This guide explains the CI/CD pipeline setup for Manji that ensures safe deployments with database backups and data preservation.
 
 ## 📋 Overview
 
@@ -62,7 +62,7 @@ Creates compressed database backups with metadata.
 - Works via SSH
 
 **Backup Location:**
-- Default: `/backups/sarvcast/`
+- Default: `/backups/manji/`
 - Format: `backup_YYYYMMDD_HHMMSS.sql.gz`
 
 ### 3. Safe Migration Script (`scripts/safe-migrate.sh`)
@@ -121,9 +121,9 @@ APP_PATH=/public_html/my (optional, your app path)
 #### Create Backup Directory
 
 ```bash
-sudo mkdir -p /backups/sarvcast
-sudo chown -R $USER:$USER /backups/sarvcast
-chmod 755 /backups/sarvcast
+sudo mkdir -p /backups/manji
+sudo chown -R $USER:$USER /backups/manji
+chmod 755 /backups/manji
 ```
 
 #### Install Required Tools
@@ -205,7 +205,7 @@ To restore from a backup:
 
 ```bash
 cd /path/to/your/app
-./scripts/restore-database.sh /backups/sarvcast/backup_20250101_120000.sql.gz
+./scripts/restore-database.sh /backups/manji/backup_20250101_120000.sql.gz
 ```
 
 ### Rollback via GitHub Actions
@@ -221,13 +221,13 @@ cd /path/to/your/app
 ### Check Backup Status
 
 ```bash
-ls -lh /backups/sarvcast/
+ls -lh /backups/manji/
 ```
 
 ### View Backup Metadata
 
 ```bash
-cat /backups/sarvcast/backup_*.json
+cat /backups/manji/backup_*.json
 ```
 
 ### Check Migration Status
@@ -290,7 +290,7 @@ GitHub Actions logs are available in:
 ### Storage Considerations
 
 - Each backup is compressed (typically 10-50MB)
-- Monitor disk space in `/backups/sarvcast/`
+- Monitor disk space in `/backups/manji/`
 - Consider off-site backup storage for critical data
 
 ## 🔄 Rollback Procedure
@@ -303,7 +303,7 @@ The pipeline will attempt automatic rollback if migrations fail.
 ### Option 2: Manual Rollback via Script
 ```bash
 cd /path/to/your/app
-./scripts/restore-database.sh /backups/sarvcast/pre_deployment_YYYYMMDD_HHMMSS.sql.gz
+./scripts/restore-database.sh /backups/manji/pre_deployment_YYYYMMDD_HHMMSS.sql.gz
 ```
 
 ### Option 3: Rollback via GitHub Actions
@@ -365,7 +365,7 @@ chmod +x scripts/*.sh
 
 For issues or questions:
 1. Check GitHub Actions logs
-2. Review server logs: `/tmp/sarvcast-*.log`
+2. Review server logs: `/tmp/manji-*.log`
 3. Check Laravel logs: `storage/logs/laravel.log`
 4. Review backup metadata files
 

@@ -1,6 +1,6 @@
-# SarvCast Deployment Guide
+# Manji Deployment Guide
 
-This guide provides comprehensive instructions for deploying the SarvCast Laravel application.
+This guide provides comprehensive instructions for deploying the Manji Laravel application.
 
 ## 📋 Prerequisites
 
@@ -17,7 +17,7 @@ This guide provides comprehensive instructions for deploying the SarvCast Larave
 
 ```bash
 git clone <repository-url>
-cd sarvcast
+cd manji
 composer install
 cp .env.example .env
 ```
@@ -27,7 +27,7 @@ cp .env.example .env
 Update your `.env` file with the following essential configurations:
 
 ```env
-APP_NAME="سروکست"
+APP_NAME="مانجی"
 APP_ENV=production
 APP_KEY=base64:your-generated-key
 APP_DEBUG=false
@@ -36,7 +36,7 @@ APP_URL=https://yourdomain.com
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=sarvcast
+DB_DATABASE=manji
 DB_USERNAME=your_db_user
 DB_PASSWORD=your_db_password
 
@@ -54,8 +54,8 @@ MAIL_PORT=587
 MAIL_USERNAME=your-email
 MAIL_PASSWORD=your-password
 MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@sarvcast.com
-MAIL_FROM_NAME="سروکست"
+MAIL_FROM_ADDRESS=noreply@manji.com
+MAIL_FROM_NAME="مانجی"
 
 # Payment Gateways
 ZARINPAL_MERCHANT_ID=your-zarinpal-merchant-id
@@ -105,10 +105,10 @@ docker-compose exec app php artisan db:seed
 
 ```bash
 # Build the application image
-docker build -t sarvcast-app .
+docker build -t manji-app .
 
 # Run the application
-docker run -d -p 80:80 --name sarvcast-app sarvcast-app
+docker run -d -p 80:80 --name manji-app manji-app
 ```
 
 ## 🔧 Manual Deployment Steps
@@ -161,15 +161,15 @@ Create a virtual host configuration:
 ```apache
 <VirtualHost *:80>
     ServerName yourdomain.com
-    DocumentRoot /path/to/sarvcast/public
+    DocumentRoot /path/to/manji/public
     
-    <Directory /path/to/sarvcast/public>
+    <Directory /path/to/manji/public>
         AllowOverride All
         Require all granted
     </Directory>
     
-    ErrorLog ${APACHE_LOG_DIR}/sarvcast_error.log
-    CustomLog ${APACHE_LOG_DIR}/sarvcast_access.log combined
+    ErrorLog ${APACHE_LOG_DIR}/manji_error.log
+    CustomLog ${APACHE_LOG_DIR}/manji_access.log combined
 </VirtualHost>
 ```
 
@@ -179,7 +179,7 @@ Create a virtual host configuration:
 server {
     listen 80;
     server_name yourdomain.com;
-    root /path/to/sarvcast/public;
+    root /path/to/manji/public;
     
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-Content-Type-Options "nosniff";
@@ -234,10 +234,10 @@ sudo crontab -e
 crontab -e
 
 # Add Laravel scheduler
-* * * * * cd /path/to/sarvcast && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /path/to/manji && php artisan schedule:run >> /dev/null 2>&1
 
 # Add log rotation
-0 0 * * * find /path/to/sarvcast/storage/logs -name "*.log" -mtime +7 -delete
+0 0 * * * find /path/to/manji/storage/logs -name "*.log" -mtime +7 -delete
 ```
 
 ### 2. Queue Workers
@@ -251,10 +251,10 @@ php artisan queue:work --daemon
 
 ### 3. Log Rotation
 
-Create `/etc/logrotate.d/sarvcast`:
+Create `/etc/logrotate.d/manji`:
 
 ```
-/path/to/sarvcast/storage/logs/*.log {
+/path/to/manji/storage/logs/*.log {
     daily
     missingok
     rotate 14
@@ -283,7 +283,7 @@ php artisan test --coverage
 
 ```bash
 # Create test database
-mysql -u root -p -e "CREATE DATABASE sarvcast_test;"
+mysql -u root -p -e "CREATE DATABASE manji_test;"
 
 # Run tests with test database
 php artisan test --env=testing

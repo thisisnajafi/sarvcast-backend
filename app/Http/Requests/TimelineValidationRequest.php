@@ -153,8 +153,8 @@ class TimelineValidationRequest extends FormRequest
 
         // Check for CDN or trusted domains
         $trustedDomains = [
-            'cdn.sarvcast.com',
-            'images.sarvcast.com',
+            'cdn.manji.com',
+            'images.manji.com',
             'storage.googleapis.com',
             'amazonaws.com',
             'cloudinary.com'

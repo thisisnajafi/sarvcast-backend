@@ -19,23 +19,23 @@ Firebase Cloud Messaging Legacy API has been **deprecated** and will be removed.
 ### Step 1: Enable FCM v1 API
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your project: **sarvcast-20d5c**
+2. Select your project: **manji-20d5c**
 3. Navigate to **APIs & Services** → **Library**
 4. Search for **"Firebase Cloud Messaging API"**
 5. Click **Enable** (if not already enabled)
 
-**Direct Link**: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=sarvcast-20d5c
+**Direct Link**: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=manji-20d5c
 
 ### Step 2: Generate Service Account Key
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Select your project: **sarvcast-20d5c**
+2. Select your project: **manji-20d5c**
 3. Click **Project Settings** (gear icon) → **Service Accounts** tab
 4. Click **Generate new private key**
 5. Confirm by clicking **Generate Key**
-6. A JSON file will be downloaded (e.g., `sarvcast-20d5c-firebase-adminsdk-xxxxx.json`)
+6. A JSON file will be downloaded (e.g., `manji-20d5c-firebase-adminsdk-xxxxx.json`)
 
-**Direct Link**: https://console.firebase.google.com/project/sarvcast-20d5c/settings/serviceaccounts/adminsdk
+**Direct Link**: https://console.firebase.google.com/project/manji-20d5c/settings/serviceaccounts/adminsdk
 
 ### Step 3: Store Service Account File
 
@@ -52,11 +52,11 @@ Firebase Cloud Messaging Legacy API has been **deprecated** and will be removed.
 
 ### Step 4: Update Laravel .env File
 
-Add these lines to `sarvcast-laravel/.env`:
+Add these lines to `manji-laravel/.env`:
 
 ```env
 # Firebase FCM v1 API Configuration
-FIREBASE_PROJECT_ID=sarvcast-20d5c
+FIREBASE_PROJECT_ID=manji-20d5c
 FIREBASE_SERVICE_ACCOUNT_PATH=storage/app/firebase-service-account.json
 FIREBASE_USE_V1_API=true
 
@@ -173,7 +173,7 @@ After migration, verify:
 
 - [ ] Service account JSON file is in `storage/app/`
 - [ ] `.env` has `FIREBASE_USE_V1_API=true`
-- [ ] `.env` has `FIREBASE_PROJECT_ID=sarvcast-20d5c`
+- [ ] `.env` has `FIREBASE_PROJECT_ID=manji-20d5c`
 - [ ] `.env` has `FIREBASE_SERVICE_ACCOUNT_PATH` set
 - [ ] FCM API is enabled in Google Cloud Console
 - [ ] Test notification sends successfully

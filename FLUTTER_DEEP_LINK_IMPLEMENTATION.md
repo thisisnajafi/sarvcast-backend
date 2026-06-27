@@ -2,7 +2,7 @@
 
 ## 📱 COMPLETE FLUTTER DEEP LINK SETUP
 
-This guide provides a complete implementation for handling deep links from the SarvCast payment system in your Flutter application.
+This guide provides a complete implementation for handling deep links from the Manji payment system in your Flutter application.
 
 ## 🔧 1. DEPENDENCIES
 
@@ -54,7 +54,7 @@ dependencies:
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="sarvcast" />
+                <data android:scheme="manji" />
             </intent-filter>
         </activity>
     </application>
@@ -77,10 +77,10 @@ dependencies:
     <array>
         <dict>
             <key>CFBundleURLName</key>
-            <string>sarvcast</string>
+            <string>manji</string>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>sarvcast</string>
+                <string>manji</string>
             </array>
         </dict>
     </array>
@@ -142,7 +142,7 @@ class DeepLinkService {
   void _handleDeepLink(Uri uri) {
     debugPrint('Received deep link: $uri');
     
-    if (uri.scheme != 'sarvcast') {
+    if (uri.scheme != 'manji') {
       debugPrint('Invalid scheme: ${uri.scheme}');
       return;
     }
@@ -591,7 +591,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SarvCast',
+      title: 'Manji',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         fontFamily: 'IranSans', // Add Persian font
@@ -693,7 +693,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('SarvCast')),
+      appBar: AppBar(title: Text('Manji')),
       body: Center(
         child: Text('Home Screen'),
       ),
@@ -720,13 +720,13 @@ class SubscriptionScreen extends StatelessWidget {
 ```bash
 adb shell am start \
   -W -a android.intent.action.VIEW \
-  -d "sarvcast://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%2C%22subscription_id%22%3A456%2C%22amount%22%3A160000%2C%22transaction_id%22%3A%22A000000000000000000000000000j1j3zqzz%22%7D" \
-  com.yourpackage.sarvcast
+  -d "manji://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%2C%22subscription_id%22%3A456%2C%22amount%22%3A160000%2C%22transaction_id%22%3A%22A000000000000000000000000000j1j3zqzz%22%7D" \
+  com.yourpackage.manji
 ```
 
 ### iOS Testing
 ```bash
-xcrun simctl openurl booted "sarvcast://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%2C%22subscription_id%22%3A456%2C%22amount%22%3A160000%2C%22transaction_id%22%3A%22A000000000000000000000000000j1j3zqzz%22%7D"
+xcrun simctl openurl booted "manji://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%2C%22subscription_id%22%3A456%2C%22amount%22%3A160000%2C%22transaction_id%22%3A%22A000000000000000000000000000j1j3zqzz%22%7D"
 ```
 
 ## 📋 8. DEEP LINK DATA STRUCTURE
@@ -769,12 +769,12 @@ xcrun simctl openurl booted "sarvcast://payment/success?data=%7B%22success%22%3A
 
 | **Scheme** | **Purpose** | **Data** |
 |------------|-------------|----------|
-| `sarvcast://payment/success` | Payment success | Payment details |
-| `sarvcast://payment/failure` | Payment failure | Error details |
-| `sarvcast://subscription/success` | Subscription success | Subscription details |
-| `sarvcast://subscription/failure` | Subscription failure | Error details |
-| `sarvcast://home` | Navigate to home | None |
-| `sarvcast://` | Default fallback | None |
+| `manji://payment/success` | Payment success | Payment details |
+| `manji://payment/failure` | Payment failure | Error details |
+| `manji://subscription/success` | Subscription success | Subscription details |
+| `manji://subscription/failure` | Subscription failure | Error details |
+| `manji://home` | Navigate to home | None |
+| `manji://` | Default fallback | None |
 
 ## 🚀 DEPLOYMENT NOTES
 
@@ -784,4 +784,4 @@ xcrun simctl openurl booted "sarvcast://payment/success?data=%7B%22success%22%3A
 4. **Consider analytics** for deep link usage
 5. **Update app store** descriptions with deep link support
 
-**This implementation provides complete deep link support for the SarvCast payment system!** 🎉📱
+**This implementation provides complete deep link support for the Manji payment system!** 🎉📱

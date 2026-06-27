@@ -1,15 +1,15 @@
-# SarvCast API Documentation
+# Manji API Documentation
 
 ## Overview
-SarvCast is a Persian children's audio story platform API that provides comprehensive functionality for content management, user authentication, subscriptions, and mobile app integration.
+Manji is a Persian children's audio story platform API that provides comprehensive functionality for content management, user authentication, subscriptions, and mobile app integration.
 
 ## Base URL
 ```
-https://api.sarvcast.com/v1
+https://api.manji.com/v1
 ```
 
 ## Authentication
-SarvCast uses Laravel Sanctum for API authentication with Persian phone numbers as unique identifiers. Include the Bearer token in the Authorization header:
+Manji uses Laravel Sanctum for API authentication with Persian phone numbers as unique identifiers. Include the Bearer token in the Authorization header:
 
 ```
 Authorization: Bearer {token}
@@ -375,7 +375,7 @@ GET /people
                 "id": 1,
                 "name": "علی احمدی",
                 "bio": "صداپیشه و کارگردان با تجربه در زمینه داستان‌های کودکان",
-                "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+                "image_url": "https://api.manji.com/storage/people/person1.jpg",
                 "roles": ["voice_actor", "director"],
                 "total_stories": 15,
                 "total_episodes": 45,
@@ -408,7 +408,7 @@ GET /people/{id}
         "id": 1,
         "name": "علی احمدی",
         "bio": "صداپیشه و کارگردان با تجربه در زمینه داستان‌های کودکان",
-        "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+        "image_url": "https://api.manji.com/storage/people/person1.jpg",
         "roles": ["voice_actor", "director"],
         "total_stories": 15,
         "total_episodes": 45,
@@ -455,7 +455,7 @@ GET /people/search
             "id": 1,
             "name": "علی احمدی",
             "bio": "صداپیشه و کارگردان...",
-            "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+            "image_url": "https://api.manji.com/storage/people/person1.jpg",
             "roles": ["voice_actor", "director"],
             "is_verified": true
         }
@@ -480,7 +480,7 @@ GET /people/role/{role}
             "id": 1,
             "name": "علی احمدی",
             "bio": "صداپیشه و کارگردان...",
-            "image_url": "https://api.sarvcast.com/storage/people/person1.jpg",
+            "image_url": "https://api.manji.com/storage/people/person1.jpg",
             "roles": ["voice_actor", "director"],
             "is_verified": true
         }
@@ -532,7 +532,7 @@ POST /upload/image
         "filename": "image_20240115_120000.jpg",
         "original_name": "profile.jpg",
         "path": "images/2024/01/image_20240115_120000.jpg",
-        "url": "https://api.sarvcast.com/storage/images/2024/01/image_20240115_120000.jpg",
+        "url": "https://api.manji.com/storage/images/2024/01/image_20240115_120000.jpg",
         "size": 245760,
         "mime_type": "image/jpeg",
         "dimensions": {
@@ -565,7 +565,7 @@ POST /upload/audio
         "filename": "audio_20240115_120000.mp3",
         "original_name": "story_episode_1.mp3",
         "path": "audio/2024/01/audio_20240115_120000.mp3",
-        "url": "https://api.sarvcast.com/storage/audio/2024/01/audio_20240115_120000.mp3",
+        "url": "https://api.manji.com/storage/audio/2024/01/audio_20240115_120000.mp3",
         "size": 5242880,
         "mime_type": "audio/mpeg",
         "duration": 180,
@@ -600,7 +600,7 @@ POST /upload/document
         "filename": "document_20240115_120000.pdf",
         "original_name": "story_script.pdf",
         "path": "documents/2024/01/document_20240115_120000.pdf",
-        "url": "https://api.sarvcast.com/storage/documents/2024/01/document_20240115_120000.pdf",
+        "url": "https://api.manji.com/storage/documents/2024/01/document_20240115_120000.pdf",
         "size": 1048576,
         "mime_type": "application/pdf",
         "pages": 5,
@@ -632,13 +632,13 @@ POST /upload/multiple
             {
                 "file_id": "img_1234567890",
                 "filename": "image_20240115_120000.jpg",
-                "url": "https://api.sarvcast.com/storage/images/2024/01/image_20240115_120000.jpg",
+                "url": "https://api.manji.com/storage/images/2024/01/image_20240115_120000.jpg",
                 "size": 245760
             },
             {
                 "file_id": "aud_1234567891",
                 "filename": "audio_20240115_120001.mp3",
-                "url": "https://api.sarvcast.com/storage/audio/2024/01/audio_20240115_120001.mp3",
+                "url": "https://api.manji.com/storage/audio/2024/01/audio_20240115_120001.mp3",
                 "size": 5242880
             }
         ],
@@ -684,7 +684,7 @@ GET /upload/info?file_id=img_1234567890
         "filename": "image_20240115_120000.jpg",
         "original_name": "profile.jpg",
         "path": "images/2024/01/image_20240115_120000.jpg",
-        "url": "https://api.sarvcast.com/storage/images/2024/01/image_20240115_120000.jpg",
+        "url": "https://api.manji.com/storage/images/2024/01/image_20240115_120000.jpg",
         "size": 245760,
         "mime_type": "image/jpeg",
         "dimensions": {
@@ -2289,7 +2289,7 @@ GET /ratings/story/{storyId}
                     "id": 1,
                     "first_name": "علی",
                     "last_name": "احمدی",
-                    "profile_image_url": "https://api.sarvcast.com/storage/users/user1.jpg"
+                    "profile_image_url": "https://api.manji.com/storage/users/user1.jpg"
                 }
             }
         ],
@@ -2343,7 +2343,7 @@ GET /ratings/episode/{episodeId}
                     "id": 1,
                     "first_name": "علی",
                     "last_name": "احمدی",
-                    "profile_image_url": "https://api.sarvcast.com/storage/users/user1.jpg"
+                    "profile_image_url": "https://api.manji.com/storage/users/user1.jpg"
                 }
             }
         ],
@@ -2548,7 +2548,7 @@ GET /ratings/recent-reviews
                     "id": 1,
                     "first_name": "علی",
                     "last_name": "احمدی",
-                    "profile_image_url": "https://api.sarvcast.com/storage/users/user1.jpg"
+                    "profile_image_url": "https://api.manji.com/storage/users/user1.jpg"
                 },
                 "story": {
                     "id": 5,
@@ -2789,7 +2789,7 @@ GET /search/people
                 "name": "علی احمدی",
                 "bio": "کارگردان و نویسنده با تجربه در زمینه داستان‌های کودکان",
                 "role": "director",
-                "image_url": "https://api.sarvcast.com/storage/people/director1.jpg",
+                "image_url": "https://api.manji.com/storage/people/director1.jpg",
                 "story_count": 15,
                 "stories": [
                     {
@@ -3174,7 +3174,7 @@ GET /stories/{id}
                 "duration": 25,
                 "is_free": true,
                 "play_count": 450,
-                "audio_url": "https://cdn.sarvcast.com/episodes/episode_1.mp3"
+                "audio_url": "https://cdn.manji.com/episodes/episode_1.mp3"
             }
         ]
     }
@@ -3199,7 +3199,7 @@ GET /stories/{id}/episodes
             "duration": 25,
             "is_free": true,
             "play_count": 450,
-            "audio_url": "https://cdn.sarvcast.com/episodes/episode_1.mp3",
+            "audio_url": "https://cdn.manji.com/episodes/episode_1.mp3",
             "created_at": "2024-01-01T00:00:00.000000Z"
         }
     ]
@@ -3225,7 +3225,7 @@ GET /episodes/{id}
         "duration": 25,
         "is_free": true,
         "play_count": 450,
-        "audio_url": "https://cdn.sarvcast.com/episodes/episode_1.mp3",
+        "audio_url": "https://cdn.manji.com/episodes/episode_1.mp3",
         "created_at": "2024-01-01T00:00:00.000000Z",
         "story": {
             "id": 1,
@@ -3261,7 +3261,7 @@ GET /episodes/{id}?include_timeline=true
             "duration": 25,
             "is_free": true,
             "play_count": 450,
-            "audio_url": "https://cdn.sarvcast.com/episodes/episode_1.mp3",
+            "audio_url": "https://cdn.manji.com/episodes/episode_1.mp3",
             "use_image_timeline": true,
             "created_at": "2024-01-01T00:00:00.000000Z"
         },
@@ -3270,14 +3270,14 @@ GET /episodes/{id}?include_timeline=true
                 "id": 1,
                 "start_time": 0,
                 "end_time": 10,
-                "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_1.jpg",
+                "image_url": "https://cdn.manji.com/images/episode_1_scene_1.jpg",
                 "image_order": 1
             },
             {
                 "id": 2,
                 "start_time": 11,
                 "end_time": 20,
-                "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_2.jpg",
+                "image_url": "https://cdn.manji.com/images/episode_1_scene_2.jpg",
                 "image_order": 2
             }
         ]
@@ -3309,7 +3309,7 @@ Authorization: Bearer {token}
                 "id": 1,
                 "start_time": 0,
                 "end_time": 10,
-                "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_1.jpg",
+                "image_url": "https://cdn.manji.com/images/episode_1_scene_1.jpg",
                 "image_order": 1
             }
         ]
@@ -3335,12 +3335,12 @@ Content-Type: application/json
         {
             "start_time": 0,
             "end_time": 10,
-            "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_1.jpg"
+            "image_url": "https://cdn.manji.com/images/episode_1_scene_1.jpg"
         },
         {
             "start_time": 11,
             "end_time": 20,
-            "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_2.jpg"
+            "image_url": "https://cdn.manji.com/images/episode_1_scene_2.jpg"
         }
     ]
 }
@@ -3394,7 +3394,7 @@ Authorization: Bearer {token}
     "data": {
         "episode_id": 1,
         "time": 15,
-        "image_url": "https://cdn.sarvcast.com/images/episode_1_scene_2.jpg"
+        "image_url": "https://cdn.manji.com/images/episode_1_scene_2.jpg"
     }
 }
 ```
@@ -3434,7 +3434,7 @@ Authorization: Bearer {token}
                 "user": {
                     "id": 1,
                     "name": "علی احمدی",
-                    "avatar": "https://cdn.sarvcast.com/avatars/user_1.jpg"
+                    "avatar": "https://cdn.manji.com/avatars/user_1.jpg"
                 }
             }
         ],
@@ -3483,7 +3483,7 @@ Content-Type: application/json
             "user": {
                 "id": 1,
                 "name": "علی احمدی",
-                "avatar": "https://cdn.sarvcast.com/avatars/user_1.jpg"
+                "avatar": "https://cdn.manji.com/avatars/user_1.jpg"
             }
         }
     }
@@ -3521,7 +3521,7 @@ Authorization: Bearer {token}
                 "story": {
                     "id": 1,
                     "title": "سفیدبرفی و هفت کوتوله",
-                    "image_url": "https://cdn.sarvcast.com/stories/story_1.jpg"
+                    "image_url": "https://cdn.manji.com/stories/story_1.jpg"
                 }
             }
         ],
@@ -4139,7 +4139,7 @@ Authorization: Bearer {token}
 {
     "success": true,
     "data": {
-        "app_name": "SarvCast",
+        "app_name": "Manji",
         "app_version": "1.0.0",
         "api_version": "v1",
         "features": {
@@ -4446,14 +4446,14 @@ GET /health/metrics
 
 ### JavaScript/Node.js
 ```bash
-npm install sarvcast-api-client
+npm install manji-api-client
 ```
 
 ```javascript
-import SarvCastClient from 'sarvcast-api-client';
+import ManjiClient from 'manji-api-client';
 
-const client = new SarvCastClient({
-    baseUrl: 'https://api.sarvcast.com/v1',
+const client = new ManjiClient({
+    baseUrl: 'https://api.manji.com/v1',
     apiKey: 'your-api-key'
 });
 
@@ -4463,14 +4463,14 @@ const stories = await client.stories.getAll();
 
 ### PHP
 ```bash
-composer require sarvcast/api-client
+composer require manji/api-client
 ```
 
 ```php
-use SarvCast\ApiClient\SarvCastClient;
+use Manji\ApiClient\ManjiClient;
 
-$client = new SarvCastClient([
-    'base_url' => 'https://api.sarvcast.com/v1',
+$client = new ManjiClient([
+    'base_url' => 'https://api.manji.com/v1',
     'api_key' => 'your-api-key'
 ]);
 
@@ -4480,14 +4480,14 @@ $stories = $client->stories()->getAll();
 
 ### Python
 ```bash
-pip install sarvcast-api-client
+pip install manji-api-client
 ```
 
 ```python
-from sarvcast_api_client import SarvCastClient
+from manji_api_client import ManjiClient
 
-client = SarvCastClient(
-    base_url='https://api.sarvcast.com/v1',
+client = ManjiClient(
+    base_url='https://api.manji.com/v1',
     api_key='your-api-key'
 )
 
@@ -4498,9 +4498,9 @@ stories = client.stories.get_all()
 ## Support
 
 For API support and questions:
-- Email: api-support@sarvcast.com
-- Documentation: https://docs.sarvcast.com
-- Status Page: https://status.sarvcast.com
+- Email: api-support@manji.com
+- Documentation: https://docs.manji.com
+- Status Page: https://status.manji.com
 
 ## Changelog
 

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Subscriptions
+  title: Manji Admin API — Subscriptions
   version: 1.0.0
 
 paths:

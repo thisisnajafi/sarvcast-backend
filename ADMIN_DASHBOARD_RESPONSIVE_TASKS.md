@@ -1,4 +1,4 @@
-SarvCast Admin Dashboard – Responsive Fix Task List
+Manji Admin Dashboard – Responsive Fix Task List
 ===================================================
 
 ## Global Layout & Navigation

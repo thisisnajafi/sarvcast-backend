@@ -18,7 +18,7 @@ class ProcessStoriesFromMarkdown extends Command
      * @var string
      */
     protected $signature = 'stories:process-markdown
-                            {--stories-path= : Path to sarvcast-stories directory}
+                            {--stories-path= : Path to manji-stories directory}
                             {--dry-run : Run without making database changes}';
 
     /**
@@ -55,9 +55,9 @@ class ProcessStoriesFromMarkdown extends Command
         if (!$this->storiesPath) {
             // Try to find it relative to Laravel root
             $possiblePaths = [
-                base_path('../sarvcast-stories'),
-                base_path('../../sarvcast-stories'),
-                base_path('sarvcast-stories'),
+                base_path('../manji-stories'),
+                base_path('../../manji-stories'),
+                base_path('manji-stories'),
             ];
 
             foreach ($possiblePaths as $path) {
@@ -115,7 +115,7 @@ class ProcessStoriesFromMarkdown extends Command
         $excludePatterns = [
             'README', 'CHANGELOG', 'GUIDE', 'TEMPLATE', 'PROMPT',
             'ANIMATED', 'COMPLETE', 'QUICK_START', 'PROJECT_SUMMARY',
-            '__pycache__', '.git', 'iransans', 'sarvcast-team', 'Voices'
+            '__pycache__', '.git', 'iransans', 'manji-team', 'Voices'
         ];
 
         foreach ($directories as $dir) {

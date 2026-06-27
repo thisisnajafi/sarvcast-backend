@@ -120,9 +120,9 @@ mkdir -p /public_html/my/storage/backups
 chmod 755 /public_html/my/storage/backups
 
 # Or if using system-level backup
-sudo mkdir -p /backups/sarvcast
-sudo chown -R $USER:$USER /backups/sarvcast
-sudo chmod 755 /backups/sarvcast
+sudo mkdir -p /backups/manji
+sudo chown -R $USER:$USER /backups/manji
+sudo chmod 755 /backups/manji
 ```
 
 ### Error: `Database connection failed`

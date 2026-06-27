@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SarvCast Deployment Script
+# Manji Deployment Script
 # This script performs the essential deployment tasks:
 # 1. Run Composer
 # 2. Deploy to FTP
@@ -9,8 +9,8 @@
 set -e  # Exit on any error
 
 # Configuration
-FTP_SERVER="${FTP_SERVER:-ftp.sarvcast.ir}"
-FTP_USERNAME="${FTP_USERNAME:-my@sarvcast.ir}"
+FTP_SERVER="${FTP_SERVER:-ftp.manji.ir}"
+FTP_USERNAME="${FTP_USERNAME:-my@manji.ir}"
 FTP_PASSWORD="${FTP_PASSWORD:-prof48017421@#}"
 FTP_DIRECTORY="${FTP_DIRECTORY:-/}"
 TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc}"
@@ -154,7 +154,7 @@ send_telegram_notification() {
     AUTHOR=$(git log -1 --pretty=%an 2>/dev/null || echo "unknown")
 
     # Create message
-    MESSAGE="🚀 *SarvCast Deployment Successful*
+    MESSAGE="🚀 *Manji Deployment Successful*
 
 *Branch:* \`$BRANCH_NAME\`
 *Commit:* \`$COMMIT_HASH\`
@@ -189,7 +189,7 @@ cleanup() {
 
 # Main deployment function
 main() {
-    log_info "Starting SarvCast deployment..."
+    log_info "Starting Manji deployment..."
 
     check_dependencies
     install_composer

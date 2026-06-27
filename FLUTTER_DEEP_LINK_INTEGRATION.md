@@ -6,7 +6,7 @@ The payment callback pages now include beautiful, responsive designs with Flutte
 ## Payment Callback URLs
 
 ### Success Page
-- **URL**: `https://my.sarvcast.ir/payment/success?payment_id={payment_id}`
+- **URL**: `https://my.manji.ir/payment/success?payment_id={payment_id}`
 - **Features**: 
   - ✅ Beautiful success animation with confetti
   - ✅ Payment details display
@@ -15,7 +15,7 @@ The payment callback pages now include beautiful, responsive designs with Flutte
   - ✅ Auto-return after 30 seconds
 
 ### Failure Page
-- **URL**: `https://my.sarvcast.ir/payment/failure`
+- **URL**: `https://my.manji.ir/payment/failure`
 - **Features**:
   - ✅ Encouraging failure message
   - ✅ Error details (if available)
@@ -44,7 +44,7 @@ In your Flutter app's platform-specific configuration:
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="sarvcast" />
+        <data android:scheme="manji" />
     </intent-filter>
 </activity>
 ```
@@ -55,10 +55,10 @@ In your Flutter app's platform-specific configuration:
 <array>
     <dict>
         <key>CFBundleURLName</key>
-        <string>sarvcast</string>
+        <string>manji</string>
         <key>CFBundleURLSchemes</key>
         <array>
-            <string>sarvcast</string>
+            <string>manji</string>
         </array>
     </dict>
 </array>
@@ -88,7 +88,7 @@ class PaymentDeepLinkHandler {
   }
   
   static void handleDeepLink(Uri uri) {
-    if (uri.scheme == 'sarvcast') {
+    if (uri.scheme == 'manji') {
       final path = uri.path;
       final dataParam = uri.queryParameters['data'];
       
@@ -189,7 +189,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SarvCast',
+      title: 'Manji',
       // ... your app configuration
     );
   }
@@ -224,19 +224,19 @@ class MyApp extends StatelessWidget {
 ### Android Testing
 ```bash
 # Test success callback
-adb shell am start -W -a android.intent.action.VIEW -d "sarvcast://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%7D" com.your.package.name
+adb shell am start -W -a android.intent.action.VIEW -d "manji://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%7D" com.your.package.name
 
 # Test failure callback
-adb shell am start -W -a android.intent.action.VIEW -d "sarvcast://payment/failure?data=%7B%22success%22%3Afalse%2C%22error%22%3A%22Test%20error%22%7D" com.your.package.name
+adb shell am start -W -a android.intent.action.VIEW -d "manji://payment/failure?data=%7B%22success%22%3Afalse%2C%22error%22%3A%22Test%20error%22%7D" com.your.package.name
 ```
 
 ### iOS Testing
 ```bash
 # Test success callback
-xcrun simctl openurl booted "sarvcast://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%7D"
+xcrun simctl openurl booted "manji://payment/success?data=%7B%22success%22%3Atrue%2C%22payment_id%22%3A123%7D"
 
 # Test failure callback
-xcrun simctl openurl booted "sarvcast://payment/failure?data=%7B%22success%22%3Afalse%2C%22error%22%3A%22Test%20error%22%7D"
+xcrun simctl openurl booted "manji://payment/failure?data=%7B%22success%22%3Afalse%2C%22error%22%3A%22Test%20error%22%7D"
 ```
 
 ## Payment Flow Integration
@@ -246,7 +246,7 @@ xcrun simctl openurl booted "sarvcast://payment/failure?data=%7B%22success%22%3A
 // In your Flutter app
 Future<void> initiatePayment() async {
   final response = await http.post(
-    Uri.parse('https://my.sarvcast.ir/api/v1/subscriptions'),
+    Uri.parse('https://my.manji.ir/api/v1/subscriptions'),
     headers: {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
@@ -299,6 +299,6 @@ setTimeout(() => {
 ## Support
 
 For any issues with the payment integration:
-- 📧 Email: support@sarvcast.ir
-- 📱 Telegram: @sarvcast_support
+- 📧 Email: support@manji.ir
+- 📱 Telegram: @manji_support
 - 🕐 Hours: 9 AM to 6 PM

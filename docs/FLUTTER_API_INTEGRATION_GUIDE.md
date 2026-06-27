@@ -1,10 +1,10 @@
-# Flutter API Integration Guide for SarvCast
+# Flutter API Integration Guide for Manji
 
 ## Overview
-This guide provides a comprehensive, ordered approach for Flutter developers to integrate with the SarvCast API endpoints. The endpoints are organized by feature implementation order, starting with core functionality and progressing to advanced features.
+This guide provides a comprehensive, ordered approach for Flutter developers to integrate with the Manji API endpoints. The endpoints are organized by feature implementation order, starting with core functionality and progressing to advanced features.
 
 ## Base Configuration
-- **Base URL**: `https://my.sarvcast.ir/api/v1`
+- **Base URL**: `https://my.manji.ir/api/v1`
 - **Response Format**: JSON
 - **Authentication**: Bearer token (for user-specific data)
 - **Content-Type**: `application/json`
@@ -503,7 +503,7 @@ Headers: {"Authorization": "Bearer {token}"}
 Body: {
   "amount": 50000,
   "description": "اشتراک ماهانه",
-  "callback_url": "https://app.sarvcast.ir/callback"
+  "callback_url": "https://app.manji.ir/callback"
 }
 
 // Verify payment
@@ -676,7 +676,7 @@ Body: {
 ### 1. HTTP Client Setup
 ```dart
 class ApiClient {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   static const Map<String, String> headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -749,7 +749,7 @@ class ApiResponse<T> {
 
 For questions or clarifications about this API integration guide, please refer to:
 - **API Documentation**: `docs/LARAVEL_API_DOCUMENTATION.md`
-- **Postman Collection**: `SarvCast_API.postman_collection.json`
+- **Postman Collection**: `Manji_API.postman_collection.json`
 - **Testing Guide**: `docs/POSTMAN_API_TESTING_GUIDE.md`
 
 **Last Updated**: January 2024  

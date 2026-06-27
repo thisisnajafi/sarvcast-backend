@@ -1,7 +1,7 @@
-# SarvCast UI Design System
+# Manji UI Design System
 
 ## Overview
-SarvCast is a Persian audio story platform for children with a vibrant, playful design system that emphasizes accessibility, readability, and child-friendly aesthetics.
+Manji is a Persian audio story platform for children with a vibrant, playful design system that emphasizes accessibility, readability, and child-friendly aesthetics.
 
 ## Color Palette
 
@@ -337,4 +337,4 @@ The app uses a comprehensive SVG icon library with 919+ icons including:
 - **Shadow Consistency**: Use consistent shadow patterns for depth
 - **Animation Timing**: Use appropriate animation durations for smooth interactions
 
-This design system ensures consistency, accessibility, and child-friendly design throughout the SarvCast application while maintaining proper Persian language support and RTL layout patterns.
+This design system ensures consistency, accessibility, and child-friendly design throughout the Manji application while maintaining proper Persian language support and RTL layout patterns.

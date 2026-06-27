@@ -235,16 +235,16 @@ class VersionController extends Controller
     public function getAppConfig(): JsonResponse
     {
         $config = [
-            'app_name' => config('app.name', 'SarvCast'),
+            'app_name' => config('app.name', 'Manji'),
             'app_version' => config('app.version', '1.0.0'),
             'app_build' => config('app.build', '1'),
             'min_supported_version' => config('app.min_supported_version', '1.0.0'),
             'update_check_url' => route('api.version.check'),
-            'support_email' => config('mail.support_email', 'support@sarvcast.com'),
+            'support_email' => config('mail.support_email', 'support@manji.com'),
             'support_phone' => config('app.support_phone', '021-12345678'),
-            'website_url' => config('app.website_url', 'https://sarvcast.com'),
-            'privacy_policy_url' => config('app.privacy_policy_url', 'https://sarvcast.com/privacy'),
-            'terms_of_service_url' => config('app.terms_of_service_url', 'https://sarvcast.com/terms'),
+            'website_url' => config('app.website_url', 'https://manji.com'),
+            'privacy_policy_url' => config('app.privacy_policy_url', 'https://manji.com/privacy'),
+            'terms_of_service_url' => config('app.terms_of_service_url', 'https://manji.com/terms'),
         ];
 
         return response()->json([

@@ -85,7 +85,7 @@ Should return:
 
 **On your production server:**
 ```bash
-cd /path/to/sarvcast
+cd /path/to/manji
 php artisan subscription:fix-end-date 12
 ```
 

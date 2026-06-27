@@ -1,6 +1,6 @@
-# SarvCast Testing Guide
+# Manji Testing Guide
 
-This guide provides comprehensive testing instructions for the SarvCast Laravel application.
+This guide provides comprehensive testing instructions for the Manji Laravel application.
 
 ## 🧪 Test Structure
 

@@ -1,13 +1,13 @@
 # Category Page Backend API Requirements
 
 ## Overview
-This document outlines the backend API requirements for the SarvCast category page functionality. The category page displays category details, background images, and associated stories in a horizontal scrolling layout.
+This document outlines the backend API requirements for the Manji category page functionality. The category page displays category details, background images, and associated stories in a horizontal scrolling layout.
 
 ## Base Configuration
 
 ### API Base URL
 ```
-https://my.sarvcast.ir/api/v1
+https://my.manji.ir/api/v1
 ```
 
 ### Required Headers
@@ -15,7 +15,7 @@ https://my.sarvcast.ir/api/v1
 Map<String, String> headers = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-  'User-Agent': 'SarvCast-Flutter/1.0.0',
+  'User-Agent': 'Manji-Flutter/1.0.0',
 };
 ```
 
@@ -72,7 +72,7 @@ Future<Category> getCategoryDetails(int categoryId) async {
     "order": 1,
     "story_count": 15,
     "icon_path": "/icons/adventure-stories.svg",
-    "image_url": "https://my.sarvcast.ir/storage/categories/adventure-bg.jpg",
+    "image_url": "https://my.manji.ir/storage/categories/adventure-bg.jpg",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-20T14:45:00Z"
   }
@@ -161,7 +161,7 @@ Future<List<Story>> getCategoryStories({
         "order": 1,
         "story_count": 15,
         "icon_path": "/icons/adventure-stories.svg",
-        "image_url": "https://my.sarvcast.ir/storage/categories/adventure-bg.jpg",
+        "image_url": "https://my.manji.ir/storage/categories/adventure-bg.jpg",
         "created_at": "2024-01-15T10:30:00Z",
         "updated_at": "2024-01-20T14:45:00Z"
       },
@@ -169,7 +169,7 @@ Future<List<Story>> getCategoryStories({
         "id": 1,
         "name": "علی احمدی",
         "bio": "راوی با تجربه",
-        "image_url": "https://my.sarvcast.ir/storage/narrators/ali-ahmadi.jpg",
+        "image_url": "https://my.manji.ir/storage/narrators/ali-ahmadi.jpg",
         "roles": ["narrator", "voice_actor"],
         "total_stories": 10,
         "total_episodes": 50,
@@ -178,8 +178,8 @@ Future<List<Story>> getCategoryStories({
         "last_active_at": "2024-01-18T16:20:00Z",
         "created_at": "2024-01-10T09:15:00Z"
       },
-      "image_url": "https://my.sarvcast.ir/storage/stories/magical-forest.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/storage/stories/magical-forest-cover.jpg",
+      "image_url": "https://my.manji.ir/storage/stories/magical-forest.jpg",
+      "cover_image_url": "https://my.manji.ir/storage/stories/magical-forest-cover.jpg",
       "total_episodes": 3,
       "free_episodes": 3,
       "episode_ids": [1, 2, 3],

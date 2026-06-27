@@ -1,10 +1,10 @@
-# SarvCast Backend API Implementation Guide
+# Manji Backend API Implementation Guide
 
 ## Overview
-This document provides comprehensive specifications for implementing the backend APIs required for the SarvCast mobile application. The APIs are designed to support a children's podcast platform with stories, episodes, categories, and user interactions.
+This document provides comprehensive specifications for implementing the backend APIs required for the Manji mobile application. The APIs are designed to support a children's podcast platform with stories, episodes, categories, and user interactions.
 
 ## Base Configuration
-- **Base URL**: `https://my.sarvcast.ir/api/v1`
+- **Base URL**: `https://my.manji.ir/api/v1`
 - **Response Format**: JSON
 - **Authentication**: Bearer token (for user-specific data)
 - **Content-Type**: `application/json`
@@ -106,8 +106,8 @@ Get stories belonging to a specific category.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -183,8 +183,8 @@ Get all stories with optional filtering.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -248,8 +248,8 @@ Get specific story details.
     "title": "ماجراجویی در جنگل",
     "subtitle": "داستانی هیجان‌انگیز برای کودکان",
     "description": "داستان کامل ماجراجویی در جنگل...",
-    "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-    "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+    "image_url": "https://my.manji.ir/images/story1.jpg",
+    "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
     "duration": 1800,
     "is_premium": false,
     "rating": 4.5,
@@ -313,8 +313,8 @@ Get featured stories for the home page featured section.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -380,8 +380,8 @@ Get popular stories based on play count and ratings.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -446,8 +446,8 @@ Get recently added stories.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -512,8 +512,8 @@ Get personalized story recommendations for the user.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -585,7 +585,7 @@ Get episodes for a specific story.
       "title": "شروع ماجرا",
       "subtitle": "قسمت اول",
       "description": "شروع داستان ماجراجویی در جنگل...",
-      "audio_url": "https://my.sarvcast.ir/audio/episode1.mp3",
+      "audio_url": "https://my.manji.ir/audio/episode1.mp3",
       "duration": 360,
       "episode_number": 1,
       "is_premium": false,
@@ -617,7 +617,7 @@ Get specific episode details.
     "title": "شروع ماجرا",
     "subtitle": "قسمت اول",
     "description": "شروع داستان ماجراجویی در جنگل...",
-    "audio_url": "https://my.sarvcast.ir/audio/episode1.mp3",
+    "audio_url": "https://my.manji.ir/audio/episode1.mp3",
     "duration": 360,
     "episode_number": 1,
     "is_premium": false,
@@ -652,7 +652,7 @@ Get authors, narrators, voice actors, and other people involved in content creat
       "name": "علی احمدی",
       "role": "narrator",
       "bio": "راوی با تجربه و صداپیشه حرفه‌ای با بیش از 10 سال سابقه در زمینه داستان‌گویی برای کودکان",
-      "avatar_url": "https://my.sarvcast.ir/images/narrator1.jpg",
+      "avatar_url": "https://my.manji.ir/images/narrator1.jpg",
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
     }
@@ -676,7 +676,7 @@ Get specific person details.
     "name": "علی احمدی",
     "role": "narrator",
     "bio": "راوی با تجربه و صداپیشه حرفه‌ای با بیش از 10 سال سابقه در زمینه داستان‌گویی برای کودکان",
-    "avatar_url": "https://my.sarvcast.ir/images/narrator1.jpg",
+    "avatar_url": "https://my.manji.ir/images/narrator1.jpg",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z"
   }
@@ -704,8 +704,8 @@ Get stories by a specific person.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -775,21 +775,21 @@ Get the complete image timeline for an episode.
       "id": 1,
       "start_time": 0,
       "end_time": 30,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene1.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene1.jpg",
       "image_order": 1
     },
     {
       "id": 2,
       "start_time": 30,
       "end_time": 60,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene2.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene2.jpg",
       "image_order": 2
     },
     {
       "id": 3,
       "start_time": 60,
       "end_time": 90,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene3.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene3.jpg",
       "image_order": 3
     }
   ]
@@ -814,7 +814,7 @@ Get the specific image that should be displayed at a given time during episode p
     "id": 2,
     "start_time": 30,
     "end_time": 60,
-    "image_url": "https://my.sarvcast.ir/images/episode1_scene2.jpg",
+    "image_url": "https://my.manji.ir/images/episode1_scene2.jpg",
     "image_order": 2,
     "is_current": true,
     "time_remaining": 30
@@ -835,13 +835,13 @@ Create or update image timeline for an episode (Admin only).
     {
       "start_time": 0,
       "end_time": 30,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene1.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene1.jpg",
       "image_order": 1
     },
     {
       "start_time": 30,
       "end_time": 60,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene2.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene2.jpg",
       "image_order": 2
     }
   ]
@@ -876,13 +876,13 @@ Update existing image timeline for an episode (Admin only).
       "id": 1,
       "start_time": 0,
       "end_time": 35,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene1_updated.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene1_updated.jpg",
       "image_order": 1
     },
     {
       "start_time": 35,
       "end_time": 70,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene2.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene2.jpg",
       "image_order": 2
     }
   ]
@@ -943,8 +943,8 @@ Search for stories based on query parameters.
       "title": "ماجراجویی در جنگل",
       "subtitle": "داستانی هیجان‌انگیز برای کودکان",
       "description": "داستان کامل ماجراجویی در جنگل...",
-      "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+      "image_url": "https://my.manji.ir/images/story1.jpg",
+      "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
       "duration": 1800,
       "is_premium": false,
       "rating": 4.5,
@@ -1017,7 +1017,7 @@ Global search across all content types.
         "id": 1,
         "title": "ماجراجویی در جنگل",
         "subtitle": "داستانی هیجان‌انگیز برای کودکان",
-        "image_url": "https://my.sarvcast.ir/images/story1.jpg",
+        "image_url": "https://my.manji.ir/images/story1.jpg",
         "duration": 1800,
         "rating": 4.5,
         "category": {
@@ -1031,7 +1031,7 @@ Global search across all content types.
         "id": 1,
         "name": "علی احمدی",
         "role": "narrator",
-        "avatar_url": "https://my.sarvcast.ir/images/narrator1.jpg"
+        "avatar_url": "https://my.manji.ir/images/narrator1.jpg"
       }
     ],
     "categories": [
@@ -1072,8 +1072,8 @@ Global search across all content types.
   "title": "ماجراجویی در جنگل",
   "subtitle": "داستانی هیجان‌انگیز برای کودکان",
   "description": "داستان کامل ماجراجویی در جنگل...",
-  "image_url": "https://my.sarvcast.ir/images/story1.jpg",
-  "cover_image_url": "https://my.sarvcast.ir/images/story1_cover.jpg",
+  "image_url": "https://my.manji.ir/images/story1.jpg",
+  "cover_image_url": "https://my.manji.ir/images/story1_cover.jpg",
   "duration": 1800,
   "is_premium": false,
   "rating": 4.5,
@@ -1127,7 +1127,7 @@ Global search across all content types.
   "title": "شروع ماجرا",
   "subtitle": "قسمت اول",
   "description": "شروع داستان ماجراجویی در جنگل...",
-  "audio_url": "https://my.sarvcast.ir/audio/episode1.mp3",
+  "audio_url": "https://my.manji.ir/audio/episode1.mp3",
   "duration": 360,
   "episode_number": 1,
   "is_premium": false,
@@ -1139,14 +1139,14 @@ Global search across all content types.
       "id": 1,
       "start_time": 0,
       "end_time": 30,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene1.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene1.jpg",
       "image_order": 1
     },
     {
       "id": 2,
       "start_time": 30,
       "end_time": 60,
-      "image_url": "https://my.sarvcast.ir/images/episode1_scene2.jpg",
+      "image_url": "https://my.manji.ir/images/episode1_scene2.jpg",
       "image_order": 2
     }
   ]
@@ -1159,7 +1159,7 @@ Global search across all content types.
   "id": 1,
   "start_time": 0,
   "end_time": 30,
-  "image_url": "https://my.sarvcast.ir/images/episode1_scene1.jpg",
+  "image_url": "https://my.manji.ir/images/episode1_scene1.jpg",
   "image_order": 1
 }
 ```
@@ -1171,7 +1171,7 @@ Global search across all content types.
   "name": "علی احمدی",
   "role": "narrator",
   "bio": "راوی با تجربه و صداپیشه حرفه‌ای با بیش از 10 سال سابقه در زمینه داستان‌گویی برای کودکان",
-  "avatar_url": "https://my.sarvcast.ir/images/narrator1.jpg",
+  "avatar_url": "https://my.manji.ir/images/narrator1.jpg",
   "created_at": "2024-01-01T00:00:00Z",
   "updated_at": "2024-01-01T00:00:00Z"
 }
@@ -1288,7 +1288,7 @@ Global search across all content types.
 ```
 
 ### CORS Configuration
-- **Allowed Origins**: `https://my.sarvcast.ir`, `http://localhost:*`
+- **Allowed Origins**: `https://my.manji.ir`, `http://localhost:*`
 - **Allowed Methods**: GET, POST, PUT, DELETE, OPTIONS
 - **Allowed Headers**: Content-Type, Authorization, Accept
 - **Max Age**: 86400 seconds

@@ -22,7 +22,7 @@ echo "Sender Number: 50002710008883\n";
 echo "Date: " . date('Y-m-d H:i:s') . "\n\n";
 
 $testPhone = '09136708883';
-$testMessage = "تست سرویس پیامک سروکست با Facade - " . date('Y-m-d H:i:s');
+$testMessage = "تست سرویس پیامک مانجی با Facade - " . date('Y-m-d H:i:s');
 
 // Test 1: Using the new Melipayamak facade
 echo "=== Test 1: Melipayamak Facade ===\n";

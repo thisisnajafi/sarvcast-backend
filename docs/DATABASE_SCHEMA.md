@@ -1,4 +1,4 @@
-# SarvCast Database Schema
+# Manji Database Schema
 
 ## Core Tables
 

@@ -73,7 +73,7 @@ If you continue having issues, generate a new key pair:
 
 ```bash
 # Generate new SSH key
-ssh-keygen -t ed25519 -C "github-actions@sarvcast.ir" -f ~/.ssh/github_actions_deploy
+ssh-keygen -t ed25519 -C "github-actions@manji.ir" -f ~/.ssh/github_actions_deploy
 
 # This creates:
 # - ~/.ssh/github_actions_deploy (private key) → Add to GitHub Secrets

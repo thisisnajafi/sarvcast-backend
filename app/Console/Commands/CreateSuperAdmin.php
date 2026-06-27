@@ -32,7 +32,7 @@ class CreateSuperAdmin extends Command
             // Create new user
             $user = User::create([
                 'phone_number' => $phoneNumber,
-                'email' => 'abolfazl@sarvcast.com',
+                'email' => 'abolfazl@manji.com',
                 'password' => Hash::make($password),
                 'first_name' => 'Abolfazl',
                 'last_name' => 'Super Admin',

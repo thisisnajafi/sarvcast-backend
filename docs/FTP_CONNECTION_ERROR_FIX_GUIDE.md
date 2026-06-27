@@ -36,8 +36,8 @@ If the current action still fails, try these alternatives:
 - name: Deploy to FTP (Alternative)
   uses: wlixcc/SFTP-Deploy-Action@v1.2.4
   with:
-    server: ftp.sarvcast.ir
-    username: my@sarvcast.ir
+    server: ftp.manji.ir
+    username: my@manji.ir
     password: Prof48017421@#
     local_path: ./deployment/
     remote_path: /
@@ -52,7 +52,7 @@ If the current action still fails, try these alternatives:
     rsync -avz --delete \
       -e "ssh -o StrictHostKeyChecking=no" \
       ./deployment/ \
-      user@ftp.sarvcast.ir:/path/to/app/
+      user@ftp.manji.ir:/path/to/app/
 ```
 
 ### **Option C: Manual FTP with retry logic**
@@ -63,7 +63,7 @@ If the current action still fails, try these alternatives:
       echo "Attempt $i"
       lftp -c "
         set ftp:ssl-allow no
-        open ftp://my@sarvcast.ir:Prof48017421@#@ftp.sarvcast.ir
+        open ftp://my@manji.ir:Prof48017421@#@ftp.manji.ir
         mirror -R --delete --verbose ./deployment/ /
         quit
       " && break || sleep 10

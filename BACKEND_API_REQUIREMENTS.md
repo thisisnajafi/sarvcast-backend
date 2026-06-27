@@ -1,7 +1,7 @@
-# SarvCast Backend API Requirements
+# Manji Backend API Requirements
 
 ## Overview
-This document outlines the complete backend requirements for implementing the SarvCast API as specified in the API documentation. The backend should be implemented using Laravel with the following key features and endpoints.
+This document outlines the complete backend requirements for implementing the Manji API as specified in the API documentation. The backend should be implemented using Laravel with the following key features and endpoints.
 
 ## Database Schema
 
@@ -652,4 +652,4 @@ CREATE TABLE devices (
 - Troubleshooting guide
 - Maintenance procedures
 
-This comprehensive backend implementation will provide all the necessary functionality for the SarvCast mobile application, ensuring scalability, security, and performance.
+This comprehensive backend implementation will provide all the necessary functionality for the Manji mobile application, ensuring scalability, security, and performance.

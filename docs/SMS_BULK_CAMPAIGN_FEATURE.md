@@ -1,7 +1,7 @@
 # SMS Template Management & Bulk Campaign Feature
 
-**Project:** SarvCast  
-**Scope:** Laravel backend (`sarvcast-laravel`) + Next.js admin dashboard (`next-dashboard`)  
+**Project:** Manji  
+**Scope:** Laravel backend (`manji-laravel`) + Next.js admin dashboard (`next-dashboard`)  
 **Provider:** Melipayamak (ملی‌پیامک) — pattern/template-based SMS  
 **Status:** Specification (pre-implementation)  
 **Last updated:** June 2026
@@ -32,14 +32,14 @@
 
 ## 1. Executive Summary
 
-SarvCast already sends OTP and transactional SMS via **Melipayamak pattern templates** (`sendByBaseNumber` / `BaseServiceNumber`). This feature adds an **admin-managed SMS template registry** and a **bulk SMS campaign tool** in the Next.js dashboard.
+Manji already sends OTP and transactional SMS via **Melipayamak pattern templates** (`sendByBaseNumber` / `BaseServiceNumber`). This feature adds an **admin-managed SMS template registry** and a **bulk SMS campaign tool** in the Next.js dashboard.
 
 Admins will:
 
 1. **Register Melipayamak templates** — enter the panel-assigned `bodyId` (pattern code), template preview text, and define dynamic parameters (e.g. `{0}` = first name, `{1}` = last name).
 2. **Send bulk SMS** to segmented audiences — all users, premium only, non-premium, by role, custom user list, or manual phone numbers — using a selected template with per-user parameter resolution.
 
-Templates are **created and approved in the Melipayamak web panel**; SarvCast stores metadata and maps dynamic fields to user attributes. There is **no Melipayamak API to auto-fetch pattern lists** — registration is manual.
+Templates are **created and approved in the Melipayamak web panel**; Manji stores metadata and maps dynamic fields to user attributes. There is **no Melipayamak API to auto-fetch pattern lists** — registration is manual.
 
 ---
 
@@ -141,9 +141,9 @@ User::whereDoesntHave('subscriptions', fn ($q) =>
 
 | Panel pattern text | bodyId | Parameters sent |
 |--------------------|--------|-----------------|
-| `سلام {0} {1}، اشتراک شما تا {2} فعال است. سروکست` | `380001` | `text=علی;احمدی;۱۴۰۴/۰۴/۰۱` |
+| `سلام {0} {1}، اشتراک شما تا {2} فعال است. مانجی` | `380001` | `text=علی;احمدی;۱۴۰۴/۰۴/۰۱` |
 
-### 4.2 What admin enters in SarvCast
+### 4.2 What admin enters in Manji
 
 Because Melipayamak does not expose a “list my patterns” REST endpoint, the admin manually registers:
 
@@ -433,7 +433,7 @@ POST /api/admin/sms-templates
 {
   "name": "یادآوری اشتراک",
   "melipayamak_body_id": 380001,
-  "preview_text": "سلام {0} {1}، اشتراک شما تا {2} فعال است. سروکست",
+  "preview_text": "سلام {0} {1}، اشتراک شما تا {2} فعال است. مانجی",
   "category": "marketing",
   "description": "برای کاربران پریمیوم",
   "is_active": true,
@@ -974,7 +974,7 @@ Reference: `next-dashboard/components/categories/category-form.tsx`
 Current OTP template in production config:
 
 - **bodyId:** `372382` (config default; docs mention `371085`)
-- **Pattern:** `کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست`
+- **Pattern:** `کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد مانجی`
 - **Parameters:** `[otp_code]`
 
 ### F. Environment variables to document in `.env.example`

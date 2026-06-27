@@ -37,8 +37,8 @@ public/
 ## URL Format
 
 Audio files are accessible at:
-- Direct URL: `https://my.sarvcast.ir/audio/episodes/filename.mp3`
-- Via AudioController: `https://my.sarvcast.ir/audio/episodes/filename.mp3` (with proper MIME types)
+- Direct URL: `https://my.manji.ir/audio/episodes/filename.mp3`
+- Via AudioController: `https://my.manji.ir/audio/episodes/filename.mp3` (with proper MIME types)
 
 ## Database Storage
 

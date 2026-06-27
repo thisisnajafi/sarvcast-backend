@@ -12,14 +12,14 @@ class OptimizePerformanceCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'sarvcast:optimize-performance {--warm-cache : Warm up cache} {--clear-cache : Clear expired cache} {--optimize-db : Optimize database}';
+    protected $signature = 'manji:optimize-performance {--warm-cache : Warm up cache} {--clear-cache : Clear expired cache} {--optimize-db : Optimize database}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Optimize SarvCast application performance';
+    protected $description = 'Optimize Manji application performance';
 
     /**
      * Execute the console command.
@@ -28,7 +28,7 @@ class OptimizePerformanceCommand extends Command
     {
         $performanceService = app(PerformanceService::class);
 
-        $this->info('🚀 Starting SarvCast performance optimization...');
+        $this->info('🚀 Starting Manji performance optimization...');
 
         // Warm up cache
         if ($this->option('warm-cache')) {

@@ -8,7 +8,7 @@ All images are now saved directly in the `public/images` folder instead of using
 ### 1. Updated HasImageUrl Trait
 - **File**: `app/Traits/HasImageUrl.php`
 - **Change**: Updated to generate URLs using `/images/` instead of `/storage/`
-- **URL Format**: `https://my.sarvcast.ir/images/categories/filename.webp`
+- **URL Format**: `https://my.manji.ir/images/categories/filename.webp`
 
 ### 2. Created Public Images Directory Structure
 ```
@@ -46,13 +46,13 @@ public/images/
 
 ### 4. Updated Models
 All models using the `HasImageUrl` trait automatically generate correct URLs:
-- **Category**: `$category->image_url` → `https://my.sarvcast.ir/images/categories/filename.webp`
-- **Story**: `$story->image_url` → `https://my.sarvcast.ir/images/stories/filename.webp`
+- **Category**: `$category->image_url` → `https://my.manji.ir/images/categories/filename.webp`
+- **Story**: `$story->image_url` → `https://my.manji.ir/images/stories/filename.webp`
 - **Episode**: `$episode->image_urls` → Array of full URLs
-- **Person**: `$person->image_url` → `https://my.sarvcast.ir/images/people/filename.webp`
-- **User**: `$user->profile_image_url` → `https://my.sarvcast.ir/images/users/filename.webp`
-- **UserPlaylist**: `$playlist->cover_image` → `https://my.sarvcast.ir/images/playlists/filename.webp`
-- **ImageTimeline**: `$timeline->image_url` → `https://my.sarvcast.ir/images/timeline/filename.webp`
+- **Person**: `$person->image_url` → `https://my.manji.ir/images/people/filename.webp`
+- **User**: `$user->profile_image_url` → `https://my.manji.ir/images/users/filename.webp`
+- **UserPlaylist**: `$playlist->cover_image` → `https://my.manji.ir/images/playlists/filename.webp`
+- **ImageTimeline**: `$timeline->image_url` → `https://my.manji.ir/images/timeline/filename.webp`
 
 ### 5. Updated GitHub Actions Workflow
 - **File**: `.github/workflows/main.yml`
@@ -78,7 +78,7 @@ All models using the `HasImageUrl` trait automatically generate correct URLs:
 ### URL Generation
 ```php
 // Database stores: "categories/filename.webp"
-// Model accessor generates: "https://my.sarvcast.ir/images/categories/filename.webp"
+// Model accessor generates: "https://my.manji.ir/images/categories/filename.webp"
 ```
 
 ### File Structure
@@ -137,7 +137,7 @@ public/
 ### After (Public)
 ```json
 {
-  "image_url": "https://my.sarvcast.ir/images/categories/filename.webp"
+  "image_url": "https://my.manji.ir/images/categories/filename.webp"
 }
 ```
 
@@ -147,7 +147,7 @@ public/
 1. Go to admin panel
 2. Upload a category image
 3. Check if image displays correctly
-4. Verify URL format: `https://my.sarvcast.ir/images/categories/filename.webp`
+4. Verify URL format: `https://my.manji.ir/images/categories/filename.webp`
 
 ### 2. Direct URL Test
 1. Get image URL from database
@@ -218,7 +218,7 @@ ls -la public/images/
 ls -la public/images/categories/
 
 # Test file access
-curl -I https://my.sarvcast.ir/images/categories/test.webp
+curl -I https://my.manji.ir/images/categories/test.webp
 
 # Check web server logs
 tail -f /var/log/apache2/error.log

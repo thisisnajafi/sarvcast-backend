@@ -1,7 +1,7 @@
-# SarvCast Production Deployment Guide
+# Manji Production Deployment Guide
 
 ## Overview
-This guide provides step-by-step instructions for deploying the SarvCast Laravel application to a production server.
+This guide provides step-by-step instructions for deploying the Manji Laravel application to a production server.
 
 ## Prerequisites
 
@@ -12,8 +12,8 @@ This guide provides step-by-step instructions for deploying the SarvCast Laravel
 - **Database**: MySQL 8.0+ or MariaDB 10.6+
 - **Cache**: Redis 6.0+
 - **SSL**: Let's Encrypt certificate
-- **Domain**: api.sarvcast.com (for API)
-- **Subdomain**: admin.sarvcast.com (for admin dashboard)
+- **Domain**: api.manji.com (for API)
+- **Subdomain**: admin.manji.com (for admin dashboard)
 
 ### Required PHP Extensions
 ```bash
@@ -63,9 +63,9 @@ sudo mysql_secure_installation
 
 Create database and user:
 ```sql
-CREATE DATABASE sarvcast_production CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'sarvcast_user'@'localhost' IDENTIFIED BY 'YOUR_SECURE_PASSWORD';
-GRANT ALL PRIVILEGES ON sarvcast_production.* TO 'sarvcast_user'@'localhost';
+CREATE DATABASE manji_production CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'manji_user'@'localhost' IDENTIFIED BY 'YOUR_SECURE_PASSWORD';
+GRANT ALL PRIVILEGES ON manji_production.* TO 'manji_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
@@ -80,9 +80,9 @@ sudo systemctl start redis-server
 ### 1. Clone Repository
 ```bash
 cd /var/www
-sudo git clone https://github.com/your-username/sarvcast.git
-sudo chown -R www-data:www-data sarvcast
-cd sarvcast
+sudo git clone https://github.com/your-username/manji.git
+sudo chown -R www-data:www-data manji
+cd manji
 ```
 
 ### 2. Install Dependencies
@@ -99,17 +99,17 @@ cp .env.example .env
 
 Edit `.env` file with production values:
 ```env
-APP_NAME="SarvCast"
+APP_NAME="Manji"
 APP_ENV=production
 APP_KEY=base64:YOUR_APP_KEY_HERE
 APP_DEBUG=false
-APP_URL=https://api.sarvcast.com
+APP_URL=https://api.manji.com
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=sarvcast_production
-DB_USERNAME=sarvcast_user
+DB_DATABASE=manji_production
+DB_USERNAME=manji_user
 DB_PASSWORD=YOUR_SECURE_DB_PASSWORD
 
 REDIS_HOST=127.0.0.1
@@ -123,28 +123,28 @@ QUEUE_CONNECTION=redis
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
-MAIL_USERNAME=noreply@sarvcast.com
+MAIL_USERNAME=noreply@manji.com
 MAIL_PASSWORD=YOUR_EMAIL_PASSWORD
 MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@sarvcast.com
-MAIL_FROM_NAME="SarvCast"
+MAIL_FROM_ADDRESS=noreply@manji.com
+MAIL_FROM_NAME="Manji"
 
 SMS_API_KEY=YOUR_SMS_API_KEY
 SMS_SENDER_NUMBER=10008663
 
 ZARINPAL_MERCHANT_ID=YOUR_ZARINPAL_MERCHANT_ID
 ZARINPAL_SANDBOX=false
-ZARINPAL_CALLBACK_URL=https://api.sarvcast.com/payment/zarinpal/callback
+ZARINPAL_CALLBACK_URL=https://api.manji.com/payment/zarinpal/callback
 
 FILESYSTEM_DISK=s3
 AWS_ACCESS_KEY_ID=YOUR_AWS_ACCESS_KEY
 AWS_SECRET_ACCESS_KEY=YOUR_AWS_SECRET_KEY
 AWS_DEFAULT_REGION=us-east-1
-AWS_BUCKET=sarvcast-storage
-AWS_URL=https://sarvcast-storage.s3.amazonaws.com
+AWS_BUCKET=manji-storage
+AWS_URL=https://manji-storage.s3.amazonaws.com
 
 FIREBASE_SERVER_KEY=YOUR_FIREBASE_SERVER_KEY
-FIREBASE_PROJECT_ID=sarvcast-app
+FIREBASE_PROJECT_ID=manji-app
 
 LOG_CHANNEL=daily
 LOG_LEVEL=info
@@ -170,17 +170,17 @@ php artisan db:seed --force
 
 ### 7. Set Permissions
 ```bash
-sudo chown -R www-data:www-data /var/www/sarvcast
-sudo chmod -R 755 /var/www/sarvcast
-sudo chmod -R 775 /var/www/sarvcast/storage
-sudo chmod -R 775 /var/www/sarvcast/bootstrap/cache
+sudo chown -R www-data:www-data /var/www/manji
+sudo chmod -R 755 /var/www/manji
+sudo chmod -R 775 /var/www/manji/storage
+sudo chmod -R 775 /var/www/manji/bootstrap/cache
 ```
 
 ## Nginx Configuration
 
 ### 1. Create Nginx Configuration
 ```bash
-sudo nano /etc/nginx/sites-available/sarvcast
+sudo nano /etc/nginx/sites-available/manji
 ```
 
 Add the following configuration:
@@ -188,8 +188,8 @@ Add the following configuration:
 # API Server Configuration
 server {
     listen 80;
-    server_name api.sarvcast.com;
-    root /var/www/sarvcast/public;
+    server_name api.manji.com;
+    root /var/www/manji/public;
     index index.php;
 
     # Security headers
@@ -251,8 +251,8 @@ server {
 # Admin Dashboard Configuration
 server {
     listen 80;
-    server_name admin.sarvcast.com;
-    root /var/www/sarvcast/public;
+    server_name admin.manji.com;
+    root /var/www/manji/public;
     index index.php;
 
     # Security headers
@@ -294,7 +294,7 @@ server {
 
 ### 2. Enable Site
 ```bash
-sudo ln -s /etc/nginx/sites-available/sarvcast /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/manji /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -308,7 +308,7 @@ sudo apt install certbot python3-certbot-nginx -y
 
 ### 2. Obtain SSL Certificates
 ```bash
-sudo certbot --nginx -d api.sarvcast.com -d admin.sarvcast.com
+sudo certbot --nginx -d api.manji.com -d admin.manji.com
 ```
 
 ### 3. Auto-renewal Setup
@@ -359,21 +359,21 @@ sudo systemctl restart php8.2-fpm
 
 ### 1. Create Queue Worker Service
 ```bash
-sudo nano /etc/systemd/system/sarvcast-worker.service
+sudo nano /etc/systemd/system/manji-worker.service
 ```
 
 Add the following content:
 ```ini
 [Unit]
-Description=SarvCast Queue Worker
+Description=Manji Queue Worker
 After=network.target
 
 [Service]
 User=www-data
 Group=www-data
 Restart=always
-ExecStart=/usr/bin/php /var/www/sarvcast/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
-WorkingDirectory=/var/www/sarvcast
+ExecStart=/usr/bin/php /var/www/manji/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+WorkingDirectory=/var/www/manji
 
 [Install]
 WantedBy=multi-user.target
@@ -381,8 +381,8 @@ WantedBy=multi-user.target
 
 ### 2. Enable and Start Service
 ```bash
-sudo systemctl enable sarvcast-worker
-sudo systemctl start sarvcast-worker
+sudo systemctl enable manji-worker
+sudo systemctl start manji-worker
 ```
 
 ## Cron Jobs Setup
@@ -394,7 +394,7 @@ sudo crontab -e
 
 Add the following line:
 ```bash
-* * * * * cd /var/www/sarvcast && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/manji && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 ## Monitoring Setup
@@ -441,8 +441,8 @@ sudo systemctl start fail2ban
 
 ### 1. Create Backup Directory
 ```bash
-sudo mkdir -p /var/backups/sarvcast
-sudo chown www-data:www-data /var/backups/sarvcast
+sudo mkdir -p /var/backups/manji
+sudo chown www-data:www-data /var/backups/manji
 ```
 
 ### 2. Configure Automated Backups
@@ -453,13 +453,13 @@ sudo crontab -e
 Add the following lines:
 ```bash
 # Daily full backup at 2 AM
-0 2 * * * cd /var/www/sarvcast && php artisan sarvcast:backup --type=full >> /var/log/sarvcast-backup.log 2>&1
+0 2 * * * cd /var/www/manji && php artisan manji:backup --type=full >> /var/log/manji-backup.log 2>&1
 
 # Weekly database backup on Sundays at 3 AM
-0 3 * * 0 cd /var/www/sarvcast && php artisan sarvcast:backup --type=database >> /var/log/sarvcast-backup.log 2>&1
+0 3 * * 0 cd /var/www/manji && php artisan manji:backup --type=database >> /var/log/manji-backup.log 2>&1
 
 # Cleanup old backups monthly
-0 4 1 * * cd /var/www/sarvcast && php artisan sarvcast:backup --cleanup >> /var/log/sarvcast-backup.log 2>&1
+0 4 1 * * cd /var/www/manji && php artisan manji:backup --cleanup >> /var/log/manji-backup.log 2>&1
 ```
 
 ## Performance Optimization
@@ -538,22 +538,22 @@ sudo systemctl restart ssh
 ### 1. Test API Endpoints
 ```bash
 # Test health check
-curl https://api.sarvcast.com/api/v1/health
+curl https://api.manji.com/api/v1/health
 
 # Test categories endpoint
-curl https://api.sarvcast.com/api/v1/categories
+curl https://api.manji.com/api/v1/categories
 ```
 
 ### 2. Test Admin Dashboard
 ```bash
 # Test admin login page
-curl https://admin.sarvcast.com/admin/auth/login
+curl https://admin.manji.com/admin/auth/login
 ```
 
 ### 3. Test SSL Certificate
 ```bash
 # Check SSL certificate
-openssl s_client -connect api.sarvcast.com:443 -servername api.sarvcast.com
+openssl s_client -connect api.manji.com:443 -servername api.manji.com
 ```
 
 ## Maintenance Commands
@@ -576,7 +576,7 @@ php artisan view:clear
 php artisan optimize
 
 # Run performance optimization
-php artisan sarvcast:optimize-performance
+php artisan manji:optimize-performance
 ```
 
 ### 2. Database Maintenance
@@ -588,22 +588,22 @@ php artisan migrate --force
 php artisan db:seed --force
 
 # Create backup
-php artisan sarvcast:backup --type=full
+php artisan manji:backup --type=full
 
 # List backups
-php artisan sarvcast:backup --list
+php artisan manji:backup --list
 ```
 
 ### 3. Monitoring Commands
 ```bash
 # Check application health
-php artisan sarvcast:monitor
+php artisan manji:monitor
 
 # View system metrics
-php artisan sarvcast:monitor --metrics
+php artisan manji:monitor --metrics
 
 # Check error rates
-php artisan sarvcast:monitor --errors
+php artisan manji:monitor --errors
 ```
 
 ## Troubleshooting
@@ -612,10 +612,10 @@ php artisan sarvcast:monitor --errors
 
 #### 1. Permission Issues
 ```bash
-sudo chown -R www-data:www-data /var/www/sarvcast
-sudo chmod -R 755 /var/www/sarvcast
-sudo chmod -R 775 /var/www/sarvcast/storage
-sudo chmod -R 775 /var/www/sarvcast/bootstrap/cache
+sudo chown -R www-data:www-data /var/www/manji
+sudo chmod -R 755 /var/www/manji
+sudo chmod -R 775 /var/www/manji/storage
+sudo chmod -R 775 /var/www/manji/bootstrap/cache
 ```
 
 #### 2. Database Connection Issues
@@ -640,10 +640,10 @@ redis-cli ping
 #### 4. Queue Worker Issues
 ```bash
 # Check queue worker status
-sudo systemctl status sarvcast-worker
+sudo systemctl status manji-worker
 
 # Restart queue worker
-sudo systemctl restart sarvcast-worker
+sudo systemctl restart manji-worker
 ```
 
 #### 5. SSL Certificate Issues
@@ -684,15 +684,15 @@ sudo certbot renew --dry-run
 4. **Quarterly**: Review and optimize database performance
 
 ### Monitoring Endpoints
-- **Health Check**: https://api.sarvcast.com/api/v1/health
-- **Metrics**: https://api.sarvcast.com/api/v1/health/metrics
-- **Admin Dashboard**: https://admin.sarvcast.com
+- **Health Check**: https://api.manji.com/api/v1/health
+- **Metrics**: https://api.manji.com/api/v1/health/metrics
+- **Admin Dashboard**: https://admin.manji.com
 
 ### Support Contacts
-- **Technical Support**: support@sarvcast.com
-- **System Administrator**: admin@sarvcast.com
+- **Technical Support**: support@manji.com
+- **System Administrator**: admin@manji.com
 - **Emergency Contact**: +98-XXX-XXX-XXXX
 
 ## Conclusion
 
-This deployment guide provides comprehensive instructions for setting up SarvCast in a production environment. Follow all steps carefully and test thoroughly before going live. Regular monitoring and maintenance are essential for optimal performance and security.
+This deployment guide provides comprehensive instructions for setting up Manji in a production environment. Follow all steps carefully and test thoroughly before going live. Regular monitoring and maintenance are essential for optimal performance and security.

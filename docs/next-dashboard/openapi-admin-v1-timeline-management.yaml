@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Timeline Management (Dashboard)
+  title: Manji Admin API — Timeline Management (Dashboard)
   description: Contract for episode image timeline CRUD under /api/admin/timeline-management
   version: 1.0.0
 

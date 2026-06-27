@@ -1,4 +1,4 @@
-# راهنمای پشتیبان‌گیری و بازیابی پنل مدیریت SarvCast
+# راهنمای پشتیبان‌گیری و بازیابی پنل مدیریت Manji
 
 ## فهرست مطالب
 
@@ -40,8 +40,8 @@
 
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/opt/backups/full"
-DB_NAME="sarvcast"
-DB_USER="sarvcast_admin"
+DB_NAME="manji"
+DB_USER="manji_admin"
 DB_PASS="StrongPassword123!"
 
 # ایجاد پوشه پشتیبان‌گیری
@@ -56,7 +56,7 @@ gzip $BACKUP_DIR/db_full_$DATE.sql
 
 # پشتیبان‌گیری فایل‌ها
 echo "شروع پشتیبان‌گیری فایل‌ها..."
-tar -czf $BACKUP_DIR/files_full_$DATE.tar.gz /var/www/sarvcast
+tar -czf $BACKUP_DIR/files_full_$DATE.tar.gz /var/www/manji
 
 # پشتیبان‌گیری تنظیمات
 echo "شروع پشتیبان‌گیری تنظیمات..."
@@ -80,8 +80,8 @@ echo "پشتیبان‌گیری کامل با موفقیت انجام شد: $DAT
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/opt/backups/differential"
 FULL_BACKUP_DIR="/opt/backups/full"
-DB_NAME="sarvcast"
-DB_USER="sarvcast_admin"
+DB_NAME="manji"
+DB_USER="manji_admin"
 DB_PASS="StrongPassword123!"
 
 # یافتن آخرین پشتیبان‌گیری کامل
@@ -100,7 +100,7 @@ gzip $BACKUP_DIR/db_diff_$DATE.sql
 
 # پشتیبان‌گیری تفاضلی فایل‌ها
 echo "شروع پشتیبان‌گیری تفاضلی فایل‌ها..."
-find /var/www/sarvcast -newer $LAST_FULL -type f -print0 | tar -czf $BACKUP_DIR/files_diff_$DATE.tar.gz --null -T -
+find /var/www/manji -newer $LAST_FULL -type f -print0 | tar -czf $BACKUP_DIR/files_diff_$DATE.tar.gz --null -T -
 
 # رمزگذاری پشتیبان‌گیری
 echo "رمزگذاری پشتیبان‌گیری تفاضلی..."
@@ -119,8 +119,8 @@ echo "پشتیبان‌گیری تفاضلی با موفقیت انجام شد: 
 
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/opt/backups/incremental"
-DB_NAME="sarvcast"
-DB_USER="sarvcast_admin"
+DB_NAME="manji"
+DB_USER="manji_admin"
 DB_PASS="StrongPassword123!"
 
 # یافتن آخرین پشتیبان‌گیری
@@ -144,9 +144,9 @@ gzip $BACKUP_DIR/db_inc_$DATE.sql
 # پشتیبان‌گیری افزایشی فایل‌ها
 echo "شروع پشتیبان‌گیری افزایشی فایل‌ها..."
 if [ -n "$LAST_BACKUP" ]; then
-    find /var/www/sarvcast -newer $LAST_BACKUP -type f -print0 | tar -czf $BACKUP_DIR/files_inc_$DATE.tar.gz --null -T -
+    find /var/www/manji -newer $LAST_BACKUP -type f -print0 | tar -czf $BACKUP_DIR/files_inc_$DATE.tar.gz --null -T -
 else
-    tar -czf $BACKUP_DIR/files_inc_$DATE.tar.gz /var/www/sarvcast
+    tar -czf $BACKUP_DIR/files_inc_$DATE.tar.gz /var/www/manji
 fi
 
 # رمزگذاری پشتیبان‌گیری
@@ -346,10 +346,10 @@ gpg --gen-key
 gpg --list-keys
 
 # صادرات کلید عمومی
-gpg --armor --export admin@sarvcast.com > public_key.asc
+gpg --armor --export admin@manji.com > public_key.asc
 
 # صادرات کلید خصوصی
-gpg --armor --export-secret-keys admin@sarvcast.com > private_key.asc
+gpg --armor --export-secret-keys admin@manji.com > private_key.asc
 ```
 
 ### رمزگذاری خودکار
@@ -359,7 +359,7 @@ gpg --armor --export-secret-keys admin@sarvcast.com > private_key.asc
 
 BACKUP_FILE=$1
 ENCRYPTED_FILE=$2
-RECIPIENT="admin@sarvcast.com"
+RECIPIENT="admin@manji.com"
 
 if [ -z "$BACKUP_FILE" ] || [ -z "$ENCRYPTED_FILE" ]; then
     echo "استفاده: $0 <فایل_پشتیبان‌گیری> <فایل_رمزگذاری_شده>"
@@ -402,7 +402,7 @@ echo "فایل با موفقیت رمزگشایی شد: $DECRYPTED_FILE"
 # فایل: /opt/scripts/upload_to_s3.sh
 
 BACKUP_FILE=$1
-BUCKET_NAME="sarvcast-backups"
+BUCKET_NAME="manji-backups"
 AWS_REGION="us-east-1"
 
 if [ -z "$BACKUP_FILE" ]; then
@@ -425,7 +425,7 @@ echo "فایل با موفقیت به S3 آپلود شد: $(basename $BACKUP_FIL
 # فایل: /opt/scripts/upload_to_gcs.sh
 
 BACKUP_FILE=$1
-BUCKET_NAME="sarvcast-backups"
+BUCKET_NAME="manji-backups"
 
 if [ -z "$BACKUP_FILE" ]; then
     echo "استفاده: $0 <فایل_پشتیبان‌گیری>"
@@ -449,8 +449,8 @@ echo "فایل با موفقیت به GCS آپلود شد: $(basename $BACKUP_FI
 # فایل: /opt/scripts/restore_full.sh
 
 BACKUP_FILE=$1
-DB_NAME="sarvcast"
-DB_USER="sarvcast_admin"
+DB_NAME="manji"
+DB_USER="manji_admin"
 DB_PASS="StrongPassword123!"
 
 if [ -z "$BACKUP_FILE" ]; then
@@ -474,8 +474,8 @@ if [ -n "$DB_FILE" ]; then
 fi
 
 # تنظیم مجوزهای فایل‌ها
-chown -R www-data:www-data /var/www/sarvcast
-chmod -R 755 /var/www/sarvcast
+chown -R www-data:www-data /var/www/manji
+chmod -R 755 /var/www/manji
 
 # پاک کردن فایل‌های موقت
 rm $DECRYPTED_FILE
@@ -594,7 +594,7 @@ echo "تست یکپارچگی پشتیبان‌گیری موفق"
 # فایل: /opt/scripts/test_restore.sh
 
 BACKUP_FILE=$1
-TEST_DB_NAME="sarvcast_test"
+TEST_DB_NAME="manji_test"
 
 if [ -z "$BACKUP_FILE" ]; then
     echo "استفاده: $0 <فایل_پشتیبان‌گیری>"
@@ -637,7 +637,7 @@ echo "تست بازیابی موفق"
 # فایل: /opt/scripts/monitor_backups.sh
 
 BACKUP_DIR="/opt/backups"
-ALERT_EMAIL="admin@sarvcast.com"
+ALERT_EMAIL="admin@manji.com"
 
 echo "شروع نظارت بر پشتیبان‌گیری‌ها..."
 
@@ -676,7 +676,7 @@ echo "نظارت بر پشتیبان‌گیری‌ها تکمیل شد"
 # فایل: /opt/scripts/backup_report.sh
 
 BACKUP_DIR="/opt/backups"
-REPORT_EMAIL="admin@sarvcast.com"
+REPORT_EMAIL="admin@manji.com"
 
 echo "ایجاد گزارش پشتیبان‌گیری..."
 
@@ -751,9 +751,9 @@ MAX_PARALLEL=4
 echo "شروع پشتیبان‌گیری موازی..."
 
 # پشتیبان‌گیری موازی جداول
-mysql -u root -p -e "SHOW TABLES" sarvcast | tail -n +2 | while read table; do
+mysql -u root -p -e "SHOW TABLES" manji | tail -n +2 | while read table; do
     (
-        mysqldump -u root -p sarvcast $table > $BACKUP_DIR/${table}.sql
+        mysqldump -u root -p manji $table > $BACKUP_DIR/${table}.sql
         echo "جدول $table پشتیبان‌گیری شد"
     ) &
     

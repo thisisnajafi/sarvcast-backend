@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Manji'),
 
     /*
     |--------------------------------------------------------------------------
@@ -28,11 +28,11 @@ return [
     'version' => env('APP_VERSION', '1.0.0'),
     'build' => env('APP_BUILD', '1'),
     'min_supported_version' => env('APP_MIN_SUPPORTED_VERSION', '1.0.0'),
-    'support_email' => env('APP_SUPPORT_EMAIL', 'support@sarvcast.com'),
+    'support_email' => env('APP_SUPPORT_EMAIL', 'support@manji.com'),
     'support_phone' => env('APP_SUPPORT_PHONE', '021-12345678'),
-    'website_url' => env('APP_WEBSITE_URL', 'https://sarvcast.com'),
-    'privacy_policy_url' => env('APP_PRIVACY_POLICY_URL', 'https://sarvcast.com/privacy'),
-    'terms_of_service_url' => env('APP_TERMS_OF_SERVICE_URL', 'https://sarvcast.com/terms'),
+    'website_url' => env('APP_WEBSITE_URL', 'https://manji.com'),
+    'privacy_policy_url' => env('APP_PRIVACY_POLICY_URL', 'https://manji.com/privacy'),
+    'terms_of_service_url' => env('APP_TERMS_OF_SERVICE_URL', 'https://manji.com/terms'),
 
     /*
     |--------------------------------------------------------------------------

@@ -1,11 +1,11 @@
 @echo off
-REM SarvCast Post-Deployment Storage Setup Script (Windows)
+REM Manji Post-Deployment Storage Setup Script (Windows)
 REM Run this script on your production server after deployment
 
-echo 🚀 Starting SarvCast post-deployment storage setup...
+echo Starting Manji post-deployment storage setup...
 
 REM Navigate to the project directory
-cd /d "E:\1 - laravel\7 - SarvCast\sarvcast"
+cd /d "E:\1 - laravel\7 - Manji\manji-laravel"
 
 REM Create public images directories
 echo 📁 Creating public images directories...

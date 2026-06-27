@@ -1,16 +1,16 @@
-# SarvCast Environment Configuration Guide
+# Manji Environment Configuration Guide
 
 ## 🔧 Complete .env Configuration
 
-Add these settings to your `.env` file for proper SarvCast functionality:
+Add these settings to your `.env` file for proper Manji functionality:
 
 ```env
 # Application Settings
-APP_NAME=SarvCast
+APP_NAME=Manji
 APP_ENV=production
 APP_KEY=base64:YOUR_APP_KEY_HERE
 APP_DEBUG=false
-APP_URL=https://my.sarvcast.ir
+APP_URL=https://my.manji.ir
 
 # Database Configuration
 DB_CONNECTION=mysql
@@ -38,9 +38,9 @@ MELIPAYAMK_SENDER=50002710008883
 # Payment Configuration (Zarinpal)
 # Note: Merchant ID is hardcoded in the application
 ZARINPAL_SANDBOX=false
-PAYMENT_CALLBACK_URL=https://my.sarvcast.ir/payment/zarinpal/callback
-PAYMENT_SUCCESS_URL=https://my.sarvcast.ir/payment/success
-PAYMENT_FAILURE_URL=https://my.sarvcast.ir/payment/failure
+PAYMENT_CALLBACK_URL=https://my.manji.ir/payment/zarinpal/callback
+PAYMENT_SUCCESS_URL=https://my.manji.ir/payment/success
+PAYMENT_FAILURE_URL=https://my.manji.ir/payment/failure
 
 # Logging
 LOG_CHANNEL=stack
@@ -53,8 +53,8 @@ MAIL_PORT=587
 MAIL_USERNAME=your_email
 MAIL_PASSWORD=your_password
 MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@sarvcast.ir
-MAIL_FROM_NAME="SarvCast"
+MAIL_FROM_ADDRESS=noreply@manji.ir
+MAIL_FROM_NAME="Manji"
 
 # File Storage
 FILESYSTEM_DISK=local
@@ -78,9 +78,9 @@ PUSHER_APP_CLUSTER=mt1
 **Note:** The merchant ID is now hardcoded in the application code and doesn't require environment configuration.
 
 ### **Payment URLs (Callback-based, NOT webhooks):**
-- **Callback URL**: `https://my.sarvcast.ir/payment/zarinpal/callback` (Zarinpal redirects here after payment)
-- **Success URL**: `https://my.sarvcast.ir/payment/success` (User sees this on successful payment)
-- **Failure URL**: `https://my.sarvcast.ir/payment/failure` (User sees this on failed payment)
+- **Callback URL**: `https://my.manji.ir/payment/zarinpal/callback` (Zarinpal redirects here after payment)
+- **Success URL**: `https://my.manji.ir/payment/success` (User sees this on successful payment)
+- **Failure URL**: `https://my.manji.ir/payment/failure` (User sees this on failed payment)
 
 **Note:** Zarinpal uses callback redirects, not webhooks. The user is redirected back to your application after payment.
 
@@ -201,7 +201,7 @@ php artisan route:list | head -5
 ```
 
 ### **Test Payment System:**
-1. Visit: `https://my.sarvcast.ir/api/v1/subscriptions/plans`
+1. Visit: `https://my.manji.ir/api/v1/subscriptions/plans`
 2. Should return subscription plans with prices
 3. Test payment initiation works
 
@@ -212,7 +212,7 @@ php artisan route:list | head -5
 
 ---
 
-## 🎯 Your SarvCast Application is Ready!
+## 🎯 Your Manji Application is Ready!
 
 With these configurations:
 - ✅ **Payment system** configured with Zarinpal
@@ -221,4 +221,4 @@ With these configurations:
 - ✅ **Production-ready** settings
 - ✅ **Security optimized** configuration
 
-Your SarvCast application is now fully configured and ready for production use! 🚀
+Your Manji application is now fully configured and ready for production use! 🚀

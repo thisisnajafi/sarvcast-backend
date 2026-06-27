@@ -285,7 +285,7 @@ class SmsService
         }
 
         // Fallback to regular SMS with template pattern message
-        $otpMessage = "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد سروکست";
+        $otpMessage = "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد مانجی";
 
         Log::info('Template SMS failed, using regular SMS fallback', [
             'phone_number' => $phoneNumber,
@@ -305,7 +305,7 @@ class SmsService
 
     /**
      * Send OTP using Melipayamak template pattern 372382
-     * Template message: "کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست"
+     * Template message: "کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد مانجی"
      */
     private function sendOtpWithTemplate(string $phoneNumber, string $otpCode, string $purpose): array
     {
@@ -343,7 +343,7 @@ class SmsService
                 'to' => $phoneNumber,
                 'template_id' => $templateId,
                 'parameters' => [$otpCode],
-                'template_message' => "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد سروکست"
+                'template_message' => "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد مانجی"
             ];
 
             // Send SMS with template pattern 372382

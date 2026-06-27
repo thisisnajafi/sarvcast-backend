@@ -3,7 +3,7 @@
 ## مرحله 1: اجرای Migration
 
 ```bash
-cd sarvcast-laravel
+cd manji-laravel
 php artisan migrate
 ```
 
@@ -25,21 +25,21 @@ php artisan migrate:status
 
 ```env
 # CafeBazaar
-CAFEBAZAAR_PACKAGE_NAME=ir.sarvcast.app
+CAFEBAZAAR_PACKAGE_NAME=ir.manji.app
 CAFEBAZAAR_API_KEY=your_api_key_here
 CAFEBAZAAR_API_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/validate
 CAFEBAZAAR_SUBSCRIPTION_API_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/validate/subscription
 CAFEBAZAAR_ACKNOWLEDGE_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge
 
 # Myket
-MYKET_PACKAGE_NAME=ir.sarvcast.app
+MYKET_PACKAGE_NAME=ir.manji.app
 MYKET_API_KEY=your_api_key_here
 MYKET_API_URL=https://developer.myket.ir/api/applications/validatePurchase
 MYKET_SUBSCRIPTION_API_URL=https://developer.myket.ir/api/applications/validateSubscription
 
 # Zarinpal (Website - already configured)
 ZARINPAL_MERCHANT_ID=your_merchant_id
-ZARINPAL_CALLBACK_URL=https://my.sarvcast.ir
+ZARINPAL_CALLBACK_URL=https://my.manji.ir
 ZARINPAL_SANDBOX=false
 ```
 
@@ -111,7 +111,7 @@ ZARINPAL_SANDBOX=false
 ### 5.1 تست دریافت تنظیمات پلتفرم
 
 ```bash
-curl -X GET "https://my.sarvcast.ir/api/v1/billing/platform-config" \
+curl -X GET "https://my.manji.ir/api/v1/billing/platform-config" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -130,7 +130,7 @@ curl -X GET "https://my.sarvcast.ir/api/v1/billing/platform-config" \
 ### 5.2 تست تایید خرید کافه‌بازار (با داده تست)
 
 ```bash
-curl -X POST "https://my.sarvcast.ir/api/v1/payments/cafebazaar/verify" \
+curl -X POST "https://my.manji.ir/api/v1/payments/cafebazaar/verify" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

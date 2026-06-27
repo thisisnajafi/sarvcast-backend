@@ -235,7 +235,7 @@ class MediaLibraryApiTest extends TestCase
         $admin = User::factory()->create(['role' => 'super_admin', 'status' => 'active']);
         Sanctum::actingAs($admin);
 
-        $storiesRoot = storage_path('app/testing-sarvcast-stories');
+        $storiesRoot = storage_path('app/testing-manji-stories');
         $episodeDir = $storiesRoot . '/1-test-story/episode_1';
         if (! is_dir($episodeDir)) {
             mkdir($episodeDir, 0755, true);

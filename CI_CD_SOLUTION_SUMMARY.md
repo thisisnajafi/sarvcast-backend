@@ -95,7 +95,7 @@ Schema::table('subscription_plans', function (Blueprint $table) {
 **Backup Retention:**
 - Keep backups for 30 days
 - Automatic cleanup of old backups
-- Store backups in `/backups/sarvcast/`
+- Store backups in `/backups/manji/`
 
 ### 3. **Deployment Safety**
 
@@ -137,7 +137,7 @@ Schema::table('subscription_plans', function (Blueprint $table) {
          ├──► Upload Scripts via SSH
          │
          ├──► Backup Database (via SSH)
-         │    └──► /backups/sarvcast/pre_deployment_*.sql.gz
+         │    └──► /backups/manji/pre_deployment_*.sql.gz
          │
          ├──► Update Composer Dependencies
          │
@@ -182,10 +182,10 @@ Schema::table('subscription_plans', function (Blueprint $table) {
 ### Backup Monitoring
 ```bash
 # List all backups
-ls -lh /backups/sarvcast/
+ls -lh /backups/manji/
 
 # View backup metadata
-cat /backups/sarvcast/backup_*.json
+cat /backups/manji/backup_*.json
 ```
 
 ### Migration Status
@@ -199,7 +199,7 @@ php artisan migrate:status | grep Pending
 
 ### Deployment Logs
 - GitHub Actions: Repository → Actions
-- Server logs: `/tmp/sarvcast-*.log`
+- Server logs: `/tmp/manji-*.log`
 - Laravel logs: `storage/logs/laravel.log`
 
 ## 🚀 Quick Start
@@ -210,7 +210,7 @@ php artisan migrate:status | grep Pending
 
 2. **Server Setup (one-time):**
    ```bash
-   mkdir -p /backups/sarvcast
+   mkdir -p /backups/manji
    ```
 
 3. **Deploy:**

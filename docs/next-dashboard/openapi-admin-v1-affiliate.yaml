@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Affiliate partners
+  title: Manji Admin API — Affiliate partners
   version: 1.0.0
 
 paths:

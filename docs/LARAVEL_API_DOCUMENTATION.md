@@ -1,8 +1,8 @@
-# SarvCast Laravel API & Admin Dashboard Documentation
+# Manji Laravel API & Admin Dashboard Documentation
 
 ## Project Overview
 
-SarvCast is a Persian children's audio story platform with Flutter mobile app, Laravel API backend, and Tailwind CSS admin dashboard. This documentation covers the complete Laravel backend implementation.
+Manji is a Persian children's audio story platform with Flutter mobile app, Laravel API backend, and Tailwind CSS admin dashboard. This documentation covers the complete Laravel backend implementation.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ SarvCast is a Persian children's audio story platform with Flutter mobile app, L
 ## Project Structure
 
 ```
-sarvcast-backend/
+manji-backend/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/
@@ -493,8 +493,8 @@ Get paginated list of stories with filters.
                 "title": "ماجراجویی در جنگل جادویی",
                 "subtitle": "داستان پسر کوچکی که در جنگل جادویی گم می‌شود",
                 "description": "داستان هیجان‌انگیز...",
-                "image_url": "https://api.sarvcast.com/storage/stories/story1.jpg",
-                "cover_image_url": "https://api.sarvcast.com/storage/stories/story1_cover.jpg",
+                "image_url": "https://api.manji.com/storage/stories/story1.jpg",
+                "cover_image_url": "https://api.manji.com/storage/stories/story1_cover.jpg",
                 "category": {
                     "id": 1,
                     "name": "ماجراجویی",
@@ -649,8 +649,8 @@ Mark all notifications as read.
 ### JWT Token Structure
 ```json
 {
-    "iss": "sarvcast-api",
-    "aud": "sarvcast-app",
+    "iss": "manji-api",
+    "aud": "manji-app",
     "iat": 1640995200,
     "exp": 1641081600,
     "sub": "1",
@@ -1087,7 +1087,7 @@ Accept: application/json
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SarvCast Admin Dashboard</title>
+    <title>Manji Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -1204,4 +1204,4 @@ Accept: application/json
 </div>
 ```
 
-This comprehensive documentation provides everything needed to build a complete Laravel API and admin dashboard for the SarvCast project. The structure matches the Flutter app's data models and provides all necessary endpoints and admin functionality.
+This comprehensive documentation provides everything needed to build a complete Laravel API and admin dashboard for the Manji project. The structure matches the Flutter app's data models and provides all necessary endpoints and admin functionality.

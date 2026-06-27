@@ -1,5 +1,5 @@
 /**
- * SarvCast Admin JavaScript Functionality
+ * Manji Admin JavaScript Functionality
  * Comprehensive admin panel JavaScript functions
  */
 

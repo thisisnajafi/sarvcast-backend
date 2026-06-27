@@ -1,7 +1,7 @@
-# SarvCast Implementation Summary
+# Manji Implementation Summary
 
 ## Overview
-This document summarizes all the changes made to the SarvCast platform based on the user's requirements. The platform has been updated to focus on Persian phone number authentication, story commenting, image timeline features, and restricted user capabilities.
+This document summarizes all the changes made to the Manji platform based on the user's requirements. The platform has been updated to focus on Persian phone number authentication, story commenting, image timeline features, and restricted user capabilities.
 
 ## Major Changes Implemented
 
@@ -236,7 +236,7 @@ This document summarizes all the changes made to the SarvCast platform based on 
 
 ## Conclusion
 
-The SarvCast platform has been successfully updated with:
+The Manji platform has been successfully updated with:
 1. Persian phone number authentication
 2. Image timeline feature for episodes
 3. Story commenting system

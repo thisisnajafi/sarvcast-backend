@@ -1,8 +1,8 @@
-# راهنمای مانیتورینگ عملکرد - ویژگی‌های جدید سروکست
+# راهنمای مانیتورینگ عملکرد - ویژگی‌های جدید مانجی
 
 ## مقدمه
 
-این راهنما شامل روش‌های مانیتورینگ عملکرد ویژگی‌های جدید سروکست شامل سیستم تایم‌لاین تصاویر و سیستم نظرات است.
+این راهنما شامل روش‌های مانیتورینگ عملکرد ویژگی‌های جدید مانجی شامل سیستم تایم‌لاین تصاویر و سیستم نظرات است.
 
 ## ویژگی‌های مانیتورینگ
 
@@ -689,7 +689,7 @@ class PerformanceAlertSystem
     private function sendCriticalAlert($alert)
     {
         // ارسال ایمیل
-        Mail::to('admin@sarvcast.com')->send(new CriticalAlertMail($alert));
+        Mail::to('admin@manji.com')->send(new CriticalAlertMail($alert));
         
         // ارسال SMS
         $this->sendSMS('09123456789', $alert['message']);
@@ -701,7 +701,7 @@ class PerformanceAlertSystem
     private function sendWarningAlert($alert)
     {
         // ارسال ایمیل
-        Mail::to('admin@sarvcast.com')->send(new WarningAlertMail($alert));
+        Mail::to('admin@manji.com')->send(new WarningAlertMail($alert));
     }
 }
 ```
@@ -807,9 +807,9 @@ class PrometheusMetrics
 
 ---
 
-**نکته مهم**: این راهنما برای مانیتورینگ عملکرد ویژگی‌های جدید سروکست تهیه شده است. برای سوالات فنی، با تیم DevOps تماس بگیرید.
+**نکته مهم**: این راهنما برای مانیتورینگ عملکرد ویژگی‌های جدید مانجی تهیه شده است. برای سوالات فنی، با تیم DevOps تماس بگیرید.
 
 **تماس با تیم DevOps**:
-- ایمیل: devops@sarvcast.com
+- ایمیل: devops@manji.com
 - تلفن: 021-12345678
-- تلگرام: @SarvCastDevOps
+- تلگرام: @ManjiDevOps

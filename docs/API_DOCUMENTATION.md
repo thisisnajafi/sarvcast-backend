@@ -1,19 +1,19 @@
-# SarvCast API Documentation
+# Manji API Documentation
 
 ## Overview
 
-SarvCast is a Persian children's audio story platform that provides a comprehensive API for managing stories, episodes, users, subscriptions, and more. This documentation covers all available API endpoints, authentication methods, and usage examples.
+Manji is a Persian children's audio story platform that provides a comprehensive API for managing stories, episodes, users, subscriptions, and more. This documentation covers all available API endpoints, authentication methods, and usage examples.
 
 ## Base URL
 
 ```
-Production: https://sarvcast.com/api/v1
+Production: https://manji.com/api/v1
 Development: http://localhost:8000/api/v1
 ```
 
 ## Authentication
 
-SarvCast uses Laravel Sanctum for API authentication. All protected endpoints require a valid Bearer token.
+Manji uses Laravel Sanctum for API authentication. All protected endpoints require a valid Bearer token.
 
 ### Getting an Access Token
 
@@ -254,7 +254,7 @@ Authorization: Bearer {token}
             "name": "John Doe",
             "phone": "+989123456789",
             "email": "john@example.com",
-            "avatar": "https://sarvcast.com/storage/avatars/user1.jpg",
+            "avatar": "https://manji.com/storage/avatars/user1.jpg",
             "subscription": {
                 "plan": "premium",
                 "expires_at": "2023-12-31T23:59:59.000000Z"
@@ -264,7 +264,7 @@ Authorization: Bearer {token}
                     "id": 1,
                     "name": "Alice",
                     "age": 8,
-                    "avatar": "https://sarvcast.com/storage/avatars/child1.jpg"
+                    "avatar": "https://manji.com/storage/avatars/child1.jpg"
                 }
             ]
         }
@@ -340,7 +340,7 @@ Authorization: Bearer {token}
 {
     "name": "Alice",
     "age": 8,
-    "avatar": "https://sarvcast.com/storage/avatars/child1.jpg"
+    "avatar": "https://manji.com/storage/avatars/child1.jpg"
 }
 ```
 
@@ -368,7 +368,7 @@ GET /api/v1/stories
                 "id": 1,
                 "title": "The Magic Forest",
                 "description": "A magical adventure in the forest",
-                "cover_image": "https://sarvcast.com/storage/covers/story1.jpg",
+                "cover_image": "https://manji.com/storage/covers/story1.jpg",
                 "category": {
                     "id": 1,
                     "name": "Adventure"
@@ -407,7 +407,7 @@ Authorization: Bearer {token}
             "id": 1,
             "title": "The Magic Forest",
             "description": "A magical adventure in the forest",
-            "cover_image": "https://sarvcast.com/storage/covers/story1.jpg",
+            "cover_image": "https://manji.com/storage/covers/story1.jpg",
             "category": {
                 "id": 1,
                 "name": "Adventure"
@@ -417,7 +417,7 @@ Authorization: Bearer {token}
                     "id": 1,
                     "title": "Chapter 1: The Beginning",
                     "duration": 300,
-                    "audio_file": "https://sarvcast.com/storage/audio/episode1.mp3",
+                    "audio_file": "https://manji.com/storage/audio/episode1.mp3",
                     "is_premium": false,
                     "order": 1
                 }
@@ -472,14 +472,14 @@ Authorization: Bearer {token}
         "episode": {
             "id": 1,
             "title": "Chapter 1: The Beginning",
-            "audio_file": "https://sarvcast.com/storage/audio/episode1.mp3",
+            "audio_file": "https://manji.com/storage/audio/episode1.mp3",
             "duration": 300,
             "story": {
                 "id": 1,
                 "title": "The Magic Forest"
             }
         },
-        "play_url": "https://sarvcast.com/storage/audio/episode1.mp3?token=play_token"
+        "play_url": "https://manji.com/storage/audio/episode1.mp3?token=play_token"
     }
 }
 ```
@@ -501,7 +501,7 @@ GET /api/v1/categories
                 "id": 1,
                 "name": "Adventure",
                 "description": "Exciting adventure stories",
-                "icon": "https://sarvcast.com/storage/icons/adventure.png",
+                "icon": "https://manji.com/storage/icons/adventure.png",
                 "stories_count": 25,
                 "created_at": "2023-01-01T00:00:00.000000Z"
             }
@@ -989,7 +989,7 @@ Authorization: Bearer {token}
 ```json
 {
     "file_id": 1,
-    "watermark_text": "SarvCast",
+    "watermark_text": "Manji",
     "position": "bottom-right",
     "opacity": 0.5
 }
@@ -1558,10 +1558,10 @@ Authorization: Bearer {admin_token}
 ### JavaScript/TypeScript
 
 ```javascript
-import SarvCastAPI from 'sarvcast-js-sdk';
+import ManjiAPI from 'manji-js-sdk';
 
-const api = new SarvCastAPI({
-    baseURL: 'https://sarvcast.com/api/v1',
+const api = new ManjiAPI({
+    baseURL: 'https://manji.com/api/v1',
     apiKey: 'your_api_key'
 });
 
@@ -1582,10 +1582,10 @@ const stories = await api.stories.list({
 ### PHP
 
 ```php
-use SarvCast\SarvCastAPI;
+use Manji\ManjiAPI;
 
-$api = new SarvCastAPI([
-    'base_url' => 'https://sarvcast.com/api/v1',
+$api = new ManjiAPI([
+    'base_url' => 'https://manji.com/api/v1',
     'api_key' => 'your_api_key'
 ]);
 
@@ -1605,7 +1605,7 @@ $stories = $api->stories->list([
 
 ## Webhooks
 
-SarvCast supports webhooks for real-time notifications:
+Manji supports webhooks for real-time notifications:
 
 ### Webhook Events
 
@@ -1626,7 +1626,7 @@ Authorization: Bearer {admin_token}
 **Request Body:**
 ```json
 {
-    "url": "https://your-app.com/webhooks/sarvcast",
+    "url": "https://your-app.com/webhooks/manji",
     "events": ["user.registered", "user.subscribed"],
     "secret": "your_webhook_secret"
 }
@@ -1723,10 +1723,10 @@ Authorization: Bearer {admin_token}
 
 For API support and questions:
 
-- **Email**: api-support@sarvcast.com
-- **Documentation**: https://docs.sarvcast.com
-- **Status Page**: https://status.sarvcast.com
-- **GitHub**: https://github.com/sarvcast/api
+- **Email**: api-support@manji.com
+- **Documentation**: https://docs.manji.com
+- **Status Page**: https://status.manji.com
+- **GitHub**: https://github.com/manji/api
 
 ## Changelog
 

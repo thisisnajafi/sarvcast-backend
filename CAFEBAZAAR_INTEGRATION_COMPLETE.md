@@ -10,7 +10,7 @@ The CafeBazaar in-app purchase integration is fully implemented and ready for pr
 
 ### ✅ What's Been Implemented
 
-#### 1. **Flutter App Integration** (sarvcast-flutter/)
+#### 1. **Flutter App Integration** (manji-flutter/)
 - ✅ Poolakey Flutter library integration
 - ✅ CafeBazaar subscription service with automatic purchase handling
 - ✅ Product loading and subscription management
@@ -19,7 +19,7 @@ The CafeBazaar in-app purchase integration is fully implemented and ready for pr
 - ✅ Automatic consumption for consumable items
 - ✅ Subscription extension and restoration
 
-#### 2. **Laravel Backend API** (sarvcast-laravel/)
+#### 2. **Laravel Backend API** (manji-laravel/)
 - ✅ CafeBazaar purchase verification endpoints
 - ✅ Flavor-aware request validation
 - ✅ Database integration with billing platform support
@@ -49,7 +49,7 @@ Create your `.env` file with these CafeBazaar settings:
 
 ```env
 # CafeBazaar Configuration - REQUIRED
-CAFEBAZAAR_PACKAGE_NAME=ir.sarvcast.app
+CAFEBAZAAR_PACKAGE_NAME=ir.manji.app
 CAFEBAZAAR_API_KEY=your_cafebazaar_api_key_here
 CAFEBAZAAR_API_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/validate
 CAFEBAZAAR_SUBSCRIPTION_API_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/validate/subscription
@@ -184,7 +184,7 @@ php test_cafebazaar_integration.php
 ```
 
 ### 2. API Testing with Postman
-Import the Postman collection: `SarvCast_API.postman_collection.json`
+Import the Postman collection: `Manji_API.postman_collection.json`
 
 ### 3. Flutter Testing
 ```dart

@@ -13,7 +13,7 @@ Add these variables to your `.env` file:
 # =================================================================
 
 # Your app's package name in CafeBazaar (usually ir.yourcompany.appname)
-CAFEBAZAAR_PACKAGE_NAME=ir.sarvcast.app
+CAFEBAZAAR_PACKAGE_NAME=ir.manji.app
 
 # API Key from CafeBazaar Developer Panel
 # Get this from: https://pardakht.cafebazaar.ir/ > Your App > Payment Settings

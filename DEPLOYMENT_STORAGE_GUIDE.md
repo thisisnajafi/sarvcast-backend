@@ -1,7 +1,7 @@
-# SarvCast Deployment Guide - Storage Configuration
+# Manji Deployment Guide - Storage Configuration
 
 ## Overview
-This guide explains how to properly configure storage for SarvCast during deployment to fix the 403 error on image access.
+This guide explains how to properly configure storage for Manji during deployment to fix the 403 error on image access.
 
 ## Files Updated
 
@@ -9,7 +9,7 @@ This guide explains how to properly configure storage for SarvCast during deploy
 - ✅ Added storage symlink creation step
 - ✅ Added storage permissions setup
 - ✅ Updated deployment verification
-- ✅ Updated project name from LGBTinder to SarvCast
+- ✅ Updated project name from LGBTinder to Manji
 
 ### 2. Post-Deployment Scripts
 - ✅ `post-deployment-storage-setup.sh` (Linux/Unix)
@@ -90,7 +90,7 @@ location /storage/ {
 
 ### 2. Direct URL Test
 1. Get the image URL from the database
-2. Access directly: `https://my.sarvcast.ir/storage/categories/filename.webp`
+2. Access directly: `https://my.manji.ir/storage/categories/filename.webp`
 3. Verify no 403 error
 
 ### 3. API Test
@@ -126,7 +126,7 @@ ls -la public/storage
 ls -la storage/app/public
 
 # Test file access
-curl -I https://my.sarvcast.ir/storage/categories/test.webp
+curl -I https://my.manji.ir/storage/categories/test.webp
 
 # Check web server logs
 tail -f /var/log/apache2/error.log

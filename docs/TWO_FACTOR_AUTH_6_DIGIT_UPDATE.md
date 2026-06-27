@@ -1,7 +1,7 @@
 # Two-Factor Authentication (2FA) Update - 6-Digit Codes
 
 ## Overview
-This document describes the update of the Two-Factor Authentication (2FA) system from 4-digit to 6-digit verification codes for the SarvCast admin dashboard.
+This document describes the update of the Two-Factor Authentication (2FA) system from 4-digit to 6-digit verification codes for the Manji admin dashboard.
 
 ## 🔧 Changes Made
 

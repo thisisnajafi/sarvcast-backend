@@ -14,6 +14,7 @@ use App\Models\ProfileView;
 use App\Models\Character;
 use App\Models\Story;
 use App\Traits\HasImageUrl;
+use Carbon\Carbon;
 
 class User extends Authenticatable
 {
@@ -39,6 +40,13 @@ class User extends Authenticatable
         'password',
         'first_name',
         'last_name',
+        'name',
+        'gender',
+        'birthday',
+        'age_group',
+        'account_type',
+        'favorite_category_ids',
+        'onboarding_completed',
         'profile_image_url',
         'background_photo_url',
         'bio',
@@ -97,6 +105,82 @@ class User extends Authenticatable
             'preferences' => 'array',
             'analytics_data' => 'array',
             'total_spent' => 'decimal:2',
+            'birthday' => 'date',
+            'favorite_category_ids' => 'array',
+            'onboarding_completed' => 'boolean',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->isDirty('birthday') && $user->birthday !== null) {
+                $user->age_group = self::computeAgeGroupFromBirthday($user->birthday);
+            }
+        });
+    }
+
+    public static function computeAgeGroupFromBirthday($birthday): ?string
+    {
+        if ($birthday === null) {
+            return null;
+        }
+
+        $age = Carbon::parse($birthday)->age;
+
+        return match (true) {
+            $age >= 3 && $age <= 5 => '3_5',
+            $age >= 6 && $age <= 8 => '6_8',
+            $age >= 9 && $age <= 12 => '9_12',
+            $age >= 13 => '13_plus',
+            default => null,
+        };
+    }
+
+    /**
+     * Map user age_group enum to story age_group values in the database.
+     */
+    public static function storyAgeGroupsForFilter(?string $ageGroup): ?array
+    {
+        return match ($ageGroup) {
+            '3_5' => ['3-5', '3-6', '3-7', '3-8'],
+            '6_8' => ['6-8', '6-9', '7-9', '6-10'],
+            '9_12' => ['9-12', '10-12', '9-11', '8-12'],
+            '13_plus' => ['13+', '13-17', '12+'],
+            default => null,
+        };
+    }
+
+    public function searchHistories()
+    {
+        return $this->hasMany(SearchHistory::class);
+    }
+
+    public function profilePayload(): array
+    {
+        return [
+            'id' => $this->id,
+            'phone_number' => $this->phone_number,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'name' => $this->name,
+            'gender' => $this->gender ?? 'unspecified',
+            'birthday' => $this->birthday?->format('Y-m-d'),
+            'age_group' => $this->age_group,
+            'account_type' => $this->account_type ?? 'child',
+            'favorite_category_ids' => $this->favorite_category_ids ?? [],
+            'onboarding_completed' => (bool) $this->onboarding_completed,
+            'role' => $this->role,
+            'status' => $this->status,
+            'profile_image_url' => $this->profile_image_url,
+            'background_photo_url' => $this->background_photo_url,
+            'bio' => $this->bio,
+            'timezone' => $this->timezone,
+            'preferences' => $this->preferences,
+            'phone_verified_at' => $this->phone_verified_at,
+            'last_login_at' => $this->last_login_at,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 

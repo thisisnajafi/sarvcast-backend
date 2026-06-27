@@ -1,4 +1,4 @@
-# Server Setup Guide for SarvCast Application
+# Server Setup Guide for Manji Application
 
 ## 🚀 Post-Deployment Server Setup
 
@@ -22,9 +22,9 @@ ssh user@your-server.com
 
 ### **2. Navigate to Application Directory**
 ```bash
-cd /path/to/your/sarvcast/application
-# Example: cd /public_html/sarvcast
-# Example: cd /var/www/html/sarvcast
+cd /path/to/your/manji/application
+# Example: cd /public_html/manji
+# Example: cd /var/www/html/manji
 ```
 
 ### **3. Install Composer Dependencies**
@@ -87,12 +87,12 @@ Create this script on your server for easy setup:
 
 ```bash
 #!/bin/bash
-# save as: setup-sarvcast.sh
+# save as: setup-manji.sh
 
-echo "🚀 Setting up SarvCast Application..."
+echo "🚀 Setting up Manji Application..."
 
 # Navigate to application directory
-cd /path/to/your/sarvcast
+cd /path/to/your/manji
 
 # Install dependencies
 echo "📦 Installing Composer dependencies..."
@@ -124,13 +124,13 @@ php artisan storage:link
 echo "✅ Verifying setup..."
 php artisan --version
 
-echo "🎉 SarvCast setup complete!"
+echo "🎉 Manji setup complete!"
 ```
 
 **Make it executable and run:**
 ```bash
-chmod +x setup-sarvcast.sh
-./setup-sarvcast.sh
+chmod +x setup-manji.sh
+./setup-manji.sh
 ```
 
 ---
@@ -147,10 +147,10 @@ mv composer.phar /usr/local/bin/composer
 ### **Issue 2: Permission Denied**
 ```bash
 # Fix ownership and permissions
-sudo chown -R www-data:www-data /path/to/sarvcast
-sudo chmod -R 755 /path/to/sarvcast
-sudo chmod -R 775 /path/to/sarvcast/storage
-sudo chmod -R 775 /path/to/sarvcast/bootstrap/cache
+sudo chown -R www-data:www-data /path/to/manji
+sudo chmod -R 755 /path/to/manji
+sudo chmod -R 775 /path/to/manji/storage
+sudo chmod -R 775 /path/to/manji/bootstrap/cache
 ```
 
 ### **Issue 3: Missing PHP Extensions**
@@ -261,7 +261,7 @@ If you encounter issues:
 
 ## ✅ **Success Indicators**
 
-Your SarvCast application is properly set up when:
+Your Manji application is properly set up when:
 
 - ✅ Website loads without errors
 - ✅ Admin panel is accessible
@@ -271,4 +271,4 @@ Your SarvCast application is properly set up when:
 - ✅ No PHP errors in logs
 - ✅ Performance is optimal
 
-**🎉 Congratulations! Your SarvCast application is now ready for production use!**
+**🎉 Congratulations! Your Manji application is now ready for production use!**

@@ -50,10 +50,10 @@ class PaymentCallbackController extends Controller
         $payment = $result['payment'] ?? $paymentPrefetch;
         $metadata = $payment?->payment_metadata ?? $prefetchMeta;
         $source = $metadata['source'] ?? null;
-        $returnScheme = $metadata['return_scheme'] ?? config('services.sarvcast_app.return_scheme', 'sarvcast');
+        $returnScheme = $metadata['return_scheme'] ?? config('services.manji_app.return_scheme', 'manji');
         $episodeId = $metadata['episode_id'] ?? null;
 
-        $webBase = rtrim((string) config('services.sarvcast_web.app_url', 'https://app.sarvcast.ir'), '/');
+        $webBase = rtrim((string) config('services.manji_web.app_url', 'https://app.manji.ir'), '/');
 
         // Next.js web app: redirect to configured frontend (subscription activated / failed)
         if ($source === 'web') {

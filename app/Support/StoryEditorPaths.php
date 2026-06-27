@@ -5,7 +5,7 @@ namespace App\Support;
 class StoryEditorPaths
 {
     /**
-     * Resolve the sarvcast-stories directory (env → config default → discovery list).
+     * Resolve the manji-stories directory (env → config default → discovery list).
      *
      * @throws \RuntimeException
      */
@@ -47,7 +47,7 @@ class StoryEditorPaths
 
         throw new \RuntimeException(
             'Stories directory not found. Expected storage path: '
-            . (is_string($storageDefault) ? $storageDefault : storage_path('app/sarvcast-stories'))
+            . (is_string($storageDefault) ? $storageDefault : storage_path('app/manji-stories'))
         );
     }
 

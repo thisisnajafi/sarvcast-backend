@@ -35,7 +35,7 @@ class TestSmsCommand extends Command
     public function handle()
     {
         $phone = $this->argument('phone') ?: '09123456789';
-        $message = $this->option('message') ?: 'Test SMS from SarvCast';
+        $message = $this->option('message') ?: 'Test SMS from Manji';
         $method = $this->option('method') ?: 'otp';
 
         $this->info("Testing SMS sending...");

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# SarvCast Production Deployment Script
+# Manji Production Deployment Script
 # This script automates the deployment process for production
 
 set -e
 
-echo "🚀 Starting SarvCast Production Deployment..."
+echo "🚀 Starting Manji Production Deployment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -155,7 +155,7 @@ docker-compose -f docker-compose.production.yml exec app php artisan view:cache
 
 # Run performance optimization
 print_status "Running performance optimization..."
-docker-compose -f docker-compose.production.yml exec app php artisan sarvcast:optimize-performance
+docker-compose -f docker-compose.production.yml exec app php artisan manji:optimize-performance
 
 # Test application health
 print_status "Testing application health..."
@@ -170,7 +170,7 @@ fi
 
 # Create initial backup
 print_status "Creating initial backup..."
-docker-compose -f docker-compose.production.yml exec app php artisan sarvcast:backup --type=full
+docker-compose -f docker-compose.production.yml exec app php artisan manji:backup --type=full
 
 # Setup SSL certificates (if using Let's Encrypt)
 read -p "Do you want to setup SSL certificates with Let's Encrypt? (y/n): " setup_ssl
@@ -186,7 +186,7 @@ if [ "$setup_ssl" = "y" ] || [ "$setup_ssl" = "Y" ]; then
 
     # Get SSL certificates
     print_status "Obtaining SSL certificates..."
-    sudo certbot --nginx -d api.sarvcast.com -d admin.sarvcast.com --non-interactive --agree-tos --email admin@sarvcast.com
+    sudo certbot --nginx -d api.manji.com -d admin.manji.com --non-interactive --agree-tos --email admin@manji.com
 
     # Setup auto-renewal
     print_status "Setting up SSL auto-renewal..."
@@ -195,7 +195,7 @@ fi
 
 # Setup monitoring
 print_status "Setting up monitoring..."
-docker-compose -f docker-compose.production.yml exec app php artisan sarvcast:monitor
+docker-compose -f docker-compose.production.yml exec app php artisan manji:monitor
 
 # Final status check
 print_status "Performing final status check..."
@@ -205,14 +205,14 @@ docker-compose -f docker-compose.production.yml ps
 print_status "Deployment completed successfully!"
 echo ""
 echo "🌐 Access Information:"
-echo "  API: https://api.sarvcast.com"
-echo "  Admin Dashboard: https://admin.sarvcast.com"
-echo "  Health Check: https://api.sarvcast.com/api/v1/health"
+echo "  API: https://api.manji.com"
+echo "  Admin Dashboard: https://admin.manji.com"
+echo "  Health Check: https://api.manji.com/api/v1/health"
 echo "  Monitoring: http://localhost:9090 (if enabled)"
 echo ""
 echo "📋 Next Steps:"
 echo "  1. Update DNS records to point to this server"
-echo "  2. Configure your domain names (api.sarvcast.com, admin.sarvcast.com)"
+echo "  2. Configure your domain names (api.manji.com, admin.manji.com)"
 echo "  3. Test all functionality"
 echo "  4. Setup monitoring alerts"
 echo "  5. Configure backup notifications"
@@ -221,8 +221,8 @@ echo "🔧 Useful Commands:"
 echo "  View logs: docker-compose -f docker-compose.production.yml logs -f"
 echo "  Restart services: docker-compose -f docker-compose.production.yml restart"
 echo "  Stop services: docker-compose -f docker-compose.production.yml down"
-echo "  Create backup: docker-compose -f docker-compose.production.yml exec app php artisan sarvcast:backup --type=full"
-echo "  Monitor health: docker-compose -f docker-compose.production.yml exec app php artisan sarvcast:monitor"
+echo "  Create backup: docker-compose -f docker-compose.production.yml exec app php artisan manji:backup --type=full"
+echo "  Monitor health: docker-compose -f docker-compose.production.yml exec app php artisan manji:monitor"
 echo ""
 echo "📚 Documentation:"
 echo "  Production Guide: docs/PRODUCTION_DEPLOYMENT_GUIDE.md"
@@ -230,4 +230,4 @@ echo "  API Documentation: docs/API_DOCUMENTATION_COMPLETE.md"
 echo "  Admin Guide: docs/ADMIN_USER_GUIDE.md"
 echo ""
 
-print_status "SarvCast is now running in production! 🎉"
+print_status "Manji is now running in production! 🎉"

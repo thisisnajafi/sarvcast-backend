@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-The Admin Management System provides comprehensive control over all aspects of the SarvCast platform, including coin management, coupon codes, commission payments, and partner management. Since the user-facing side is handled by the Flutter app via API, all user interactions and management are centralized in the admin dashboard.
+The Admin Management System provides comprehensive control over all aspects of the Manji platform, including coin management, coupon codes, commission payments, and partner management. Since the user-facing side is handled by the Flutter app via API, all user interactions and management are centralized in the admin dashboard.
 
 ## 🎯 System Architecture
 
@@ -248,10 +248,10 @@ All API endpoints are implemented and ready for Flutter app integration:
 ## 📞 Contact Information
 
 For technical support or questions about the Admin Management System:
-- **Email**: admin-support@sarvcast.com
+- **Email**: admin-support@manji.com
 - **Phone**: +98-21-1234-5678
-- **Documentation**: https://docs.sarvcast.com/admin-management
-- **Admin Panel**: https://admin.sarvcast.com
+- **Documentation**: https://docs.manji.com/admin-management
+- **Admin Panel**: https://admin.manji.com
 
 ---
 

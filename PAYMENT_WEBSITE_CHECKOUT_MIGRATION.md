@@ -1,9 +1,9 @@
-## SarvCast – Payment & Checkout on Website (`my.sarvcast.ir`)
+## Manji – Payment & Checkout on Website (`my.manji.ir`)
 
 ### 1. Goal
 
-All payment-related flows must be handled **only on the website** (`my.sarvcast.ir`, codebase: `sarvcast-laravel`).  
-The Flutter app (`sarvcast-flutter`) must:
+All payment-related flows must be handled **only on the website** (`my.manji.ir`, codebase: `manji-laravel`).  
+The Flutter app (`manji-flutter`) must:
 
 - Only **redirect users to the website** for:
   - plan selection,
@@ -18,12 +18,12 @@ The Flutter app (`sarvcast-flutter`) must:
 
 ## 2. Current State (High-Level)
 
-### 2.1 Flutter (`sarvcast-flutter`)
+### 2.1 Flutter (`manji-flutter`)
 
 **Active payment logic in the app:**
 
 - `core/services/payment_service.dart`
-  - `initiatePayment(subscriptionId)` → `POST https://my.sarvcast.ir/api/v1/payments/initiate`
+  - `initiatePayment(subscriptionId)` → `POST https://my.manji.ir/api/v1/payments/initiate`
   - `verifyPayment(authority, status)` → `POST /payments/verify`
   - `getPaymentHistory()` → `GET /payments/history`
 - `presentation/pages/payment_page.dart`
@@ -44,7 +44,7 @@ The Flutter app (`sarvcast-flutter`) must:
 - `presentation/pages/payment_history_page.dart`
   - Uses `GET /payments/history` to **display** payment history.
 
-### 2.2 Laravel API (`sarvcast-laravel`, `my.sarvcast.ir`)
+### 2.2 Laravel API (`manji-laravel`, `my.manji.ir`)
 
 - `routes/api.php`
   - Subscription:
@@ -84,7 +84,7 @@ The Flutter app (`sarvcast-flutter`) must:
 
 ### 3.1 Responsibilities Split
 
-- **Website (`my.sarvcast.ir`, Laravel):**
+- **Website (`my.manji.ir`, Laravel):**
   - Full checkout UI:
     - select plan,
     - enter and validate coupon code,
@@ -93,18 +93,18 @@ The Flutter app (`sarvcast-flutter`) must:
     - handle payment callbacks and confirmation (`/payments/verify`),
     - optionally redirect back to the app via deep link.
 
-- **Flutter app (`sarvcast-flutter`):**
+- **Flutter app (`manji-flutter`):**
   - For starting a purchase:
-    - open `https://my.sarvcast.ir/checkout?...` in external browser (or SFSafariView/CustomTabs; not an API call).
+    - open `https://my.manji.ir/checkout?...` in external browser (or SFSafariView/CustomTabs; not an API call).
   - For reflecting state:
     - show **current subscription**: `GET /subscriptions/current` (or mobile-specific endpoint),
     - show **payment history**: `GET /payments/history`.
   - For showing payment result:
-    - handle deep links like `sarvcast://payment/success?...` or `sarvcast://payment/failure?...` and navigate to `PaymentSuccessPage` / `PaymentFailurePage`.
+    - handle deep links like `manji://payment/success?...` or `manji://payment/failure?...` and navigate to `PaymentSuccessPage` / `PaymentFailurePage`.
 
 ---
 
-## 4. Backend Tasks (`sarvcast-laravel`, Website)
+## 4. Backend Tasks (`manji-laravel`, Website)
 
 ### 4.1 Define / Stabilize Website Checkout Page
 
@@ -112,11 +112,11 @@ The Flutter app (`sarvcast-flutter`) must:
 
 **Suggested URL:**
 
-- `GET https://my.sarvcast.ir/checkout`
+- `GET https://my.manji.ir/checkout`
   - Query parameters:
     - `source=app|web`
     - `plan_slug=...` (optional; if app preselects a plan)
-    - `return_scheme=sarvcast` (or `return_url=sarvcast://payment/...`) for deep link back to app
+    - `return_scheme=manji` (or `return_url=manji://payment/...`) for deep link back to app
     - optional analytics params: `utm_source=app`, `utm_campaign=subscription`, etc.
 
 **Tasks:**
@@ -160,10 +160,10 @@ The Flutter app (`sarvcast-flutter`) must:
   - For **app-originated** flows (based on `return_scheme` / `return_url` or `source=app`):
     - On **success**:
       - [ ] Redirect user to a deep link like:
-        - `sarvcast://payment/success?transactionId=...&amount=...&paymentId=...&subscriptionId=...&timestamp=...`
+        - `manji://payment/success?transactionId=...&amount=...&paymentId=...&subscriptionId=...&timestamp=...`
     - On **failure/cancel**:
       - [ ] Redirect to:
-        - `sarvcast://payment/failure?error=...&timestamp=...`
+        - `manji://payment/failure?error=...&timestamp=...`
   - For **pure web flows** (no deep link info):
     - [ ] Show normal HTML success/failure pages.
 - [ ] Align deep link payload fields with Flutter models:
@@ -193,7 +193,7 @@ If needed in the future, consider:
 
 ---
 
-## 5. Flutter Tasks (`sarvcast-flutter`)
+## 5. Flutter Tasks (`manji-flutter`)
 
 ### 5.1 Remove / Disable In‑App Checkout Screen
 
@@ -210,7 +210,7 @@ If needed in the future, consider:
 - [ ] Decide what to do with `PaymentPage`:
   - Option A (recommended): **Remove** the file and all related code.
   - Option B: Keep only as an informational screen that:
-    - explains “Purchases are completed on `my.sarvcast.ir`”,
+    - explains “Purchases are completed on `my.manji.ir`”,
     - has a single button “Open Website” that uses `url_launcher` to open checkout URL.
 
 ### 5.2 Replace In‑App Payment Logic with “Open Website”
@@ -223,7 +223,7 @@ If needed in the future, consider:
   - “خرید اشتراک”, “ارتقاء به پریمیوم”, etc.
 - [ ] For each:
   - [ ] Use `url_launcher` (or platform-appropriate launcher) to open:
-    - `https://my.sarvcast.ir/checkout?source=app[&plan_slug=xyz][&return_scheme=sarvcast]`
+    - `https://my.manji.ir/checkout?source=app[&plan_slug=xyz][&return_scheme=manji]`
   - [ ] If user has pre-selected a plan in app:
     - include `plan_slug` so website can preselect the same plan.
 - [ ] Optionally, pass tracking info:
@@ -246,7 +246,7 @@ If needed in the future, consider:
   - call `/coupons/use`,
   - compute discount totals client-side.
 - [ ] Add clear comments in code where necessary:
-  - “Coupon codes are handled only on `my.sarvcast.ir` checkout.”
+  - “Coupon codes are handled only on `my.manji.ir` checkout.”
 
 ### 5.4 Keep Read‑Only Subscription & History UI
 
@@ -279,8 +279,8 @@ Existing pages:
 
 - [ ] In the deep-link handler (per `FLUTTER_DEEP_LINK_IMPLEMENTATION.md` / `FLUTTER_DEEP_LINK_INTEGRATION.md`):
   - [ ] Parse:
-    - `sarvcast://payment/success?...`
-    - `sarvcast://payment/failure?...`
+    - `manji://payment/success?...`
+    - `manji://payment/failure?...`
   - [ ] Map query parameters to:
     - `DeepLinkSuccessData` (transactionId, paymentId, subscriptionId, amount, timestamp, etc.)
     - `DeepLinkFailureData` (error, timestamp, optional IDs).
@@ -309,7 +309,7 @@ Existing pages:
   - [ ] Keep (if needed) only **read-only** helpers:
     - `getPaymentHistory` for `PaymentHistoryPage`.
   - [ ] Update any comments to say:
-    - “Payment initiation and verification are handled on `my.sarvcast.ir`. This service only reads history.”
+    - “Payment initiation and verification are handled on `my.manji.ir`. This service only reads history.”
 
 - `secure_payment_service.dart`:
   - This file currently simulates a full gateway client (own gateway URL, encryption, fraud detection, etc.).
@@ -329,13 +329,13 @@ To prevent re-introduction of in-app payments, enforce these rules in code revie
 
 ### Rule 1 – Payment Location
 
-> **All** plan selection, coupon entry, price calculation, and gateway interaction **must** occur on `my.sarvcast.ir` (Laravel).  
+> **All** plan selection, coupon entry, price calculation, and gateway interaction **must** occur on `my.manji.ir` (Laravel).  
 > The Flutter app must never directly collect card/payment details or talk to payment gateways.
 
 ### Rule 2 – App Responsibilities
 
 - The app **may**:
-  - open `https://my.sarvcast.ir/checkout?...` in a browser,
+  - open `https://my.manji.ir/checkout?...` in a browser,
   - show payment result pages (`PaymentSuccessPage` / `PaymentFailurePage`),
   - show subscription status and payment history from read-only APIs.
 - The app **may not**:
@@ -360,10 +360,10 @@ To prevent re-introduction of in-app payments, enforce these rules in code revie
 
   ```text
   Flutter app
-    → open https://my.sarvcast.ir/checkout?source=app&return_scheme=sarvcast
+    → open https://my.manji.ir/checkout?source=app&return_scheme=manji
       → Zarinpal
-      → my.sarvcast.ir callback
-      → sarvcast://payment/success|failure?... deep link
+      → my.manji.ir callback
+      → manji://payment/success|failure?... deep link
       → Flutter app (PaymentSuccessPage / PaymentFailurePage)
   ```
 
@@ -384,8 +384,8 @@ Before merging any change in:
 run this checklist:
 
 - [ ] App has **no** forms for card number, CVV, or coupon code.
-- [ ] App only opens `https://my.sarvcast.ir` URLs for purchase/renewal.
-- [ ] Deep links `sarvcast://payment/success|failure` still navigate correctly and display expected data.
+- [ ] App only opens `https://my.manji.ir` URLs for purchase/renewal.
+- [ ] Deep links `manji://payment/success|failure` still navigate correctly and display expected data.
 - [ ] No direct calls from app to:
   - `/payments/initiate`,
   - `/payments/verify`,
@@ -396,11 +396,11 @@ run this checklist:
 
 ## 7. Summary
 
-- Laravel (`my.sarvcast.ir`) is the **source of truth** for all checkout, coupons, and payment gateway integrations.
+- Laravel (`my.manji.ir`) is the **source of truth** for all checkout, coupons, and payment gateway integrations.
 - The Flutter app is a **viewer + launcher**:
   - launches web checkout,
   - shows results and state from read-only APIs.
-- This document is the canonical reference for any future payment-related changes in both `sarvcast-laravel` and `sarvcast-flutter`.
+- This document is the canonical reference for any future payment-related changes in both `manji-laravel` and `manji-flutter`.
 
 ---
 
@@ -409,7 +409,7 @@ run this checklist:
 Last updated: **2025-11-26**
 
 - **Flutter – subscription CTAs now open website checkout**
-  - [x] `SubscriptionPage` now opens `https://my.sarvcast.ir/checkout?source=app&plan_slug=...&utm_source=app&utm_campaign=subscription` in the external browser instead of running an in-app checkout flow.
+  - [x] `SubscriptionPage` now opens `https://my.manji.ir/checkout?source=app&plan_slug=...&utm_source=app&utm_campaign=subscription` in the external browser instead of running an in-app checkout flow.
   - [x] `SubscriptionPlansPage` “خرید ...” buttons now open the same checkout URL (no navigation to in-app confirmation/payment pages).
 - **Flutter – in-app coupon & price calculation removed from main subscription entry points**
   - [x] `SubscriptionPage` no longer uses `CouponService` or any in-app coupon/discount UI; it delegates all coupons and price calculation to the website.
@@ -417,7 +417,7 @@ Last updated: **2025-11-26**
 - **Flutter – read-only payment views kept**
   - [x] `PaymentHistoryPage` still uses read-only history APIs only (no initiation/verification calls).
 - **Still pending (per sections above)**
-  - [x] Implement `/checkout` page on `my.sarvcast.ir`:
+  - [x] Implement `/checkout` page on `my.manji.ir`:
     - [x] `GET /checkout` (auth required) → `CheckoutController@index` + `checkout/index.blade.php`:
       - [x] loads active `SubscriptionPlan`s,
       - [x] supports `?plan_slug=...` and `?source=app|web`,
@@ -427,14 +427,14 @@ Last updated: **2025-11-26**
       - [x] creates `Subscription` with status `pending` for current user based on selected `SubscriptionPlan`,
       - [x] creates `Payment` with status `pending` and method `zarinpal`,
       - [x] calls `PaymentService::initiateZarinPalPayment` and redirects user to Zarinpal `payment_url`.
-  - [x] Wire Zarinpal callback + deep-link redirects (`sarvcast://payment/success|failure?...`) as described in section 4.3:
-    - [x] When checkout starts from app, `CheckoutController@store` stores `source=app` and `return_scheme=sarvcast` in `Payment.metadata`.
+  - [x] Wire Zarinpal callback + deep-link redirects (`manji://payment/success|failure?...`) as described in section 4.3:
+    - [x] When checkout starts from app, `CheckoutController@store` stores `source=app` and `return_scheme=manji` in `Payment.metadata`.
     - [x] `PaymentCallbackController@zarinpalCallback`:
       - [x] Reads `source` / `return_scheme` from `Payment.metadata`.
       - [x] On success and `source=app`, redirects to  
-        `sarvcast://payment/success?transactionId=...&paymentId=...&subscriptionId=...&amount=...&currency=...&timestamp=...`.
+        `manji://payment/success?transactionId=...&paymentId=...&subscriptionId=...&amount=...&currency=...&timestamp=...`.
       - [x] On failure and `source=app`, redirects to  
-        `sarvcast://payment/failure?paymentId=...&subscriptionId=...&error=...&timestamp=...`.
+        `manji://payment/failure?paymentId=...&subscriptionId=...&error=...&timestamp=...`.
       - [x] For pure web flows (no `source=app`), keeps existing HTML success/failure pages.
   - [x] Remove or fully deprecate in-app payment flows:
     - [x] Removed direct calls from Flutter to:

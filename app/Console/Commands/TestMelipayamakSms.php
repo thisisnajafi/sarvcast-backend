@@ -50,7 +50,7 @@ class TestMelipayamakSms extends Command
                 $this->info("Sending payment notification to {$phoneNumber}...");
                 $result = $smsService->sendPaymentNotification($phoneNumber, 100000, 'IRT');
             } else {
-                $message = $this->option('message') ?? 'تست سرویس پیامک سروکست - این یک پیام تستی است.';
+                $message = $this->option('message') ?? 'تست سرویس پیامک مانجی - این یک پیام تستی است.';
                 $this->info("Sending SMS to {$phoneNumber}...");
                 $this->info("Message: {$message}");
                 $result = $smsService->sendSms($phoneNumber, $message);

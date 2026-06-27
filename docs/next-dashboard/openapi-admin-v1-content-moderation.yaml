@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Content moderation
+  title: Manji Admin API — Content moderation
   version: 1.0.0
 
 paths:

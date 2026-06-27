@@ -1,4 +1,4 @@
-# راهنمای بهینه‌سازی عملکرد پنل مدیریت SarvCast
+# راهنمای بهینه‌سازی عملکرد پنل مدیریت Manji
 
 ## فهرست مطالب
 
@@ -407,7 +407,7 @@ http {
 #!/bin/bash
 # فایل: /opt/scripts/optimize_images.sh
 
-IMAGE_DIR="/var/www/sarvcast/public/images"
+IMAGE_DIR="/var/www/manji/public/images"
 
 echo "شروع بهینه‌سازی تصاویر..."
 
@@ -468,8 +468,8 @@ class ImageService
 ```bash
 # فایل: /opt/scripts/setup_cloudflare.sh
 
-DOMAIN="admin.sarvcast.com"
-EMAIL="admin@sarvcast.com"
+DOMAIN="admin.manji.com"
+EMAIL="admin@manji.com"
 API_KEY="your_api_key"
 
 # تنظیمات DNS
@@ -620,14 +620,14 @@ ServerSignature Off
 
 #### تنظیمات VirtualHost
 ```apache
-# فایل: /etc/apache2/sites-available/admin.sarvcast.com.conf
+# فایل: /etc/apache2/sites-available/admin.manji.com.conf
 
 <VirtualHost *:443>
-    ServerName admin.sarvcast.com
-    DocumentRoot /var/www/sarvcast/public
+    ServerName admin.manji.com
+    DocumentRoot /var/www/manji/public
     
     # تنظیمات عملکرد
-    <Directory /var/www/sarvcast/public>
+    <Directory /var/www/manji/public>
         AllowOverride All
         Require all granted
         
@@ -785,7 +785,7 @@ SELECT
     nullable,
     index_type
 FROM information_schema.statistics
-WHERE table_schema = 'sarvcast'
+WHERE table_schema = 'manji'
 ORDER BY table_name, index_name;
 ```
 
@@ -845,13 +845,13 @@ class MemoryService
 echo "شروع بهینه‌سازی روزانه..."
 
 # پاک کردن کش Laravel
-php /var/www/sarvcast/artisan cache:clear
-php /var/www/sarvcast/artisan config:clear
-php /var/www/sarvcast/artisan view:clear
-php /var/www/sarvcast/artisan route:clear
+php /var/www/manji/artisan cache:clear
+php /var/www/manji/artisan config:clear
+php /var/www/manji/artisan view:clear
+php /var/www/manji/artisan route:clear
 
 # بهینه‌سازی پایگاه داده
-mysql -u root -p -e "OPTIMIZE TABLE sarvcast.users, sarvcast.stories, sarvcast.episodes, sarvcast.categories;"
+mysql -u root -p -e "OPTIMIZE TABLE manji.users, manji.stories, manji.episodes, manji.categories;"
 
 # پاک کردن لاگ‌های قدیمی
 find /var/log -name "*.log" -mtime +30 -delete

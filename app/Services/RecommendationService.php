@@ -660,6 +660,97 @@ class RecommendationService
     }
 
     /**
+     * Get listen-history based recommendations for a user.
+     */
+    public function getForUser(User $user, int $limit = 10): array
+    {
+        $userId = $user->id;
+
+        $histories = PlayHistory::query()
+            ->where('user_id', $userId)
+            ->where(function ($query) {
+                $query->where('completed', true)
+                    ->orWhereRaw('total_duration > 0 AND (duration_played / total_duration) >= 0.5');
+            })
+            ->with('episode.story')
+            ->orderByDesc('played_at')
+            ->limit(20)
+            ->get();
+
+        $listenedStoryIds = $histories->pluck('story_id')->filter()->unique()->values()->all();
+        $categoryIds = $histories
+            ->map(fn ($h) => $h->episode?->story?->category_id)
+            ->filter()
+            ->countBy()
+            ->sortDesc();
+
+        $searchBoostCategoryIds = \App\Models\SearchHistory::query()
+            ->where('user_id', $userId)
+            ->whereNotNull('clicked_story_id')
+            ->with('clickedStory')
+            ->orderByDesc('searched_at')
+            ->limit(20)
+            ->get()
+            ->map(fn ($s) => $s->clickedStory?->category_id)
+            ->filter()
+            ->countBy();
+
+        foreach ($searchBoostCategoryIds as $categoryId => $weight) {
+            $categoryIds[$categoryId] = ($categoryIds[$categoryId] ?? 0) + ($weight * 2);
+        }
+
+        if ($categoryIds->isEmpty()) {
+            $favoriteCategoryIds = collect($user->favorite_category_ids ?? [])->filter();
+            foreach ($favoriteCategoryIds as $categoryId) {
+                $categoryIds[(int) $categoryId] = 1;
+            }
+        }
+
+        if ($categoryIds->isEmpty()) {
+            return [];
+        }
+
+        $maxCategoryWeight = max($categoryIds->values()->all() ?: [1]);
+
+        $candidateStories = Story::query()
+            ->with(['category', 'director', 'narrator', 'author'])
+            ->withSum('episodes', 'play_count')
+            ->published()
+            ->whereIn('category_id', $categoryIds->keys()->all())
+            ->when(!empty($listenedStoryIds), fn ($q) => $q->whereNotIn('id', $listenedStoryIds))
+            ->get();
+
+        $ageGroups = User::storyAgeGroupsForFilter($user->age_group);
+        if ($ageGroups !== null) {
+            $candidateStories = $candidateStories->whereIn('age_group', $ageGroups);
+        }
+
+        $scored = $candidateStories->map(function (Story $story) use ($categoryIds, $maxCategoryWeight) {
+            $categoryWeight = ($categoryIds[$story->category_id] ?? 0) / $maxCategoryWeight;
+            $ratingScore = min(((float) ($story->rating ?? 0)) / 5, 1);
+            $publishedAt = $story->published_at ?? $story->created_at;
+            $daysSince = $publishedAt ? now()->diffInDays($publishedAt) : 365;
+            $recencyScore = max(0, 1 - ($daysSince / 365));
+
+            $score = ($categoryWeight * 0.5) + ($ratingScore * 0.3) + ($recencyScore * 0.2);
+
+            if (isset($story->episodes_sum_play_count)) {
+                $story->play_count = (int) $story->episodes_sum_play_count;
+            }
+
+            $story->recommendation_score = round($score, 4);
+
+            return $story;
+        })
+            ->sortByDesc('recommendation_score')
+            ->take($limit)
+            ->values()
+            ->all();
+
+        return $scored;
+    }
+
+    /**
      * Update recommendation model (for future ML integration)
      */
     public function updateRecommendationModel(): void

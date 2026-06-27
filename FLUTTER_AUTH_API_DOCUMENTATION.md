@@ -1,7 +1,7 @@
 # Flutter Authentication API Documentation
 
 ## Overview
-This document describes the authentication flow for the SarvCast mobile application. The API uses SMS-based verification with automatic user detection (new vs existing users).
+This document describes the authentication flow for the Manji mobile application. The API uses SMS-based verification with automatic user detection (new vs existing users).
 
 ## Base URL
 ```

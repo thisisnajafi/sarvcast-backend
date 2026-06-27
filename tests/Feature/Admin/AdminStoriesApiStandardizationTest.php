@@ -74,7 +74,7 @@ class AdminStoriesApiStandardizationTest extends TestCase
             'status' => 'draft',
             'age_rating' => '7+',
             'is_premium' => false,
-            'cover_image_url' => 'https://my.sarvcast.ir/storage/media/2026/06/example.webp',
+            'cover_image_url' => 'https://my.manji.ir/storage/media/2026/06/example.webp',
             'tags' => ['تست'],
         ]);
 
@@ -82,7 +82,7 @@ class AdminStoriesApiStandardizationTest extends TestCase
         $this->assertDatabaseHas('stories', [
             'title' => 'داستان تست',
             'age_group' => '7+',
-            'image_url' => 'https://my.sarvcast.ir/storage/media/2026/06/example.webp',
+            'image_url' => 'https://my.manji.ir/storage/media/2026/06/example.webp',
         ]);
     }
 

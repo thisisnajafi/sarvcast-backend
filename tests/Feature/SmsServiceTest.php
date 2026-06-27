@@ -31,7 +31,7 @@ class SmsServiceTest extends TestCase
             ], 200)
         ]);
 
-        $result = $this->smsService->sendSms('09136708883', 'Test message from SarvCast');
+        $result = $this->smsService->sendSms('09136708883', 'Test message from Manji');
 
         $this->assertTrue($result['success']);
         $this->assertArrayHasKey('response', $result);

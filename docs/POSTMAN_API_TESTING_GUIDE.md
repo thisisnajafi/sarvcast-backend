@@ -1,25 +1,25 @@
-# SarvCast API Postman Collection Guide
+# Manji API Postman Collection Guide
 
 ## Overview
-This Postman collection contains all the API endpoints for the SarvCast audio story platform. The collection is organized into logical groups for easy navigation and testing.
+This Postman collection contains all the API endpoints for the Manji audio story platform. The collection is organized into logical groups for easy navigation and testing.
 
 ## Setup Instructions
 
 ### 1. Import the Collection
 1. Open Postman
 2. Click "Import" button
-3. Select the `SarvCast_API.postman_collection.json` file
+3. Select the `Manji_API.postman_collection.json` file
 4. The collection will be imported with all endpoints organized
 
 ### 2. Configure Environment Variables
 The collection uses these variables:
-- `base_url`: API base URL (default: `https://my.sarvcast.ir/api/v1`)
+- `base_url`: API base URL (default: `https://my.manji.ir/api/v1`)
 - `auth_token`: Bearer token for authenticated requests
 
 To set up:
 1. Create a new environment in Postman
 2. Add these variables:
-   - `base_url`: `https://my.sarvcast.ir/api/v1` (or your server URL)
+   - `base_url`: `https://my.manji.ir/api/v1` (or your server URL)
    - `auth_token`: Leave empty initially
 3. Select this environment for your requests
 
@@ -346,7 +346,7 @@ POST /mobile/track/share
 GET /mobile/config
 Response:
 {
-  "app_name": "SarvCast",
+  "app_name": "Manji",
   "app_version": "1.0.0",
   "api_version": "v1",
   "features": {

@@ -1,13 +1,13 @@
-# SarvCast Flutter Forced Update Integration Guide
+# Manji Flutter Forced Update Integration Guide
 
 ## Overview
-This document provides comprehensive guidance for Flutter developers to implement forced app updates using the SarvCast backend system. It covers version checking, forced update handling, and user experience management.
+This document provides comprehensive guidance for Flutter developers to implement forced app updates using the Manji backend system. It covers version checking, forced update handling, and user experience management.
 
 ## Base Configuration
 
 ### API Base URL
 ```
-https://my.sarvcast.ir/api/v1
+https://my.manji.ir/api/v1
 ```
 
 ### Required Headers
@@ -15,7 +15,7 @@ https://my.sarvcast.ir/api/v1
 Map<String, String> headers = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-  'User-Agent': 'SarvCast-Flutter/1.0.0',
+  'User-Agent': 'Manji-Flutter/1.0.0',
 };
 ```
 
@@ -39,7 +39,7 @@ Map<String, String> headers = {
 **Flutter Implementation:**
 ```dart
 class VersionService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   
   Future<VersionCheckResult> checkForUpdates({
     required String platform,
@@ -81,7 +81,7 @@ class VersionService {
   "data": {
     "latest_version": "2.0.0",
     "latest_build_number": "200",
-    "download_url": "https://play.google.com/store/apps/details?id=com.sarvcast.app",
+    "download_url": "https://play.google.com/store/apps/details?id=com.manji.app",
     "update_message": "نسخه جدید با ویژگی‌های جذاب منتشر شد!",
     "release_notes": "• بهبود عملکرد\n• رفع مشکلات\n• ویژگی‌های جدید",
     "update_type": "force",
@@ -142,7 +142,7 @@ Future<LatestVersionInfo> getLatestVersion({
     "version": "2.0.0",
     "build_number": "200",
     "platform": "android",
-    "download_url": "https://play.google.com/store/apps/details?id=com.sarvcast.app",
+    "download_url": "https://play.google.com/store/apps/details?id=com.manji.app",
     "update_message": "نسخه جدید با ویژگی‌های جذاب منتشر شد!",
     "release_notes": "• بهبود عملکرد\n• رفع مشکلات\n• ویژگی‌های جدید",
     "update_type": "force",
@@ -181,16 +181,16 @@ Future<AppConfig> getAppConfig() async {
 {
   "success": true,
   "data": {
-    "app_name": "SarvCast",
+    "app_name": "Manji",
     "app_version": "1.0.0",
     "app_build": "1",
     "min_supported_version": "1.0.0",
-    "update_check_url": "https://my.sarvcast.ir/api/v1/version/check",
-    "support_email": "support@sarvcast.com",
+    "update_check_url": "https://my.manji.ir/api/v1/version/check",
+    "support_email": "support@manji.com",
     "support_phone": "021-12345678",
-    "website_url": "https://sarvcast.com",
-    "privacy_policy_url": "https://sarvcast.com/privacy",
-    "terms_of_service_url": "https://sarvcast.com/terms"
+    "website_url": "https://manji.com",
+    "privacy_policy_url": "https://manji.com/privacy",
+    "terms_of_service_url": "https://manji.com/terms"
   }
 }
 ```
@@ -354,7 +354,7 @@ class AppConfig {
 ### Version Check Service
 ```dart
 class VersionCheckService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   final VersionService _versionService = VersionService();
   
   /// Check for app updates
@@ -809,7 +809,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SarvCast',
+      title: 'Manji',
       navigatorKey: navigatorKey,
       home: MyHomePage(),
     );
@@ -839,7 +839,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('SarvCast'),
+        title: Text('Manji'),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
@@ -852,7 +852,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Welcome to SarvCast!'),
+            Text('Welcome to Manji!'),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => _updateManager.checkForUpdates(),
@@ -914,7 +914,7 @@ void main() {
                   'data': {
                     'latest_version': '2.0.0',
                     'latest_build_number': '200',
-                    'download_url': 'https://play.google.com/store/apps/details?id=com.sarvcast.app',
+                    'download_url': 'https://play.google.com/store/apps/details?id=com.manji.app',
                     'update_message': 'نسخه جدید منتشر شد!',
                     'release_notes': '• بهبود عملکرد\n• رفع مشکلات',
                     'update_type': 'force',

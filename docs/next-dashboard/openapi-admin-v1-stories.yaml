@@ -1,6 +1,6 @@
-﻿openapi: 3.0.3
+openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Stories
+  title: Manji Admin API — Stories
   version: 1.0.0
 
 paths:

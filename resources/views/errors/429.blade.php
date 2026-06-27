@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>درخواست‌های زیاد - سروکست</title>
+    <title>درخواست‌های زیاد - مانجی</title>
     <meta name="description" content="تعداد درخواست‌های شما از حد مجاز بیشتر است. لطفاً کمی صبر کنید.">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -185,7 +185,7 @@
             <!-- Footer -->
             <div class="mt-12 text-center">
                 <p class="text-gray-500 dark:text-gray-400 text-sm">
-                    © {{ date('Y') }} سروکست. تمامی حقوق محفوظ است.
+                    © {{ date('Y') }} مانجی. تمامی حقوق محفوظ است.
                 </p>
                 <p class="text-gray-400 dark:text-gray-500 text-xs mt-2">
                     محدودیت درخواست: {{ date('Y-m-d H:i:s') }}

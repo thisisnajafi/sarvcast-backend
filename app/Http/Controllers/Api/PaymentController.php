@@ -50,7 +50,7 @@ class PaymentController extends Controller
         }
 
         $source = $request->input('source', 'app');
-        $returnScheme = $request->input('return_scheme', config('services.sarvcast_app.return_scheme', 'sarvcast'));
+        $returnScheme = $request->input('return_scheme', config('services.manji_app.return_scheme', 'manji'));
 
         // Create payment record
         $payment = Payment::create([

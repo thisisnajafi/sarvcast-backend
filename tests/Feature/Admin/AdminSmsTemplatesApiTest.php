@@ -68,7 +68,7 @@ class AdminSmsTemplatesApiTest extends TestCase
         $response = $this->postJson('/api/admin/sms-templates', [
             'name' => 'یادآوری اشتراک',
             'melipayamak_body_id' => 380001,
-            'preview_text' => 'سلام {0} {1}، اشتراک شما فعال است. سروکست',
+            'preview_text' => 'سلام {0} {1}، اشتراک شما فعال است. مانجی',
             'category' => 'marketing',
             'is_active' => true,
             'parameters' => [

@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Update database schema safely while keeping existing data
-# Usage: BACKUP_DIR=/path/to/backups LOG_FILE=/tmp/sarvcast-db-update.log ./scripts/update-database.sh
+# Usage: BACKUP_DIR=/path/to/backups LOG_FILE=/tmp/manji-db-update.log ./scripts/update-database.sh
 
 set -e
 
 # Defaults
-LOG_FILE="${LOG_FILE:-/tmp/sarvcast-db-update.log}"
+LOG_FILE="${LOG_FILE:-/tmp/manji-db-update.log}"
 BACKUP_DIR="${BACKUP_DIR:-storage/backups}"
 
 # Normalize BACKUP_DIR to absolute path

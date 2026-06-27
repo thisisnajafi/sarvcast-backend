@@ -1,6 +1,6 @@
 # CI/CD Setup Guide - Step by Step
 
-This guide will walk you through setting up the CI/CD pipeline for your SarvCast application.
+This guide will walk you through setting up the CI/CD pipeline for your Manji application.
 
 ## 📍 Prerequisites
 
@@ -22,7 +22,7 @@ This guide will walk you through setting up the CI/CD pipeline for your SarvCast
 
 **SSH_HOST**
 - **Value**: Your server IP address or domain name
-- **Example**: `123.45.67.89` or `my.sarvcast.ir`
+- **Example**: `123.45.67.89` or `my.manji.ir`
 
 **SSH_USERNAME**
 - **Value**: Your SSH username
@@ -41,12 +41,12 @@ This guide will walk you through setting up the CI/CD pipeline for your SarvCast
 
 **APP_PATH**
 - **Value**: Full path to your application on the server
-- **Example**: `/public_html/my` or `/var/www/sarvcast`
+- **Example**: `/public_html/my` or `/var/www/manji`
 - **Default**: `/public_html/my` if not provided
 
 **BACKUP_DIR** (Optional - for custom backup location)
 - **Value**: Full path where backups should be stored
-- **Example**: `/public_html/my/storage/backups` or `/backups/sarvcast`
+- **Example**: `/public_html/my/storage/backups` or `/backups/manji`
 - **Default**: `{APP_PATH}/storage/backups` if not provided
 
 ### Step 2: Server Setup
@@ -61,16 +61,16 @@ ssh your_username@your_server_ip
 
 ```bash
 # Create backup directory at system level
-sudo mkdir -p /backups/sarvcast
-sudo chown -R $USER:$USER /backups/sarvcast
-sudo chmod 755 /backups/sarvcast
+sudo mkdir -p /backups/manji
+sudo chown -R $USER:$USER /backups/manji
+sudo chmod 755 /backups/manji
 
 # Verify it was created
-ls -la /backups/sarvcast
+ls -la /backups/manji
 ```
 
 **Then set GitHub Secret:**
-- `BACKUP_DIR` = `/backups/sarvcast`
+- `BACKUP_DIR` = `/backups/manji`
 
 #### Option B: Application-Level Backup Directory (For shared hosting)
 
@@ -162,7 +162,7 @@ After first deployment, check if backup was created:
 ssh your_username@your_server_ip
 
 # Check backup directory
-ls -lh /backups/sarvcast/  # If using system-level
+ls -lh /backups/manji/  # If using system-level
 # OR
 ls -lh /public_html/my/storage/backups/  # If using app-level
 ```
@@ -184,8 +184,8 @@ You should see a file like: `pre_deployment_20250101_120000.sql.gz`
 **Solution:**
 ```bash
 # Fix permissions
-sudo chown -R $USER:$USER /backups/sarvcast
-sudo chmod 755 /backups/sarvcast
+sudo chown -R $USER:$USER /backups/manji
+sudo chmod 755 /backups/manji
 
 # Or for app-level:
 chmod 755 /public_html/my/storage/backups
@@ -246,15 +246,15 @@ Once everything is working:
 
 ### Backup Locations
 
-- **System-level**: `/backups/sarvcast/` (requires root/sudo)
+- **System-level**: `/backups/manji/` (requires root/sudo)
 - **App-level**: `/public_html/my/storage/backups/` (no root needed)
 
 ### Important Paths
 
 - **Application**: `/public_html/my` (or your `APP_PATH`)
-- **Backups**: `/backups/sarvcast` or `{APP_PATH}/storage/backups`
+- **Backups**: `/backups/manji` or `{APP_PATH}/storage/backups`
 - **Scripts**: `{APP_PATH}/scripts/`
-- **Logs**: `/tmp/sarvcast-*.log`
+- **Logs**: `/tmp/manji-*.log`
 
 ### GitHub Secrets Summary
 

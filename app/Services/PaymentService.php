@@ -18,7 +18,7 @@ class PaymentService
     {
         // Get Zarinpal configuration from config
         $this->zarinpalMerchantId = config('services.zarinpal.merchant_id', '77751ff3-c1cc-411b-869d-2ac7d7b02f88');
-        $this->callbackUrl = config('services.zarinpal.callback_url', 'https://my.sarvcast.ir');
+        $this->callbackUrl = config('services.zarinpal.callback_url', 'https://my.manji.ir');
         $this->sandboxMode = config('services.zarinpal.sandbox', false);
     }
 
@@ -36,7 +36,7 @@ class PaymentService
             $data = [
                 'merchant_id' => $this->zarinpalMerchantId,
                 'amount' => (int) $payment->amount, // Convert to integer as required by Zarinpal
-                'description' => $description ?? 'پرداخت اشتراک سروکست',
+                'description' => $description ?? 'پرداخت اشتراک مانجی',
                 'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
                 'metadata' => [
                     'payment_id' => $payment->id,
@@ -53,7 +53,7 @@ class PaymentService
                 'sandbox_mode' => $this->sandboxMode,
                 'api_url' => $apiUrl,
                 'callback_url' => $this->callbackUrl . '/payment/zarinpal/callback',
-                'description' => $payment->description ?? 'پرداخت اشتراک سروکست'
+                'description' => $payment->description ?? 'پرداخت اشتراک مانجی'
             ]);
 
             // Log the exact request data being sent

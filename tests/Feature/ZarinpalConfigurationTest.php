@@ -32,7 +32,7 @@ class ZarinpalConfigurationTest extends TestCase
         $callbackUrl = config('services.zarinpal.callback_url');
         
         $this->assertNotEmpty($callbackUrl);
-        $this->assertStringContains('sarvcast.ir', $callbackUrl);
+        $this->assertStringContains('manji.ir', $callbackUrl);
     }
 
     /** @test */

@@ -2,7 +2,7 @@
 
 ## 🚀 Overview
 
-This guide explains how to set up the GitHub Actions workflow for SarvCast deployment. The workflow performs only the essential tasks:
+This guide explains how to set up the GitHub Actions workflow for Manji deployment. The workflow performs only the essential tasks:
 
 1. **Run Composer** - Install production dependencies
 2. **Deploy to FTP** - Upload files to production server
@@ -13,8 +13,8 @@ This guide explains how to set up the GitHub Actions workflow for SarvCast deplo
 The workflow is configured with direct credentials (no GitHub secrets needed):
 
 ### **FTP Configuration**
-- **Server**: `ftp.sarvcast.ir`
-- **Username**: `my@sarvcast.ir`
+- **Server**: `ftp.manji.ir`
+- **Username**: `my@manji.ir`
 - **Password**: `prof48017421@#`
 - **Directory**: `/` (root directory)
 

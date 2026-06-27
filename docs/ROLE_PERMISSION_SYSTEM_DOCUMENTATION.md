@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-The Role and Permission System provides comprehensive access control for the SarvCast admin panel. It allows fine-grained control over what different admin users can access and modify within the system.
+The Role and Permission System provides comprehensive access control for the Manji admin panel. It allows fine-grained control over what different admin users can access and modify within the system.
 
 ## 🎯 System Architecture
 
@@ -363,10 +363,10 @@ dd($role->permissions->pluck('name'));
 ## 📞 Support
 
 For technical support or questions about the Role and Permission System:
-- **Email**: admin-support@sarvcast.com
+- **Email**: admin-support@manji.com
 - **Phone**: +98-21-1234-5678
-- **Documentation**: https://docs.sarvcast.com/role-permission-system
-- **Admin Panel**: https://admin.sarvcast.com/roles
+- **Documentation**: https://docs.manji.com/role-permission-system
+- **Admin Panel**: https://admin.manji.com/roles
 
 ---
 

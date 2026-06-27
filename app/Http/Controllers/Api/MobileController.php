@@ -65,7 +65,7 @@ class MobileController extends Controller
             'update_available' => false,
             'force_update' => false,
             'update_url' => null,
-            'release_notes' => 'نسخه اولیه اپلیکیشن سروکست',
+            'release_notes' => 'نسخه اولیه اپلیکیشن مانجی',
         ];
 
         return response()->json([

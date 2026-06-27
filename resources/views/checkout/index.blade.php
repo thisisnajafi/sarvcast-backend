@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>خرید اشتراک - سروکست</title>
+    <title>خرید اشتراک - مانجی</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -20,7 +20,7 @@
                     <span class="text-xl font-black">S</span>
                 </div>
                 <div>
-                    <div class="text-sm text-slate-300">سروکست</div>
+                    <div class="text-sm text-slate-300">مانجی</div>
                     <div class="text-xs text-slate-500">داستان‌های صوتی برای بچه‌ها</div>
                 </div>
             </div>
@@ -146,7 +146,7 @@
                         @enderror
                         <input type="hidden" name="source" value="{{ $source }}">
                         @if($source === 'app')
-                            <input type="hidden" name="return_scheme" value="sarvcast">
+                            <input type="hidden" name="return_scheme" value="manji">
                         @endif
                         @if(!empty($episodeId))
                             <input type="hidden" name="episode_id" value="{{ $episodeId }}">

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Backup (Dashboard)
+  title: Manji Admin API — Backup (Dashboard)
   description: Contract for backup & recovery under /api/admin/backup
   version: 1.0.0
 

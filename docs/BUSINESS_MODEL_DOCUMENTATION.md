@@ -1,8 +1,8 @@
-# SarvCast Business Model Documentation
+# Manji Business Model Documentation
 
 ## 📊 Executive Summary
 
-SarvCast is a Persian children's audio story platform that operates on a freemium subscription model, targeting families with children aged 3-12 years. The platform combines educational content with entertainment, offering a comprehensive library of Persian audio stories, episodes, and interactive features.
+Manji is a Persian children's audio story platform that operates on a freemium subscription model, targeting families with children aged 3-12 years. The platform combines educational content with entertainment, offering a comprehensive library of Persian audio stories, episodes, and interactive features.
 
 ### Key Business Metrics
 - **Target Market**: Persian-speaking families worldwide
@@ -255,7 +255,7 @@ A comprehensive coupon code system that enables revenue sharing with partners, i
 ### Teacher/Educator Program
 
 #### Program Overview
-The Teacher/Educator Program is designed to engage educational professionals and leverage their networks to expand SarvCast's reach in educational settings.
+The Teacher/Educator Program is designed to engage educational professionals and leverage their networks to expand Manji's reach in educational settings.
 
 #### Benefits for Educators
 - **Special Educator Accounts**: 50% discount on all subscription plans
@@ -280,7 +280,7 @@ The Teacher/Educator Program is designed to engage educational professionals and
 ### Influencer Partnerships
 
 #### Program Overview
-Collaborate with Persian parenting influencers, child development experts, and cultural advocates to promote SarvCast through authentic content and recommendations.
+Collaborate with Persian parenting influencers, child development experts, and cultural advocates to promote Manji through authentic content and recommendations.
 
 #### Partnership Tiers
 
@@ -311,7 +311,7 @@ Collaborate with Persian parenting influencers, child development experts, and c
 ### School Partnership Program
 
 #### Program Overview
-Establish partnerships with schools, libraries, and educational institutions to provide SarvCast as an educational resource for Persian language learning and cultural preservation.
+Establish partnerships with schools, libraries, and educational institutions to provide Manji as an educational resource for Persian language learning and cultural preservation.
 
 #### Partnership Models
 
@@ -375,7 +375,7 @@ Partner with children's brands, educational companies, and cultural organization
 ## 🪙 Coin-Based Reward System
 
 ### System Overview
-SarvCast implements a comprehensive coin-based reward system to incentivize user engagement, learning, and referrals while creating additional value for users.
+Manji implements a comprehensive coin-based reward system to incentivize user engagement, learning, and referrals while creating additional value for users.
 
 ### Coin Earning Mechanisms
 
@@ -844,7 +844,7 @@ CREATE TABLE user_quiz_attempts (
 
 ## 📞 Conclusion
 
-SarvCast represents a comprehensive business model that combines technology, content, and community to create a sustainable and profitable platform for Persian children's audio stories. With a clear revenue strategy, robust technology infrastructure, and strong growth potential, the platform is positioned to become the leading destination for Persian children's educational entertainment.
+Manji represents a comprehensive business model that combines technology, content, and community to create a sustainable and profitable platform for Persian children's audio stories. With a clear revenue strategy, robust technology infrastructure, and strong growth potential, the platform is positioned to become the leading destination for Persian children's educational entertainment.
 
 The business model focuses on:
 - **Sustainable Revenue**: Subscription-based recurring revenue
@@ -853,4 +853,4 @@ The business model focuses on:
 - **Technology Excellence**: Scalable and secure platform
 - **Market Growth**: Expansion opportunities in multiple markets
 
-With proper execution and continued innovation, SarvCast has the potential to achieve significant growth and profitability while serving the important mission of preserving and promoting Persian culture for children worldwide.
+With proper execution and continued innovation, Manji has the potential to achieve significant growth and profitability while serving the important mission of preserving and promoting Persian culture for children worldwide.

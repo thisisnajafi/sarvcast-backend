@@ -5,7 +5,7 @@
 After implementing the timeline image functionality for episode edit, users reported that:
 
 1. **Timeline images were not being saved** during episode edit
-2. **All images were getting incorrect URLs** like `https://my.sarvcast.ir/images/admin/episodes/11/edit`
+2. **All images were getting incorrect URLs** like `https://my.manji.ir/images/admin/episodes/11/edit`
 3. **This only happened after editing** - creating episodes worked fine
 
 ## 🔍 **ROOT CAUSE ANALYSIS**
@@ -20,7 +20,7 @@ src="${data.existing_image_url ? '{{ asset('') }}' + data.existing_image_url : '
 
 ### **🔧 What Was Happening:**
 1. `{{ asset('') }}` was being processed by Blade at server-side rendering
-2. This created a URL like `https://my.sarvcast.ir/images/admin/episodes/11/edit`
+2. This created a URL like `https://my.manji.ir/images/admin/episodes/11/edit`
 3. The JavaScript was then concatenating this with the image path
 4. Result: Completely wrong URLs for timeline images
 
@@ -59,14 +59,14 @@ timelineData.existing_image_url = existingImagePreview.src.replace(baseUrl + '/'
 ## 🎯 **HOW THE FIX WORKS**
 
 ### **Before Fix:**
-1. Blade processes `{{ asset('') }}` → `https://my.sarvcast.ir/images/admin/episodes/11/edit`
+1. Blade processes `{{ asset('') }}` → `https://my.manji.ir/images/admin/episodes/11/edit`
 2. JavaScript concatenates with image path → Wrong URL
 3. Images don't load or save correctly
 
 ### **After Fix:**
-1. Blade processes `{{ url('') }}` → `https://my.sarvcast.ir`
-2. JavaScript uses `baseUrl` variable → `https://my.sarvcast.ir`
-3. JavaScript concatenates correctly → `https://my.sarvcast.ir/images/episodes/timeline/image.jpg`
+1. Blade processes `{{ url('') }}` → `https://my.manji.ir`
+2. JavaScript uses `baseUrl` variable → `https://my.manji.ir`
+3. JavaScript concatenates correctly → `https://my.manji.ir/images/episodes/timeline/image.jpg`
 4. Images load and save correctly
 
 ## 🔧 **TECHNICAL DETAILS**
@@ -74,11 +74,11 @@ timelineData.existing_image_url = existingImagePreview.src.replace(baseUrl + '/'
 ### **URL Construction Process:**
 ```javascript
 // Step 1: Get base URL from Laravel
-const baseUrl = '{{ url('') }}'; // https://my.sarvcast.ir
+const baseUrl = '{{ url('') }}'; // https://my.manji.ir
 
 // Step 2: Construct image URL
 const imageUrl = baseUrl + '/' + data.existing_image_url;
-// Result: https://my.sarvcast.ir/images/episodes/timeline/image.jpg
+// Result: https://my.manji.ir/images/episodes/timeline/image.jpg
 
 // Step 3: Extract relative path for form submission
 const relativePath = fullUrl.replace(baseUrl + '/', '');

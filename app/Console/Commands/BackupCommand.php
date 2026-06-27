@@ -12,14 +12,14 @@ class BackupCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'sarvcast:backup {--type=full : Backup type (database, files, config, full)} {--cleanup : Clean up old backups} {--list : List available backups} {--restore= : Restore from backup file}';
+    protected $signature = 'manji:backup {--type=full : Backup type (database, files, config, full)} {--cleanup : Clean up old backups} {--list : List available backups} {--restore= : Restore from backup file}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Manage SarvCast application backups';
+    protected $description = 'Manage Manji application backups';
 
     /**
      * Execute the console command.
@@ -28,7 +28,7 @@ class BackupCommand extends Command
     {
         $backupService = app(BackupService::class);
 
-        $this->info('💾 SarvCast Backup Management');
+        $this->info('💾 Manji Backup Management');
         $this->line('');
 
         // List backups

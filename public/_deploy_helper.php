@@ -5,7 +5,7 @@ set_time_limit(0);
 header('Content-Type: application/json');
 
 $token = isset($_GET['token']) ? $_GET['token'] : '';
-$expected = 'sarvcast-ftp-deploy-x7k9m2';
+$expected = 'manji-ftp-deploy-x7k9m2';
 
 if ($token !== $expected) {
     http_response_code(403);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ورود به حساب کاربری - سروکست</title>
+    <title>ورود به حساب کاربری - مانجی</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -21,7 +21,7 @@
                 ورود به حساب کاربری
             </h1>
             <p class="text-center text-sm text-slate-400 mb-6">
-                برای خرید و مدیریت اشتراک سروکست، ابتدا با شماره موبایل خود وارد شوید.
+                برای خرید و مدیریت اشتراک مانجی، ابتدا با شماره موبایل خود وارد شوید.
             </p>
 
             @if ($errors->any())

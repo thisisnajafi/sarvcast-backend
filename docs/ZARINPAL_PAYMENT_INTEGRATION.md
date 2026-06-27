@@ -1,7 +1,7 @@
 # Zarinpal Payment Integration Configuration
 
 ## Overview
-This document describes the Zarinpal payment gateway integration configuration for the SarvCast application.
+This document describes the Zarinpal payment gateway integration configuration for the Manji application.
 
 ## Merchant Configuration
 
@@ -18,7 +18,7 @@ Add the following to your `.env` file:
 ```env
 # Zarinpal Configuration
 ZARINPAL_MERCHANT_ID=77751ff3-c1cc-411b-869d-2ac7d7b02f88
-ZARINPAL_CALLBACK_URL=https://my.sarvcast.ir
+ZARINPAL_CALLBACK_URL=https://my.manji.ir
 ZARINPAL_SANDBOX=false
 ```
 
@@ -28,7 +28,7 @@ The configuration is stored in `config/services.php`:
 ```php
 'zarinpal' => [
     'merchant_id' => env('ZARINPAL_MERCHANT_ID', '77751ff3-c1cc-411b-869d-2ac7d7b02f88'),
-    'callback_url' => env('ZARINPAL_CALLBACK_URL', 'https://my.sarvcast.ir'),
+    'callback_url' => env('ZARINPAL_CALLBACK_URL', 'https://my.manji.ir'),
     'sandbox' => env('ZARINPAL_SANDBOX', false),
 ],
 ```

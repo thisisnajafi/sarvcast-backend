@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — App Versions (Dashboard)
+  title: Manji Admin API — App Versions (Dashboard)
   description: Contract for mobile app version management under /api/admin/app-versions
   version: 1.0.0
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'اعلان سروکست' }}</title>
+    <title>{{ $title ?? 'اعلان مانجی' }}</title>
     <style>
         body {
             font-family: 'IranSansWeb', 'IRANSans', 'Tahoma', Arial, sans-serif;
@@ -86,7 +86,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>سروکست</h1>
+            <h1>مانجی</h1>
             <p>پلتفرم داستان‌های صوتی کودکان</p>
         </div>
         
@@ -127,9 +127,9 @@
         </div>
         
         <div class="footer">
-            <p>این ایمیل از طرف سروکست ارسال شده است.</p>
+            <p>این ایمیل از طرف مانجی ارسال شده است.</p>
             <p>
-                <a href="{{ url('/') }}">سروکست</a> | 
+                <a href="{{ url('/') }}">مانجی</a> | 
                 <a href="{{ url('/privacy') }}">حریم خصوصی</a> | 
                 <a href="{{ url('/contact') }}">تماس با ما</a>
             </p>

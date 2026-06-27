@@ -1,7 +1,7 @@
 {
     "info": {
-        "name": "SarvCast API",
-        "description": "Complete API collection for SarvCast platform",
+        "name": "Manji API",
+        "description": "Complete API collection for Manji platform",
         "version": "1.0.0",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
@@ -18,7 +18,7 @@
     "variable": [
         {
             "key": "base_url",
-            "value": "https://sarvcast.com/api/v1",
+            "value": "https://manji.com/api/v1",
             "type": "string"
         },
         {
@@ -303,7 +303,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"image_timeline\": [\n        {\n            \"start_time\": 0,\n            \"end_time\": 10,\n            \"image_url\": \"https://cdn.sarvcast.com/images/episode_1_scene_1.jpg\"\n        },\n        {\n            \"start_time\": 11,\n            \"end_time\": 20,\n            \"image_url\": \"https://cdn.sarvcast.com/images/episode_1_scene_2.jpg\"\n        }\n    ]\n}"
+                            "raw": "{\n    \"image_timeline\": [\n        {\n            \"start_time\": 0,\n            \"end_time\": 10,\n            \"image_url\": \"https://cdn.manji.com/images/episode_1_scene_1.jpg\"\n        },\n        {\n            \"start_time\": 11,\n            \"end_time\": 20,\n            \"image_url\": \"https://cdn.manji.com/images/episode_1_scene_2.jpg\"\n        }\n    ]\n}"
                         },
                         "url": {
                             "raw": "{{base_url}}/episodes/1/image-timeline",

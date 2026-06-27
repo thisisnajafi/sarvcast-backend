@@ -184,7 +184,7 @@ class InAppNotificationService
      */
     public function createWelcomeNotification(int $userId): Notification
     {
-        return $this->createNotification($userId, 'success', 'خوش آمدید!', 'به سروکست خوش آمدید! از شنیدن داستان‌های زیبا لذت ببرید.', [
+        return $this->createNotification($userId, 'success', 'خوش آمدید!', 'به مانجی خوش آمدید! از شنیدن داستان‌های زیبا لذت ببرید.', [
             'category' => 'system',
             'priority' => 'normal',
             'is_important' => true,

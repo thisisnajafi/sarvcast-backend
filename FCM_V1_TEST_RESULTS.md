@@ -9,14 +9,14 @@
 
 ### 1. Service Account File ✅
 - **Status**: ✅ PASSED
-- **File Path**: `storage/app/sarvcast-20d5c-firebase-adminsdk-fbsvc-cf01027af7.json`
+- **File Path**: `storage/app/manji-20d5c-firebase-adminsdk-fbsvc-cf01027af7.json`
 - **File Exists**: Yes
 - **Validation**: Valid JSON structure
 
 ### 2. JSON Structure Validation ✅
 - **Status**: ✅ PASSED
-- **Project ID**: `sarvcast-20d5c` ✅
-- **Client Email**: `firebase-adminsdk-fbsvc@sarvcast-20d5c.iam.gserviceaccount.com` ✅
+- **Project ID**: `manji-20d5c` ✅
+- **Client Email**: `firebase-adminsdk-fbsvc@manji-20d5c.iam.gserviceaccount.com` ✅
 - **Required Fields**: All present (type, project_id, private_key, client_email)
 
 ### 3. OAuth2 Token Generation ✅
@@ -28,7 +28,7 @@
 
 ### 4. Configuration Check ✅
 - **Status**: ✅ PASSED
-- **Project ID**: `sarvcast-20d5c` ✅
+- **Project ID**: `manji-20d5c` ✅
 - **Use V1 API**: `true` ✅
 - **Service Account Path**: Correctly resolved
 
@@ -41,13 +41,13 @@
 
 ### .env Settings (Verified)
 ```env
-FIREBASE_PROJECT_ID=sarvcast-20d5c
-FIREBASE_SERVICE_ACCOUNT_PATH=storage/app/sarvcast-20d5c-firebase-adminsdk-fbsvc-cf01027af7.json
+FIREBASE_PROJECT_ID=manji-20d5c
+FIREBASE_SERVICE_ACCOUNT_PATH=storage/app/manji-20d5c-firebase-adminsdk-fbsvc-cf01027af7.json
 FIREBASE_USE_V1_API=true
 ```
 
 ### Files Verified
-- ✅ Service Account JSON: `storage/app/sarvcast-20d5c-firebase-adminsdk-fbsvc-cf01027af7.json`
+- ✅ Service Account JSON: `storage/app/manji-20d5c-firebase-adminsdk-fbsvc-cf01027af7.json`
 - ✅ Config File: `config/notification.php`
 - ✅ FirebaseAuthService: `app/Services/FirebaseAuthService.php`
 - ✅ NotificationService: `app/Services/NotificationService.php`
@@ -63,7 +63,7 @@ FIREBASE_USE_V1_API=true
 ## Next Steps
 
 ### 1. Enable FCM API in Google Cloud (If Not Done)
-- Go to: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=sarvcast-20d5c
+- Go to: https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=manji-20d5c
 - Click **Enable**
 
 ### 2. Test with Real Device
@@ -102,7 +102,7 @@ When sending a notification:
 If notifications don't work:
 
 1. **Check FCM API is enabled**:
-   - https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=sarvcast-20d5c
+   - https://console.cloud.google.com/apis/library/fcm.googleapis.com?project=manji-20d5c
 
 2. **Check Laravel logs**:
    ```bash

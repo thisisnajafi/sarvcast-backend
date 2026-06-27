@@ -1,4 +1,4 @@
-# راهنمای عیب‌یابی پنل مدیریت SarvCast
+# راهنمای عیب‌یابی پنل مدیریت Manji
 
 ## فهرست مطالب
 
@@ -274,7 +274,7 @@ php artisan tinker
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=sarvcast
+DB_DATABASE=manji
 DB_USERNAME=root
 DB_PASSWORD=
 ```
@@ -286,7 +286,7 @@ php artisan migrate:status
 
 3. بررسی مجوزهای پایگاه داده:
 ```sql
-GRANT ALL PRIVILEGES ON sarvcast.* TO 'username'@'localhost';
+GRANT ALL PRIVILEGES ON manji.* TO 'username'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
@@ -554,10 +554,10 @@ php artisan route:list | grep admin
 
 ### کانال‌های پشتیبانی
 
-- **ایمیل**: support@sarvcast.com
+- **ایمیل**: support@manji.com
 - **تلفن**: 021-12345678
-- **تلگرام**: @SarvCastSupport
-- **تیکت سیستم**: https://support.sarvcast.com
+- **تلگرام**: @ManjiSupport
+- **تیکت سیستم**: https://support.manji.com
 
 ### ساعات کاری پشتیبانی
 

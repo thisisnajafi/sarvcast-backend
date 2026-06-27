@@ -7,7 +7,7 @@
 set -e
 
 # Configuration
-LOG_FILE="${LOG_FILE:-/tmp/sarvcast-restore.log}"
+LOG_FILE="${LOG_FILE:-/tmp/manji-restore.log}"
 
 # Colors for output
 RED='\033[0;31m'

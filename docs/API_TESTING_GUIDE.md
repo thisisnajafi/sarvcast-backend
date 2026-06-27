@@ -1,13 +1,13 @@
-# SarvCast API Testing Guide
+# Manji API Testing Guide
 
 ## Overview
 
-This guide provides comprehensive instructions for testing the SarvCast API endpoints, including setup, authentication, and testing scenarios.
+This guide provides comprehensive instructions for testing the Manji API endpoints, including setup, authentication, and testing scenarios.
 
 ## Prerequisites
 
 - Postman or similar API testing tool
-- Access to SarvCast API (development or production)
+- Access to Manji API (development or production)
 - Valid phone number for testing
 - Basic understanding of REST APIs
 
@@ -15,7 +15,7 @@ This guide provides comprehensive instructions for testing the SarvCast API endp
 
 ### 1. Import Postman Collection
 
-1. Download the `SarvCast_API.postman_collection.json` file
+1. Download the `Manji_API.postman_collection.json` file
 2. Open Postman
 3. Click "Import" and select the collection file
 4. The collection will be imported with all endpoints and examples
@@ -25,7 +25,7 @@ This guide provides comprehensive instructions for testing the SarvCast API endp
 Create a new environment in Postman with the following variables:
 
 ```
-base_url: https://sarvcast.com/api/v1
+base_url: https://manji.com/api/v1
 access_token: (leave empty, will be set after login)
 user_id: (leave empty, will be set after login)
 story_id: 1
@@ -522,4 +522,4 @@ Set up alerts for:
 
 ## Conclusion
 
-This testing guide provides comprehensive coverage of the SarvCast API testing scenarios. Follow these guidelines to ensure thorough testing of all API endpoints and functionality. Regular testing helps maintain API quality and reliability.
+This testing guide provides comprehensive coverage of the Manji API testing scenarios. Follow these guidelines to ensure thorough testing of all API endpoints and functionality. Regular testing helps maintain API quality and reliability.

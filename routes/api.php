@@ -28,6 +28,8 @@ use App\Http\Controllers\Api\InfluencerController;
 use App\Http\Controllers\Api\SchoolController;
 use App\Http\Controllers\Api\CorporateController;
 use App\Http\Controllers\Api\VersionController;
+use App\Http\Controllers\Api\HomeController;
+use App\Http\Controllers\Api\SearchHistoryController;
 use App\Http\Controllers\Api\UserSearchController;
 use App\Http\Controllers\Api\StorySearchController;
 use App\Http\Controllers\Api\AdminPanelController;
@@ -299,6 +301,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // User routes
     Route::prefix('user')->group(function () {
+        Route::get('profile', [UserController::class, 'getUserProfile']);
+        Route::put('profile', [UserController::class, 'updateUserProfile']);
         Route::get('favorites', [UserController::class, 'favorites']);
         Route::get('history', [UserController::class, 'history']);
         Route::post('profiles', [UserController::class, 'createProfile']);
@@ -612,6 +616,19 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('notifications/types', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getTypes']);
         Route::get('notifications/priorities', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getPriorities']);
         Route::get('notifications/categories', [\App\Http\Controllers\Api\InAppNotificationController::class, 'getCategories']);
+    });
+
+    // Home feed routes
+    Route::prefix('home')->group(function () {
+        Route::get('personalized', [HomeController::class, 'personalized']);
+    });
+
+    // Search history routes
+    Route::prefix('search')->group(function () {
+        Route::post('history', [SearchHistoryController::class, 'store']);
+        Route::get('history', [SearchHistoryController::class, 'recent']);
+        Route::get('history/trending', [SearchHistoryController::class, 'trending']);
+        Route::put('history/{searchHistory}/click', [SearchHistoryController::class, 'recordClick']);
     });
 
     // Recommendation routes
@@ -1340,7 +1357,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::get('/sales/analytics', [\App\Http\Controllers\Admin\SalesDashboardController::class, 'apiAnalytics']);
     });
 
-        // Story markdown editor API (filesystem source in sarvcast-stories)
+        // Story markdown editor API (filesystem source in manji-stories)
         Route::prefix('story-editor')->group(function () {
             Route::get('/resolve-slug', [\App\Http\Controllers\Admin\StoryEditorController::class, 'resolveSlug']);
             Route::post('/stories', [\App\Http\Controllers\Admin\StoryEditorController::class, 'storeStory']);

@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Coupons (Dashboard)
+  title: Manji Admin API — Coupons (Dashboard)
   description: Contract for coupon management under /api/admin/coupons
   version: 1.0.0
 

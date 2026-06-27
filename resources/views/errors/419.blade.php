@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خطای امنیتی - سروکست</title>
+    <title>خطای امنیتی - مانجی</title>
     <meta name="description" content="خطای امنیتی CSRF. لطفاً صفحه را رفرش کنید و دوباره تلاش کنید.">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -178,7 +178,7 @@
             <!-- Footer -->
             <div class="mt-12 text-center">
                 <p class="text-gray-500 dark:text-gray-400 text-sm">
-                    © {{ date('Y') }} سروکست. تمامی حقوق محفوظ است.
+                    © {{ date('Y') }} مانجی. تمامی حقوق محفوظ است.
                 </p>
                 <p class="text-gray-400 dark:text-gray-500 text-xs mt-2">
                     خطای امنیتی: {{ date('Y-m-d H:i:s') }}

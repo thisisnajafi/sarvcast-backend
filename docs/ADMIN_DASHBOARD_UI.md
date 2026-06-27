@@ -1,4 +1,4 @@
-# SarvCast Admin Dashboard UI Components
+# Manji Admin Dashboard UI Components
 
 ## Dashboard Layout Structure
 
@@ -9,7 +9,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SarvCast Admin Dashboard</title>
+    <title>Manji Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -38,7 +38,7 @@
         <!-- Sidebar -->
         <div class="w-64 bg-white shadow-lg">
             <div class="p-6">
-                <h1 class="text-2xl font-bold text-primary">سروکست</h1>
+                <h1 class="text-2xl font-bold text-primary">مانجی</h1>
                 <p class="text-sm text-gray-500 mt-1">پنل مدیریت</p>
             </div>
             
@@ -587,4 +587,4 @@ function deleteSelected() {
 }
 ```
 
-This comprehensive UI documentation provides all the necessary components and structure for building a complete admin dashboard for the SarvCast project using Tailwind CSS with RTL support and Persian language.
+This comprehensive UI documentation provides all the necessary components and structure for building a complete admin dashboard for the Manji project using Tailwind CSS with RTL support and Persian language.

@@ -107,7 +107,7 @@ class PaymentCallbackTest extends TestCase
         $response->assertSee('متأسفیم! پرداخت انجام نشد');
         $response->assertSee('تلاش مجدد برای پرداخت');
         $response->assertSee('تماس با پشتیبانی');
-        $response->assertSee('support@sarvcast.ir');
+        $response->assertSee('support@manji.ir');
     }
 
     /** @test */
@@ -159,8 +159,8 @@ class PaymentCallbackTest extends TestCase
     {
         $response = $this->get('/payment/failure');
         
-        $response->assertSee('support@sarvcast.ir');
-        $response->assertSee('@sarvcast_support');
+        $response->assertSee('support@manji.ir');
+        $response->assertSee('@manji_support');
         $response->assertSee('۹ صبح تا ۶ عصر');
     }
 
@@ -169,7 +169,7 @@ class PaymentCallbackTest extends TestCase
     {
         $response = $this->get('/payment/success');
         
-        $response->assertSee('<title>پرداخت موفق - سروکست</title>');
+        $response->assertSee('<title>پرداخت موفق - مانجی</title>');
         $response->assertSee('lang="fa"');
         $response->assertSee('dir="rtl"');
     }
@@ -179,7 +179,7 @@ class PaymentCallbackTest extends TestCase
     {
         $response = $this->get('/payment/failure');
         
-        $response->assertSee('<title>پرداخت ناموفق - سروکست</title>');
+        $response->assertSee('<title>پرداخت ناموفق - مانجی</title>');
         $response->assertSee('lang="fa"');
         $response->assertSee('dir="rtl"');
     }

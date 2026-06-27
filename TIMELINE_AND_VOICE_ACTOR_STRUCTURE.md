@@ -1,7 +1,7 @@
 # Timeline and Voice Actor Data Structure
 
 ## Overview
-This document explains the data structure for image timelines and voice actors in the SarvCast application.
+This document explains the data structure for image timelines and voice actors in the Manji application.
 
 ---
 

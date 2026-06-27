@@ -1,6 +1,6 @@
 # راهنمای مدیریت پلتفرم‌های پرداخت
 
-این سند راهنمای کامل مدیریت سه روش پرداخت در سیستم SarvCast است:
+این سند راهنمای کامل مدیریت سه روش پرداخت در سیستم Manji است:
 1. **پرداخت از وب‌سایت** (Zarinpal - نسخه فعلی)
 2. **خرید درون‌برنامه‌ای کافه‌بازار** (CafeBazaar)
 3. **خرید درون‌برنامه‌ای مایکت** (Myket)
@@ -52,18 +52,18 @@
 ```env
 # Zarinpal (Website Payment)
 ZARINPAL_MERCHANT_ID=your_merchant_id
-ZARINPAL_CALLBACK_URL=https://my.sarvcast.ir
+ZARINPAL_CALLBACK_URL=https://my.manji.ir
 ZARINPAL_SANDBOX=false
 
 # CafeBazaar
-CAFEBAZAAR_PACKAGE_NAME=ir.sarvcast.app
+CAFEBAZAAR_PACKAGE_NAME=ir.manji.app
 CAFEBAZAAR_API_KEY=your_api_key
 CAFEBAZAAR_API_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/validate
 CAFEBAZAAR_SUBSCRIPTION_API_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/validate/subscription
 CAFEBAZAAR_ACKNOWLEDGE_URL=https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge
 
 # Myket
-MYKET_PACKAGE_NAME=ir.sarvcast.app
+MYKET_PACKAGE_NAME=ir.manji.app
 MYKET_API_KEY=your_api_key
 MYKET_API_URL=https://developer.myket.ir/api/applications/validatePurchase
 MYKET_SUBSCRIPTION_API_URL=https://developer.myket.ir/api/applications/validateSubscription
@@ -121,12 +121,12 @@ GET /api/v1/billing/platform-config
       },
       "cafebazaar": {
         "name": "کافه‌بازار",
-        "package_name": "ir.sarvcast.app",
+        "package_name": "ir.manji.app",
         "requires_in_app_purchase": true
       },
       "myket": {
         "name": "مایکت",
-        "package_name": "ir.sarvcast.app",
+        "package_name": "ir.manji.app",
         "requires_in_app_purchase": true
       }
     }

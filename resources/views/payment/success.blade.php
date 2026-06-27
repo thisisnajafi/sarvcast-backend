@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پرداخت موفق - سروکست</title>
+    <title>پرداخت موفق - مانجی</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -87,7 +87,7 @@
         </h1>
         
         <p class="text-lg text-gray-600 mb-6">
-            اشتراک شما با موفقیت فعال شد و حالا می‌تونید از تمام داستان‌های جذاب سروکست لذت ببرید!
+            اشتراک شما با موفقیت فعال شد و حالا می‌تونید از تمام داستان‌های جذاب مانجی لذت ببرید!
         </p>
 
         @if(isset($payment) && $payment)
@@ -147,7 +147,7 @@
         <!-- Footer -->
         <div class="mt-6 text-center">
             <p class="text-sm text-gray-500">
-                با تشکر از اعتماد شما به سروکست
+                با تشکر از اعتماد شما به مانجی
             </p>
             <div class="mt-2">
                 <span class="text-2xl">📚✨🎭</span>
@@ -170,10 +170,10 @@
             
             // Try multiple methods to return to app
             const appSchemes = [
-                'sarvcast://payment/success', // Your app's custom scheme
-                'sarvcast://subscription/success',
-                'sarvcast://home',
-                'sarvcast://'
+                'manji://payment/success', // Your app's custom scheme
+                'manji://subscription/success',
+                'manji://home',
+                'manji://'
             ];
             
             // Add payment data as query parameters

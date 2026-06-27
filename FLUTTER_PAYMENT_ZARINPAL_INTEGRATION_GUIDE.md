@@ -1,13 +1,13 @@
-# SarvCast Flutter Payment & Zarinpal Integration Guide
+# Manji Flutter Payment & Zarinpal Integration Guide
 
 ## Overview
-This document provides comprehensive guidance for Flutter developers to integrate with the SarvCast payment system using Zarinpal payment gateway. It covers subscription plans, payment processing, and user-side payment management.
+This document provides comprehensive guidance for Flutter developers to integrate with the Manji payment system using Zarinpal payment gateway. It covers subscription plans, payment processing, and user-side payment management.
 
 ## Base Configuration
 
 ### API Base URL
 ```
-https://my.sarvcast.ir/api/v1
+https://my.manji.ir/api/v1
 ```
 
 ### Required Headers
@@ -15,7 +15,7 @@ https://my.sarvcast.ir/api/v1
 Map<String, String> headers = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-  'User-Agent': 'SarvCast-Flutter/1.0.0',
+  'User-Agent': 'Manji-Flutter/1.0.0',
 };
 
 // For authenticated requests
@@ -36,7 +36,7 @@ Map<String, String> authHeaders = {
 **Flutter Implementation:**
 ```dart
 class SubscriptionPlanService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   
   Future<List<SubscriptionPlan>> getPlans() async {
     final uri = Uri.parse('$baseUrl/subscriptions/plans');
@@ -282,7 +282,7 @@ Future<SubscriptionCreationResult> createSubscription({
 **Flutter Implementation:**
 ```dart
 class PaymentService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   
   Future<PaymentInitiationResult> initiatePayment({
     required int subscriptionId,

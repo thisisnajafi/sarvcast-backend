@@ -89,7 +89,7 @@ class MyketSubscriptionVerifyTest extends TestCase
     {
         config([
             'services.myket.api_key' => 'test-access-token',
-            'services.myket.package_name' => 'com.sarvabi.sarvcast',
+            'services.myket.package_name' => 'com.avinpishtazan.manji',
         ]);
 
         Http::fake([

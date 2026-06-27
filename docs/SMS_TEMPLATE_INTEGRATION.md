@@ -1,13 +1,13 @@
 # SMS Template Integration with Meli Payamak
 
 ## Overview
-This document describes the integration of Meli Payamak SMS templates with the SarvCast application for sending verification codes.
+This document describes the integration of Meli Payamak SMS templates with the Manji application for sending verification codes.
 
 ## Template Configuration
 
 ### Verification Code Template
 - **Template ID**: `371085`
-- **Template Message**: `کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست`
+- **Template Message**: `کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد مانجی`
 - **Parameters**: `{0}` - The verification code (4-digit number)
 
 ### Environment Configuration
@@ -53,7 +53,7 @@ Code stored in cache for 5 minutes
     ↓
 Template ID 371085 used with parameter [code]
     ↓
-Meli Payamak sends: "کد ورود شما: 1234 این کد 5 دقیقه اعتبار دارد سروکست"
+Meli Payamak sends: "کد ورود شما: 1234 این کد 5 دقیقه اعتبار دارد مانجی"
 ```
 
 ## Usage Examples
@@ -110,7 +110,7 @@ $result = $this->smsService->sendOtp($phoneNumber, 'login');
 
 1. **Compliance**: Uses approved SMS templates from Meli Payamak
 2. **Consistency**: Standardized message format across all verification codes
-3. **Branding**: Includes "سروکست" brand name in messages
+3. **Branding**: Includes "مانجی" brand name in messages
 4. **Reliability**: Higher delivery rates with template-based SMS
 5. **Cost Efficiency**: Better pricing for template-based messages
 

@@ -1,8 +1,8 @@
-# راهنمای پشتیبان‌گیری و بازیابی - سروکست
+# راهنمای پشتیبان‌گیری و بازیابی - مانجی
 
 ## مقدمه
 
-این راهنما شامل روش‌های پشتیبان‌گیری و بازیابی داده‌های سروکست، به ویژه ویژگی‌های جدید مانند تایم‌لاین تصاویر و سیستم نظرات است.
+این راهنما شامل روش‌های پشتیبان‌گیری و بازیابی داده‌های مانجی، به ویژه ویژگی‌های جدید مانند تایم‌لاین تصاویر و سیستم نظرات است.
 
 ## ویژگی‌های جدید شامل شده
 
@@ -25,22 +25,22 @@
 #!/bin/bash
 # اسکریپت پشتیبان‌گیری روزانه
 
-BACKUP_DIR="/backups/sarvcast"
+BACKUP_DIR="/backups/manji"
 DATE=$(date +%Y%m%d-%H%M%S)
-BACKUP_NAME="sarvcast-backup-$DATE"
+BACKUP_NAME="manji-backup-$DATE"
 
 # ایجاد دایرکتوری پشتیبان
 mkdir -p "$BACKUP_DIR/$BACKUP_NAME"
 
 # پشتیبان‌گیری پایگاه داده
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T mysql mysqldump \
-    -u sarvcast_user \
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T mysql mysqldump \
+    -u manji_user \
     -p$DB_PASSWORD \
     --single-transaction \
     --routines \
     --triggers \
     --include-new-tables \
-    sarvcast_production > "$BACKUP_DIR/$BACKUP_NAME/database.sql"
+    manji_production > "$BACKUP_DIR/$BACKUP_NAME/database.sql"
 
 # پشتیبان‌گیری فایل‌های اپلیکیشن
 tar -czf "$BACKUP_DIR/$BACKUP_NAME/application.tar.gz" \
@@ -52,16 +52,16 @@ tar -czf "$BACKUP_DIR/$BACKUP_NAME/application.tar.gz" \
     --exclude='storage/framework/views' \
     --exclude='.git' \
     --exclude='.env' \
-    /var/www/sarvcast
+    /var/www/manji
 
 # پشتیبان‌گیری فایل‌های آپلود شده
 tar -czf "$BACKUP_DIR/$BACKUP_NAME/storage.tar.gz" \
-    /var/www/sarvcast/storage/app/public
+    /var/www/manji/storage/app/public
 
 # پشتیبان‌گیری حجم‌های Docker
 docker run --rm \
-    -v sarvcast_mysql_data:/data \
-    -v sarvcast_redis_data:/redis \
+    -v manji_mysql_data:/data \
+    -v manji_redis_data:/redis \
     -v "$BACKUP_DIR/$BACKUP_NAME":/backup \
     alpine tar czf /backup/volumes.tar.gz /data /redis
 
@@ -73,24 +73,24 @@ echo "پشتیبان‌گیری کامل شد: $BACKUP_NAME"
 @echo off
 REM اسکریپت پشتیبان‌گیری روزانه برای Windows
 
-set BACKUP_DIR=C:\backups\sarvcast
+set BACKUP_DIR=C:\backups\manji
 set DATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%-%time:~0,2%%time:~3,2%%time:~6,2%
-set BACKUP_NAME=sarvcast-backup-%DATE%
+set BACKUP_NAME=manji-backup-%DATE%
 
 REM ایجاد دایرکتوری پشتیبان
 mkdir "%BACKUP_DIR%\%BACKUP_NAME%"
 
 REM پشتیبان‌گیری پایگاه داده
-docker-compose -f C:\var\www\sarvcast\docker-compose.production.yml exec -T mysql mysqldump -u sarvcast_user -p%DB_PASSWORD% --single-transaction --routines --triggers sarvcast_production > "%BACKUP_DIR%\%BACKUP_NAME%\database.sql"
+docker-compose -f C:\var\www\manji\docker-compose.production.yml exec -T mysql mysqldump -u manji_user -p%DB_PASSWORD% --single-transaction --routines --triggers manji_production > "%BACKUP_DIR%\%BACKUP_NAME%\database.sql"
 
 REM پشتیبان‌گیری فایل‌های اپلیکیشن
-powershell -command "Compress-Archive -Path 'C:\var\www\sarvcast\*' -DestinationPath '%BACKUP_DIR%\%BACKUP_NAME%\application.zip' -Exclude @('node_modules', 'vendor', 'storage\logs', 'storage\framework\cache', 'storage\framework\sessions', 'storage\framework\views', '.git', '.env') -Force"
+powershell -command "Compress-Archive -Path 'C:\var\www\manji\*' -DestinationPath '%BACKUP_DIR%\%BACKUP_NAME%\application.zip' -Exclude @('node_modules', 'vendor', 'storage\logs', 'storage\framework\cache', 'storage\framework\sessions', 'storage\framework\views', '.git', '.env') -Force"
 
 REM پشتیبان‌گیری فایل‌های آپلود شده
-powershell -command "Compress-Archive -Path 'C:\var\www\sarvcast\storage\app\public\*' -DestinationPath '%BACKUP_DIR%\%BACKUP_NAME%\storage.zip' -Force"
+powershell -command "Compress-Archive -Path 'C:\var\www\manji\storage\app\public\*' -DestinationPath '%BACKUP_DIR%\%BACKUP_NAME%\storage.zip' -Force"
 
 REM پشتیبان‌گیری حجم‌های Docker
-docker run --rm -v sarvcast_mysql_data:/data -v sarvcast_redis_data:/redis -v "%BACKUP_DIR%\%BACKUP_NAME%":/backup alpine tar czf /backup/volumes.tar.gz /data /redis
+docker run --rm -v manji_mysql_data:/data -v manji_redis_data:/redis -v "%BACKUP_DIR%\%BACKUP_NAME%":/backup alpine tar czf /backup/volumes.tar.gz /data /redis
 
 echo پشتیبان‌گیری کامل شد: %BACKUP_NAME%
 ```
@@ -111,12 +111,12 @@ scripts\backup.bat
 ##### فقط پایگاه داده
 ```bash
 docker-compose -f docker-compose.production.yml exec mysql mysqldump \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
     --single-transaction \
     --routines \
     --triggers \
-    sarvcast_production > backup-database-$(date +%Y%m%d).sql
+    manji_production > backup-database-$(date +%Y%m%d).sql
 ```
 
 ##### فقط فایل‌های تایم‌لاین
@@ -128,11 +128,11 @@ tar -czf timeline-images-backup-$(date +%Y%m%d).tar.gz \
 ##### فقط نظرات
 ```bash
 docker-compose -f docker-compose.production.yml exec mysql mysqldump \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
     --single-transaction \
     --where="created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" \
-    sarvcast_production story_comments > comments-backup-$(date +%Y%m%d).sql
+    manji_production story_comments > comments-backup-$(date +%Y%m%d).sql
 ```
 
 ### 3. پشتیبان‌گیری ابری
@@ -142,8 +142,8 @@ docker-compose -f docker-compose.production.yml exec mysql mysqldump \
 #!/bin/bash
 # آپلود پشتیبان به S3
 
-BACKUP_FILE="sarvcast-backup-$(date +%Y%m%d).tar.gz"
-S3_BUCKET="sarvcast-backups"
+BACKUP_FILE="manji-backup-$(date +%Y%m%d).tar.gz"
+S3_BUCKET="manji-backups"
 S3_PATH="backups/$(date +%Y)/$(date +%m)/"
 
 # ایجاد پشتیبان فشرده
@@ -156,7 +156,7 @@ tar -czf "$BACKUP_FILE" \
     --exclude='storage/framework/views' \
     --exclude='.git' \
     --exclude='.env' \
-    /var/www/sarvcast
+    /var/www/manji
 
 # آپلود به S3
 aws s3 cp "$BACKUP_FILE" "s3://$S3_BUCKET/$S3_PATH$BACKUP_FILE"
@@ -176,8 +176,8 @@ echo "پشتیبان به S3 آپلود شد: s3://$S3_BUCKET/$S3_PATH$BACKUP_FI
 #!/bin/bash
 # بازیابی کامل از پشتیبان
 
-BACKUP_PATH="/backups/sarvcast/sarvcast-backup-20241201-120000"
-APP_PATH="/var/www/sarvcast"
+BACKUP_PATH="/backups/manji/manji-backup-20241201-120000"
+APP_PATH="/var/www/manji"
 
 # توقف سرویس‌ها
 docker-compose -f "$APP_PATH/docker-compose.production.yml" down
@@ -194,14 +194,14 @@ sleep 30
 
 # بازیابی پایگاه داده
 docker-compose -f "$APP_PATH/docker-compose.production.yml" exec -T mysql mysql \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
-    sarvcast_production < "$BACKUP_PATH/database.sql"
+    manji_production < "$BACKUP_PATH/database.sql"
 
 # بازیابی حجم‌های Docker
 docker run --rm \
-    -v sarvcast_mysql_data:/data \
-    -v sarvcast_redis_data:/redis \
+    -v manji_mysql_data:/data \
+    -v manji_redis_data:/redis \
     -v "$BACKUP_PATH":/backup \
     alpine tar xzf /backup/volumes.tar.gz -C /
 
@@ -217,9 +217,9 @@ echo "بازیابی کامل انجام شد"
 ```bash
 # بازیابی پایگاه داده
 docker-compose -f docker-compose.production.yml exec -T mysql mysql \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
-    sarvcast_production < backup-database-20241201.sql
+    manji_production < backup-database-20241201.sql
 ```
 
 #### بازیابی فقط فایل‌های تایم‌لاین
@@ -232,9 +232,9 @@ tar -xzf timeline-images-backup-20241201.tar.gz -C storage/app/public/
 ```bash
 # بازیابی نظرات
 docker-compose -f docker-compose.production.yml exec -T mysql mysql \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
-    sarvcast_production < comments-backup-20241201.sql
+    manji_production < comments-backup-20241201.sql
 ```
 
 ### 3. بازیابی از S3
@@ -243,8 +243,8 @@ docker-compose -f docker-compose.production.yml exec -T mysql mysql \
 #!/bin/bash
 # بازیابی از S3
 
-BACKUP_FILE="sarvcast-backup-20241201.tar.gz"
-S3_BUCKET="sarvcast-backups"
+BACKUP_FILE="manji-backup-20241201.tar.gz"
+S3_BUCKET="manji-backups"
 S3_PATH="backups/2024/12/"
 
 # دانلود از S3
@@ -275,10 +275,10 @@ tar -czf "$TIMELINE_BACKUP_DIR/timeline-images-$DATE.tar.gz" \
 
 # پشتیبان‌گیری داده‌های تایم‌لاین
 docker-compose -f docker-compose.production.yml exec -T mysql mysqldump \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
     --single-transaction \
-    sarvcast_production image_timelines > "$TIMELINE_BACKUP_DIR/image-timelines-$DATE.sql"
+    manji_production image_timelines > "$TIMELINE_BACKUP_DIR/image-timelines-$DATE.sql"
 
 echo "پشتیبان‌گیری تایم‌لاین کامل شد"
 ```
@@ -296,18 +296,18 @@ mkdir -p "$COMMENTS_BACKUP_DIR"
 
 # پشتیبان‌گیری نظرات تایید شده
 docker-compose -f docker-compose.production.yml exec -T mysql mysqldump \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
     --single-transaction \
     --where="status='approved'" \
-    sarvcast_production story_comments > "$COMMENTS_BACKUP_DIR/approved-comments-$DATE.sql"
+    manji_production story_comments > "$COMMENTS_BACKUP_DIR/approved-comments-$DATE.sql"
 
 # پشتیبان‌گیری تمام نظرات
 docker-compose -f docker-compose.production.yml exec -T mysql mysqldump \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
     --single-transaction \
-    sarvcast_production story_comments > "$COMMENTS_BACKUP_DIR/all-comments-$DATE.sql"
+    manji_production story_comments > "$COMMENTS_BACKUP_DIR/all-comments-$DATE.sql"
 
 echo "پشتیبان‌گیری نظرات کامل شد"
 ```
@@ -320,8 +320,8 @@ echo "پشتیبان‌گیری نظرات کامل شد"
 #!/bin/bash
 # بررسی وضعیت پشتیبان‌گیری
 
-BACKUP_DIR="/backups/sarvcast"
-LOG_FILE="/var/log/sarvcast-backup.log"
+BACKUP_DIR="/backups/manji"
+LOG_FILE="/var/log/manji-backup.log"
 
 echo "=== گزارش وضعیت پشتیبان‌گیری ==="
 echo "تاریخ: $(date)"
@@ -356,8 +356,8 @@ tail -5 "$LOG_FILE"
 #!/bin/bash
 # اسکریپت هشدار پشتیبان‌گیری
 
-BACKUP_DIR="/backups/sarvcast"
-ALERT_EMAIL="admin@sarvcast.com"
+BACKUP_DIR="/backups/manji"
+ALERT_EMAIL="admin@manji.com"
 
 # بررسی آخرین پشتیبان
 LATEST_BACKUP=$(ls -t "$BACKUP_DIR" | head -1)
@@ -368,10 +368,10 @@ if [ -n "$LATEST_BACKUP" ]; then
     
     # اگر پشتیبان بیش از 25 ساعت قدیمی باشد
     if [ $TIME_DIFF -gt 90000 ]; then
-        echo "هشدار: آخرین پشتیبان بیش از 25 ساعت قدیمی است" | mail -s "هشدار پشتیبان‌گیری سروکست" "$ALERT_EMAIL"
+        echo "هشدار: آخرین پشتیبان بیش از 25 ساعت قدیمی است" | mail -s "هشدار پشتیبان‌گیری مانجی" "$ALERT_EMAIL"
     fi
 else
-    echo "هشدار: هیچ پشتیبانی یافت نشد" | mail -s "هشدار پشتیبان‌گیری سروکست" "$ALERT_EMAIL"
+    echo "هشدار: هیچ پشتیبانی یافت نشد" | mail -s "هشدار پشتیبان‌گیری مانجی" "$ALERT_EMAIL"
 fi
 ```
 
@@ -383,8 +383,8 @@ fi
 #!/bin/bash
 # تست بازیابی در محیط آزمایشی
 
-TEST_ENV="/var/www/sarvcast-test"
-BACKUP_PATH="/backups/sarvcast/sarvcast-backup-20241201-120000"
+TEST_ENV="/var/www/manji-test"
+BACKUP_PATH="/backups/manji/manji-backup-20241201-120000"
 
 echo "ایجاد محیط آزمایشی..."
 mkdir -p "$TEST_ENV"
@@ -393,7 +393,7 @@ echo "کپی فایل‌های پشتیبان..."
 cp -r "$BACKUP_PATH" "$TEST_ENV/"
 
 echo "استخراج فایل‌های اپلیکیشن..."
-tar -xzf "$TEST_ENV/sarvcast-backup-20241201-120000/application.tar.gz" -C "$TEST_ENV/"
+tar -xzf "$TEST_ENV/manji-backup-20241201-120000/application.tar.gz" -C "$TEST_ENV/"
 
 echo "راه‌اندازی محیط آزمایشی..."
 cd "$TEST_ENV"
@@ -412,14 +412,14 @@ echo "بررسی یکپارچگی پایگاه داده..."
 
 # بررسی جداول جدید
 docker-compose -f docker-compose.production.yml exec mysql mysql \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
-    -e "SELECT COUNT(*) as image_timelines_count FROM sarvcast_production.image_timelines;"
+    -e "SELECT COUNT(*) as image_timelines_count FROM manji_production.image_timelines;"
 
 docker-compose -f docker-compose.production.yml exec mysql mysql \
-    -u sarvcast_user \
+    -u manji_user \
     -p$DB_PASSWORD \
-    -e "SELECT COUNT(*) as story_comments_count FROM sarvcast_production.story_comments;"
+    -e "SELECT COUNT(*) as story_comments_count FROM manji_production.story_comments;"
 
 # بررسی فایل‌های تایم‌لاین
 echo "بررسی فایل‌های تایم‌لاین..."
@@ -437,23 +437,23 @@ echo "بررسی یکپارچگی کامل شد"
 crontab -e
 
 # پشتیبان‌گیری روزانه در ساعت 2 صبح
-0 2 * * * /var/www/sarvcast/scripts/backup.sh
+0 2 * * * /var/www/manji/scripts/backup.sh
 
 # پشتیبان‌گیری هفتگی کامل در یکشنبه‌ها
-0 1 * * 0 /var/www/sarvcast/scripts/full-backup.sh
+0 1 * * 0 /var/www/manji/scripts/full-backup.sh
 
 # پاک‌سازی پشتیبان‌های قدیمی (بیش از 30 روز)
-0 3 * * * find /backups/sarvcast -type d -mtime +30 -exec rm -rf {} \;
+0 3 * * * find /backups/manji -type d -mtime +30 -exec rm -rf {} \;
 ```
 
 ### 2. Windows Task Scheduler
 
 ```batch
 REM ایجاد وظیفه پشتیبان‌گیری روزانه
-schtasks /create /tn "SarvCast Daily Backup" /tr "C:\var\www\sarvcast\scripts\backup.bat" /sc daily /st 02:00 /f
+schtasks /create /tn "Manji Daily Backup" /tr "C:\var\www\manji\scripts\backup.bat" /sc daily /st 02:00 /f
 
 REM ایجاد وظیفه پشتیبان‌گیری هفتگی
-schtasks /create /tn "SarvCast Weekly Backup" /tr "C:\var\www\sarvcast\scripts\full-backup.bat" /sc weekly /d SUN /st 01:00 /f
+schtasks /create /tn "Manji Weekly Backup" /tr "C:\var\www\manji\scripts\full-backup.bat" /sc weekly /d SUN /st 01:00 /f
 ```
 
 ## نکات مهم
@@ -477,10 +477,10 @@ schtasks /create /tn "SarvCast Weekly Backup" /tr "C:\var\www\sarvcast\scripts\f
 
 در صورت بروز مشکل در فرآیند پشتیبان‌گیری یا بازیابی:
 
-- ایمیل: support@sarvcast.com
+- ایمیل: support@manji.com
 - تلفن: 021-12345678
-- تلگرام: @SarvCastSupport
+- تلگرام: @ManjiSupport
 
 ---
 
-**نکته مهم**: این راهنما برای مدیریت پشتیبان‌گیری و بازیابی سروکست تهیه شده است. برای سوالات فنی، با تیم پشتیبانی تماس بگیرید.
+**نکته مهم**: این راهنما برای مدیریت پشتیبان‌گیری و بازیابی مانجی تهیه شده است. برای سوالات فنی، با تیم پشتیبانی تماس بگیرید.

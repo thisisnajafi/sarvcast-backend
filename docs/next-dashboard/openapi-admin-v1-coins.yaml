@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Coins (Dashboard)
+  title: Manji Admin API — Coins (Dashboard)
   description: Contract for coin transaction management under /api/admin/coins
   version: 1.0.0
 

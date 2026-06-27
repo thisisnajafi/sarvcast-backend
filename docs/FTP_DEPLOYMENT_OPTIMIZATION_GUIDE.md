@@ -96,8 +96,8 @@ composer install --no-dev --optimize-autoloader --no-interaction
 - name: Deploy to FTP (Incremental)
   uses: SamKirkland/FTP-Deploy-Action@v4.3.4
   with:
-    server: ftp.sarvcast.ir
-    username: my@sarvcast.ir
+    server: ftp.manji.ir
+    username: my@manji.ir
     password: Prof48017421@#
     local-dir: ./
     server-dir: /
@@ -124,8 +124,8 @@ composer install --no-dev --optimize-autoloader --no-interaction
 - name: Deploy application files
   uses: SamKirkland/FTP-Deploy-Action@v4.3.4
   with:
-    server: ftp.sarvcast.ir
-    username: my@sarvcast.ir
+    server: ftp.manji.ir
+    username: my@manji.ir
     password: Prof48017421@#
     local-dir: ./deployment/
     server-dir: /
@@ -204,8 +204,8 @@ jobs:
     - name: Deploy to FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        server: ftp.sarvcast.ir
-        username: my@sarvcast.ir
+        server: ftp.manji.ir
+        username: my@manji.ir
         password: Prof48017421@#
         local-dir: ./deployment/
         server-dir: /
@@ -228,7 +228,7 @@ jobs:
       run: |
         curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
           -d "chat_id=$TELEGRAM_CHAT_ID" \
-          -d "text=🚀 *SarvCast Deployment Successful*
+          -d "text=🚀 *Manji Deployment Successful*
 
         *Branch:* \`${{ github.ref_name }}\`
         *Commit:* \`${{ github.sha }}\`

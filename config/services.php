@@ -39,22 +39,22 @@ return [
 
     'zarinpal' => [
         'merchant_id' => env('ZARINPAL_MERCHANT_ID', '77751ff3-c1cc-411b-869d-2ac7d7b02f88'),
-        'callback_url' => env('ZARINPAL_CALLBACK_URL', 'https://my.sarvcast.ir'),
+        'callback_url' => env('ZARINPAL_CALLBACK_URL', 'https://my.manji.ir'),
         'sandbox' => env('ZARINPAL_SANDBOX', false),
     ],
 
-    /** Next.js web app (app.sarvcast.ir) — Zarinpal callback redirects here after subscription payment. */
-    'sarvcast_web' => [
-        'app_url' => env('SARVCAST_WEB_APP_URL', env('FRONTEND_APP_URL', 'https://app.sarvcast.ir')),
+    /** Next.js web app (app.manji.ir) — Zarinpal callback redirects here after subscription payment. */
+    'manji_web' => [
+        'app_url' => env('MANJI_WEB_APP_URL', env('FRONTEND_APP_URL', 'https://app.manji.ir')),
     ],
 
     /** Deep-link defaults for Flutter app payment callbacks. */
-    'sarvcast_app' => [
-        'return_scheme' => env('SARVCAST_APP_RETURN_SCHEME', 'sarvcast'),
+    'manji_app' => [
+        'return_scheme' => env('MANJI_APP_RETURN_SCHEME', 'manji'),
     ],
 
     'cafebazaar' => [
-        'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.sarvabi.sarvcast'),
+        'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.avinpishtazan.manji'),
         // API key from Pishkhan; sent in header CAFEBAZAAR-PISHKHAN-API-SECRET (doc: developers.cafebazaar.ir)
         'api_key' => env('CAFEBAZAAR_API_KEY'),
         'api_header_name' => env('CAFEBAZAAR_API_HEADER_NAME', 'CAFEBAZAAR-PISHKHAN-API-SECRET'),
@@ -82,7 +82,7 @@ return [
     ],
 
     'myket' => [
-        'package_name' => env('MYKET_PACKAGE_NAME', 'com.sarvabi.sarvcast'),
+        'package_name' => env('MYKET_PACKAGE_NAME', 'com.avinpishtazan.manji'),
         // X-Access-Token from Myket developer panel → In-App Billing (server-side only)
         'api_key' => env('MYKET_API_KEY'),
         'api_base_url' => env('MYKET_API_BASE_URL', 'https://developer.myket.ir/api/partners/applications'),

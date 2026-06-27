@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# SarvCast Production Setup Script
+# Manji Production Setup Script
 set -e
 
-PROJECT_NAME="sarvcast"
-DOMAIN="sarvcast.com"
+PROJECT_NAME="manji"
+DOMAIN="manji.com"
 
 log() {
     echo -e "\033[0;34m[$(date +'%Y-%m-%d %H:%M:%S')]\033[0m $1"
@@ -41,9 +41,9 @@ fi
 
 # Create directories
 log "Creating directories..."
-mkdir -p /var/www/sarvcast
-mkdir -p /backups/sarvcast
-mkdir -p /var/log/sarvcast
+mkdir -p /var/www/manji
+mkdir -p /backups/manji
+mkdir -p /var/log/manji
 mkdir -p /etc/nginx/ssl
 
 # Set permissions
@@ -52,8 +52,8 @@ chmod +x scripts/*.sh
 # Generate SSL certificates
 log "Generating SSL certificates..."
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/nginx/ssl/sarvcast.key \
-    -out /etc/nginx/ssl/sarvcast.crt \
-    -subj "/C=IR/ST=Tehran/L=Tehran/O=SarvCast/OU=IT/CN=$DOMAIN"
+    -keyout /etc/nginx/ssl/manji.key \
+    -out /etc/nginx/ssl/manji.crt \
+    -subj "/C=IR/ST=Tehran/L=Tehran/O=Manji/OU=IT/CN=$DOMAIN"
 
 success "Production environment setup completed!"

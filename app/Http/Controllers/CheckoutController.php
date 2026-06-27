@@ -75,7 +75,7 @@ class CheckoutController extends Controller
         $source = $request->input('source', 'web');
         $returnScheme = $request->input('return_scheme');
         if (!$returnScheme && $source === 'app') {
-            $returnScheme = 'sarvcast';
+            $returnScheme = 'manji';
         }
 
         // Optional: episode context when checkout started from a specific episode in the app

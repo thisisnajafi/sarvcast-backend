@@ -1,7 +1,7 @@
 # Notification Implementation Status Report
 
 ## Overview
-This document provides a comprehensive status of all notification implementations in the SarvCast application.
+This document provides a comprehensive status of all notification implementations in the Manji application.
 
 ## Implementation Summary
 

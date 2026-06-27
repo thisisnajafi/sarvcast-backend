@@ -82,7 +82,7 @@ rm public/images/stories/test.txt
 
 ### Check web server access:
 ```bash
-curl -I https://my.sarvcast.ir/images/
+curl -I https://my.manji.ir/images/
 ```
 
 ## Common Issues & Solutions
@@ -129,7 +129,7 @@ After applying the fix:
 - ✅ Story creation works without errors
 - ✅ Images upload successfully
 - ✅ Images display in admin panel
-- ✅ Direct image URLs work (e.g., `https://my.sarvcast.ir/images/stories/filename.webp`)
+- ✅ Direct image URLs work (e.g., `https://my.manji.ir/images/stories/filename.webp`)
 
 ## Prevention
 

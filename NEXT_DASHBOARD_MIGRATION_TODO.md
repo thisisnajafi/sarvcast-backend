@@ -1,4 +1,4 @@
-# SarvCast Next.js Dashboard Migration To-Do
+# Manji Next.js Dashboard Migration To-Do
 
 ## Goal
 
@@ -89,7 +89,7 @@ Phase 2 spec baseline:
 
 ## 4) Next.js Project Foundation
 
-- [x] Create separate project (recommended name: `sarvcast-dashboard-next`).
+- [x] Create separate project (recommended name: `manji-dashboard-next`).
 - [x] Setup stack:
   - [x] Next.js (App Router, TypeScript)
   - [x] Tailwind

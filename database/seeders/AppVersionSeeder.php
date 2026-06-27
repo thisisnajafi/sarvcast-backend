@@ -20,13 +20,13 @@ class AppVersionSeeder extends Seeder
                 'platform' => 'all',
                 'update_type' => 'optional',
                 'title' => 'نسخه اولیه',
-                'description' => 'اولین نسخه از اپلیکیشن سروکست',
+                'description' => 'اولین نسخه از اپلیکیشن مانجی',
                 'changelog' => '• راه‌اندازی اولیه اپلیکیشن
 • پخش داستان‌ها و اپیزودها
 • سیستم اشتراک
 • پروفایل کاربری',
                 'update_notes' => 'این نسخه پایه اپلیکیشن است و تمام ویژگی‌های اصلی را شامل می‌شود.',
-                'download_url' => 'https://play.google.com/store/apps/details?id=com.sarvcast.app',
+                'download_url' => 'https://play.google.com/store/apps/details?id=com.manji.app',
                 'minimum_os_version' => '7.0',
                 'compatibility' => [
                     'min_android_version' => '7.0',
@@ -54,7 +54,7 @@ class AppVersionSeeder extends Seeder
 • بهبود رابط کاربری
 • اضافه شدن قابلیت اشتراک‌گذاری',
                 'update_notes' => 'این به‌روزرسانی شامل بهبودهای مهم عملکرد و رفع مشکلات گزارش شده است.',
-                'download_url' => 'https://play.google.com/store/apps/details?id=com.sarvcast.app',
+                'download_url' => 'https://play.google.com/store/apps/details?id=com.manji.app',
                 'minimum_os_version' => '7.0',
                 'compatibility' => [
                     'min_android_version' => '7.0',
@@ -82,7 +82,7 @@ class AppVersionSeeder extends Seeder
 • بهبود سیستم اعلان‌ها
 • اضافه شدن قابلیت دانلود آفلاین',
                 'update_notes' => 'این به‌روزرسانی شامل رفع مشکلات امنیتی مهم است و به‌روزرسانی آن اجباری است.',
-                'download_url' => 'https://play.google.com/store/apps/details?id=com.sarvcast.app',
+                'download_url' => 'https://play.google.com/store/apps/details?id=com.manji.app',
                 'minimum_os_version' => '7.0',
                 'compatibility' => [
                     'min_android_version' => '7.0',
@@ -111,7 +111,7 @@ class AppVersionSeeder extends Seeder
 • بهبود عملکرد باتری
 • رفع مشکل اعلان‌ها در برخی دستگاه‌ها',
                 'update_notes' => 'این به‌روزرسانی مخصوص کاربران اندروید است.',
-                'download_url' => 'https://play.google.com/store/apps/details?id=com.sarvcast.app',
+                'download_url' => 'https://play.google.com/store/apps/details?id=com.manji.app',
                 'minimum_os_version' => '7.0',
                 'compatibility' => [
                     'min_android_version' => '7.0',
@@ -137,7 +137,7 @@ class AppVersionSeeder extends Seeder
 • بهبود عملکرد در iPhone 13
 • رفع مشکل اعلان‌ها در iOS',
                 'update_notes' => 'این به‌روزرسانی مخصوص کاربران iOS است.',
-                'download_url' => 'https://apps.apple.com/app/sarvcast/id123456789',
+                'download_url' => 'https://apps.apple.com/app/manji/id123456789',
                 'minimum_os_version' => '12.0',
                 'compatibility' => [
                     'min_ios_version' => '12.0',

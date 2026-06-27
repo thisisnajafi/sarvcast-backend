@@ -1,8 +1,8 @@
-# SarvCast API Endpoints Specification
+# Manji API Endpoints Specification
 
 ## Base URL
 ```
-https://api.sarvcast.com/v1
+https://api.manji.com/v1
 ```
 
 ## Authentication

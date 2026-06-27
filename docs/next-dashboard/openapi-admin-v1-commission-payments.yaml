@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Commission Payments
+  title: Manji Admin API — Commission Payments
   version: 1.0.0
 
 paths:

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'سروکست') - پنل مدیریت</title>
+    <title>@yield('title', 'مانجی') - پنل مدیریت</title>
     <script src="{{ asset('js/tailwind.js') }}"></script>
     <script>
         tailwind.config = {
@@ -55,7 +55,7 @@
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-xl font-bold text-gray-900 dark:text-white">سروکست</h1>
+                            <h1 class="text-xl font-bold text-gray-900 dark:text-white">مانجی</h1>
                             <p class="text-xs text-gray-500 dark:text-gray-400">پنل مدیریت</p>
                         </div>
                     </div>
@@ -534,7 +534,7 @@
                                         {{ auth()->user()->first_name ?? 'مدیر' }} {{ auth()->user()->last_name ?? 'سیستم' }}
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[140px] sm:max-w-[200px]">
-                                        {{ auth()->user()->email ?? 'admin@sarvcast.com' }}
+                                        {{ auth()->user()->email ?? 'admin@manji.com' }}
                                     </p>
                                 </div>
                                 <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200" id="dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -553,7 +553,7 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ auth()->user()->first_name ?? 'مدیر' }} {{ auth()->user()->last_name ?? 'سیستم' }}</p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ auth()->user()->email ?? 'admin@sarvcast.com' }}</p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ auth()->user()->email ?? 'admin@manji.com' }}</p>
                                                 <p class="text-xs text-green-600 dark:text-green-400 font-medium">مدیر سیستم</p>
                                             </div>
                                         </div>

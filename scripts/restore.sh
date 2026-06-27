@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# SarvCast Restore Script
-# This script restores the SarvCast application from a backup
+# Manji Restore Script
+# This script restores the Manji application from a backup
 
 set -e
 
 # Configuration
-PROJECT_NAME="sarvcast"
-BACKUP_DIR="/backups/sarvcast"
-LOG_FILE="/var/log/sarvcast-restore.log"
+PROJECT_NAME="manji"
+BACKUP_DIR="/backups/manji"
+LOG_FILE="/var/log/manji-restore.log"
 
 # Colors for output
 RED='\033[0;31m'
@@ -60,7 +60,7 @@ fi
 
 # Extract backup
 log "Extracting backup..."
-EXTRACT_DIR="/tmp/sarvcast_restore_$(date +%Y%m%d_%H%M%S)"
+EXTRACT_DIR="/tmp/manji_restore_$(date +%Y%m%d_%H%M%S)"
 mkdir -p $EXTRACT_DIR
 tar -xzf "$BACKUP_FILE" -C $EXTRACT_DIR
 
@@ -98,22 +98,22 @@ fi
 
 # Stop services
 log "Stopping services..."
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml down || true
+docker-compose -f /var/www/manji/docker-compose.production.yml down || true
 systemctl stop nginx || true
 systemctl stop mysql || true
 systemctl stop redis || true
 
 # Create current backup before restore
 log "Creating current backup before restore..."
-CURRENT_BACKUP="/tmp/sarvcast_current_backup_$(date +%Y%m%d_%H%M%S).tar.gz"
-tar -czf "$CURRENT_BACKUP" /var/www/sarvcast
+CURRENT_BACKUP="/tmp/manji_current_backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+tar -czf "$CURRENT_BACKUP" /var/www/manji
 success "Current backup created: $CURRENT_BACKUP"
 
 # Restore application files
 log "Restoring application files..."
 if [ -f "$RESTORE_PATH/application.tar.gz" ]; then
-    rm -rf /var/www/sarvcast
-    mkdir -p /var/www/sarvcast
+    rm -rf /var/www/manji
+    mkdir -p /var/www/manji
     tar -xzf "$RESTORE_PATH/application.tar.gz" -C /
     success "Application files restored"
 else
@@ -140,14 +140,14 @@ fi
 
 # Set permissions
 log "Setting permissions..."
-chown -R www-data:www-data /var/www/sarvcast
-chmod -R 755 /var/www/sarvcast
-chmod -R 777 /var/www/sarvcast/storage
-chmod -R 777 /var/www/sarvcast/bootstrap/cache
+chown -R www-data:www-data /var/www/manji
+chmod -R 755 /var/www/manji
+chmod -R 777 /var/www/manji/storage
+chmod -R 777 /var/www/manji/bootstrap/cache
 
 # Start services
 log "Starting services..."
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml up -d
+docker-compose -f /var/www/manji/docker-compose.production.yml up -d
 
 # Wait for services to be ready
 log "Waiting for services to be ready..."
@@ -156,10 +156,10 @@ sleep 60
 # Restore database
 log "Restoring database..."
 if [ -f "$RESTORE_PATH/database.sql" ]; then
-    docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T mysql mysql \
-        -u sarvcast_user \
+    docker-compose -f /var/www/manji/docker-compose.production.yml exec -T mysql mysql \
+        -u manji_user \
         -p$DB_PASSWORD \
-        sarvcast_production < "$RESTORE_PATH/database.sql"
+        manji_production < "$RESTORE_PATH/database.sql"
     success "Database restored"
 else
     error "Database backup not found"
@@ -169,7 +169,7 @@ fi
 log "Restoring Docker volumes..."
 if [ -f "$RESTORE_PATH/mysql_volume.tar.gz" ]; then
     docker run --rm \
-        -v sarvcast_mysql_data:/data \
+        -v manji_mysql_data:/data \
         -v $RESTORE_PATH:/backup \
         alpine:latest \
         tar xzf /backup/mysql_volume.tar.gz -C /data
@@ -178,7 +178,7 @@ fi
 
 if [ -f "$RESTORE_PATH/redis_volume.tar.gz" ]; then
     docker run --rm \
-        -v sarvcast_redis_data:/data \
+        -v manji_redis_data:/data \
         -v $RESTORE_PATH:/backup \
         alpine:latest \
         tar xzf /backup/redis_volume.tar.gz -C /data
@@ -187,16 +187,16 @@ fi
 
 # Clear caches
 log "Clearing caches..."
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T php-fpm php artisan cache:clear
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T php-fpm php artisan config:clear
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T php-fpm php artisan route:clear
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T php-fpm php artisan view:clear
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T php-fpm php artisan cache:clear
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T php-fpm php artisan config:clear
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T php-fpm php artisan route:clear
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T php-fpm php artisan view:clear
 
 # Rebuild caches
 log "Rebuilding caches..."
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T php-fpm php artisan config:cache
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T php-fpm php artisan route:cache
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T php-fpm php artisan view:cache
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T php-fpm php artisan config:cache
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T php-fpm php artisan route:cache
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T php-fpm php artisan view:cache
 
 # Health check
 log "Performing health check..."
@@ -220,9 +220,9 @@ echo "   • Restore Time: $(date)"
 echo "   • Current Backup: $CURRENT_BACKUP"
 echo ""
 echo "🔗 Access URLs:"
-echo "   • Application: https://sarvcast.com"
-echo "   • Admin Panel: https://sarvcast.com/admin"
-echo "   • API: https://sarvcast.com/api/v1"
+echo "   • Application: https://manji.com"
+echo "   • Admin Panel: https://manji.com/admin"
+echo "   • API: https://manji.com/api/v1"
 echo ""
 echo "📝 Next Steps:"
 echo "   1. Test all functionality"

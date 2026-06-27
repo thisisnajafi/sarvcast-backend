@@ -447,7 +447,7 @@ class SubscriptionController extends Controller
             $planFeatures = $plan->features ?? [];
             $firstFeature = !empty($planFeatures) ? $planFeatures[0] : ($plan->name ?? $plan->title ?? 'اشتراک');
 
-            $defaultWebBase = rtrim((string) config('services.sarvcast_web.app_url', 'https://app.sarvcast.ir'), '/');
+            $defaultWebBase = rtrim((string) config('services.manji_web.app_url', 'https://app.manji.ir'), '/');
             $returnUrl = $this->sanitizeWebAppUrl($request->input('return_url'), $defaultWebBase . '/home');
             $failureUrl = $this->sanitizeWebAppUrl($request->input('failure_url'), $defaultWebBase . '/subscription/failure');
 
@@ -560,7 +560,7 @@ class SubscriptionController extends Controller
         if (in_array($host, ['localhost', '127.0.0.1'], true)) {
             return $url;
         }
-        $allowedBase = rtrim((string) config('services.sarvcast_web.app_url', 'https://app.sarvcast.ir'), '/');
+        $allowedBase = rtrim((string) config('services.manji_web.app_url', 'https://app.manji.ir'), '/');
         $allowedHost = parse_url($allowedBase, PHP_URL_HOST);
         if (!$allowedHost || strcasecmp($host, (string) $allowedHost) !== 0) {
             return $fallback;

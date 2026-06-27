@@ -62,7 +62,7 @@ You have **two options** depending on your server setup:
 
 ## ✅ Option 2: System-Level Directory (Recommended if you have root access)
 
-**Location**: `/backups/sarvcast/`
+**Location**: `/backups/manji/`
 
 ### Why This Option?
 - ✅ Separated from application files
@@ -79,19 +79,19 @@ You have **two options** depending on your server setup:
 
 2. **Create backup directory (requires sudo):**
    ```bash
-   sudo mkdir -p /backups/sarvcast
-   sudo chown -R $USER:$USER /backups/sarvcast
-   sudo chmod 755 /backups/sarvcast
+   sudo mkdir -p /backups/manji
+   sudo chown -R $USER:$USER /backups/manji
+   sudo chmod 755 /backups/manji
    ```
 
 3. **Verify it was created:**
    ```bash
-   ls -la /backups/sarvcast
+   ls -la /backups/manji
    ```
 
 4. **Set GitHub Secret:**
    - Go to: Repository → Settings → Secrets → Actions
-   - Add secret: `BACKUP_DIR` = `/backups/sarvcast`
+   - Add secret: `BACKUP_DIR` = `/backups/manji`
 
 ---
 
@@ -143,7 +143,7 @@ After your first deployment:
    ls -lh /public_html/my/storage/backups/
    
    # For Option 2 (system directory)
-   ls -lh /backups/sarvcast/
+   ls -lh /backups/manji/
    ```
 
 2. **You should see:**
@@ -193,7 +193,7 @@ If you want to change the backup location:
 | Option | Location | Requires Root? | GitHub Secret? |
 |--------|----------|----------------|----------------|
 | **Option 1** | `/public_html/my/storage/backups/` | ❌ No | ❌ No (default) |
-| **Option 2** | `/backups/sarvcast/` | ✅ Yes | ✅ Yes (`BACKUP_DIR`) |
+| **Option 2** | `/backups/manji/` | ✅ Yes | ✅ Yes (`BACKUP_DIR`) |
 
 **Recommendation for you:** Use **Option 1** (app directory) - it's simpler and works automatically! 🎯
 

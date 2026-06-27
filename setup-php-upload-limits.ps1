@@ -1,5 +1,5 @@
 # PowerShell script to update PHP configuration for timeline uploads
-Write-Host "Setting up PHP configuration for SarvCast Timeline Uploads..." -ForegroundColor Green
+Write-Host "Setting up PHP configuration for Manji Timeline Uploads..." -ForegroundColor Green
 Write-Host ""
 
 # Get PHP configuration file path

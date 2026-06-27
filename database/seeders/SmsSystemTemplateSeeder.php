@@ -16,7 +16,7 @@ class SmsSystemTemplateSeeder extends Seeder
             [
                 'name' => 'کد تایید ورود',
                 'melipayamak_body_id' => $bodyId,
-                'preview_text' => 'کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد سروکست',
+                'preview_text' => 'کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد مانجی',
                 'parameters' => [
                     [
                         'index' => 0,

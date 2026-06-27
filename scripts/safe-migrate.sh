@@ -7,8 +7,8 @@
 set -e
 
 # Configuration
-BACKUP_DIR="${BACKUP_DIR:-/backups/sarvcast}"
-LOG_FILE="${LOG_FILE:-/tmp/sarvcast-migrate.log}"
+BACKUP_DIR="${BACKUP_DIR:-/backups/manji}"
+LOG_FILE="${LOG_FILE:-/tmp/manji-migrate.log}"
 ROLLBACK_ON_FAILURE="${1:---rollback-on-failure}"
 
 # Colors for output

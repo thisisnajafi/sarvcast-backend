@@ -1,13 +1,13 @@
-# SarvCast Flutter Ratings & Play Count Integration Guide
+# Manji Flutter Ratings & Play Count Integration Guide
 
 ## Overview
-This document provides comprehensive guidance for Flutter developers to integrate with the SarvCast story ratings and episode play count APIs. These features allow users to rate stories and track episode play statistics.
+This document provides comprehensive guidance for Flutter developers to integrate with the Manji story ratings and episode play count APIs. These features allow users to rate stories and track episode play statistics.
 
 ## Base Configuration
 
 ### API Base URL
 ```
-https://my.sarvcast.ir/api/v1
+https://my.manji.ir/api/v1
 ```
 
 ### Required Headers
@@ -15,7 +15,7 @@ https://my.sarvcast.ir/api/v1
 Map<String, String> headers = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-  'User-Agent': 'SarvCast-Flutter/1.0.0',
+  'User-Agent': 'Manji-Flutter/1.0.0',
 };
 
 // For authenticated requests
@@ -41,7 +41,7 @@ Map<String, String> authHeaders = {
 **Flutter Implementation:**
 ```dart
 class StoryRatingService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   
   Future<List<StoryRating>> getStoryRatings({
     required int storyId,
@@ -264,7 +264,7 @@ Future<void> deleteRating(int storyId) async {
 **Flutter Implementation:**
 ```dart
 class EpisodePlayService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   
   Future<EpisodePlayResult> incrementPlayCount({
     required int episodeId,

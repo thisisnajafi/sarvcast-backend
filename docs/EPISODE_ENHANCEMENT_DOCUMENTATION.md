@@ -2,7 +2,7 @@
 ## Multiple Voice Actors & Timeline-Based Images
 
 ### Overview
-This document outlines the implementation of two major enhancements to the SarvCast platform:
+This document outlines the implementation of two major enhancements to the Manji platform:
 
 1. **Multiple Voice Actors per Episode**: Each episode can now have multiple voice actors with specific roles and time segments
 2. **Timeline-Based Images**: Each episode can have multiple images synchronized with specific time segments of the audio

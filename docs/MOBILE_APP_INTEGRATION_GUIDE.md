@@ -1,8 +1,8 @@
-# راهنمای یکپارچه‌سازی اپلیکیشن موبایل - سروکست
+# راهنمای یکپارچه‌سازی اپلیکیشن موبایل - مانجی
 
 ## مقدمه
 
-این راهنما برای توسعه‌دهندگان اپلیکیشن موبایل سروکست تهیه شده است تا بتوانند به راحتی با API جدید یکپارچه شوند و از ویژگی‌های جدید استفاده کنند.
+این راهنما برای توسعه‌دهندگان اپلیکیشن موبایل مانجی تهیه شده است تا بتوانند به راحتی با API جدید یکپارچه شوند و از ویژگی‌های جدید استفاده کنند.
 
 ## تغییرات کلیدی
 
@@ -94,14 +94,14 @@ Authorization: Bearer {token}
                 "id": 1,
                 "start_time": 0,
                 "end_time": 15,
-                "image_url": "https://cdn.sarvcast.com/images/scene1.jpg",
+                "image_url": "https://cdn.manji.com/images/scene1.jpg",
                 "image_order": 1
             },
             {
                 "id": 2,
                 "start_time": 16,
                 "end_time": 30,
-                "image_url": "https://cdn.sarvcast.com/images/scene2.jpg",
+                "image_url": "https://cdn.manji.com/images/scene2.jpg",
                 "image_order": 2
             }
         ]
@@ -124,7 +124,7 @@ Authorization: Bearer {token}
     "data": {
         "episode_id": "uuid",
         "time": 25,
-        "image_url": "https://cdn.sarvcast.com/images/scene2.jpg"
+        "image_url": "https://cdn.manji.com/images/scene2.jpg"
     }
 }
 ```
@@ -340,7 +340,7 @@ data class CommentUser(
 - تیم پشتیبانی فنی
 
 ### تماس با پشتیبانی
-- ایمیل: dev-support@sarvcast.com
+- ایمیل: dev-support@manji.com
 - تلفن: 021-12345678
 - چت آنلاین: پنل توسعه‌دهندگان
 

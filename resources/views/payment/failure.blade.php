@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>پرداخت ناموفق - سروکست</title>
+    <title>پرداخت ناموفق - مانجی</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -109,8 +109,8 @@
         <div class="mt-8 p-4 bg-gray-50 rounded-2xl">
             <h4 class="text-gray-800 font-semibold mb-3">🆘 نیاز به کمک دارید؟</h4>
             <div class="text-sm text-gray-600 space-y-2">
-                <p>📧 ایمیل: support@sarvcast.ir</p>
-                <p>📱 تلگرام: @sarvcast_support</p>
+                <p>📧 ایمیل: support@manji.ir</p>
+                <p>📱 تلگرام: @manji_support</p>
                 <p>🕐 ساعات کاری: ۹ صبح تا ۶ عصر</p>
             </div>
         </div>
@@ -137,10 +137,10 @@
             
             // Try multiple methods to return to app
             const appSchemes = [
-                'sarvcast://payment/failure', // Your app's custom scheme
-                'sarvcast://subscription/failure',
-                'sarvcast://home',
-                'sarvcast://'
+                'manji://payment/failure', // Your app's custom scheme
+                'manji://subscription/failure',
+                'manji://home',
+                'manji://'
             ];
             
             // Add failure data as query parameters

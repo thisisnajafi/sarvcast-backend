@@ -26,7 +26,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKZQyBQfSZkOolimqCaFoGtZB3f1p2hBeXSZT929gMmQ
 
 ### Step 1: Add Private Key to GitHub Secrets
 
-1. Go to: https://github.com/thisisnajafi/sarvcast-backend/settings/secrets/actions
+1. Go to: https://github.com/thisisnajafi/manji-backend/settings/secrets/actions
 2. Find or create `SSH_PRIVATE_KEY`
 3. Click **Edit** (or **New repository secret** if it doesn't exist)
 4. **Copy the ENTIRE private key above** (from `-----BEGIN` to `-----END`)
@@ -68,7 +68,7 @@ If it works, you're all set!
 Make sure these secrets are set in GitHub:
 
 - `SSH_HOST` - Your server hostname (e.g., `2997021731.cloudylink.com`)
-- `SSH_USERNAME` - Your SSH username (e.g., `my@sarvcast.ir`)
+- `SSH_USERNAME` - Your SSH username (e.g., `my@manji.ir`)
 - `SSH_PRIVATE_KEY` - The private key shown above
 - `SSH_PORT` (optional) - SSH port, defaults to 22
 - `APP_PATH` (optional) - Application path, defaults to `/public_html/my`

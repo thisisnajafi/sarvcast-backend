@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — File Upload (Dashboard)
+  title: Manji Admin API — File Upload (Dashboard)
   description: Contract for general file uploads under /api/admin/file-upload
   version: 1.0.0
 

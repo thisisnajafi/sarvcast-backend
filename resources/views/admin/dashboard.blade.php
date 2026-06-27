@@ -423,7 +423,7 @@
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2 truncate">
-                    خوش آمدید به پنل مدیریت سروکست
+                    خوش آمدید به پنل مدیریت مانجی
                 </h1>
                 <p class="text-sm sm:text-base text-blue-100">
                     مدیریت کامل پلتفرم داستان‌های صوتی کودکان

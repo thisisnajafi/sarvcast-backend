@@ -15,14 +15,14 @@
 
 ### **Base URL**
 ```
-https://my.sarvcast.ir/api/v1
+https://my.manji.ir/api/v1
 ```
 
 ### **1. Get All Stories**
 ```dart
 // GET /stories
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/stories?limit=20'),
+  Uri.parse('https://my.manji.ir/api/v1/stories?limit=20'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -40,8 +40,8 @@ final response = await http.get(
       "title": "پشمالو",
       "subtitle": "پشمالو",
       "description": "تخساخ",
-      "image_url": "https://my.sarvcast.ir/images/stories/1758956130_cover.webp",
-      "cover_image_url": "https://my.sarvcast.ir/images/stories/1758956130_cover_cover.webp",
+      "image_url": "https://my.manji.ir/images/stories/1758956130_cover.webp",
+      "cover_image_url": "https://my.manji.ir/images/stories/1758956130_cover_cover.webp",
       "category_id": 5,
       "age_group": "3-5",
       "language": "persian",
@@ -87,7 +87,7 @@ final response = await http.get(
 ```dart
 // GET /stories/featured
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/stories/featured?limit=6'),
+  Uri.parse('https://my.manji.ir/api/v1/stories/featured?limit=6'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ final response = await http.get(
 ```dart
 // GET /stories/popular
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/stories/popular?limit=6&period=week'),
+  Uri.parse('https://my.manji.ir/api/v1/stories/popular?limit=6&period=week'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -111,7 +111,7 @@ final response = await http.get(
 ```dart
 // GET /stories/recent
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/stories/recent?limit=6'),
+  Uri.parse('https://my.manji.ir/api/v1/stories/recent?limit=6'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ final response = await http.get(
 ```dart
 // GET /stories/{id}
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/stories/1'),
+  Uri.parse('https://my.manji.ir/api/v1/stories/1'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -139,7 +139,7 @@ final response = await http.get(
 ```dart
 // GET /stories/{id}/episodes
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/stories/1/episodes'),
+  Uri.parse('https://my.manji.ir/api/v1/stories/1/episodes'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ final response = await http.get(
         "story_id": 1,
         "title": "داستان پشمالو",
         "description": "پشمالو بدون غرش هم شجاعه",
-        "audio_url": "https://my.sarvcast.ir/episodes/audio/cDSxlmldYnILXhfxJaSOsSVBh9Vk1jCcNHX78E5r.mp3",
+        "audio_url": "https://my.manji.ir/episodes/audio/cDSxlmldYnILXhfxJaSOsSVBh9Vk1jCcNHX78E5r.mp3",
         "duration": 409, // Duration in seconds
         "episode_number": 1,
         "is_premium": false,
@@ -188,7 +188,7 @@ final response = await http.get(
             "episode_id": 1,
             "start_time": 0,
             "end_time": 60,
-            "image_url": "https://my.sarvcast.ir/images/timeline/image1.jpg",
+            "image_url": "https://my.manji.ir/images/timeline/image1.jpg",
             "image_order": 1,
             "scene_description": "شروع داستان",
             "transition_type": "fade",
@@ -205,7 +205,7 @@ final response = await http.get(
 ```dart
 // GET /episodes
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/episodes?story_id=1&per_page=20'),
+  Uri.parse('https://my.manji.ir/api/v1/episodes?story_id=1&per_page=20'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -217,7 +217,7 @@ final response = await http.get(
 ```dart
 // GET /episodes/{id}
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/episodes/1'),
+  Uri.parse('https://my.manji.ir/api/v1/episodes/1'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -233,7 +233,7 @@ final response = await http.get(
 ```dart
 // GET /categories
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/categories'),
+  Uri.parse('https://my.manji.ir/api/v1/categories'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -256,7 +256,7 @@ final response = await http.get(
       "order": 5,
       "story_count": 1,
       "icon_path": "categories/1758958943_cover.webp",
-      "image_url": "https://my.sarvcast.ir/images/categories/1758958943_cover.webp",
+      "image_url": "https://my.manji.ir/images/categories/1758958943_cover.webp",
       "created_at": "2025-09-27T03:11:56.000000Z",
       "updated_at": "2025-09-27T08:03:06.000000Z"
     }
@@ -268,7 +268,7 @@ final response = await http.get(
 ```dart
 // GET /categories/{id}/stories
 final response = await http.get(
-  Uri.parse('https://my.sarvcast.ir/api/v1/categories/5/stories?limit=10'),
+  Uri.parse('https://my.manji.ir/api/v1/categories/5/stories?limit=10'),
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -409,7 +409,7 @@ class _EpisodePlayerState extends State<EpisodePlayer> {
 Future<void> incrementPlayCount(int episodeId) async {
   try {
     final response = await http.post(
-      Uri.parse('https://my.sarvcast.ir/api/v1/episodes/$episodeId/play'),
+      Uri.parse('https://my.manji.ir/api/v1/episodes/$episodeId/play'),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -434,7 +434,7 @@ Future<void> incrementPlayCount(int episodeId) async {
 Future<Map<String, dynamic>> getEpisodeStatistics(int episodeId) async {
   try {
     final response = await http.get(
-      Uri.parse('https://my.sarvcast.ir/api/v1/episodes/$episodeId/play/statistics'),
+      Uri.parse('https://my.manji.ir/api/v1/episodes/$episodeId/play/statistics'),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -662,7 +662,7 @@ class Episode {
 ### **API Service Implementation**
 ```dart
 class StoryApiService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
 
   static Future<List<Story>> getStories({int limit = 20}) async {
     try {

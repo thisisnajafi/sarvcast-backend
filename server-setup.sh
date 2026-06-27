@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# SarvCast Server Setup Script
+# Manji Server Setup Script
 # This script clears AWS cache and sets up the application properly
 
-echo "🧹 Clearing AWS cache and setting up SarvCast..."
+echo "🧹 Clearing AWS cache and setting up Manji..."
 echo "=================================================="
 
 # Navigate to application directory
@@ -91,7 +91,7 @@ echo "=================================================="
 echo "🎉 Server setup complete! AWS cache cleared."
 echo ""
 echo "💳 Zarinpal merchant ID is hardcoded in the application"
-echo "🌐 Application should now work at: https://my.sarvcast.ir/public/"
+echo "🌐 Application should now work at: https://my.manji.ir/public/"
 echo ""
 echo "📋 What was done:"
 echo "• Composer cache cleared"
@@ -101,4 +101,4 @@ echo "• Laravel caches cleared and regenerated"
 echo "• File permissions set"
 echo "• Storage symlink created"
 echo ""
-echo "✅ Your SarvCast application is ready!"
+echo "✅ Your Manji application is ready!"

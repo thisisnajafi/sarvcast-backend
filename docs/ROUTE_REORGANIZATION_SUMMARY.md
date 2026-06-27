@@ -1,4 +1,4 @@
-# Route Reorganization Summary - SarvCast
+# Route Reorganization Summary - Manji
 
 ## Overview
 
@@ -351,12 +351,12 @@ Route::prefix('episodes')->middleware('auth:sanctum')->group(function () {
 # Test user timeline access (read-only)
 curl -H "Authorization: Bearer {user_token}" \
      -H "Accept: application/json" \
-     "https://sarvcast.com/api/v1/episodes/123/image-timeline"
+     "https://manji.com/api/v1/episodes/123/image-timeline"
 
 # Test user image for time
 curl -H "Authorization: Bearer {user_token}" \
      -H "Accept: application/json" \
-     "https://sarvcast.com/api/v1/episodes/123/image-for-time?time=30"
+     "https://manji.com/api/v1/episodes/123/image-for-time?time=30"
 ```
 
 ### Admin API Testing
@@ -364,7 +364,7 @@ curl -H "Authorization: Bearer {user_token}" \
 # Test admin timeline management
 curl -H "Authorization: Bearer {admin_token}" \
      -H "Accept: application/json" \
-     "https://sarvcast.com/admin/api/episodes/123/timeline"
+     "https://manji.com/admin/api/episodes/123/timeline"
 
 # Test admin timeline creation
 curl -X POST \
@@ -372,7 +372,7 @@ curl -X POST \
      -H "Accept: application/json" \
      -H "Content-Type: application/json" \
      -d '{"timeline_data": [...]}' \
-     "https://sarvcast.com/admin/api/episodes/123/timeline"
+     "https://manji.com/admin/api/episodes/123/timeline"
 ```
 
 ## Conclusion

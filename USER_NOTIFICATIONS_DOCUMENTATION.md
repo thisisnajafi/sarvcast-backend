@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes all the notifications that users receive in the SarvCast application. Notifications are sent via multiple channels: **Push Notifications**, **In-App Notifications**, **Email**, and **SMS** (for critical events).
+This document describes all the notifications that users receive in the Manji application. Notifications are sent via multiple channels: **Push Notifications**, **In-App Notifications**, **Email**, and **SMS** (for critical events).
 
 ---
 

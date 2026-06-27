@@ -1,7 +1,7 @@
-# SarvCast Laravel Backend Development Tasks
+# Manji Laravel Backend Development Tasks
 
 ## Project Overview
-Complete Laravel API backend and Tailwind CSS admin dashboard for SarvCast Persian children's audio story platform.
+Complete Laravel API backend and Tailwind CSS admin dashboard for Manji Persian children's audio story platform.
 
 ## Updated Requirements (Latest)
 - **Payment Gateway**: Only ZarinPal (Pay.ir removed)
@@ -28,7 +28,7 @@ Complete Laravel API backend and Tailwind CSS admin dashboard for SarvCast Persi
 ### Phase 1: Project Setup & Core Infrastructure (Week 1-2)
 
 #### Task 1.1: Laravel Project Initialization
-- [x] Create new Laravel project: `composer create-project laravel/laravel sarvcast-backend`
+- [x] Create new Laravel project: `composer create-project laravel/laravel manji-backend`
 - [x] Configure `.env` file with database settings
 - [x] Set up database connection (MySQL)
 - [x] Install required packages:
@@ -722,4 +722,4 @@ Complete Laravel API backend and Tailwind CSS admin dashboard for SarvCast Persi
 - Monitor file uploads
 - Track admin actions
 
-This comprehensive task list provides a complete roadmap for developing the SarvCast Laravel backend and admin dashboard. Each task is specific, measurable, and includes the necessary technical details for implementation.
+This comprehensive task list provides a complete roadmap for developing the Manji Laravel backend and admin dashboard. Each task is specific, measurable, and includes the necessary technical details for implementation.

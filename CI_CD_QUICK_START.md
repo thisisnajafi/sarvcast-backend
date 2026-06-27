@@ -19,8 +19,8 @@ Add these secrets:
 
 ```bash
 # Create backup directory at system level
-sudo mkdir -p /backups/sarvcast
-sudo chown -R $USER:$USER /backups/sarvcast
+sudo mkdir -p /backups/manji
+sudo chown -R $USER:$USER /backups/manji
 ```
 
 **Option B: Application-level backup directory (For shared hosting or no root access)**
@@ -63,14 +63,14 @@ That's it! The pipeline will:
 ## 📋 What Gets Backed Up?
 
 - **Database**: Full MySQL/MariaDB dump (compressed)
-- **Default Location**: `/backups/sarvcast/` (system-level)
+- **Default Location**: `/backups/manji/` (system-level)
 - **Alternative Location**: `storage/backups/` (inside your app)
 - **Retention**: 30 days (auto-cleanup)
 - **Format**: `pre_deployment_YYYYMMDD_HHMMSS.sql.gz`
 
 ### Custom Backup Location
 
-If you want backups in `public_html/my/storage/backups` instead of `/backups/sarvcast`:
+If you want backups in `public_html/my/storage/backups` instead of `/backups/manji`:
 
 1. **Set GitHub Secret** (optional):
    - Add `BACKUP_DIR` secret with value: `/public_html/my/storage/backups`
@@ -88,7 +88,7 @@ If you want backups in `public_html/my/storage/backups` instead of `/backups/sar
 
 ```bash
 cd /path/to/your/app
-./scripts/restore-database.sh /backups/sarvcast/pre_deployment_YYYYMMDD_HHMMSS.sql.gz
+./scripts/restore-database.sh /backups/manji/pre_deployment_YYYYMMDD_HHMMSS.sql.gz
 ```
 
 ### Rollback via GitHub Actions

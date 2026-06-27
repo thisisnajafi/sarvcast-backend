@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نمایش صفحات پرداخت - سروکست</title>
+    <title>نمایش صفحات پرداخت - مانجی</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -15,7 +15,7 @@
 <body class="bg-gray-100 min-h-screen p-8">
     <div class="max-w-4xl mx-auto">
         <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">
-            🎨 نمایش صفحات پرداخت سروکست
+            🎨 نمایش صفحات پرداخت مانجی
         </h1>
         
         <div class="grid md:grid-cols-2 gap-8">
@@ -167,7 +167,7 @@
         <!-- Footer -->
         <div class="mt-8 text-center">
             <p class="text-gray-600">
-                🎭 سروکست - داستان‌های جذاب برای کودکان
+                🎭 مانجی - داستان‌های جذاب برای کودکان
             </p>
             <div class="mt-2">
                 <span class="text-2xl">📚✨🎈</span>

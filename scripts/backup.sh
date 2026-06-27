@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# SarvCast Backup Script
-# This script creates automated backups of the SarvCast application
+# Manji Backup Script
+# This script creates automated backups of the Manji application
 
 set -e
 
 # Configuration
-PROJECT_NAME="sarvcast"
-BACKUP_DIR="/backups/sarvcast"
+PROJECT_NAME="manji"
+BACKUP_DIR="/backups/manji"
 RETENTION_DAYS=30
-LOG_FILE="/var/log/sarvcast-backup.log"
+LOG_FILE="/var/log/manji-backup.log"
 
 # Colors for output
 RED='\033[0;31m'
@@ -51,13 +51,13 @@ mkdir -p $BACKUP_PATH
 
 log "Creating database backup..."
 # Database backup (includes new tables: image_timelines, story_comments)
-docker-compose -f /var/www/sarvcast/docker-compose.production.yml exec -T mysql mysqldump \
-    -u sarvcast_user \
+docker-compose -f /var/www/manji/docker-compose.production.yml exec -T mysql mysqldump \
+    -u manji_user \
     -p$DB_PASSWORD \
     --single-transaction \
     --routines \
     --triggers \
-    sarvcast_production > $BACKUP_PATH/database.sql
+    manji_production > $BACKUP_PATH/database.sql
 
 if [ $? -eq 0 ]; then
     success "Database backup completed"
@@ -76,7 +76,7 @@ tar -czf $BACKUP_PATH/application.tar.gz \
     --exclude='storage/framework/views' \
     --exclude='.git' \
     --exclude='.env' \
-    /var/www/sarvcast
+    /var/www/manji
 
 if [ $? -eq 0 ]; then
     success "Application files backup completed"
@@ -91,7 +91,7 @@ tar -czf $BACKUP_PATH/storage.tar.gz \
     --exclude='framework/cache' \
     --exclude='framework/sessions' \
     --exclude='framework/views' \
-    /var/www/sarvcast/storage
+    /var/www/manji/storage
 
 if [ $? -eq 0 ]; then
     success "Storage backup completed"
@@ -102,12 +102,12 @@ fi
 log "Creating configuration backup..."
 # Configuration backup
 tar -czf $BACKUP_PATH/config.tar.gz \
-    /var/www/sarvcast/.env \
-    /var/www/sarvcast/docker-compose.production.yml \
-    /var/www/sarvcast/nginx \
-    /var/www/sarvcast/mysql \
-    /var/www/sarvcast/supervisor \
-    /var/www/sarvcast/monitoring
+    /var/www/manji/.env \
+    /var/www/manji/docker-compose.production.yml \
+    /var/www/manji/nginx \
+    /var/www/manji/mysql \
+    /var/www/manji/supervisor \
+    /var/www/manji/monitoring
 
 if [ $? -eq 0 ]; then
     success "Configuration backup completed"
@@ -118,13 +118,13 @@ fi
 log "Creating Docker volumes backup..."
 # Docker volumes backup
 docker run --rm \
-    -v sarvcast_mysql_data:/data \
+    -v manji_mysql_data:/data \
     -v $BACKUP_PATH:/backup \
     alpine:latest \
     tar czf /backup/mysql_volume.tar.gz -C /data .
 
 docker run --rm \
-    -v sarvcast_redis_data:/data \
+    -v manji_redis_data:/data \
     -v $BACKUP_PATH:/backup \
     alpine:latest \
     tar czf /backup/redis_volume.tar.gz -C /data .
@@ -143,7 +143,7 @@ cat > $BACKUP_PATH/metadata.json << EOF
     "timestamp": "$TIMESTAMP",
     "date": "$(date -Iseconds)",
     "project": "$PROJECT_NAME",
-    "version": "$(cd /var/www/sarvcast && git rev-parse HEAD 2>/dev/null || echo 'unknown')",
+    "version": "$(cd /var/www/manji && git rev-parse HEAD 2>/dev/null || echo 'unknown')",
     "files": {
         "database": "database.sql",
         "application": "application.tar.gz",
@@ -184,8 +184,8 @@ log "Remaining backups: $BACKUP_COUNT"
 # Send notification (if configured)
 if [ -n "$BACKUP_NOTIFICATION_EMAIL" ]; then
     log "Sending backup notification..."
-    echo "SarvCast backup completed successfully at $(date)" | \
-    mail -s "SarvCast Backup Completed" $BACKUP_NOTIFICATION_EMAIL
+    echo "Manji backup completed successfully at $(date)" | \
+    mail -s "Manji Backup Completed" $BACKUP_NOTIFICATION_EMAIL
 fi
 
 # Log backup completion

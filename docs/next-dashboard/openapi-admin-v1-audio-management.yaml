@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Audio Management (Dashboard)
+  title: Manji Admin API — Audio Management (Dashboard)
   description: Contract for audio file management under /api/admin/audio-management
   version: 1.0.0
 

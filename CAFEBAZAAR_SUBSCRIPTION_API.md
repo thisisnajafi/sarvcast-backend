@@ -266,7 +266,7 @@ Ensure the following config values are set in `config/services.php`:
 
 ```php
 'cafebazaar' => [
-    'package_name' => 'com.sarvabi.sarvcast.cafebazaar',
+    'package_name' => 'com.avinpishtazan.manji.cafebazaar',
     'api_key' => env('CAFEBAZAAR_API_KEY'),
     'api_url' => env('CAFEBAZAAR_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate'),
     'product_mapping' => [

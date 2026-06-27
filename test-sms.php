@@ -30,7 +30,7 @@ try {
     
     // Test 1: Send regular SMS
     echo "Test 1: Sending regular SMS...\n";
-    $message = "تست سرویس پیامک سروکست - این یک پیام تستی است. زمان: " . date('Y-m-d H:i:s');
+    $message = "تست سرویس پیامک مانجی - این یک پیام تستی است. زمان: " . date('Y-m-d H:i:s');
     $result = $smsService->sendSms('09136708883', $message);
     
     if ($result['success']) {

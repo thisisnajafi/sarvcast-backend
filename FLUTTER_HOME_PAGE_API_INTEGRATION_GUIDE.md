@@ -1,13 +1,13 @@
-# SarvCast Flutter Home Page API Integration Guide
+# Manji Flutter Home Page API Integration Guide
 
 ## Overview
-This document provides comprehensive guidance for Flutter developers to integrate with the SarvCast home page APIs. The home page displays categories, featured stories, recent stories, popular stories, and bedtime stories to provide users with a comprehensive overview of available content.
+This document provides comprehensive guidance for Flutter developers to integrate with the Manji home page APIs. The home page displays categories, featured stories, recent stories, popular stories, and bedtime stories to provide users with a comprehensive overview of available content.
 
 ## Base Configuration
 
 ### API Base URL
 ```
-https://my.sarvcast.ir/api/v1
+https://my.manji.ir/api/v1
 ```
 
 ### Required Headers
@@ -15,7 +15,7 @@ https://my.sarvcast.ir/api/v1
 Map<String, String> headers = {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
-  'User-Agent': 'SarvCast-Flutter/1.0.0',
+  'User-Agent': 'Manji-Flutter/1.0.0',
 };
 ```
 
@@ -45,7 +45,7 @@ Map<String, String> authHeaders = {
 **Flutter Implementation:**
 ```dart
 class CategoryService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   
   Future<List<Category>> getCategories({
     int? limit,
@@ -162,7 +162,7 @@ class Category {
 **Flutter Implementation:**
 ```dart
 class StoryService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manji.ir/api/v1';
   
   Future<List<Story>> getFeaturedStories({int? limit}) async {
     final queryParams = <String, String>{};

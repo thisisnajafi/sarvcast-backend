@@ -7,9 +7,9 @@
 set -e
 
 # Configuration
-BACKUP_DIR="${BACKUP_DIR:-/backups/sarvcast}"
+BACKUP_DIR="${BACKUP_DIR:-/backups/manji}"
 RETENTION_DAYS=30
-LOG_FILE="${LOG_FILE:-/tmp/sarvcast-backup.log}"
+LOG_FILE="${LOG_FILE:-/tmp/manji-backup.log}"
 
 # Colors for output
 RED='\033[0;31m'

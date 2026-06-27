@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SarvCast Storage Link Script
+# Manji Storage Link Script
 # This script ensures the storage symlink exists
 # Run this script after deployment or if storage files are not accessible
 

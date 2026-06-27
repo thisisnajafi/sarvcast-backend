@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This report identifies responsive design issues found in the SarvCast admin dashboard. The analysis covers layout components, tables, forms, navigation, and interactive elements across multiple screen sizes (mobile, tablet, desktop).
+This report identifies responsive design issues found in the Manji admin dashboard. The analysis covers layout components, tables, forms, navigation, and interactive elements across multiple screen sizes (mobile, tablet, desktop).
 
 **Total Issues Found:** 47  
 **Critical Issues:** 12  

@@ -1,4 +1,4 @@
-# راهنمای استقرار پنل مدیریت SarvCast
+# راهنمای استقرار پنل مدیریت Manji
 
 ## فهرست مطالب
 
@@ -50,7 +50,7 @@ sudo apt install -y curl wget git unzip software-properties-common apt-transport
 sudo timedatectl set-timezone Asia/Tehran
 
 # تنظیم hostname
-sudo hostnamectl set-hostname sarvcast-server
+sudo hostnamectl set-hostname manji-server
 ```
 
 #### نصب CentOS 8
@@ -65,7 +65,7 @@ sudo dnf install -y curl wget git unzip epel-release
 sudo timedatectl set-timezone Asia/Tehran
 
 # تنظیم hostname
-sudo hostnamectl set-hostname sarvcast-server
+sudo hostnamectl set-hostname manji-server
 ```
 
 ### کاربران و مجوزها
@@ -260,13 +260,13 @@ npm --version
 mysql -u root -p
 
 -- ایجاد پایگاه داده
-CREATE DATABASE sarvcast CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE manji CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- ایجاد کاربر
-CREATE USER 'sarvcast_user'@'localhost' IDENTIFIED BY 'StrongPassword123!';
+CREATE USER 'manji_user'@'localhost' IDENTIFIED BY 'StrongPassword123!';
 
 -- اعطای مجوزها
-GRANT ALL PRIVILEGES ON sarvcast.* TO 'sarvcast_user'@'localhost';
+GRANT ALL PRIVILEGES ON manji.* TO 'manji_user'@'localhost';
 
 -- اعمال تغییرات
 FLUSH PRIVILEGES;
@@ -307,14 +307,14 @@ sudo systemctl restart mysql
 
 #### VirtualHost
 ```apache
-# فایل: /etc/apache2/sites-available/sarvcast.conf
+# فایل: /etc/apache2/sites-available/manji.conf
 
 <VirtualHost *:80>
-    ServerName sarvcast.com
-    ServerAlias www.sarvcast.com
-    DocumentRoot /var/www/sarvcast/public
+    ServerName manji.com
+    ServerAlias www.manji.com
+    DocumentRoot /var/www/manji/public
     
-    <Directory /var/www/sarvcast/public>
+    <Directory /var/www/manji/public>
         AllowOverride All
         Require all granted
     </Directory>
@@ -336,12 +336,12 @@ sudo systemctl restart mysql
     </FilesMatch>
     
     # لاگ‌ها
-    ErrorLog ${APACHE_LOG_DIR}/sarvcast_error.log
-    CustomLog ${APACHE_LOG_DIR}/sarvcast_access.log combined
+    ErrorLog ${APACHE_LOG_DIR}/manji_error.log
+    CustomLog ${APACHE_LOG_DIR}/manji_access.log combined
 </VirtualHost>
 
 # فعال‌سازی سایت
-sudo a2ensite sarvcast.conf
+sudo a2ensite manji.conf
 sudo a2dissite 000-default.conf
 sudo systemctl reload apache2
 ```
@@ -349,18 +349,18 @@ sudo systemctl reload apache2
 #### تنظیمات PHP-FPM
 ```bash
 # ویرایش فایل تنظیمات
-sudo nano /etc/apache2/sites-available/sarvcast.conf
+sudo nano /etc/apache2/sites-available/manji.conf
 
 # افزودن تنظیمات PHP-FPM
 <VirtualHost *:80>
-    ServerName sarvcast.com
-    DocumentRoot /var/www/sarvcast/public
+    ServerName manji.com
+    DocumentRoot /var/www/manji/public
     
     <FilesMatch \.php$>
         SetHandler "proxy:unix:/run/php/php8.1-fpm.sock|fcgi://localhost"
     </FilesMatch>
     
-    <Directory /var/www/sarvcast/public>
+    <Directory /var/www/manji/public>
         AllowOverride All
         Require all granted
     </Directory>
@@ -371,12 +371,12 @@ sudo nano /etc/apache2/sites-available/sarvcast.conf
 
 #### VirtualHost
 ```nginx
-# فایل: /etc/nginx/sites-available/sarvcast
+# فایل: /etc/nginx/sites-available/manji
 
 server {
     listen 80;
-    server_name sarvcast.com www.sarvcast.com;
-    root /var/www/sarvcast/public;
+    server_name manji.com www.manji.com;
+    root /var/www/manji/public;
     index index.php index.html index.htm;
     
     # تنظیمات عملکرد
@@ -421,12 +421,12 @@ server {
     }
     
     # لاگ‌ها
-    access_log /var/log/nginx/sarvcast_access.log;
-    error_log /var/log/nginx/sarvcast_error.log;
+    access_log /var/log/nginx/manji_access.log;
+    error_log /var/log/nginx/manji_error.log;
 }
 
 # فعال‌سازی سایت
-sudo ln -s /etc/nginx/sites-available/sarvcast /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/manji /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -437,21 +437,21 @@ sudo systemctl reload nginx
 
 ```bash
 # ایجاد پوشه پروژه
-sudo mkdir -p /var/www/sarvcast
-sudo chown -R www-data:www-data /var/www/sarvcast
+sudo mkdir -p /var/www/manji
+sudo chown -R www-data:www-data /var/www/manji
 
 # کلون کردن repository
-cd /var/www/sarvcast
-sudo -u www-data git clone https://github.com/your-username/sarvcast.git .
+cd /var/www/manji
+sudo -u www-data git clone https://github.com/your-username/manji.git .
 
 # نصب وابستگی‌ها
 sudo -u www-data composer install --optimize-autoloader --no-dev
 
 # تنظیم مجوزها
-sudo chown -R www-data:www-data /var/www/sarvcast
-sudo chmod -R 755 /var/www/sarvcast
-sudo chmod -R 775 /var/www/sarvcast/storage
-sudo chmod -R 775 /var/www/sarvcast/bootstrap/cache
+sudo chown -R www-data:www-data /var/www/manji
+sudo chmod -R 755 /var/www/manji
+sudo chmod -R 775 /var/www/manji/storage
+sudo chmod -R 775 /var/www/manji/bootstrap/cache
 ```
 
 ### استقرار خودکار
@@ -461,7 +461,7 @@ sudo chmod -R 775 /var/www/sarvcast/bootstrap/cache
 #!/bin/bash
 # فایل: /opt/scripts/deploy.sh
 
-PROJECT_DIR="/var/www/sarvcast"
+PROJECT_DIR="/var/www/manji"
 BACKUP_DIR="/opt/backups"
 BRANCH="main"
 
@@ -536,18 +536,18 @@ sudo -u www-data cp .env.example .env
 sudo -u www-data nano .env
 
 # تنظیمات محیط
-APP_NAME="SarvCast"
+APP_NAME="Manji"
 APP_ENV=production
 APP_KEY=
 APP_DEBUG=false
-APP_URL=https://sarvcast.com
+APP_URL=https://manji.com
 
 # تنظیمات پایگاه داده
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=sarvcast
-DB_USERNAME=sarvcast_user
+DB_DATABASE=manji
+DB_USERNAME=manji_user
 DB_PASSWORD=StrongPassword123!
 
 # تنظیمات کش
@@ -677,7 +677,7 @@ sudo systemctl start fail2ban
 sudo apt install certbot python3-certbot-apache
 
 # دریافت گواهی SSL
-sudo certbot --apache -d sarvcast.com -d www.sarvcast.com
+sudo certbot --apache -d manji.com -d www.manji.com
 
 # تمدید خودکار
 sudo crontab -e
@@ -689,16 +689,16 @@ sudo crontab -e
 ### تنظیمات Apache SSL
 
 ```apache
-# فایل: /etc/apache2/sites-available/sarvcast-ssl.conf
+# فایل: /etc/apache2/sites-available/manji-ssl.conf
 
 <VirtualHost *:443>
-    ServerName sarvcast.com
-    ServerAlias www.sarvcast.com
-    DocumentRoot /var/www/sarvcast/public
+    ServerName manji.com
+    ServerAlias www.manji.com
+    DocumentRoot /var/www/manji/public
     
     SSLEngine on
-    SSLCertificateFile /etc/letsencrypt/live/sarvcast.com/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/sarvcast.com/privkey.pem
+    SSLCertificateFile /etc/letsencrypt/live/manji.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/manji.com/privkey.pem
     
     # امنیت SSL
     SSLProtocol -all +TLSv1.2 +TLSv1.3
@@ -713,35 +713,35 @@ sudo crontab -e
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
     
-    <Directory /var/www/sarvcast/public>
+    <Directory /var/www/manji/public>
         AllowOverride All
         Require all granted
     </Directory>
     
     # لاگ‌ها
-    ErrorLog ${APACHE_LOG_DIR}/sarvcast_ssl_error.log
-    CustomLog ${APACHE_LOG_DIR}/sarvcast_ssl_access.log combined
+    ErrorLog ${APACHE_LOG_DIR}/manji_ssl_error.log
+    CustomLog ${APACHE_LOG_DIR}/manji_ssl_access.log combined
 </VirtualHost>
 
 # فعال‌سازی سایت SSL
-sudo a2ensite sarvcast-ssl.conf
+sudo a2ensite manji-ssl.conf
 sudo systemctl reload apache2
 ```
 
 ### تنظیمات Nginx SSL
 
 ```nginx
-# فایل: /etc/nginx/sites-available/sarvcast-ssl
+# فایل: /etc/nginx/sites-available/manji-ssl
 
 server {
     listen 443 ssl http2;
-    server_name sarvcast.com www.sarvcast.com;
-    root /var/www/sarvcast/public;
+    server_name manji.com www.manji.com;
+    root /var/www/manji/public;
     index index.php index.html index.htm;
     
     # گواهی SSL
-    ssl_certificate /etc/letsencrypt/live/sarvcast.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/sarvcast.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/manji.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/manji.com/privkey.pem;
     
     # امنیت SSL
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -798,12 +798,12 @@ server {
     }
     
     # لاگ‌ها
-    access_log /var/log/nginx/sarvcast_ssl_access.log;
-    error_log /var/log/nginx/sarvcast_ssl_error.log;
+    access_log /var/log/nginx/manji_ssl_access.log;
+    error_log /var/log/nginx/manji_ssl_error.log;
 }
 
 # فعال‌سازی سایت SSL
-sudo ln -s /etc/nginx/sites-available/sarvcast-ssl /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/manji-ssl /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -814,18 +814,18 @@ sudo systemctl reload nginx
 
 ```bash
 # رکورد A
-sarvcast.com.          A       your_server_ip
-www.sarvcast.com.       A       your_server_ip
+manji.com.          A       your_server_ip
+www.manji.com.       A       your_server_ip
 
 # رکورد CNAME
-admin.sarvcast.com.     CNAME   sarvcast.com.
-api.sarvcast.com.       CNAME   sarvcast.com.
+admin.manji.com.     CNAME   manji.com.
+api.manji.com.       CNAME   manji.com.
 
 # رکورد MX
-sarvcast.com.           MX      10 mail.sarvcast.com.
+manji.com.           MX      10 mail.manji.com.
 
 # رکورد TXT
-sarvcast.com.           TXT     "v=spf1 include:_spf.google.com ~all"
+manji.com.           TXT     "v=spf1 include:_spf.google.com ~all"
 ```
 
 ### تنظیمات CloudFlare
@@ -837,7 +837,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones" \
   -H "X-Auth-Key: your-api-key" \
   -H "Content-Type: application/json" \
   --data '{
-    "name": "sarvcast.com",
+    "name": "manji.com",
     "type": "A",
     "content": "your_server_ip",
     "proxied": true
@@ -851,7 +851,7 @@ curl -X POST "https://api.cloudflare.com/client/v4/zones" \
 #### تست سرعت
 ```bash
 # تست سرعت با curl
-curl -w "@curl-format.txt" -o /dev/null -s "https://sarvcast.com"
+curl -w "@curl-format.txt" -o /dev/null -s "https://manji.com"
 
 # فایل curl-format.txt
      time_namelookup:  %{time_namelookup}\n
@@ -867,10 +867,10 @@ curl -w "@curl-format.txt" -o /dev/null -s "https://sarvcast.com"
 #### تست امنیت
 ```bash
 # تست SSL با SSL Labs
-curl -s "https://api.ssllabs.com/api/v3/analyze?host=sarvcast.com"
+curl -s "https://api.ssllabs.com/api/v3/analyze?host=manji.com"
 
 # تست امنیت با Nmap
-nmap -sV -sC -O sarvcast.com
+nmap -sV -sC -O manji.com
 ```
 
 ### نظارت بر سیستم

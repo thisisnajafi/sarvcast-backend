@@ -29,7 +29,7 @@ You need to add the following secrets to your GitHub repository:
 
 **Example Values**:
 - `2997021731.cloudylink.com`
-- `my.sarvcast.ir`
+- `my.manji.ir`
 - `123.456.789.0`
 
 **How to Add**:
@@ -44,9 +44,9 @@ You need to add the following secrets to your GitHub repository:
 **Description**: SSH username for server access
 
 **Example Values**:
-- `my@sarvcast.ir`
+- `my@manji.ir`
 - `root`
-- `sarvcast`
+- `manji`
 
 **How to Add**:
 1. Go to **Settings** → **Secrets and variables** → **Actions**
@@ -62,7 +62,7 @@ You need to add the following secrets to your GitHub repository:
 
 ```bash
 # Generate a new SSH key pair
-ssh-keygen -t rsa -b 4096 -C "github-actions@sarvcast.ir" -f ~/.ssh/github_actions
+ssh-keygen -t rsa -b 4096 -C "github-actions@manji.ir" -f ~/.ssh/github_actions
 
 # This creates two files:
 # - ~/.ssh/github_actions (private key) - Add this to GitHub secrets
@@ -73,10 +73,10 @@ ssh-keygen -t rsa -b 4096 -C "github-actions@sarvcast.ir" -f ~/.ssh/github_actio
 
 ```bash
 # Copy public key to server
-ssh-copy-id -i ~/.ssh/github_actions.pub my@sarvcast.ir@2997021731.cloudylink.com
+ssh-copy-id -i ~/.ssh/github_actions.pub my@manji.ir@2997021731.cloudylink.com
 
 # Or manually add to ~/.ssh/authorized_keys on server
-cat ~/.ssh/github_actions.pub | ssh my@sarvcast.ir@2997021731.cloudylink.com "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+cat ~/.ssh/github_actions.pub | ssh my@manji.ir@2997021731.cloudylink.com "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
 ```
 
 **How to Add Private Key to GitHub**:
@@ -110,7 +110,7 @@ cat ~/.ssh/github_actions.pub | ssh my@sarvcast.ir@2997021731.cloudylink.com "mk
 
 **Example Values**:
 - `/public_html`
-- `/var/www/html/sarvcast`
+- `/var/www/html/manji`
 - `/home/my/public_html`
 
 **Default**: `/public_html` (if not set)
@@ -128,10 +128,10 @@ Before adding secrets to GitHub, test your SSH connection:
 
 ```bash
 # Test SSH connection
-ssh -i ~/.ssh/github_actions my@sarvcast.ir@2997021731.cloudylink.com
+ssh -i ~/.ssh/github_actions my@manji.ir@2997021731.cloudylink.com
 
 # Test if you can run commands
-ssh -i ~/.ssh/github_actions my@sarvcast.ir@2997021731.cloudylink.com "cd /public_html && php artisan --version"
+ssh -i ~/.ssh/github_actions my@manji.ir@2997021731.cloudylink.com "cd /public_html && php artisan --version"
 ```
 
 ## Deployment Process

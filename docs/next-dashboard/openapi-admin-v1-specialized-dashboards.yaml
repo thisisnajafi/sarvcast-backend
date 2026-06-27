@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: SarvCast Admin API — Specialized Dashboards (Dashboard)
+  title: Manji Admin API — Specialized Dashboards (Dashboard)
   description: Contract for stories, partners, and sales specialized dashboards under /api/admin/specialized-dashboards
   version: 1.0.0
 

@@ -14,7 +14,7 @@ class AddStorySubtitles extends Command
      * @var string
      */
     protected $signature = 'stories:add-subtitles 
-                            {--stories-path= : Path to sarvcast-stories directory}
+                            {--stories-path= : Path to manji-stories directory}
                             {--dry-run : Show what would be added without making changes}';
 
     /**
@@ -40,9 +40,9 @@ class AddStorySubtitles extends Command
         $this->storiesPath = $this->option('stories-path');
         if (!$this->storiesPath) {
             $possiblePaths = [
-                base_path('../sarvcast-stories'),
-                base_path('../../sarvcast-stories'),
-                base_path('sarvcast-stories'),
+                base_path('../manji-stories'),
+                base_path('../../manji-stories'),
+                base_path('manji-stories'),
             ];
             
             foreach ($possiblePaths as $path) {
@@ -150,7 +150,7 @@ class AddStorySubtitles extends Command
         $excludePatterns = [
             'README', 'CHANGELOG', 'GUIDE', 'TEMPLATE', 'PROMPT',
             'ANIMATED', 'COMPLETE', 'QUICK_START', 'PROJECT_SUMMARY',
-            '__pycache__', '.git', 'iransans', 'sarvcast-team', 'Voices'
+            '__pycache__', '.git', 'iransans', 'manji-team', 'Voices'
         ];
         
         foreach ($directories as $dir) {

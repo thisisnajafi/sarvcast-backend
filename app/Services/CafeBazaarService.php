@@ -37,7 +37,7 @@ class CafeBazaarService
 
     public function __construct(SubscriptionService $subscriptionService)
     {
-        $this->packageName = config('services.cafebazaar.package_name', 'com.sarvabi.sarvcast');
+        $this->packageName = config('services.cafebazaar.package_name', 'com.avinpishtazan.manji');
         $this->apiKey = config('services.cafebazaar.api_key');
         // One-time in-app purchase: POST to validate/inapp/purchases/ (correct path; ignore wrong .env like /api/validate)
         $defaultPurchaseUrl = 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/';

@@ -1,4 +1,4 @@
-# راهنمای امنیت پنل مدیریت SarvCast
+# راهنمای امنیت پنل مدیریت Manji
 
 ## فهرست مطالب
 
@@ -15,7 +15,7 @@
 
 ## معرفی امنیت
 
-امنیت پنل مدیریت SarvCast شامل مجموعه‌ای از اقدامات و تدابیر امنیتی است که از سیستم، داده‌ها و کاربران در برابر تهدیدات مختلف محافظت می‌کند.
+امنیت پنل مدیریت Manji شامل مجموعه‌ای از اقدامات و تدابیر امنیتی است که از سیستم، داده‌ها و کاربران در برابر تهدیدات مختلف محافظت می‌کند.
 
 ### اصول امنیت
 - **محرمانگی (Confidentiality)**: دسترسی فقط به کاربران مجاز
@@ -38,7 +38,7 @@
 php artisan tinker
 >>> $admin = new User();
 >>> $admin->name = 'Admin User';
->>> $admin->email = 'admin@sarvcast.com';
+>>> $admin->email = 'admin@manji.com';
 >>> $admin->password = bcrypt('StrongPassword123!');
 >>> $admin->role = 'super_admin';
 >>> $admin->status = 'active';
@@ -237,7 +237,7 @@ public function show(CoinTransaction $coin)
 sudo apt-get install certbot python3-certbot-apache
 
 # دریافت گواهی SSL
-sudo certbot --apache -d admin.sarvcast.com
+sudo certbot --apache -d admin.manji.com
 
 # تمدید خودکار
 sudo crontab -e
@@ -246,14 +246,14 @@ sudo crontab -e
 
 #### تنظیمات Apache
 ```apache
-# در فایل /etc/apache2/sites-available/admin.sarvcast.com.conf
+# در فایل /etc/apache2/sites-available/admin.manji.com.conf
 <VirtualHost *:443>
-    ServerName admin.sarvcast.com
-    DocumentRoot /var/www/sarvcast/public
+    ServerName admin.manji.com
+    DocumentRoot /var/www/manji/public
     
     SSLEngine on
-    SSLCertificateFile /etc/letsencrypt/live/admin.sarvcast.com/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/admin.sarvcast.com/privkey.pem
+    SSLCertificateFile /etc/letsencrypt/live/admin.manji.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/admin.manji.com/privkey.pem
     
     # امنیت SSL
     SSLProtocol -all +TLSv1.2 +TLSv1.3
@@ -420,13 +420,13 @@ sudo systemctl start fail2ban
 #### ایجاد کاربر امن
 ```sql
 -- ایجاد کاربر جدید
-CREATE USER 'sarvcast_admin'@'localhost' IDENTIFIED BY 'StrongPassword123!';
+CREATE USER 'manji_admin'@'localhost' IDENTIFIED BY 'StrongPassword123!';
 
 -- اعطای مجوزها
-GRANT SELECT, INSERT, UPDATE, DELETE ON sarvcast.* TO 'sarvcast_admin'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON manji.* TO 'manji_admin'@'localhost';
 
 -- اعطای مجوزهای خاص
-GRANT CREATE, DROP, ALTER ON sarvcast.* TO 'sarvcast_admin'@'localhost';
+GRANT CREATE, DROP, ALTER ON manji.* TO 'manji_admin'@'localhost';
 
 -- اعمال تغییرات
 FLUSH PRIVILEGES;
@@ -456,7 +456,7 @@ ALTER TABLE coin_transactions MODIFY COLUMN description VARBINARY(500);
 #### پشتیبان‌گیری رمزگذاری شده
 ```bash
 # پشتیبان‌گیری با رمزگذاری
-mysqldump -u root -p sarvcast | gpg --cipher-algo AES256 --compress-algo 1 --symmetric --output sarvcast_backup_$(date +%Y%m%d).sql.gpg
+mysqldump -u root -p manji | gpg --cipher-algo AES256 --compress-algo 1 --symmetric --output manji_backup_$(date +%Y%m%d).sql.gpg
 ```
 
 ## امنیت فایل
@@ -466,21 +466,21 @@ mysqldump -u root -p sarvcast | gpg --cipher-algo AES256 --compress-algo 1 --sym
 #### تنظیم مجوزهای صحیح
 ```bash
 # مجوزهای فایل‌های Laravel
-find /var/www/sarvcast -type f -exec chmod 644 {} \;
-find /var/www/sarvcast -type d -exec chmod 755 {} \;
+find /var/www/manji -type f -exec chmod 644 {} \;
+find /var/www/manji -type d -exec chmod 755 {} \;
 
 # مجوزهای خاص
-chmod 600 /var/www/sarvcast/.env
-chmod 755 /var/www/sarvcast/storage
-chmod 755 /var/www/sarvcast/bootstrap/cache
+chmod 600 /var/www/manji/.env
+chmod 755 /var/www/manji/storage
+chmod 755 /var/www/manji/bootstrap/cache
 ```
 
 #### مالکیت فایل‌ها
 ```bash
 # تنظیم مالکیت
-chown -R www-data:www-data /var/www/sarvcast
-chown -R www-data:www-data /var/www/sarvcast/storage
-chown -R www-data:www-data /var/www/sarvcast/bootstrap/cache
+chown -R www-data:www-data /var/www/manji
+chown -R www-data:www-data /var/www/manji/storage
+chown -R www-data:www-data /var/www/manji/bootstrap/cache
 ```
 
 ### اسکن فایل‌ها
@@ -494,16 +494,16 @@ sudo apt install clamav clamav-daemon
 sudo freshclam
 
 # اسکن فایل‌ها
-sudo clamscan -r /var/www/sarvcast
+sudo clamscan -r /var/www/manji
 ```
 
 #### بررسی یکپارچگی فایل‌ها
 ```bash
 # ایجاد checksum
-find /var/www/sarvcast -type f -exec md5sum {} \; > /var/log/sarvcast_checksums.md5
+find /var/www/manji -type f -exec md5sum {} \; > /var/log/manji_checksums.md5
 
 # بررسی یکپارچگی
-md5sum -c /var/log/sarvcast_checksums.md5
+md5sum -c /var/log/manji_checksums.md5
 ```
 
 ## نظارت و لاگ‌گیری
@@ -571,7 +571,7 @@ sudo apt install logwatch
 sudo nano /etc/logwatch/conf/logwatch.conf
 
 # اجرای روزانه
-sudo logwatch --detail high --mailto admin@sarvcast.com
+sudo logwatch --detail high --mailto admin@manji.com
 ```
 
 ## پشتیبان‌گیری امن
@@ -581,12 +581,12 @@ sudo logwatch --detail high --mailto admin@sarvcast.com
 #### اسکریپت پشتیبان‌گیری
 ```bash
 #!/bin/bash
-# فایل: /opt/scripts/backup_sarvcast.sh
+# فایل: /opt/scripts/backup_manji.sh
 
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/opt/backups"
-DB_NAME="sarvcast"
-DB_USER="sarvcast_admin"
+DB_NAME="manji"
+DB_USER="manji_admin"
 DB_PASS="StrongPassword123!"
 
 # ایجاد پوشه پشتیبان‌گیری
@@ -596,7 +596,7 @@ mkdir -p $BACKUP_DIR
 mysqldump -u $DB_USER -p$DB_PASS $DB_NAME | gzip > $BACKUP_DIR/db_$DATE.sql.gz
 
 # پشتیبان‌گیری فایل‌ها
-tar -czf $BACKUP_DIR/files_$DATE.tar.gz /var/www/sarvcast
+tar -czf $BACKUP_DIR/files_$DATE.tar.gz /var/www/manji
 
 # رمزگذاری پشتیبان‌گیری
 gpg --cipher-algo AES256 --compress-algo 1 --symmetric --output $BACKUP_DIR/backup_$DATE.tar.gz.gpg $BACKUP_DIR/files_$DATE.tar.gz
@@ -617,7 +617,7 @@ echo "پشتیبان‌گیری با موفقیت انجام شد: $DATE"
 sudo crontab -e
 
 # اجرای روزانه در ساعت 2 صبح
-0 2 * * * /opt/scripts/backup_sarvcast.sh >> /var/log/backup.log 2>&1
+0 2 * * * /opt/scripts/backup_manji.sh >> /var/log/backup.log 2>&1
 ```
 
 ### بازیابی
@@ -625,11 +625,11 @@ sudo crontab -e
 #### اسکریپت بازیابی
 ```bash
 #!/bin/bash
-# فایل: /opt/scripts/restore_sarvcast.sh
+# فایل: /opt/scripts/restore_manji.sh
 
 BACKUP_FILE=$1
-DB_NAME="sarvcast"
-DB_USER="sarvcast_admin"
+DB_NAME="manji"
+DB_USER="manji_admin"
 DB_PASS="StrongPassword123!"
 
 if [ -z "$BACKUP_FILE" ]; then
@@ -704,7 +704,7 @@ class SecurityAlertService
     private function sendSecurityAlert($message)
     {
         // ارسال ایمیل هشدار
-        Mail::to('security@sarvcast.com')->send(new SecurityAlertMail($message));
+        Mail::to('security@manji.com')->send(new SecurityAlertMail($message));
         
         // ارسال پیامک
         // SMS::send('09123456789', $message);
@@ -742,11 +742,11 @@ sudo systemctl stop apache2
 sudo systemctl stop mysql
 
 # بررسی یکپارچگی فایل‌ها
-find /var/www/sarvcast -type f -exec md5sum {} \; > /tmp/current_checksums.md5
-diff /var/log/sarvcast_checksums.md5 /tmp/current_checksums.md5
+find /var/www/manji -type f -exec md5sum {} \; > /tmp/current_checksums.md5
+diff /var/log/manji_checksums.md5 /tmp/current_checksums.md5
 
 # بازیابی از پشتیبان‌گیری
-/opt/scripts/restore_sarvcast.sh /opt/backups/backup_latest.tar.gz.gpg
+/opt/scripts/restore_manji.sh /opt/backups/backup_latest.tar.gz.gpg
 
 # راه‌اندازی مجدد سرویس‌ها
 sudo systemctl start mysql

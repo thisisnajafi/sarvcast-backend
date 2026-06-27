@@ -1,7 +1,7 @@
-# Backend Requirements for SarvCast API Implementation
+# Backend Requirements for Manji API Implementation
 
 ## Overview
-This document outlines the backend requirements for implementing the SarvCast API endpoints. The backend should be built using Laravel framework and provide comprehensive REST API endpoints for the Flutter mobile application.
+This document outlines the backend requirements for implementing the Manji API endpoints. The backend should be built using Laravel framework and provide comprehensive REST API endpoints for the Flutter mobile application.
 
 ## Technology Stack
 - **Framework**: Laravel 10.x
@@ -560,4 +560,4 @@ CREATE TABLE notification_preferences (
 - Disaster recovery plan
 - Data retention policies
 
-This document provides a comprehensive overview of the backend requirements for implementing the SarvCast API. The implementation should follow Laravel best practices and ensure scalability, security, and performance.
+This document provides a comprehensive overview of the backend requirements for implementing the Manji API. The implementation should follow Laravel best practices and ensure scalability, security, and performance.

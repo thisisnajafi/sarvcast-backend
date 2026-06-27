@@ -1,7 +1,7 @@
 # Payment Callback System - Kid-Friendly Pages
 
 ## Overview
-This document describes the beautiful, kid-friendly payment callback system for SarvCast, including success and failure pages with detailed payment information.
+This document describes the beautiful, kid-friendly payment callback system for Manji, including success and failure pages with detailed payment information.
 
 ## 🎨 Design Philosophy
 
@@ -54,8 +54,8 @@ This document describes the beautiful, kid-friendly payment callback system for 
 - 🔄 Option to try again
 
 **Support Information:**
-- 📧 Email: support@sarvcast.ir
-- 📱 Telegram: @sarvcast_support
+- 📧 Email: support@manji.ir
+- 📱 Telegram: @manji_support
 - 🕐 Working Hours: 9 AM to 6 PM
 
 ## 🔧 Technical Implementation
@@ -177,11 +177,11 @@ User can retry payment or contact support
 - **Messages**: Customizable text content
 - **Animations**: Adjustable animation timing
 - **Layout**: Flexible component arrangement
-- **Branding**: SarvCast logo and colors
+- **Branding**: Manji logo and colors
 
 ### Environment Variables
 ```env
-ZARINPAL_CALLBACK_URL=https://my.sarvcast.ir
+ZARINPAL_CALLBACK_URL=https://my.manji.ir
 ```
 
 ## 📊 Analytics and Tracking
@@ -230,8 +230,8 @@ ZARINPAL_CALLBACK_URL=https://my.sarvcast.ir
 ## 📞 Support and Contact
 
 ### Support Channels
-- **Email**: support@sarvcast.ir
-- **Telegram**: @sarvcast_support
+- **Email**: support@manji.ir
+- **Telegram**: @manji_support
 - **Working Hours**: 9 AM to 6 PM (Iran time)
 
 ### Development Team

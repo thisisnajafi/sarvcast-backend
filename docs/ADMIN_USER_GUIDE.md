@@ -1,7 +1,7 @@
-# SarvCast Admin Dashboard User Guide
+# Manji Admin Dashboard User Guide
 
 ## Overview
-The SarvCast Admin Dashboard is a comprehensive Persian (RTL) interface for managing the children's audio story platform. This guide will help administrators navigate and use all features effectively.
+The Manji Admin Dashboard is a comprehensive Persian (RTL) interface for managing the children's audio story platform. This guide will help administrators navigate and use all features effectively.
 
 ## Accessing the Dashboard
 
@@ -285,9 +285,9 @@ The dashboard features a Persian RTL sidebar with the following sections:
   - Contact technical support
 
 ### Getting Help
-- **پشتیبانی فنی** (Technical Support) - support@sarvcast.com
-- **مستندات** (Documentation) - https://docs.sarvcast.com
-- **وضعیت سیستم** (System Status) - https://status.sarvcast.com
+- **پشتیبانی فنی** (Technical Support) - support@manji.com
+- **مستندات** (Documentation) - https://docs.manji.com
+- **وضعیت سیستم** (System Status) - https://status.manji.com
 
 ## Best Practices
 
@@ -354,7 +354,7 @@ Supported browsers:
 
 ## Conclusion
 
-This guide covers all major features of the SarvCast Admin Dashboard. For additional help or advanced features, please contact the technical support team or refer to the API documentation.
+This guide covers all major features of the Manji Admin Dashboard. For additional help or advanced features, please contact the technical support team or refer to the API documentation.
 
 Remember to:
 - Keep your login credentials secure

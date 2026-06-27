@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# SarvCast Post-Deployment Storage Setup Script
+# Manji Post-Deployment Storage Setup Script
 # Run this script on your production server after deployment
 
-echo "🚀 Starting SarvCast post-deployment storage setup..."
+echo "🚀 Starting Manji post-deployment storage setup..."
 
 # Navigate to the project directory
 cd /path/to/your/project
@@ -59,7 +59,7 @@ else
     exit 1
 fi
 
-echo "🎉 SarvCast storage setup completed successfully!"
+echo "🎉 Manji storage setup completed successfully!"
 echo ""
 echo "📋 What was done:"
 echo "  ✅ Storage symlink created"

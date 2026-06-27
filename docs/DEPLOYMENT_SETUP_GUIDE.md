@@ -1,8 +1,8 @@
-# SarvCast Deployment Setup Guide
+# Manji Deployment Setup Guide
 
 ## 🚀 Overview
 
-This guide covers the complete deployment setup for SarvCast, including GitHub Actions workflow and manual deployment scripts. The deployment process focuses on the essential tasks:
+This guide covers the complete deployment setup for Manji, including GitHub Actions workflow and manual deployment scripts. The deployment process focuses on the essential tasks:
 
 1. **Run Composer** - Install production dependencies
 2. **Deploy to FTP** - Upload files to production server  
@@ -55,8 +55,8 @@ The workflow is pre-configured with your credentials (no GitHub secrets needed):
 
 | Configuration | Value |
 |---------------|-------|
-| **FTP Server** | `ftp.sarvcast.ir` |
-| **FTP Username** | `my@sarvcast.ir` |
+| **FTP Server** | `ftp.manji.ir` |
+| **FTP Username** | `my@manji.ir` |
 | **FTP Password** | `prof48017421@#` |
 | **FTP Directory** | `/` (root directory) |
 | **Telegram Bot Token** | `7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc` |
@@ -188,7 +188,7 @@ scripts\deploy.bat
 The Telegram notification includes:
 
 ```
-🚀 SarvCast Deployment Successful
+🚀 Manji Deployment Successful
 
 Branch: main
 Commit: abc1234
@@ -335,7 +335,7 @@ Edit the message section in the workflow or script files.
 
 ## 🎉 Ready to Deploy!
 
-Your SarvCast deployment system is now configured with:
+Your Manji deployment system is now configured with:
 
 - ✅ **GitHub Actions Workflow** - Automated deployment
 - ✅ **Manual Deployment Scripts** - Linux/macOS and Windows

@@ -12,14 +12,14 @@ class MonitorApplicationCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'sarvcast:monitor {--report : Generate monitoring report} {--health : Check application health} {--metrics : Get application metrics}';
+    protected $signature = 'manji:monitor {--report : Generate monitoring report} {--health : Check application health} {--metrics : Get application metrics}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Monitor SarvCast application health and performance';
+    protected $description = 'Monitor Manji application health and performance';
 
     /**
      * Execute the console command.
@@ -28,7 +28,7 @@ class MonitorApplicationCommand extends Command
     {
         $monitoringService = app(MonitoringService::class);
 
-        $this->info('📊 SarvCast Application Monitoring');
+        $this->info('📊 Manji Application Monitoring');
         $this->line('');
 
         // Check application health

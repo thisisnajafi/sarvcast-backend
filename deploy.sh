@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# SarvCast Production Deployment Script
-# This script deploys the SarvCast application to production
+# Manji Production Deployment Script
+# This script deploys the Manji application to production
 
 set -e
 
-echo "🚀 Starting SarvCast Production Deployment..."
+echo "🚀 Starting Manji Production Deployment..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,11 +15,11 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_NAME="sarvcast"
-DOMAIN="sarvcast.com"
-SSL_EMAIL="admin@sarvcast.com"
-BACKUP_DIR="/backups/sarvcast"
-LOG_FILE="/var/log/sarvcast-deploy.log"
+PROJECT_NAME="manji"
+DOMAIN="manji.com"
+SSL_EMAIL="admin@manji.com"
+BACKUP_DIR="/backups/manji"
+LOG_FILE="/var/log/manji-deploy.log"
 
 # Functions
 log() {
@@ -58,14 +58,14 @@ log "Starting deployment process..."
 # Create necessary directories
 log "Creating necessary directories..."
 mkdir -p $BACKUP_DIR
-mkdir -p /var/log/sarvcast
+mkdir -p /var/log/manji
 mkdir -p /etc/nginx/ssl
-mkdir -p /var/www/sarvcast
+mkdir -p /var/www/manji
 
 # Backup existing data if exists
-if [ -d "/var/www/sarvcast" ]; then
+if [ -d "/var/www/manji" ]; then
     log "Creating backup of existing installation..."
-    tar -czf $BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).tar.gz /var/www/sarvcast
+    tar -czf $BACKUP_DIR/backup-$(date +%Y%m%d-%H%M%S).tar.gz /var/www/manji
     success "Backup created successfully"
 fi
 
@@ -78,23 +78,23 @@ systemctl stop redis || true
 
 # Copy application files
 log "Copying application files..."
-cp -r . /var/www/sarvcast/
-cd /var/www/sarvcast
+cp -r . /var/www/manji/
+cd /var/www/manji
 
 # Set permissions
 log "Setting proper permissions..."
-chown -R www-data:www-data /var/www/sarvcast
-chmod -R 755 /var/www/sarvcast
-chmod -R 777 /var/www/sarvcast/storage
-chmod -R 777 /var/www/sarvcast/bootstrap/cache
+chown -R www-data:www-data /var/www/manji
+chmod -R 755 /var/www/manji
+chmod -R 777 /var/www/manji/storage
+chmod -R 777 /var/www/manji/bootstrap/cache
 
 # Generate SSL certificates
 log "Generating SSL certificates..."
-if [ ! -f "/etc/nginx/ssl/sarvcast.crt" ]; then
+if [ ! -f "/etc/nginx/ssl/manji.crt" ]; then
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout /etc/nginx/ssl/sarvcast.key \
-        -out /etc/nginx/ssl/sarvcast.crt \
-        -subj "/C=IR/ST=Tehran/L=Tehran/O=SarvCast/OU=IT/CN=$DOMAIN"
+        -keyout /etc/nginx/ssl/manji.key \
+        -out /etc/nginx/ssl/manji.crt \
+        -subj "/C=IR/ST=Tehran/L=Tehran/O=Manji/OU=IT/CN=$DOMAIN"
     success "SSL certificates generated"
 else
     warning "SSL certificates already exist"
@@ -192,12 +192,12 @@ fi
 
 # Setup backup cron job
 log "Setting up backup cron job..."
-(crontab -l 2>/dev/null; echo "0 2 * * * /var/www/sarvcast/scripts/backup.sh") | crontab -
+(crontab -l 2>/dev/null; echo "0 2 * * * /var/www/manji/scripts/backup.sh") | crontab -
 
 # Setup log rotation
 log "Setting up log rotation..."
-cat > /etc/logrotate.d/sarvcast << EOF
-/var/log/sarvcast/*.log {
+cat > /etc/logrotate.d/manji << EOF
+/var/log/manji/*.log {
     daily
     missingok
     rotate 30
@@ -206,23 +206,23 @@ cat > /etc/logrotate.d/sarvcast << EOF
     notifempty
     create 644 www-data www-data
     postrotate
-        docker-compose -f /var/www/sarvcast/docker-compose.production.yml restart nginx
+        docker-compose -f /var/www/manji/docker-compose.production.yml restart nginx
     endscript
 }
 EOF
 
 # Setup systemd service
 log "Setting up systemd service..."
-cat > /etc/systemd/system/sarvcast.service << EOF
+cat > /etc/systemd/system/manji.service << EOF
 [Unit]
-Description=SarvCast Application
+Description=Manji Application
 Requires=docker.service
 After=docker.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/var/www/sarvcast
+WorkingDirectory=/var/www/manji
 ExecStart=/usr/bin/docker-compose -f docker-compose.production.yml up -d
 ExecStop=/usr/bin/docker-compose -f docker-compose.production.yml down
 TimeoutStartSec=0
@@ -232,7 +232,7 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable sarvcast.service
+systemctl enable manji.service
 
 # Final checks
 log "Performing final checks..."
@@ -261,7 +261,7 @@ echo "   • Domain: $DOMAIN"
 echo "   • SSL: Enabled"
 echo "   • Monitoring: Enabled"
 echo "   • Backup: Configured"
-echo "   • Logs: /var/log/sarvcast/"
+echo "   • Logs: /var/log/manji/"
 echo "   • New Features: Image Timeline, Story Comments"
 echo "   • Authentication: Persian Phone Numbers"
 echo "   • Premium Access: Enabled"
@@ -289,8 +289,8 @@ echo "   7. Verify mobile app integration"
 echo ""
 echo "📚 Documentation:"
 echo "   • Logs: tail -f $LOG_FILE"
-echo "   • Status: systemctl status sarvcast"
-echo "   • Restart: systemctl restart sarvcast"
+echo "   • Status: systemctl status manji"
+echo "   • Restart: systemctl restart manji"
 echo "   • Logs: docker-compose -f docker-compose.production.yml logs"
 echo ""
 

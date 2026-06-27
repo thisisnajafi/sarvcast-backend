@@ -45,30 +45,30 @@ ADD COLUMN use_image_timeline BOOLEAN DEFAULT FALSE COMMENT 'Whether episode use
   "storyId": "story-456",
   "title": "ماجراجویی در جنگل جادویی",
   "description": "داستان پسر کوچکی که در جنگل جادویی گم می شود",
-  "audioUrl": "https://cdn.sarvcast.com/audio/episode-123.mp3",
+  "audioUrl": "https://cdn.manji.com/audio/episode-123.mp3",
   "duration": 900,
   "isPremium": false,
   "episodeNumber": 1,
   "imageUrls": [
-    "https://cdn.sarvcast.com/images/episode-123-image1.jpg",
-    "https://cdn.sarvcast.com/images/episode-123-image2.jpg",
-    "https://cdn.sarvcast.com/images/episode-123-image3.jpg"
+    "https://cdn.manji.com/images/episode-123-image1.jpg",
+    "https://cdn.manji.com/images/episode-123-image2.jpg",
+    "https://cdn.manji.com/images/episode-123-image3.jpg"
   ],
   "imageTimeline": [
     {
       "startTime": 0,
       "endTime": 45,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image1.jpg"
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image1.jpg"
     },
     {
       "startTime": 46,
       "endTime": 75,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image2.jpg"
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image2.jpg"
     },
     {
       "startTime": 76,
       "endTime": 120,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image3.jpg"
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image3.jpg"
     }
   ],
   "createdAt": "2024-01-15T10:30:00Z",
@@ -96,17 +96,17 @@ ADD COLUMN use_image_timeline BOOLEAN DEFAULT FALSE COMMENT 'Whether episode use
     {
       "startTime": 0,
       "endTime": 45,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image1.jpg"
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image1.jpg"
     },
     {
       "startTime": 46,
       "endTime": 75,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image2.jpg"
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image2.jpg"
     },
     {
       "startTime": 76,
       "endTime": 120,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image3.jpg"
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image3.jpg"
     }
   ]
 }
@@ -137,14 +137,14 @@ ADD COLUMN use_image_timeline BOOLEAN DEFAULT FALSE COMMENT 'Whether episode use
       "id": "timeline-1",
       "startTime": 0,
       "endTime": 45,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image1.jpg",
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image1.jpg",
       "imageOrder": 1
     },
     {
       "id": "timeline-2",
       "startTime": 46,
       "endTime": 75,
-      "imageUrl": "https://cdn.sarvcast.com/images/episode-123-image2.jpg",
+      "imageUrl": "https://cdn.manji.com/images/episode-123-image2.jpg",
       "imageOrder": 2
     }
   ]

@@ -1,8 +1,8 @@
-# SarvCast Flutter Payment Integration Guide
+# Manji Flutter Payment Integration Guide
 
 ## 📱 Overview
 
-This document provides comprehensive guidance for integrating SarvCast's payment system with Flutter applications. The system includes subscription plans, Zarinpal payment gateway, and coupon code functionality.
+This document provides comprehensive guidance for integrating Manji's payment system with Flutter applications. The system includes subscription plans, Zarinpal payment gateway, and coupon code functionality.
 
 ## 🏗️ System Architecture
 
@@ -1393,12 +1393,12 @@ dependencies:
 
 For technical support or questions about the payment integration:
 
-- **Email**: support@sarvcast.com
-- **Documentation**: https://docs.sarvcast.com
-- **API Status**: https://status.sarvcast.com
+- **Email**: support@manji.com
+- **Documentation**: https://docs.manji.com
+- **API Status**: https://status.manji.com
 
 ---
 
 ## 📄 License
 
-This documentation is provided for SarvCast Flutter integration. Please ensure compliance with your app's terms of service and privacy policy when implementing payment functionality.
+This documentation is provided for Manji Flutter integration. Please ensure compliance with your app's terms of service and privacy policy when implementing payment functionality.

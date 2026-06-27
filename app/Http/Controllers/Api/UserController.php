@@ -149,6 +149,74 @@ class UserController extends Controller
     }
 
     /**
+     * Get authenticated user's personalization profile
+     */
+    public function getUserProfile(Request $request)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $request->user()->profilePayload(),
+        ]);
+    }
+
+    /**
+     * Update authenticated user's personalization profile (onboarding / settings)
+     */
+    public function updateUserProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'sometimes|nullable|string|max:100',
+            'gender' => 'sometimes|nullable|in:male,female,unspecified',
+            'birthday' => 'sometimes|nullable|date|before:today',
+            'account_type' => 'sometimes|in:child,parent,shared',
+            'favorite_category_ids' => 'sometimes|nullable|array',
+            'favorite_category_ids.*' => 'string',
+            'onboarding_completed' => 'sometimes|boolean',
+            'skip_onboarding' => 'sometimes|boolean',
+        ]);
+
+        if ($request->boolean('skip_onboarding')) {
+            $user->update([
+                'gender' => 'unspecified',
+                'account_type' => 'child',
+                'onboarding_completed' => true,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'آنبوردینگ رد شد',
+                'data' => $user->fresh()->profilePayload(),
+            ]);
+        }
+
+        $payload = collect($validated)->except(['skip_onboarding'])->all();
+
+        if (array_key_exists('favorite_category_ids', $payload) && $payload['favorite_category_ids'] !== null) {
+            $payload['favorite_category_ids'] = array_values(
+                array_map('strval', $payload['favorite_category_ids'])
+            );
+        }
+
+        if ($request->boolean('onboarding_completed')) {
+            $payload['onboarding_completed'] = true;
+        }
+
+        $user->update($payload);
+
+        if (!empty($user->name) && empty($user->first_name)) {
+            $user->update(['first_name' => $user->name]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'پروفایل با موفقیت به‌روزرسانی شد',
+            'data' => $user->fresh()->profilePayload(),
+        ]);
+    }
+
+    /**
      * Delete child profile
      */
     public function deleteProfile(UserProfile $profile)

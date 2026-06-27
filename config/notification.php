@@ -15,7 +15,7 @@ return [
         'server_key' => env('FIREBASE_SERVER_KEY'),
 
         // FCM v1 API Configuration (Recommended)
-        'project_id' => env('FIREBASE_PROJECT_ID', 'sarvcast-20d5c'),
+        'project_id' => env('FIREBASE_PROJECT_ID', 'manji-20d5c'),
         'service_account_path' => (function() {
             $path = env('FIREBASE_SERVICE_ACCOUNT_PATH');
             if (!$path) {
@@ -44,8 +44,8 @@ return [
     ],
 
     'email' => [
-        'from' => env('MAIL_FROM_ADDRESS', 'noreply@sarvcast.com'),
-        'from_name' => env('MAIL_FROM_NAME', 'سروکست'),
+        'from' => env('MAIL_FROM_ADDRESS', 'noreply@manji.com'),
+        'from_name' => env('MAIL_FROM_NAME', 'مانجی'),
         'templates' => [
             'notification' => 'emails.notification',
             'subscription' => 'emails.subscription',
@@ -57,7 +57,7 @@ return [
     'sms' => [
         'api_key' => env('SMS_API_KEY'),
         'api_url' => 'https://api.sms.ir/v1/send/verify',
-        'sender' => env('SMS_SENDER', 'سروکست'),
+        'sender' => env('SMS_SENDER', 'مانجی'),
     ],
 
     'push' => [

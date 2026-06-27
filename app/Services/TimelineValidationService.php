@@ -25,14 +25,14 @@ class TimelineValidationService
      * Trusted domains for image hosting
      */
     private const TRUSTED_DOMAINS = [
-        'cdn.sarvcast.ir',
-        'images.sarvcast.ir',
+        'cdn.manji.ir',
+        'images.manji.ir',
         'storage.googleapis.com',
         'amazonaws.com',
         'cloudinary.com',
         'imgur.com',
         'unsplash.com',
-        'my.sarvcast.ir'
+        'my.manji.ir'
     ];
 
     /**

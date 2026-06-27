@@ -17,7 +17,7 @@ class CompleteStoriesData extends Command
      * @var string
      */
     protected $signature = 'stories:complete-data 
-                            {--stories-path= : Path to sarvcast-stories directory}
+                            {--stories-path= : Path to manji-stories directory}
                             {--dry-run : Run without making database changes}';
 
     /**
@@ -43,9 +43,9 @@ class CompleteStoriesData extends Command
         $this->storiesPath = $this->option('stories-path');
         if (!$this->storiesPath) {
             $possiblePaths = [
-                base_path('../sarvcast-stories'),
-                base_path('../../sarvcast-stories'),
-                base_path('sarvcast-stories'),
+                base_path('../manji-stories'),
+                base_path('../../manji-stories'),
+                base_path('manji-stories'),
             ];
             
             foreach ($possiblePaths as $path) {

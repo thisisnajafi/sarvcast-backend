@@ -57,7 +57,7 @@ GET /api/app/version-check
     "description": "به‌روزرسانی جدید با ویژگی‌های بهبود یافته",
     "changelog": "• بهبود عملکرد\n• رفع باگ‌ها\n• ویژگی‌های جدید",
     "update_notes": "لطفاً قبل از به‌روزرسانی از اطلاعات خود پشتیبان تهیه کنید",
-    "download_url": "https://play.google.com/store/apps/details?id=com.sarvcast.app",
+    "download_url": "https://play.google.com/store/apps/details?id=com.manji.app",
     "minimum_os_version": "Android 7.0",
     "is_active": true,
     "is_latest": true,
@@ -331,7 +331,7 @@ class VersionService {
   VersionService._internal();
 
   final Dio _dio = Dio();
-  final String _baseUrl = 'https://my.sarvcast.ir/api';
+  final String _baseUrl = 'https://my.manji.ir/api';
 
   Future<VersionModel?> checkForUpdates() async {
     try {
