@@ -179,6 +179,7 @@ class AuthController extends Controller
             'last_name' => $user->last_name,
             'role' => $user->role,
             'status' => $user->status,
+            'needs_profile_completion' => $user->needsProfileCompletion(),
             'onboarding_completed' => (bool) $user->onboarding_completed,
         ];
     }
