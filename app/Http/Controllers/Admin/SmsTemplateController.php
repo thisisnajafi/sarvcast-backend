@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Support\AdminApiResponse;
 use App\Models\SmsTemplate;
+use App\Models\User;
 use App\Services\SmsAudienceBuilder;
 use App\Services\SmsParameterResolver;
 use App\Services\SmsService;
@@ -239,11 +240,27 @@ class SmsTemplateController extends Controller
     public function apiTestSend(Request $request, SmsTemplate $smsTemplate): JsonResponse
     {
         $validated = $request->validate([
-            'phone_number' => 'required|string|max:15',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'phone_number' => 'required_without:user_id|nullable|string|max:15',
             'parameter_overrides' => 'nullable|array',
         ]);
 
-        $phone = $this->audienceBuilder->normalizePhone($validated['phone_number']);
+        $user = null;
+        $phone = null;
+
+        if (! empty($validated['user_id'])) {
+            $user = User::query()->findOrFail($validated['user_id']);
+
+            if (empty($user->phone_number)) {
+                throw ValidationException::withMessages([
+                    'user_id' => ['این کاربر شماره موبایل ثبت‌شده ندارد.'],
+                ]);
+            }
+
+            $phone = $this->audienceBuilder->normalizePhone($user->phone_number);
+        } else {
+            $phone = $this->audienceBuilder->normalizePhone((string) $validated['phone_number']);
+        }
 
         if (! $this->audienceBuilder->isValidIranianMobile($phone)) {
             throw ValidationException::withMessages([
@@ -252,7 +269,7 @@ class SmsTemplateController extends Controller
         }
 
         $overrides = $validated['parameter_overrides'] ?? [];
-        $parameters = $this->parameterResolver->resolve(null, $smsTemplate->parameters ?? [], $overrides);
+        $parameters = $this->parameterResolver->resolve($user, $smsTemplate->parameters ?? [], $overrides);
         $preview = $this->parameterResolver->renderPreview($smsTemplate->preview_text, $parameters);
 
         try {
@@ -262,6 +279,7 @@ class SmsTemplateController extends Controller
                 $parameters,
                 [
                     'sms_template_id' => $smsTemplate->id,
+                    'user_id' => $user?->id,
                     'preview_text' => $preview,
                     'message' => $preview,
                 ]
@@ -275,6 +293,8 @@ class SmsTemplateController extends Controller
                     'data' => [
                         'preview_message' => $preview,
                         'parameters' => $parameters,
+                        'user_id' => $user?->id,
+                        'phone_number' => $phone,
                     ],
                 ], 502);
             }
@@ -284,6 +304,8 @@ class SmsTemplateController extends Controller
                 'parameters' => $parameters,
                 'message_id' => $result['message_id'] ?? null,
                 'sms_log_id' => $result['sms_log_id'] ?? null,
+                'user_id' => $user?->id,
+                'phone_number' => $phone,
             ], 'پیامک تست با موفقیت ارسال شد.');
         } catch (\Throwable $e) {
             Log::error('SMS template test send failed', [

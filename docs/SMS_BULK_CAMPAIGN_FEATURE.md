@@ -424,7 +424,7 @@ Route::middleware(['auth:sanctum', 'api.admin', 'api.permission', 'throttle', 'a
 | POST | `/admin/sms-templates/bulk-action` | `sms_templates.bulk` | activate/deactivate/delete |
 | GET | `/admin/sms-templates/export` | `sms_templates.export` | CSV export |
 | GET | `/admin/sms-templates/statistics/data` | `sms_templates.read` | Usage stats |
-| POST | `/admin/sms-templates/{id}/test-send` | `sms_templates.send_test` | Send test to one phone |
+| POST | `/admin/sms-templates/{id}/test-send` | `sms_templates.send_test` | Send test to a user or phone |
 
 #### Create template request
 
@@ -449,6 +449,11 @@ POST /api/admin/sms-templates
 
 ```json
 POST /api/admin/sms-templates/{id}/test-send
+{
+  "user_id": 42
+}
+
+// or manual phone (parameters use fallbacks unless overrides provided):
 {
   "phone_number": "09123456789",
   "parameter_overrides": {
@@ -659,7 +664,7 @@ Add under **کاربران و عوامل** section in `components/layout/sidebar
 | پارامترها | Dynamic field array | Add row: index, label, source dropdown, fallback |
 | فعال | Checkbox | |
 | توضیحات | Textarea | Optional |
-| **تست ارسال** | Phone input + button | Calls `test-send` endpoint |
+| **تست ارسال** | User search + optional manual phone | Calls `test-send` with `user_id` or `phone_number` |
 
 **Parameter source dropdown options:**
 

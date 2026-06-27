@@ -157,6 +157,71 @@ class AdminSmsTemplatesApiTest extends TestCase
             ->assertJsonPath('data.message_id', 'msg-123');
     }
 
+    public function test_test_send_resolves_parameters_from_selected_user(): void
+    {
+        Sanctum::actingAs($this->createAdminUser());
+
+        $template = SmsTemplate::create($this->sampleTemplateAttributes());
+
+        $targetUser = User::create([
+            'phone_number' => '09125551234',
+            'first_name' => 'Reza',
+            'last_name' => 'Ahmadi',
+            'role' => 'parent',
+            'status' => 'active',
+            'password' => bcrypt('password'),
+        ]);
+
+        $mock = Mockery::mock(SmsService::class);
+        $mock->shouldReceive('sendSmsWithTemplate')
+            ->once()
+            ->with(
+                '09125551234',
+                380001,
+                ['Reza', 'Ahmadi'],
+                Mockery::on(fn (array $context) => $context['sms_template_id'] === $template->id
+                    && $context['user_id'] === $targetUser->id)
+            )
+            ->andReturn([
+                'success' => true,
+                'message_id' => 'msg-456',
+                'sms_log_id' => 100,
+            ]);
+
+        $this->app->instance(SmsService::class, $mock);
+
+        $response = $this->postJson("/api/admin/sms-templates/{$template->id}/test-send", [
+            'user_id' => $targetUser->id,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user_id', $targetUser->id)
+            ->assertJsonPath('data.phone_number', '09125551234')
+            ->assertJsonPath('data.preview_message', 'سلام Reza Ahmadi');
+    }
+
+    public function test_test_send_rejects_user_without_phone_number(): void
+    {
+        Sanctum::actingAs($this->createAdminUser());
+
+        $template = SmsTemplate::create($this->sampleTemplateAttributes());
+
+        $targetUser = User::create([
+            'phone_number' => null,
+            'first_name' => 'No',
+            'last_name' => 'Phone',
+            'role' => 'parent',
+            'status' => 'active',
+            'password' => bcrypt('password'),
+        ]);
+
+        $this->postJson("/api/admin/sms-templates/{$template->id}/test-send", [
+            'user_id' => $targetUser->id,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['user_id']);
+    }
+
     public function test_parameter_resolver_resolves_user_and_subscription_fields(): void
     {
         $user = User::create([
