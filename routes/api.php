@@ -314,6 +314,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::delete('profiles/{profile}', [UserController::class, 'deleteProfile']);
         Route::post('profile/photo', [\App\Http\Controllers\Api\AuthController::class, 'uploadProfilePhoto']);
         Route::post('profile/background-photo', [\App\Http\Controllers\Api\AuthController::class, 'uploadBackgroundPhoto']);
+        Route::put('notification-preferences', [UserController::class, 'updateNotificationPreferences']);
     });
 
     // Favorites routes (outside mobile group for easier access)

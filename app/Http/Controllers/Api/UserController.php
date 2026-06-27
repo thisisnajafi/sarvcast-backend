@@ -376,6 +376,30 @@ class UserController extends Controller
     }
 
     /**
+     * Update push notification preferences for authenticated user.
+     */
+    public function updateNotificationPreferences(Request $request)
+    {
+        $request->validate([
+            'push_notifications_enabled' => 'required|boolean',
+        ]);
+
+        $user = Auth::user();
+        $preferences = $user->preferences ?? [];
+        $preferences['push_notifications_enabled'] = $request->boolean('push_notifications_enabled');
+        $user->preferences = $preferences;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification preferences updated',
+            'data' => [
+                'push_notifications_enabled' => $preferences['push_notifications_enabled'],
+            ],
+        ]);
+    }
+
+    /**
      * Get team members by phone numbers (public endpoint)
      */
     public function getTeamMembers(Request $request)
