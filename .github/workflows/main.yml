@@ -69,6 +69,7 @@ jobs:
           test -f database/migrations/2026_06_27_100002_create_search_histories_table.php
           test -f database/migrations/2026_06_27_120000_create_sponsors_table.php
           test -f database/migrations/2026_06_27_120001_add_sponsor_id_to_stories_table.php
+          test -f database/migrations/2026_06_30_120004_fix_stories_sponsor_id_foreign_key.php
           test -f database/migrations/2026_06_29_100000_create_activity_logs_table.php
           test -f database/migrations/2026_06_29_110000_add_event_uuid_to_activity_logs_table.php
           test -f database/migrations/2026_06_30_100000_add_archived_status_to_episodes_table.php

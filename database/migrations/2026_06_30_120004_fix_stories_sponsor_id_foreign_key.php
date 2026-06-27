@@ -5,6 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Recovery migration for servers where stories.sponsor_id was added without a
+ * valid foreign key (MySQL 3780 charset/type mismatch).
+ */
 return new class extends Migration
 {
     private const FK_NAME = 'stories_sponsor_id_foreign';
@@ -39,15 +43,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (! Schema::hasTable('stories') || ! Schema::hasColumn('stories', 'sponsor_id')) {
-            return;
-        }
-
-        $this->dropForeignKeyIfExists('stories', self::FK_NAME);
-
-        Schema::table('stories', function (Blueprint $table) {
-            $table->dropColumn('sponsor_id');
-        });
+        // Intentionally no-op: 2026_06_27_120001 owns rollback of sponsor_id.
     }
 
     private function alignStoriesSponsorIdColumn(): void
@@ -106,17 +102,6 @@ return new class extends Migration
                AND CONSTRAINT_TYPE = ?',
             [$table, $name, 'FOREIGN KEY']
         ) !== null;
-    }
-
-    private function dropForeignKeyIfExists(string $table, string $name): void
-    {
-        if (! $this->foreignKeyExists($table, $name)) {
-            return;
-        }
-
-        Schema::table($table, function (Blueprint $table) use ($name) {
-            $table->dropForeign($name);
-        });
     }
 
     private function columnMeta(string $table, string $column): ?object
