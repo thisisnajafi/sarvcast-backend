@@ -205,6 +205,7 @@ Route::prefix('admin/v1/auth')->middleware(['security', 'admin.origin'])->group(
         Route::get('me', [AuthController::class, 'profile']);
         Route::middleware('api.audit')->group(function () {
             Route::put('profile', [AuthController::class, 'updateProfile']);
+            Route::put('onboarding-profile', [\App\Http\Controllers\Api\UserController::class, 'updateUserProfile']);
             Route::post('change-password', [AuthController::class, 'changePassword']);
             Route::post('logout', [AuthController::class, 'logout']);
             Route::post('logout-all', [AuthController::class, 'logoutAllSessions']);

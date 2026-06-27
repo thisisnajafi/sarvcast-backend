@@ -63,6 +63,18 @@ class User extends Authenticatable
     }
 
     /**
+     * Admin panel login/API access (includes profile onboarding state).
+     */
+    public function mayAccessAdminPanel(): bool
+    {
+        if (! in_array($this->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN], true)) {
+            return false;
+        }
+
+        return in_array($this->status, self::loginAllowedStatuses(), true);
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>

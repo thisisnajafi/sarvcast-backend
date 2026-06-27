@@ -66,7 +66,7 @@ class AuthController extends Controller
                 ->withInput($request->only('phone_number'));
         }
 
-        if ($user->status !== 'active') {
+        if (! $user->mayAccessAdminPanel()) {
             return redirect()->back()
                 ->withErrors(['phone_number' => 'حساب کاربری شما غیرفعال است'])
                 ->withInput($request->only('phone_number'));
@@ -130,7 +130,7 @@ class AuthController extends Controller
                 ->with('otp_sent', true);
         }
 
-        if ($user->status !== 'active') {
+        if (! $user->mayAccessAdminPanel()) {
             return redirect()->back()
                 ->withErrors(['phone_number' => 'حساب کاربری شما غیرفعال است'])
                 ->withInput($request->only('phone_number'))

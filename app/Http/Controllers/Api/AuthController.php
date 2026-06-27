@@ -152,6 +152,14 @@ class AuthController extends Controller
     }
 
     /**
+     * Whether an admin user may request OTP / log in (includes profile onboarding state).
+     */
+    private function adminMayLogin(User $user): bool
+    {
+        return $user->mayAccessAdminPanel();
+    }
+
+    /**
      * Whether the user may log in (active or pending profile onboarding).
      */
     private function userMayLogin(User $user): bool
@@ -270,7 +278,7 @@ class AuthController extends Controller
             ], 404);
         }
 
-        if ($user->status !== 'active') {
+        if (! $this->adminMayLogin($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'حساب کاربری شما غیرفعال است'
@@ -345,7 +353,7 @@ class AuthController extends Controller
             ], 404);
         }
 
-        if ($user->status !== 'active') {
+        if (! $this->adminMayLogin($user)) {
             $this->activityLog->recordSecurityEvent(
                 'login_failed',
                 $request,
@@ -412,6 +420,8 @@ class AuthController extends Controller
                     'last_name' => $user->last_name,
                     'role' => $user->role,
                     'status' => $user->status,
+                    'onboarding_completed' => (bool) $user->onboarding_completed,
+                    'needs_profile_completion' => $user->needsProfileCompletion(),
                     'requires_2fa' => $twoFactorRequired,
                 ],
                 'token' => $token,
@@ -696,6 +706,7 @@ class AuthController extends Controller
                 'account_type' => $user->account_type ?? 'child',
                 'favorite_category_ids' => $user->favorite_category_ids ?? [],
                 'onboarding_completed' => (bool) $user->onboarding_completed,
+                'needs_profile_completion' => $user->needsProfileCompletion(),
                 'parent_id' => $user->parent_id,
                 'timezone' => $user->timezone,
                 'preferences' => $user->preferences,
