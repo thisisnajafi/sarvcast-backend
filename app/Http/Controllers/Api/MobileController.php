@@ -110,7 +110,7 @@ class MobileController extends Controller
         $user = Auth::user();
         
         $query = Episode::with(['story'])
-            ->where('status', 'published')
+            ->publiclyVisible()
             ->where('is_free', true);
 
         $episodes = $query->limit(100)->get();
@@ -158,7 +158,7 @@ class MobileController extends Controller
         }
 
         if ($type === 'all' || $type === 'episodes') {
-            $episodes = Episode::where('status', 'published')
+            $episodes = Episode::publiclyVisible()
                 ->where(function($q) use ($query) {
                     $q->where('title', 'like', '%' . $query . '%')
                       ->orWhere('description', 'like', '%' . $query . '%');
@@ -261,7 +261,7 @@ class MobileController extends Controller
                     ->limit($limit)
                     ->get();
             } else {
-                return Episode::where('status', 'published')
+                return Episode::publiclyVisible()
                     ->whereHas('playHistories', function($query) use ($dateFrom) {
                         $query->where('created_at', '>=', $dateFrom);
                     })

@@ -149,6 +149,7 @@ try {
         'clear-compiled'  => [],
         'migrate:status'  => [],
         'migrate'         => ['--force' => true],
+        'stories:sync-episode-status' => [],
         'db:seed'         => ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true],
         'queue:work'      => ['--stop-when-empty' => true, '--max-jobs' => 500, '--max-time' => 120],
         'config:cache'    => [],
@@ -172,14 +173,16 @@ try {
                     continue;
                 }
 
-                $results[] = $cmd . ' FAILED (exit ' . $exitCode . ')'
+                $label = $cmd === 'migrate' ? 'php artisan migrate --force' : $cmd;
+                $results[] = $label . ' FAILED (exit ' . $exitCode . ')'
                     . ($output ? ': ' . $output : '');
 
                 continue;
             }
 
+            $label = $cmd === 'migrate' ? 'php artisan migrate --force' : $cmd;
             $suffix = $output !== '' ? ': ' . $output : '';
-            $results[] = $cmd . ' OK' . $suffix;
+            $results[] = $label . ' OK' . $suffix;
         } catch (Throwable $e) {
             if ($cmd === 'queue:work') {
                 $results[] = $cmd . ' skipped: ' . $e->getMessage();

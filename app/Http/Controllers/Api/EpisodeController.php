@@ -70,7 +70,7 @@ class EpisodeController extends Controller
     {
         // Load story with narrator, but not episode narrator or people
         $query = Episode::with(['story.narrator', 'imageTimelines.voiceActor.person'])
-            ->published()
+            ->publiclyVisible()
             ->whereHas('imageTimelines');
 
         // Apply filters
@@ -723,7 +723,7 @@ class EpisodeController extends Controller
         // 1. Try to find next episode in the same story
         $nextEpisode = Episode::where('story_id', $currentStory->id)
             ->where('episode_number', '>', $currentEpisodeNumber)
-            ->published()
+            ->publiclyVisible()
             ->orderBy('episode_number', 'asc')
             ->first();
 
@@ -751,7 +751,7 @@ class EpisodeController extends Controller
 
         if ($nextStory) {
             $nextEpisode = Episode::where('story_id', $nextStory->id)
-                ->published()
+                ->publiclyVisible()
                 ->orderBy('episode_number', 'asc')
                 ->first();
 
@@ -780,7 +780,7 @@ class EpisodeController extends Controller
 
         if ($nextStory) {
             $nextEpisode = Episode::where('story_id', $nextStory->id)
-                ->published()
+                ->publiclyVisible()
                 ->orderBy('episode_number', 'asc')
                 ->first();
 

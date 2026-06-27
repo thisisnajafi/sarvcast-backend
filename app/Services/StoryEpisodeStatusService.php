@@ -26,7 +26,10 @@ class StoryEpisodeStatusService
         }
 
         if ($storyStatus === 'archived') {
-            $story->episodes()->update(['status' => 'archived']);
+            $story->episodes()->update([
+                'status' => 'archived',
+                'published_at' => null,
+            ]);
         }
     }
 
@@ -84,6 +87,44 @@ class StoryEpisodeStatusService
     public function applyStoryStatus(Story $story, string $status): void
     {
         $story->update($this->storyStatusAttributes($status));
+        $story->refresh();
+        $this->cascadeEpisodesFromStory($story);
+    }
+
+    /**
+     * Fix episodes that still show as published while their parent story is draft/archived.
+     *
+     * @return array{stories_processed: int, episodes_updated: int}
+     */
+    public function syncEpisodesToStoryStatuses(): array
+    {
+        $storiesProcessed = 0;
+        $episodesUpdated = 0;
+
+        Story::query()
+            ->whereIn('status', ['draft', 'archived'])
+            ->chunkById(100, function ($stories) use (&$storiesProcessed, &$episodesUpdated) {
+                foreach ($stories as $story) {
+                    if ($story->status === 'draft') {
+                        $count = $story->episodes()->where('status', '!=', 'draft')->count();
+                    } else {
+                        $count = $story->episodes()->where('status', '!=', 'archived')->count();
+                    }
+
+                    if ($count === 0) {
+                        continue;
+                    }
+
+                    $this->cascadeEpisodesFromStory($story);
+                    $storiesProcessed++;
+                    $episodesUpdated += $count;
+                }
+            });
+
+        return [
+            'stories_processed' => $storiesProcessed,
+            'episodes_updated' => $episodesUpdated,
+        ];
     }
 
     public function applyEpisodeStatus(Episode $episode, string $status): void

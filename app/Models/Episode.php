@@ -278,6 +278,16 @@ class Episode extends Model
         return $query->where('status', 'published');
     }
 
+    /**
+     * Episodes visible in the public app: published episode with a published parent story.
+     */
+    public function scopePubliclyVisible($query)
+    {
+        return $query->published()->whereHas('story', function ($storyQuery) {
+            $storyQuery->published();
+        });
+    }
+
     public function scopePremium($query)
     {
         return $query->where('is_premium', true);
