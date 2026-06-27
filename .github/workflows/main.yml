@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FTP_SERVER: "ftp.manji.ir"
-  FTP_USERNAME: "my@manji.ir"
+  FTP_SERVER: "ftp.sarvcast.ir"
+  FTP_USERNAME: "my@sarvcast.ir"
   FTP_PASSWORD: "Prof48017421@#"
   SITE_URL: "https://my.manji.ir"
   DEPLOY_TOKEN: "manji-ftp-deploy-x7k9m2"

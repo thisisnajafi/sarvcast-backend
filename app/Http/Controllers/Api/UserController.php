@@ -182,6 +182,7 @@ class UserController extends Controller
                 'gender' => 'unspecified',
                 'account_type' => 'child',
                 'onboarding_completed' => true,
+                'status' => User::STATUS_ACTIVE,
             ]);
 
             return response()->json([
@@ -201,6 +202,7 @@ class UserController extends Controller
 
         if ($request->boolean('onboarding_completed')) {
             $payload['onboarding_completed'] = true;
+            $payload['status'] = User::STATUS_ACTIVE;
         }
 
         $user->update($payload);

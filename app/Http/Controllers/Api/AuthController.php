@@ -124,14 +124,15 @@ class AuthController extends Controller
             ], 409);
         }
 
-        // Create user
+        // Create user — must complete onboarding before full app access
         $user = User::create([
             'phone_number' => $phoneNumber,
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'role' => $request->role ?? 'basic', // Default to 'basic' if no role provided
             'parent_id' => $request->parent_id,
-            'status' => 'active',
+            'status' => User::STATUS_PROFILE_COMPLETION_NEEDED,
+            'onboarding_completed' => false,
             'phone_verified_at' => now(),
         ]);
 
@@ -151,10 +152,35 @@ class AuthController extends Controller
                     'last_name' => $user->last_name,
                     'role' => $user->role,
                     'status' => $user->status,
+                    'onboarding_completed' => (bool) $user->onboarding_completed,
                 ],
                 'token' => $token
             ]
         ], 201);
+    }
+
+    /**
+     * Whether the user may log in (active or pending profile onboarding).
+     */
+    private function userMayLogin(User $user): bool
+    {
+        return in_array($user->status, User::loginAllowedStatuses(), true);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function authUserPayload(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'phone_number' => $user->phone_number,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'role' => $user->role,
+            'status' => $user->status,
+            'onboarding_completed' => (bool) $user->onboarding_completed,
+        ];
     }
 
     /**
@@ -198,7 +224,7 @@ class AuthController extends Controller
             ], 404);
         }
 
-        if ($user->status !== 'active') {
+        if (!$this->userMayLogin($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'حساب کاربری شما غیرفعال است'
@@ -214,14 +240,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'ورود با موفقیت انجام شد',
             'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'phone_number' => $user->phone_number,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name,
-                    'role' => $user->role,
-                    'status' => $user->status,
-                ],
+                'user' => $this->authUserPayload($user),
                 'token' => $token
             ]
         ]);

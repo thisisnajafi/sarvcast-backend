@@ -31,6 +31,38 @@ class User extends Authenticatable
     const ROLE_BASIC = 'basic';
 
     /**
+     * Account status constants
+     */
+    const STATUS_ACTIVE = 'active';
+    const STATUS_PROFILE_COMPLETION_NEEDED = 'profile_completion_needed';
+    const STATUS_INACTIVE = 'inactive';
+    const STATUS_SUSPENDED = 'suspended';
+    const STATUS_PENDING = 'pending';
+
+    /**
+     * Statuses that may authenticate and use the mobile app (including onboarding).
+     */
+    public static function loginAllowedStatuses(): array
+    {
+        return [
+            self::STATUS_ACTIVE,
+            self::STATUS_PROFILE_COMPLETION_NEEDED,
+        ];
+    }
+
+    public function needsProfileCompletion(): bool
+    {
+        return $this->status === self::STATUS_PROFILE_COMPLETION_NEEDED
+            || !$this->onboarding_completed;
+    }
+
+    public function canAuthenticate(): bool
+    {
+        return in_array($this->status, self::loginAllowedStatuses(), true)
+            && $this->isPhoneVerified();
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -170,6 +202,7 @@ class User extends Authenticatable
             'account_type' => $this->account_type ?? 'child',
             'favorite_category_ids' => $this->favorite_category_ids ?? [],
             'onboarding_completed' => (bool) $this->onboarding_completed,
+            'needs_profile_completion' => $this->needsProfileCompletion(),
             'role' => $this->role,
             'status' => $this->status,
             'profile_image_url' => $this->profile_image_url,
@@ -408,7 +441,7 @@ class User extends Authenticatable
      */
     public function canLogin()
     {
-        return $this->status === 'active' && $this->isPhoneVerified();
+        return $this->canAuthenticate();
     }
 
     /**
