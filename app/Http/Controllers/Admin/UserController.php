@@ -14,6 +14,7 @@ use App\Models\Rating;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Services\InAppNotificationService;
+use App\Services\UserDeletionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,9 +26,14 @@ class UserController extends Controller
 {
     protected $notificationService;
 
-    public function __construct(InAppNotificationService $notificationService)
-    {
+    protected UserDeletionService $userDeletionService;
+
+    public function __construct(
+        InAppNotificationService $notificationService,
+        UserDeletionService $userDeletionService,
+    ) {
         $this->notificationService = $notificationService;
+        $this->userDeletionService = $userDeletionService;
     }
     /**
      * Search users for admin forms - based on mobile phone number
@@ -324,7 +330,7 @@ class UserController extends Controller
                 ->with('error', 'نمی‌توان کاربران مدیر را حذف کرد.');
         }
 
-        $user->delete();
+        $this->userDeletionService->deleteUser($user);
 
         return redirect()->route('admin.users.index')
             ->with('success', 'کاربر با موفقیت حذف شد.');
@@ -459,7 +465,7 @@ class UserController extends Controller
                             break;
 
                         case 'delete':
-                            $user->delete();
+                            $this->userDeletionService->deleteUser($user);
                             break;
 
                         case 'change_status':
@@ -984,7 +990,7 @@ class UserController extends Controller
             ], 403);
         }
 
-        $user->delete();
+        $this->userDeletionService->deleteUser($user);
 
         return AdminApiResponse::okMessage('کاربر با موفقیت حذف شد.');
     }
@@ -1073,7 +1079,7 @@ class UserController extends Controller
                             break;
 
                         case 'delete':
-                            $user->delete();
+                            $this->userDeletionService->deleteUser($user);
                             break;
 
                         case 'change_status':

@@ -64,12 +64,33 @@ class Favorite extends Model
     }
 
     /**
-     * Check if a user has favorited a story
+     * Only favorites whose story is published (visible in the app).
+     */
+    public function scopeForPublishedStory($query)
+    {
+        return $query->whereHas('story', function ($storyQuery) {
+            $storyQuery->published();
+        });
+    }
+
+    /**
+     * Check if a user has favorited a story (includes unpublished/archived rows).
      */
     public static function isFavorited($userId, $storyId): bool
     {
         return self::where('user_id', $userId)
                    ->where('story_id', $storyId)
+                   ->exists();
+    }
+
+    /**
+     * Check if a favorited story is still visible (published) in the app.
+     */
+    public static function isVisibleFavorite($userId, $storyId): bool
+    {
+        return self::where('user_id', $userId)
+                   ->where('story_id', $storyId)
+                   ->forPublishedStory()
                    ->exists();
     }
 
@@ -127,8 +148,13 @@ class Favorite extends Model
      */
     public static function getUserFavorites($userId, $perPage = 20)
     {
-        return self::with(['story.category', 'story.episodes'])
+        return self::with([
+                   'story' => function ($query) {
+                       $query->published()->with('category');
+                   },
+               ])
                    ->forUser($userId)
+                   ->forPublishedStory()
                    ->orderBy('created_at', 'desc')
                    ->paginate($perPage);
     }
@@ -146,7 +172,8 @@ class Favorite extends Model
      */
     public static function getMostFavorited($limit = 10)
     {
-        return self::with(['story.category'])
+        return self::with(['story' => fn ($query) => $query->published()->with('category')])
+                   ->forPublishedStory()
                    ->selectRaw('story_id, COUNT(*) as favorite_count')
                    ->groupBy('story_id')
                    ->orderBy('favorite_count', 'desc')
@@ -168,14 +195,17 @@ class Favorite extends Model
         $query = self::query();
         
         if ($userId) {
-            $query->forUser($userId);
+            $query->forUser($userId)->forPublishedStory();
         }
 
         return [
             'total_favorites' => $query->count(),
-            'recent_favorites' => $query->recent(7)->count(),
-            'monthly_favorites' => $query->recent(30)->count(),
-            'most_favorited_story' => $query->with('story')
+            'recent_favorites' => (clone $query)->recent(7)->count(),
+            'monthly_favorites' => (clone $query)->recent(30)->count(),
+            'most_favorited_story' => self::query()
+                                           ->when($userId, fn ($q) => $q->forUser($userId))
+                                           ->forPublishedStory()
+                                           ->with(['story' => fn ($q) => $q->published()])
                                            ->selectRaw('story_id, COUNT(*) as count')
                                            ->groupBy('story_id')
                                            ->orderBy('count', 'desc')

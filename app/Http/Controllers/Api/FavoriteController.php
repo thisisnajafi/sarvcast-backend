@@ -280,7 +280,7 @@ class FavoriteController extends Controller
                 ], 404);
             }
 
-            $isFavorited = Favorite::isFavorited($user->id, $storyId);
+            $isFavorited = Favorite::isVisibleFavorite($user->id, $storyId);
             $favoriteCount = Favorite::getStoryFavoriteCount($storyId);
 
             return response()->json([
