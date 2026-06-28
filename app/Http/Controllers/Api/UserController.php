@@ -211,6 +211,12 @@ class UserController extends Controller
             $user->update(['first_name' => $user->name]);
         }
 
+        $user->refresh();
+
+        if ($user->onboarding_completed && $user->status !== User::STATUS_ACTIVE) {
+            $user->update(['status' => User::STATUS_ACTIVE]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'پروفایل با موفقیت به‌روزرسانی شد',
