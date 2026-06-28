@@ -7,6 +7,7 @@ use App\Models\Episode;
 use App\Models\Story;
 use App\Support\StoryEditorPaths;
 use Illuminate\Support\Str;
+use Illuminate\Support\Str;
 
 class OldStoriesImportService
 {
@@ -308,13 +309,17 @@ class OldStoriesImportService
             throw new \RuntimeException('No categories in database — create at least one category before --create-db.');
         }
 
+        $summary = $manifest['story_summary'] ?? null;
+        $subtitle = is_string($summary) && $summary !== '' ? Str::limit($summary, 300, '…') : null;
+        $description = Str::limit(is_string($summary) && $summary !== '' ? $summary : $storyDirTitle, 5000, '…');
+
         $story = Story::create([
-            'title' => $storyDirTitle,
-            'subtitle' => $manifest['story_summary'] ?? null,
-            'description' => $manifest['story_summary'] ?? $storyDirTitle,
+            'title' => Str::limit($storyDirTitle, 200),
+            'subtitle' => $subtitle,
+            'description' => $description,
             'image_url' => 'stories/default.jpg',
             'category_id' => $category->id,
-            'age_group' => is_array($json ?? null) ? ($json['target_age'] ?? null) : null,
+            'age_group' => $this->resolveAgeGroup($json, $manifest),
             'language' => 'fa',
             'duration' => 0,
             'total_episodes' => (int) ($manifest['total_episodes'] ?? 0),
@@ -326,6 +331,27 @@ class OldStoriesImportService
         ]);
 
         return $story->id;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $json
+     * @param  array<string, mixed>  $manifest
+     */
+    private function resolveAgeGroup(?array $json, array $manifest): string
+    {
+        $candidates = [
+            is_array($json) ? ($json['target_age'] ?? null) : null,
+            $manifest['target_age'] ?? null,
+            $manifest['age_group'] ?? null,
+        ];
+
+        foreach ($candidates as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return Str::limit(trim($value), 20, '');
+            }
+        }
+
+        return '3-6';
     }
 
     /**
