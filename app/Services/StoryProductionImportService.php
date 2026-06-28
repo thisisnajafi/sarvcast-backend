@@ -57,12 +57,71 @@ class StoryProductionImportService
         ?int $forceStoryId = null,
         ?int $forceEpisodeId = null,
     ): array {
+        $path = $file->getRealPath();
+        if (! is_string($path) || $path === '') {
+            throw new \InvalidArgumentException('فایل معتبر نیست.');
+        }
+
+        return $this->importStoryFileFromPath(
+            $storySlug,
+            $path,
+            $file->getClientOriginalName(),
+            $episodeSlug,
+            $forceStoryId,
+            $forceEpisodeId,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function importStoryFileFromPath(
+        string $storySlug,
+        string $absolutePath,
+        ?string $originalFilename = null,
+        ?string $episodeSlug = null,
+        ?int $forceStoryId = null,
+        ?int $forceEpisodeId = null,
+    ): array {
+        if (! is_file($absolutePath)) {
+            throw new \InvalidArgumentException("File not found: {$absolutePath}");
+        }
+
+        $filename = $originalFilename ?? basename($absolutePath);
+        $file = new UploadedFile(
+            $absolutePath,
+            $filename,
+            mime_content_type($absolutePath) ?: 'application/octet-stream',
+            null,
+            true,
+        );
+
+        return $this->importStoryFileInternal(
+            $storySlug,
+            $file,
+            file_get_contents($absolutePath),
+            $episodeSlug,
+            $forceStoryId,
+            $forceEpisodeId,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function importStoryFileInternal(
+        string $storySlug,
+        UploadedFile $file,
+        string|false $content,
+        ?string $episodeSlug = null,
+        ?int $forceStoryId = null,
+        ?int $forceEpisodeId = null,
+    ): array {
         $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
         if ($storyDir === null) {
             throw new \RuntimeException('داستان یافت نشد.');
         }
 
-        $content = file_get_contents($file->getRealPath());
         if (! is_string($content) || $content === '') {
             throw new \InvalidArgumentException('فایل خالی است.');
         }

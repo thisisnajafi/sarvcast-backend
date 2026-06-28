@@ -36,6 +36,7 @@ return [
         'README', 'CHANGELOG', 'GUIDE', 'TEMPLATE', 'PROMPT',
         'ANIMATED', 'COMPLETE', 'QUICK_START', 'PROJECT_SUMMARY',
         '__pycache__', '.git', 'iransans', 'manji-team', 'Voices', 'OLD_Sarv',
+        'OLD_Stories', 'staging', 'scripts', 'reports',
     ],
 
 ];
