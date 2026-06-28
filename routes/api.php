@@ -1101,6 +1101,17 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::get('/{sponsor}/stories', [\App\Http\Controllers\Admin\SponsorController::class, 'apiStories']);
     });
 
+    // Manji team page (custom public titles, not app roles)
+    Route::prefix('team-members')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\TeamMemberController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\TeamMemberController::class, 'apiStore']);
+        Route::post('/reorder', [\App\Http\Controllers\Admin\TeamMemberController::class, 'apiReorder']);
+        Route::get('/{teamMember}', [\App\Http\Controllers\Admin\TeamMemberController::class, 'apiShow']);
+        Route::put('/{teamMember}', [\App\Http\Controllers\Admin\TeamMemberController::class, 'apiUpdate']);
+        Route::patch('/{teamMember}', [\App\Http\Controllers\Admin\TeamMemberController::class, 'apiUpdate']);
+        Route::delete('/{teamMember}', [\App\Http\Controllers\Admin\TeamMemberController::class, 'apiDestroy']);
+    });
+
     // SMS overview + management API
     Route::prefix('sms')->group(function () {
         Route::get('/overview/statistics/data', [\App\Http\Controllers\Admin\SmsOverviewController::class, 'apiStatistics']);

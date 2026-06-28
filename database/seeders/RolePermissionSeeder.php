@@ -34,6 +34,10 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'media.delete', 'display_name' => 'حذف رسانه', 'group' => 'media_library'],
             ['name' => 'audit.view', 'display_name' => 'مشاهده گزارش فعالیت', 'group' => 'audit'],
             ['name' => 'audit.export', 'display_name' => 'خروجی گزارش فعالیت', 'group' => 'audit'],
+            ['name' => 'team_members.view', 'display_name' => 'مشاهده تیم مانجی', 'group' => 'team_members'],
+            ['name' => 'team_members.create', 'display_name' => 'افزودن عضو تیم', 'group' => 'team_members'],
+            ['name' => 'team_members.update', 'display_name' => 'ویرایش عضو تیم', 'group' => 'team_members'],
+            ['name' => 'team_members.delete', 'display_name' => 'حذف عضو تیم', 'group' => 'team_members'],
         ];
 
         foreach ($permissions as $permission) {
@@ -55,7 +59,7 @@ class RolePermissionSeeder extends Seeder
         $adminRole->permissions()->sync(Permission::whereIn('group', [
             'dashboard', 'coin_management', 'coupon_management', 
             'payment_management', 'partner_management', 'analytics',
-            'user_management', 'media_library',
+            'user_management', 'media_library', 'team_members',
         ])->pluck('id'));
 
         $auditView = Permission::where('name', 'audit.view')->first();
