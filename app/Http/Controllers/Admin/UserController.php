@@ -408,7 +408,7 @@ class UserController extends Controller
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'integer|exists:users,id',
             'status' => 'required_if:action,change_status|string|in:active,inactive,suspended,pending',
-            'role' => 'required_if:action,change_role|string|in:parent,child,admin',
+            'role' => 'required_if:action,change_role|string|in:parent,child,admin,basic,voice_actor,super_admin',
             'notification_title' => 'required_if:action,send_notification|string|max:255',
             'notification_message' => 'required_if:action,send_notification|string|max:1000',
             'notification_type' => 'required_if:action,send_notification|string|in:info,success,warning,error',
@@ -440,59 +440,24 @@ class UserController extends Controller
             $action = $request->action;
             $successCount = 0;
             $failureCount = 0;
+            $failures = [];
+            $actor = auth('web')->user() ?? auth('sanctum')->user();
 
             foreach ($userIds as $userId) {
                 try {
                     $user = User::findOrFail($userId);
+                    $result = $this->applyBulkUserAction($actor, $user, $action, $request);
 
-                    // Prevent operations on admin users
-                    if ($user->isAdmin() && in_array($action, ['delete', 'suspend', 'change_role'])) {
-                        $failureCount++;
+                    if ($result['success']) {
+                        $successCount++;
                         continue;
                     }
 
-                    switch ($action) {
-                        case 'activate':
-                            $user->update(['status' => 'active']);
-                            break;
-
-                        case 'deactivate':
-                            $user->update(['status' => 'inactive']);
-                            break;
-
-                        case 'suspend':
-                            $user->update(['status' => 'suspended']);
-                            break;
-
-                        case 'delete':
-                            $this->userDeletionService->deleteUser($user);
-                            break;
-
-                        case 'change_status':
-                            $user->update(['status' => $request->status]);
-                            break;
-
-                        case 'change_role':
-                            $user->update(['role' => $request->role]);
-                            $user->update2FARequirement();
-                            break;
-
-                        case 'send_notification':
-                            $this->notificationService->createNotification(
-                                $user->id,
-                                $request->notification_type,
-                                $request->notification_title,
-                                $request->notification_message,
-                                [
-                                    'priority' => $request->notification_priority ?? 'normal',
-                                    'is_important' => $request->notification_priority === 'urgent'
-                                ]
-                            );
-                            break;
-                    }
-
-                    $successCount++;
-
+                    $failureCount++;
+                    $failures[] = [
+                        'user_id' => $userId,
+                        'reason' => $result['reason'] ?? 'عملیات برای این کاربر مجاز نیست.',
+                    ];
                 } catch (\Exception $e) {
                     $failureCount++;
                     Log::error('Bulk action failed for user', [
@@ -957,18 +922,22 @@ class UserController extends Controller
         }
 
         $previousRole = $user->role;
+        $newRole = $data['role'] ?? $previousRole;
+        unset($data['role']);
+
         $user->update($data);
+
+        if ($newRole !== $previousRole) {
+            $user->applyLegacyRoleChange($newRole);
+        }
 
         if ($request->has('role_ids')) {
             $user->syncRoles($request->input('role_ids', []));
+            $user->update2FARequirement();
         }
 
         if ($request->has('direct_permission_ids')) {
             $user->directPermissions()->sync($request->input('direct_permission_ids', []));
-        }
-
-        if ($previousRole !== $user->role || $request->has('role_ids')) {
-            $user->update2FARequirement();
         }
 
         $user->load(['profiles', 'activeSubscription', 'roles.permissions', 'directPermissions']);
@@ -1054,61 +1023,30 @@ class UserController extends Controller
             $action = $request->action;
             $successCount = 0;
             $failureCount = 0;
+            $failures = [];
+            $actor = auth('sanctum')->user() ?? auth('web')->user();
 
             foreach ($userIds as $userId) {
                 try {
                     $user = User::findOrFail($userId);
+                    $result = $this->applyBulkUserAction($actor, $user, $action, $request);
 
-                    // Prevent operations on admin users
-                    if ($user->isAdmin() && in_array($action, ['delete', 'suspend', 'change_role'])) {
-                        $failureCount++;
+                    if ($result['success']) {
+                        $successCount++;
                         continue;
                     }
 
-                    switch ($action) {
-                        case 'activate':
-                            $user->update(['status' => 'active']);
-                            break;
-
-                        case 'deactivate':
-                            $user->update(['status' => 'inactive']);
-                            break;
-
-                        case 'suspend':
-                            $user->update(['status' => 'suspended']);
-                            break;
-
-                        case 'delete':
-                            $this->userDeletionService->deleteUser($user);
-                            break;
-
-                        case 'change_status':
-                            $user->update(['status' => $request->status]);
-                            break;
-
-                        case 'change_role':
-                            $user->update(['role' => $request->role]);
-                            $user->update2FARequirement();
-                            break;
-
-                        case 'send_notification':
-                            $this->notificationService->createNotification(
-                                $user->id,
-                                $request->notification_type,
-                                $request->notification_title,
-                                $request->notification_message,
-                                [
-                                    'priority' => $request->notification_priority ?? 'normal',
-                                    'is_important' => $request->notification_priority === 'urgent'
-                                ]
-                            );
-                            break;
-                    }
-
-                    $successCount++;
-
+                    $failureCount++;
+                    $failures[] = [
+                        'user_id' => $userId,
+                        'reason' => $result['reason'] ?? 'عملیات برای این کاربر مجاز نیست.',
+                    ];
                 } catch (\Exception $e) {
                     $failureCount++;
+                    $failures[] = [
+                        'user_id' => $userId,
+                        'reason' => 'خطای داخلی سرور.',
+                    ];
                     Log::error('Bulk action failed for user', [
                         'user_id' => $userId,
                         'action' => $action,
@@ -1128,7 +1066,8 @@ class UserController extends Controller
                 'success' => true,
                 'message' => $message,
                 'success_count' => $successCount,
-                'failure_count' => $failureCount
+                'failure_count' => $failureCount,
+                'failures' => $failures,
             ]);
 
         } catch (\Exception $e) {
@@ -1278,6 +1217,87 @@ class UserController extends Controller
         $raw = (int) $request->input('perPage', $request->input('per_page', 20));
 
         return min(100, max(1, $raw ?: 20));
+    }
+
+    /**
+     * @return array{success: bool, reason?: string}
+     */
+    private function applyBulkUserAction(?User $actor, User $target, string $action, Request $request): array
+    {
+        $newRole = $action === 'change_role' ? (string) $request->input('role') : null;
+        $blockReason = $this->resolveBulkUserActionBlock($actor, $target, $action, $newRole);
+
+        if ($blockReason !== null) {
+            return ['success' => false, 'reason' => $blockReason];
+        }
+
+        switch ($action) {
+            case 'activate':
+                $target->update(['status' => 'active']);
+                break;
+
+            case 'deactivate':
+                $target->update(['status' => 'inactive']);
+                break;
+
+            case 'suspend':
+                $target->update(['status' => 'suspended']);
+                break;
+
+            case 'delete':
+                $this->userDeletionService->deleteUser($target);
+                break;
+
+            case 'change_status':
+                $target->update(['status' => $request->status]);
+                break;
+
+            case 'change_role':
+                $target->applyLegacyRoleChange((string) $request->role);
+                break;
+
+            case 'send_notification':
+                $this->notificationService->createNotification(
+                    $target->id,
+                    $request->notification_type,
+                    $request->notification_title,
+                    $request->notification_message,
+                    [
+                        'priority' => $request->notification_priority ?? 'normal',
+                        'is_important' => $request->notification_priority === 'urgent',
+                    ]
+                );
+                break;
+        }
+
+        return ['success' => true];
+    }
+
+    private function resolveBulkUserActionBlock(?User $actor, User $target, string $action, ?string $newRole = null): ?string
+    {
+        if ($actor === null) {
+            return 'کاربر احراز هویت نشده است.';
+        }
+
+        if ($actor->id === $target->id && in_array($action, ['delete', 'suspend', 'change_role'], true)) {
+            return 'امکان انجام این عملیات روی حساب کاربری خودتان وجود ندارد.';
+        }
+
+        if ($action === 'change_role' && $newRole !== null) {
+            if (in_array($newRole, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true) && ! $actor->isSuperAdmin()) {
+                return 'فقط مدیر کل می‌تواند نقش مدیر یا مدیر کل اختصاص دهد.';
+            }
+        }
+
+        if ($target->isSuperAdmin() && ! $actor->isSuperAdmin()) {
+            return 'فقط مدیر کل می‌تواند کاربران مدیر کل را تغییر دهد.';
+        }
+
+        if ($target->isAdmin() && in_array($action, ['delete', 'suspend', 'change_role'], true) && ! $actor->isSuperAdmin()) {
+            return 'فقط مدیر کل می‌تواند نقش یا وضعیت کاربران مدیر را تغییر دهد.';
+        }
+
+        return null;
     }
 
     /**

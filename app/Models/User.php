@@ -711,6 +711,32 @@ class User extends Authenticatable
         }
     }
 
+    /**
+     * Update the legacy role column and keep RBAC admin roles in sync.
+     */
+    public function applyLegacyRoleChange(string $newRole): void
+    {
+        $this->update(['role' => $newRole]);
+
+        $adminRbacRoleIds = Role::query()
+            ->whereIn('name', [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN])
+            ->pluck('id');
+
+        if ($adminRbacRoleIds->isNotEmpty()) {
+            $this->roles()->detach($adminRbacRoleIds);
+        }
+
+        if (in_array($newRole, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN], true)) {
+            $rbacRole = Role::query()->where('name', $newRole)->first();
+            if ($rbacRole) {
+                $this->roles()->syncWithoutDetaching([$rbacRole->id]);
+            }
+        }
+
+        $this->refresh();
+        $this->update2FARequirement();
+    }
+
     protected static function boot()
     {
         parent::boot();
