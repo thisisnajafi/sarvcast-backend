@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Traits\HasImageUrl;
 
 class Person extends Model
@@ -46,6 +47,14 @@ class Person extends Model
         return $this->belongsToMany(Episode::class, 'episode_people')
                     ->withPivot('role')
                     ->withTimestamps();
+    }
+
+    /**
+     * Legacy episode voice-actor assignments (person_id on episode_voice_actors).
+     */
+    public function episodeVoiceActors(): HasMany
+    {
+        return $this->hasMany(EpisodeVoiceActor::class);
     }
 
     /**

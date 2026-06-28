@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\Person;
-use App\Models\EpisodeVoiceActor;
+use App\Models\Character;
 use App\Models\Episode;
+use App\Models\EpisodeVoiceActor;
+use App\Services\UserStoryContributionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -421,32 +425,51 @@ class VoiceActorController extends Controller
         return redirect()->back()->with('success', $message);
     }
 
-    // API Methods
+    // API Methods — voice actors are users with the voice_actor role (see VoiceActorsManagementController)
     public function apiIndex(Request $request)
     {
-        $query = Person::whereJsonContains('roles', 'voice_actor');
+        $query = $this->eligibleVoiceActorUsersQuery();
 
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'like', "%{$searchTerm}%")
-                    ->orWhere('bio', 'like', "%{$searchTerm}%");
+                $q->where('first_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('phone_number', 'like', "%{$searchTerm}%")
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$searchTerm}%"]);
             });
         }
 
-        if ($request->filled('verified')) {
-            $query->where('is_verified', $request->boolean('verified'));
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
         if ($request->filled('active')) {
-            $query->where('is_active', $request->boolean('active'));
+            if ($request->boolean('active')) {
+                $query->where('status', 'active');
+            } else {
+                $query->where('status', '!=', 'active');
+            }
         }
 
-        $voiceActors = $query->orderBy('created_at', 'desc')->paginate(20);
+        $perPage = min(100, max(1, (int) $request->input('per_page', 20)));
+        $voiceActors = $query
+            ->withCount([
+                'characters as total_characters',
+                'storiesAsNarrator as total_stories_narrated',
+                'storiesAsAuthor as total_stories_authored',
+            ])
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $voiceActors->items(),
+            'data' => collect($voiceActors->items())->map(fn (User $user) => $this->formatVoiceActorUserForApi($user))->values(),
             'pagination' => [
                 'current_page' => $voiceActors->currentPage(),
                 'last_page' => $voiceActors->lastPage(),
@@ -459,82 +482,101 @@ class VoiceActorController extends Controller
     public function apiStore(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'bio' => 'nullable|string|max:1000',
-            'voice_type' => 'nullable|string|max:100',
-            'voice_range' => 'nullable|string|max:100',
-            'specialties' => 'nullable|array',
-            'specialties.*' => 'string|max:100',
-            'languages' => 'nullable|array',
-            'languages.*' => 'string|max:50',
-            'experience_years' => 'nullable|integer|min:0|max:100',
-            'hourly_rate' => 'nullable|numeric|min:0',
-            'is_verified' => 'boolean',
-            'is_active' => 'boolean',
-            'image_path' => 'nullable|string|max:255',
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/|unique:users,phone_number',
+            'password' => 'nullable|string|min:8',
+            'status' => 'nullable|in:active,inactive,suspended,pending',
         ]);
 
-        $validated['roles'] = ['voice_actor'];
-        $validated['is_verified'] = $request->boolean('is_verified', false);
-        $validated['is_active'] = $request->boolean('is_active', true);
-
-        $voiceActor = Person::create($validated);
+        $user = User::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'phone_number' => $validated['phone_number'],
+            'password' => Hash::make($validated['password'] ?? bin2hex(random_bytes(8))),
+            'role' => User::ROLE_VOICE_ACTOR,
+            'status' => $validated['status'] ?? 'active',
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'صداپیشه با موفقیت ایجاد شد.',
-            'data' => $voiceActor,
-        ]);
+            'data' => $this->formatVoiceActorUserForApi($user),
+        ], 201);
     }
 
-    public function apiShow(Person $voiceActor)
+    public function apiShow(User $voiceActor)
     {
-        $voiceActor->load(['episodeVoiceActors' => function ($query) {
-            $query->with(['episode.story'])->orderBy('created_at', 'desc');
-        }]);
+        $this->ensureEligibleVoiceActorUser($voiceActor);
+
+        $voiceActor->load([
+            'characters.story:id,title,status',
+            'storiesAsNarrator:id,title,status',
+            'storiesAsAuthor:id,title,status',
+        ]);
+
+        $contributions = app(UserStoryContributionService::class)->summarizeForUser($voiceActor);
+
+        $stats = [
+            'total_characters' => $voiceActor->characters()->count(),
+            'total_stories_narrated' => $voiceActor->storiesAsNarrator()->count(),
+            'total_stories_authored' => $voiceActor->storiesAsAuthor()->count(),
+            'total_episodes' => Episode::whereHas('story', function ($q) use ($voiceActor) {
+                $q->where('narrator_id', $voiceActor->id);
+            })->count(),
+        ];
 
         return response()->json([
             'success' => true,
-            'data' => $voiceActor,
+            'data' => array_merge($this->formatVoiceActorUserForApi($voiceActor), [
+                'stats' => $stats,
+                'story_contributions' => $contributions,
+                'characters' => $voiceActor->characters->map(fn ($character) => [
+                    'id' => $character->id,
+                    'name' => $character->name,
+                    'story_id' => $character->story_id,
+                    'story_title' => $character->story?->title,
+                ])->values(),
+            ]),
         ]);
     }
 
-    public function apiUpdate(Request $request, Person $voiceActor)
+    public function apiUpdate(Request $request, User $voiceActor)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'bio' => 'nullable|string|max:1000',
-            'voice_type' => 'nullable|string|max:100',
-            'voice_range' => 'nullable|string|max:100',
-            'specialties' => 'nullable|array',
-            'specialties.*' => 'string|max:100',
-            'languages' => 'nullable|array',
-            'languages.*' => 'string|max:50',
-            'experience_years' => 'nullable|integer|min:0|max:100',
-            'hourly_rate' => 'nullable|numeric|min:0',
-            'is_verified' => 'boolean',
-            'is_active' => 'boolean',
-            'image_path' => 'nullable|string|max:255',
-        ]);
+        $this->ensureEligibleVoiceActorUser($voiceActor);
 
-        $validated['is_verified'] = $request->boolean('is_verified', false);
-        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated = $request->validate([
+            'first_name' => 'sometimes|required|string|max:100',
+            'last_name' => 'sometimes|required|string|max:100',
+            'phone_number' => 'sometimes|required|string|regex:/^09[0-9]{9}$/|unique:users,phone_number,'.$voiceActor->id,
+            'status' => 'sometimes|required|in:active,inactive,suspended,pending',
+            'role' => 'sometimes|required|in:'.User::ROLE_VOICE_ACTOR.','.User::ROLE_ADMIN.','.User::ROLE_SUPER_ADMIN,
+        ]);
 
         $voiceActor->update($validated);
 
         return response()->json([
             'success' => true,
             'message' => 'صداپیشه با موفقیت به‌روزرسانی شد.',
-            'data' => $voiceActor,
+            'data' => $this->formatVoiceActorUserForApi($voiceActor->fresh()),
         ]);
     }
 
-    public function apiDestroy(Person $voiceActor)
+    public function apiDestroy(User $voiceActor)
     {
-        if ($voiceActor->episodeVoiceActors()->count() > 0) {
+        $this->ensureEligibleVoiceActorUser($voiceActor);
+
+        if (in_array($voiceActor->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'نمی‌توان صداپیشه‌ای که در اپیزودها استفاده شده را حذف کرد.',
+                'message' => 'نمی‌توان کاربران مدیر را از این بخش حذف کرد.',
+            ], 403);
+        }
+
+        if ($voiceActor->characters()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نمی‌توان صداپیشه‌ای که شخصیت دارد را حذف کرد. ابتدا شخصیت‌ها را جدا کنید.',
             ], 422);
         }
 
@@ -551,27 +593,35 @@ class VoiceActorController extends Controller
         $request->validate([
             'action' => 'required|string|in:verify,unverify,activate,deactivate,delete',
             'voice_actor_ids' => 'required|array|min:1',
-            'voice_actor_ids.*' => 'exists:people,id',
+            'voice_actor_ids.*' => 'exists:users,id',
         ]);
 
         $ids = $request->voice_actor_ids;
         $action = $request->action;
+        $query = User::whereIn('id', $ids)->whereIn('role', [
+            User::ROLE_VOICE_ACTOR,
+            User::ROLE_ADMIN,
+            User::ROLE_SUPER_ADMIN,
+        ]);
 
         switch ($action) {
             case 'verify':
-                Person::whereIn('id', $ids)->update(['is_verified' => true]);
+                $query->update(['phone_verified_at' => now()]);
                 break;
             case 'unverify':
-                Person::whereIn('id', $ids)->update(['is_verified' => false]);
+                $query->update(['phone_verified_at' => null]);
                 break;
             case 'activate':
-                Person::whereIn('id', $ids)->update(['is_active' => true]);
+                $query->update(['status' => 'active']);
                 break;
             case 'deactivate':
-                Person::whereIn('id', $ids)->update(['is_active' => false]);
+                $query->update(['status' => 'inactive']);
                 break;
             case 'delete':
-                Person::whereIn('id', $ids)->delete();
+                User::whereIn('id', $ids)
+                    ->where('role', User::ROLE_VOICE_ACTOR)
+                    ->whereDoesntHave('characters')
+                    ->delete();
                 break;
         }
 
@@ -584,11 +634,11 @@ class VoiceActorController extends Controller
     public function apiStatistics()
     {
         $stats = [
-            'total' => Person::whereJsonContains('roles', 'voice_actor')->count(),
-            'verified' => Person::whereJsonContains('roles', 'voice_actor')->where('is_verified', true)->count(),
-            'unverified' => Person::whereJsonContains('roles', 'voice_actor')->where('is_verified', false)->count(),
-            'active' => Person::whereJsonContains('roles', 'voice_actor')->where('is_active', true)->count(),
-            'total_episodes' => EpisodeVoiceActor::count(),
+            'total' => User::where('role', User::ROLE_VOICE_ACTOR)->count(),
+            'verified' => User::where('role', User::ROLE_VOICE_ACTOR)->whereNotNull('phone_verified_at')->count(),
+            'active' => User::where('role', User::ROLE_VOICE_ACTOR)->where('status', 'active')->count(),
+            'total_episodes' => Character::whereNotNull('voice_actor_id')->distinct('story_id')->count('story_id'),
+            'total_characters_assigned' => Character::whereNotNull('voice_actor_id')->count(),
         ];
 
         return response()->json([
@@ -599,22 +649,23 @@ class VoiceActorController extends Controller
 
     public function apiExport(Request $request)
     {
-        $query = Person::whereJsonContains('roles', 'voice_actor');
+        $query = $this->eligibleVoiceActorUsersQuery();
 
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'like', "%{$searchTerm}%")
-                    ->orWhere('bio', 'like', "%{$searchTerm}%");
+                $q->where('first_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('phone_number', 'like', "%{$searchTerm}%");
             });
         }
 
-        if ($request->filled('verified')) {
-            $query->where('is_verified', $request->boolean('verified'));
+        if ($request->filled('role')) {
+            $query->where('role', $request->role);
         }
 
-        if ($request->filled('active')) {
-            $query->where('is_active', $request->boolean('active'));
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
         $filename = 'voice-actors-'.now()->format('Y-m-d-His').'.csv';
@@ -626,19 +677,18 @@ class VoiceActorController extends Controller
             }
 
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-            fputcsv($handle, ['id', 'name', 'voice_type', 'voice_range', 'is_verified', 'is_active', 'experience_years', 'hourly_rate', 'created_at']);
+            fputcsv($handle, ['id', 'first_name', 'last_name', 'phone_number', 'role', 'status', 'characters_count', 'created_at']);
 
-            $query->orderBy('created_at', 'desc')->chunk(500, function ($rows) use ($handle) {
+            $query->withCount('characters')->orderBy('created_at', 'desc')->chunk(500, function ($rows) use ($handle) {
                 foreach ($rows as $row) {
                     fputcsv($handle, [
                         $row->id,
-                        $row->name,
-                        $row->voice_type,
-                        $row->voice_range,
-                        $row->is_verified ? '1' : '0',
-                        $row->is_active ? '1' : '0',
-                        $row->experience_years,
-                        $row->hourly_rate,
+                        $row->first_name,
+                        $row->last_name,
+                        $row->phone_number,
+                        $row->role,
+                        $row->status,
+                        $row->characters_count,
                         $row->created_at?->toIso8601String(),
                     ]);
                 }
@@ -648,5 +698,41 @@ class VoiceActorController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    private function eligibleVoiceActorUsersQuery()
+    {
+        return User::query()->whereIn('role', [
+            User::ROLE_VOICE_ACTOR,
+            User::ROLE_ADMIN,
+            User::ROLE_SUPER_ADMIN,
+        ]);
+    }
+
+    private function ensureEligibleVoiceActorUser(User $user): void
+    {
+        if (! in_array($user->role, [User::ROLE_VOICE_ACTOR, User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true)) {
+            abort(404);
+        }
+    }
+
+    private function formatVoiceActorUserForApi(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'phone_number' => $user->phone_number,
+            'role' => $user->role,
+            'status' => $user->status,
+            'is_active' => $user->status === 'active',
+            'is_verified' => $user->phone_verified_at !== null,
+            'total_characters' => $user->total_characters ?? null,
+            'total_stories_narrated' => $user->total_stories_narrated ?? null,
+            'total_stories_authored' => $user->total_stories_authored ?? null,
+            'profile_image_url' => $user->profile_image_url ?? null,
+            'created_at' => $user->created_at?->toIso8601String(),
+        ];
     }
 }

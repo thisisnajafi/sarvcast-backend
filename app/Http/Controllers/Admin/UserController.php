@@ -15,6 +15,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Services\InAppNotificationService;
 use App\Services\UserDeletionService;
+use App\Services\UserStoryContributionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -890,7 +891,13 @@ class UserController extends Controller
     {
         $user->load(['profiles', 'activeSubscription', 'subscriptions', 'payments', 'playHistories', 'favorites', 'ratings', 'roles.permissions', 'directPermissions']);
 
-        return AdminApiResponse::success($this->formatUserForApi($user));
+        $payload = $this->formatUserForApi($user);
+
+        if ($this->userHasCreativeContributions($user)) {
+            $payload['story_contributions'] = app(UserStoryContributionService::class)->summarizeForUser($user);
+        }
+
+        return AdminApiResponse::success($payload);
     }
 
     public function apiUpdate(Request $request, User $user)
@@ -1334,5 +1341,20 @@ class UserController extends Controller
             ->all();
 
         return $data;
+    }
+
+    private function userHasCreativeContributions(User $user): bool
+    {
+        if ($user->role === User::ROLE_VOICE_ACTOR) {
+            return true;
+        }
+
+        if ($user->isVoiceActor()) {
+            return true;
+        }
+
+        return $user->storiesAsAuthor()->exists()
+            || $user->storiesAsNarrator()->exists()
+            || $user->characters()->exists();
     }
 }

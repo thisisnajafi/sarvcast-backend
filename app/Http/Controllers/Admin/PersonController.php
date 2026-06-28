@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Support\AdminApiResponse;
 use App\Models\Person;
+use App\Services\PersonStoryContributionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -271,7 +272,17 @@ class PersonController extends Controller
 
     public function apiShow(Person $person)
     {
-        return AdminApiResponse::success($person->load(['stories', 'episodes']));
+        $person->load([
+            'stories',
+            'episodes.story',
+            'episodeVoiceActors.episode.story',
+        ]);
+
+        $contributions = app(PersonStoryContributionService::class)->summarizeForPerson($person);
+
+        return AdminApiResponse::success(array_merge($person->toArray(), [
+            'story_contributions' => $contributions,
+        ]));
     }
 
     public function apiUpdate(Request $request, Person $person)
