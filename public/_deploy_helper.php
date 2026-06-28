@@ -137,6 +137,8 @@ if (is_dir($viewsDir)) {
 }
 
 // 4. Bootstrap Laravel and run artisan commands
+$localImportPayload = null;
+
 try {
     define('LARAVEL_START', microtime(true));
 
@@ -215,6 +217,44 @@ try {
         $results[] = 'audit permissions verification FAILED: run RolePermissionSeeder';
     }
 
+    if (isset($_GET['generate_bootstrap_secret']) && $_GET['generate_bootstrap_secret'] === '1') {
+        try {
+            $secret = app(\App\Services\LocalImportAccessService::class)->generateBootstrapSecret();
+            $localImportPayload = [
+                'bootstrap_secret' => $secret,
+                'env_line' => 'LOCAL_IMPORT_BOOTSTRAP_SECRET=' . $secret,
+            ];
+            $results[] = 'local import bootstrap secret generated (add to server .env once)';
+        } catch (Throwable $e) {
+            $results[] = 'local import bootstrap secret FAILED: ' . $e->getMessage();
+        }
+    }
+
+    if (isset($_GET['issue_local_import_token']) && $_GET['issue_local_import_token'] === '1') {
+        try {
+            $phone = isset($_GET['phone']) ? trim((string) $_GET['phone']) : null;
+            $issued = app(\App\Services\LocalImportAccessService::class)->issueToken(
+                userId: null,
+                phone: ($phone !== null && $phone !== '') ? $phone : null,
+                revokeExisting: true,
+            );
+            $localImportPayload = [
+                'token_name' => $issued['token_name'],
+                'token' => $issued['plain_text_token'],
+                'user_id' => $issued['user']->id,
+                'phone_number' => $issued['user']->phone_number,
+                'api_base_url' => rtrim((string) config('app.url'), '/') . '/api/admin',
+                'local_env' => [
+                    'LOCAL_IMPORT_API_BASE_URL' => rtrim((string) config('app.url'), '/') . '/api/admin',
+                    'LOCAL_IMPORT_API_TOKEN' => $issued['plain_text_token'],
+                ],
+            ];
+            $results[] = 'local import API token issued for user #' . $issued['user']->id;
+        } catch (Throwable $e) {
+            $results[] = 'local import API token FAILED: ' . $e->getMessage();
+        }
+    }
+
 } catch (Throwable $e) {
     $results[] = 'Laravel bootstrap failed: ' . $e->getMessage();
 
@@ -259,5 +299,6 @@ http_response_code($hasFailure ? 500 : 200);
 echo json_encode([
     'status' => $hasFailure ? 'error' : 'success',
     'results' => $results,
+    'local_import' => $localImportPayload ?? null,
     'time' => date('c'),
 ]);

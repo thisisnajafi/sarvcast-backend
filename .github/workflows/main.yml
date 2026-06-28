@@ -174,10 +174,33 @@ jobs:
 
           echo "✅ php artisan migrate --force completed; dependencies installed and caches rebuilt"
           echo "::endgroup::"
-      - name: give me access
-        run : php artisan admin:create-local-import-token --phone=09136708883
-      - name: boostrap access
-        run : php artisan admin:create-local-import-token --generate-bootstrap-secret
+
+      # Token must be created ON THE SERVER (CI runner has no MySQL). Optional: set repo variable
+      # ISSUE_LOCAL_IMPORT_TOKEN=true to run after each deploy (rotates token every deploy).
+      - name: Issue local import API token on server
+        if: vars.ISSUE_LOCAL_IMPORT_TOKEN == 'true'
+        run: |
+          echo "::group::Issue local import token via deploy helper"
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&issue_local_import_token=1&phone=09136708883" \
+            --max-time 120 --connect-timeout 30)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP status: $HTTP_CODE"
+          TOKEN=$(echo "$BODY" | jq -r '.local_import.token // empty')
+          if [[ -n "$TOKEN" ]]; then
+            echo "::add-mask::$TOKEN"
+            echo ""
+            echo "========== LOCAL .env (copy once; token shown only in this log) =========="
+            echo "LOCAL_IMPORT_API_BASE_URL=${{ env.SITE_URL }}/api/admin"
+            echo "LOCAL_IMPORT_API_TOKEN=$TOKEN"
+            echo "=========================================================================="
+          else
+            echo "$BODY" | jq .
+            echo "::warning::Local import token was not issued — check deploy helper results"
+          fi
+          echo "::endgroup::"
+
       - name: Notify Telegram (success)
         if: success()
         run: |
