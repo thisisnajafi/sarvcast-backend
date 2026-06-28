@@ -943,8 +943,18 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     });
 });
 
+// Local import bootstrap (no Sanctum — uses LOCAL_IMPORT_BOOTSTRAP_SECRET on server)
+Route::prefix('admin/local-import')->middleware(['throttle:10,1'])->group(function () {
+    Route::post('/bootstrap', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'bootstrap']);
+});
+
 // Admin API Routes
 Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission', 'throttle:120,1', 'api.audit'])->group(function () {
+
+    Route::prefix('local-import')->group(function () {
+        Route::get('/verify', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'verify']);
+        Route::post('/token', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'create']);
+    });
 
     Route::get('/search', [\App\Http\Controllers\Admin\DashboardController::class, 'globalSearch']);
 
