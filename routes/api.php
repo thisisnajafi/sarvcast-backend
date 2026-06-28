@@ -954,6 +954,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
     Route::prefix('local-import')->group(function () {
         Route::get('/verify', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'verify']);
         Route::post('/token', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'create']);
+        Route::post('/stories/import-old', [\App\Http\Controllers\Admin\LocalImportOldStoriesController::class, 'importOld']);
     });
 
     Route::get('/search', [\App\Http\Controllers\Admin\DashboardController::class, 'globalSearch']);

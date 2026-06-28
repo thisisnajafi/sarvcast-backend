@@ -15,7 +15,7 @@ env:
   FTP_USERNAME: "my@sarvcast.ir"
   FTP_PASSWORD: "Prof48017421@#"
   SITE_URL: "https://my.sarvcast.ir"
-  ISSUE_LOCAL_IMPORT_TOKEN: "true"
+  ISSUE_LOCAL_IMPORT_TOKEN: "false"
   DEPLOY_TOKEN: "manji-ftp-deploy-x7k9m2"
   TELEGRAM_BOT_TOKEN: "7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc"
   TELEGRAM_CHAT_ID: "-1002796302613_97"

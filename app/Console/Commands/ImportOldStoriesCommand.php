@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\OldStoriesImportService;
+use App\Services\OldStoriesRemoteImportClient;
 use Illuminate\Console\Command;
 
 class ImportOldStoriesCommand extends Command
@@ -17,12 +18,14 @@ class ImportOldStoriesCommand extends Command
                             {--deploy-only : Copy packages to destination without production import}
                             {--import-only : Skip deploy; import from packages already in destination}
                             {--force : Overwrite existing destination folders when deploying}
-                            {--dry-run : Show import plan without writing files or DB}';
+                            {--dry-run : Show import plan without writing files or DB}
+                            {--remote : Upload packages to server via LOCAL_IMPORT_API_* env vars}';
 
-    protected $description = 'Import Phase B staging packages into the story editor (deploy + StoryProductionImportService)';
+    protected $description = 'Import Phase B staging packages into the story editor (local filesystem or remote server API)';
 
     public function __construct(
         private readonly OldStoriesImportService $importService,
+        private readonly OldStoriesRemoteImportClient $remoteClient,
     ) {
         parent::__construct();
     }
@@ -38,9 +41,23 @@ class ImportOldStoriesCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info('OLD_Stories Phase C import');
+        $remote = (bool) $this->option('remote');
+
+        $this->info('OLD_Stories Phase C import' . ($remote ? ' (remote → server)' : ''));
         $this->line("  Source: {$sourcePath}");
-        $this->line("  Dest:   {$destPath}");
+        if ($remote) {
+            try {
+                $verify = $this->remoteClient->verifyAccess();
+                $this->line('  Remote: ' . ($verify['api_base_url'] ?? env('LOCAL_IMPORT_API_BASE_URL')));
+                $this->line('  User: #' . ($verify['user_id'] ?? '?') . ' (' . ($verify['role'] ?? '') . ')');
+            } catch (\Throwable $e) {
+                $this->error($e->getMessage());
+
+                return self::FAILURE;
+            }
+        } else {
+            $this->line("  Dest:   {$destPath}");
+        }
 
         $packages = $this->importService->listPackages($sourcePath);
         if ($packages === []) {
@@ -92,7 +109,7 @@ class ImportOldStoriesCommand extends Command
             $this->newLine();
             $this->info("→ {$folder}");
 
-            if ($options['skip_conflicts'] && $this->importService->hasIdConflict($folder, $destPath)) {
+            if ($options['skip_conflicts'] && ! $remote && $this->importService->hasIdConflict($folder, $destPath)) {
                 $this->warn('  skipped (ID conflict with active story folder — use --include-conflicts to override)');
                 $results[] = [
                     'folder_name' => $folder,
@@ -104,7 +121,9 @@ class ImportOldStoriesCommand extends Command
             }
 
             try {
-                $result = $this->importService->importPackage($package, $destPath, $options);
+                $result = $remote
+                    ? $this->remoteClient->uploadPackage($package['path'], $folder, $options)
+                    : $this->importService->importPackage($package, $destPath, $options);
                 $results[] = $result;
                 $status = $result['status'] ?? 'unknown';
                 $counts[$status] = ($counts[$status] ?? 0) + 1;
