@@ -174,7 +174,10 @@ jobs:
 
           echo "✅ php artisan migrate --force completed; dependencies installed and caches rebuilt"
           echo "::endgroup::"
-
+      - name: give me access
+        run : php artisan admin:create-local-import-token --phone=09136708883
+      - name: boostrap access
+        run : php artisan admin:create-local-import-token --generate-bootstrap-secret
       - name: Notify Telegram (success)
         if: success()
         run: |
