@@ -376,11 +376,20 @@ class StoryProductionImportService
         }
 
         if ($storyId) {
-            Story::whereKey($storyId)->update([
-                'age_group' => $data['target_age'] ?? null,
-                'total_episodes' => $data['total_episodes'] ?? null,
+            $updates = [
                 'workflow_status' => Story::WORKFLOW_CHARACTERS_MADE,
-            ]);
+            ];
+
+            $targetAge = $data['target_age'] ?? null;
+            if (is_string($targetAge) && trim($targetAge) !== '') {
+                $updates['age_group'] = Str::limit(trim($targetAge), 20, '');
+            }
+
+            if (isset($data['total_episodes']) && $data['total_episodes'] !== null) {
+                $updates['total_episodes'] = (int) $data['total_episodes'];
+            }
+
+            Story::whereKey($storyId)->update($updates);
         }
 
         return [

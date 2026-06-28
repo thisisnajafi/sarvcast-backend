@@ -233,9 +233,9 @@ class OldStoriesImportService
                     $import = $this->importService->importStoryFileFromPath(
                         $storySlug,
                         $promptsFile,
-                        $episodeSlug,
-                        $storyId,
-                        $episodeId,
+                        episodeSlug: $episodeSlug,
+                        forceStoryId: $storyId,
+                        forceEpisodeId: $episodeId,
                     );
                     $result['imports'][] = [
                         'type' => 'image_prompts',
@@ -255,9 +255,9 @@ class OldStoriesImportService
                         $import = $this->importService->importStoryFileFromPath(
                             $storySlug,
                             $scriptFile,
-                            $episodeSlug,
-                            $storyId,
-                            $episodeId,
+                            episodeSlug: $episodeSlug,
+                            forceStoryId: $storyId,
+                            forceEpisodeId: $episodeId,
                         );
                         $result['imports'][] = [
                             'type' => 'story_script',
