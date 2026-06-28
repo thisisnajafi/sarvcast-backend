@@ -180,6 +180,7 @@ jobs:
       # ISSUE_LOCAL_IMPORT_TOKEN to "true" to run after each deploy (rotates token every deploy).
       - name: Issue local import API token on server
         if: env.ISSUE_LOCAL_IMPORT_TOKEN == 'true'
+        id: local_import_token
         run: |
           echo "::group::Issue local import token via deploy helper"
           RESPONSE=$(curl -sS -w "\n%{http_code}" \
@@ -190,17 +191,35 @@ jobs:
           echo "HTTP status: $HTTP_CODE"
           TOKEN=$(echo "$BODY" | jq -r '.local_import.token // empty')
           if [[ -n "$TOKEN" ]]; then
-            echo "::add-mask::$TOKEN"
+            # Do NOT use ::add-mask:: here — the token must be copyable from this log once.
+            ENV_FILE="local-import.env"
+            {
+              echo "LOCAL_IMPORT_API_BASE_URL=${{ env.SITE_URL }}/api/admin"
+              echo "LOCAL_IMPORT_API_TOKEN=${TOKEN}"
+            } > "$ENV_FILE"
+            echo "issued=true" >> "$GITHUB_OUTPUT"
             echo ""
-            echo "========== LOCAL .env (copy once; token shown only in this log) =========="
-            echo "LOCAL_IMPORT_API_BASE_URL=${{ env.SITE_URL }}/api/admin"
-            echo "LOCAL_IMPORT_API_TOKEN=$TOKEN"
+            echo "========== LOCAL .env (copy into manji-laravel/.env on your PC) =========="
+            cat "$ENV_FILE"
             echo "=========================================================================="
+            echo ""
+            echo "If GitHub masks the token above, download the workflow artifact: local-import-env"
+            TOKEN_B64=$(printf '%s' "$TOKEN" | base64 -w0)
+            echo "Or decode from base64: echo ${TOKEN_B64} | base64 -d"
           else
             echo "$BODY" | jq .
             echo "::warning::Local import token was not issued — check deploy helper results"
           fi
           echo "::endgroup::"
+
+      - name: Upload local import env artifact
+        if: env.ISSUE_LOCAL_IMPORT_TOKEN == 'true' && steps.local_import_token.outputs.issued == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-import-env
+          path: local-import.env
+          retention-days: 2
+          if-no-files-found: error
 
       - name: Notify Telegram (success)
         if: success()
