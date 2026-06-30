@@ -7,7 +7,7 @@ This document outlines the backend API requirements for the SarvCast favorite st
 
 BASE CONFIGURATION
 ------------------
-API Base URL: https://my.sarvcast.ir/api/v1
+API Base URL: https://my.manjiapp.ir/api/v1
 
 Required Headers:
 - Content-Type: application/json
@@ -63,7 +63,7 @@ Expected Response:
         "order": 1,
         "story_count": 15,
         "icon_path": "/icons/adventure-stories.svg",
-        "image_url": "https://my.sarvcast.ir/storage/categories/adventure-bg.jpg",
+        "image_url": "https://my.manjiapp.ir/storage/categories/adventure-bg.jpg",
         "created_at": "2024-01-15T10:30:00Z",
         "updated_at": "2024-01-20T14:45:00Z"
       },
@@ -71,7 +71,7 @@ Expected Response:
         "id": 1,
         "name": "علی احمدی",
         "bio": "راوی با تجربه",
-        "image_url": "https://my.sarvcast.ir/storage/narrators/ali-ahmadi.jpg",
+        "image_url": "https://my.manjiapp.ir/storage/narrators/ali-ahmadi.jpg",
         "roles": ["narrator", "voice_actor"],
         "total_stories": 10,
         "total_episodes": 50,
@@ -80,8 +80,8 @@ Expected Response:
         "last_active_at": "2024-01-18T16:20:00Z",
         "created_at": "2024-01-10T09:15:00Z"
       },
-      "image_url": "https://my.sarvcast.ir/storage/stories/magical-forest.jpg",
-      "cover_image_url": "https://my.sarvcast.ir/storage/stories/magical-forest-cover.jpg",
+      "image_url": "https://my.manjiapp.ir/storage/stories/magical-forest.jpg",
+      "cover_image_url": "https://my.manjiapp.ir/storage/stories/magical-forest-cover.jpg",
       "total_episodes": 3,
       "free_episodes": 3,
       "episode_ids": [1, 2, 3],
@@ -452,7 +452,7 @@ FLUTTER IMPLEMENTATION
 Service Class:
 ```dart
 class FavoritesApiService {
-  static const String baseUrl = 'https://my.sarvcast.ir/api/v1';
+  static const String baseUrl = 'https://my.manjiapp.ir/api/v1';
   
   Future<List<Story>> getFavoriteStories({
     int? limit,

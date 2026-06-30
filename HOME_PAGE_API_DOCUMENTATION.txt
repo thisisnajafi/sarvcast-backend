@@ -7,7 +7,7 @@ This document outlines the API routes and data requirements for the SarvCast hom
 
 BASE URL
 --------
-https://my.sarvcast.ir/api/v1
+https://my.manjiapp.ir/api/v1
 
 API ROUTES
 ==========

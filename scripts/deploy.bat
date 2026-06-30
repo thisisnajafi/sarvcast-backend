@@ -9,9 +9,9 @@ setlocal enabledelayedexpansion
 
 REM Configuration - Pre-configured with SarvCast credentials
 set "FTP_SERVER=%FTP_SERVER%"
-if "%FTP_SERVER%"=="" set "FTP_SERVER=ftp.sarvcast.ir"
+if "%FTP_SERVER%"=="" set "FTP_SERVER=ftp.manjiapp.ir"
 set "FTP_USERNAME=%FTP_USERNAME%"
-if "%FTP_USERNAME%"=="" set "FTP_USERNAME=my@sarvcast.ir"
+if "%FTP_USERNAME%"=="" set "FTP_USERNAME=my@manjiapp.ir"
 set "FTP_PASSWORD=%FTP_PASSWORD%"
 if "%FTP_PASSWORD%"=="" set "FTP_PASSWORD=prof48017421@#"
 set "FTP_DIRECTORY=%FTP_DIRECTORY%"

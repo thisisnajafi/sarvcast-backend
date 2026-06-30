@@ -5,7 +5,7 @@
 ZARINPAL_MERCHANT_ID=77751ff3-c1cc-411b-869d-2ac7d7b02f88
 
 # Callback URL for payment verification
-ZARINPAL_CALLBACK_URL=https://my.sarvcast.ir
+ZARINPAL_CALLBACK_URL=https://my.manjiapp.ir
 
 # Sandbox Mode (set to true for testing, false for production)
 ZARINPAL_SANDBOX=false

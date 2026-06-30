@@ -132,6 +132,7 @@ class HomeFeedService
 
     private function buildForYouSection(User $user, int $limit): array
     {
+        $sectionLimit = min($limit, 3);
         $favoriteIds = collect($user->favorite_category_ids ?? [])->map(fn ($id) => (int) $id)->filter()->all();
 
         if (!empty($favoriteIds)) {
@@ -140,12 +141,12 @@ class HomeFeedService
                 $user->gender
             )
                 ->orderByDesc('rating')
-                ->limit($limit)
+                ->limit($sectionLimit)
                 ->get();
         } else {
             $stories = $this->applyGenderBoost($this->baseQuery($user), $user->gender)
                 ->orderByDesc('play_count')
-                ->limit($limit)
+                ->limit($sectionLimit)
                 ->get();
         }
 
@@ -158,9 +159,10 @@ class HomeFeedService
 
     private function buildByAgeSection(User $user, int $limit): array
     {
+        $sectionLimit = min($limit, 3);
         $stories = $this->applyGenderBoost($this->baseQuery($user), $user->gender)
             ->orderByDesc('rating')
-            ->limit($limit)
+            ->limit($sectionLimit)
             ->get();
 
         return [
