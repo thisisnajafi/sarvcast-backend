@@ -1350,6 +1350,9 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
         Route::prefix('notifications')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\NotificationController::class, 'apiIndex']);
             Route::post('/', [\App\Http\Controllers\Admin\NotificationController::class, 'apiStore']);
+            Route::get('/compose-options', [\App\Http\Controllers\Admin\NotificationController::class, 'apiComposeOptions']);
+            Route::post('/send-push', [\App\Http\Controllers\Admin\NotificationController::class, 'apiSendPush']);
+            Route::post('/test-send', [\App\Http\Controllers\Admin\NotificationController::class, 'apiTestSend']);
             Route::get('/export', [\App\Http\Controllers\Admin\NotificationController::class, 'apiExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\NotificationController::class, 'apiStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\NotificationController::class, 'apiBulkAction']);

@@ -420,32 +420,71 @@ class NotificationController extends Controller
      */
     private function sendNotifications(array $notificationData): void
     {
+        $result = $this->dispatchPushNotifications($notificationData);
+
+        Log::info('Admin push notifications dispatched', $result);
+    }
+
+    /**
+     * @return array{sent_count: int, failed_count: int, recipient_count: int}
+     */
+    private function dispatchPushNotifications(array $notificationData): array
+    {
         $recipientIds = $this->resolveRecipientUserIds($notificationData);
         if ($recipientIds === []) {
-            return;
+            return ['sent_count' => 0, 'failed_count' => 0, 'recipient_count' => 0];
         }
 
         $sendPush = (bool) ($notificationData['send_push'] ?? true);
-        $type = $this->mapAdminNotificationType($notificationData['type'] ?? 'system');
+        $type = $this->normalizeNotificationType($notificationData['type'] ?? 'system');
+        $category = $notificationData['category'] ?? 'system';
+        $pushNavType = $this->mapPushNavigationType($category);
+        $sent = 0;
+        $failed = 0;
 
         foreach ($recipientIds as $userId) {
             try {
+                $options = [
+                    'category' => $category,
+                    'priority' => $this->mapAdminPriority($notificationData['priority'] ?? 'normal'),
+                    'send_push' => $sendPush,
+                    'is_important' => (bool) ($notificationData['is_important'] ?? false),
+                    'data' => array_filter([
+                        'type' => $pushNavType,
+                        'admin_notification' => true,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ];
+
+                if (! empty($notificationData['action_type'])) {
+                    $options['action_type'] = $notificationData['action_type'];
+                }
+                if (! empty($notificationData['action_url'])) {
+                    $options['action_url'] = $notificationData['action_url'];
+                }
+                if (! empty($notificationData['action_text'])) {
+                    $options['action_text'] = $notificationData['action_text'];
+                }
+                if (! empty($notificationData['story_id'])) {
+                    $options['story_id'] = (int) $notificationData['story_id'];
+                    $options['data']['story_id'] = (string) $notificationData['story_id'];
+                    $options['data']['type'] = 'story';
+                }
+                if (! empty($notificationData['episode_id'])) {
+                    $options['episode_id'] = (int) $notificationData['episode_id'];
+                    $options['data']['episode_id'] = (string) $notificationData['episode_id'];
+                    $options['data']['type'] = 'episode';
+                }
+
                 $this->inAppNotificationService->createNotification(
                     $userId,
                     $type,
                     $notificationData['title'],
                     $notificationData['message'],
-                    [
-                        'category' => 'system',
-                        'priority' => $this->mapAdminPriority($notificationData['priority'] ?? 'normal'),
-                        'send_push' => $sendPush,
-                        'data' => [
-                            'type' => 'system',
-                            'admin_notification' => true,
-                        ],
-                    ]
+                    $options
                 );
+                $sent++;
             } catch (\Exception $e) {
+                $failed++;
                 Log::error('Admin notification send failed', [
                     'user_id' => $userId,
                     'title' => $notificationData['title'] ?? null,
@@ -453,6 +492,12 @@ class NotificationController extends Controller
                 ]);
             }
         }
+
+        return [
+            'sent_count' => $sent,
+            'failed_count' => $failed,
+            'recipient_count' => count($recipientIds),
+        ];
     }
 
     /**
@@ -460,7 +505,9 @@ class NotificationController extends Controller
      */
     private function resolveRecipientUserIds(array $notificationData): array
     {
-        $recipientType = $notificationData['recipient_type'] ?? null;
+        $recipientType = $notificationData['recipient_mode']
+            ?? $notificationData['recipient_type']
+            ?? null;
 
         if ($recipientType === 'all') {
             return User::query()
@@ -470,12 +517,66 @@ class NotificationController extends Controller
                 ->all();
         }
 
-        $recipientId = $notificationData['recipient_id'] ?? $notificationData['user_id'] ?? null;
-        if ($recipientId) {
-            return [(int) $recipientId];
+        if (in_array($recipientType, ['role', 'roles'], true)) {
+            $roles = $notificationData['roles'] ?? [];
+            if (is_string($roles)) {
+                $roles = [$roles];
+            }
+            if ($roles === [] && ! empty($notificationData['role'])) {
+                $roles = [(string) $notificationData['role']];
+            }
+
+            if ($roles === []) {
+                return [];
+            }
+
+            return User::query()
+                ->where('is_active', true)
+                ->whereIn('role', $roles)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        if (in_array($recipientType, ['user', 'users', 'specific'], true)) {
+            $userIds = $notificationData['user_ids'] ?? [];
+            if (! is_array($userIds)) {
+                $userIds = [$userIds];
+            }
+            if ($userIds === [] && ! empty($notificationData['recipient_id'])) {
+                $userIds = [(int) $notificationData['recipient_id']];
+            }
+            if ($userIds === [] && ! empty($notificationData['user_id'])) {
+                $userIds = [(int) $notificationData['user_id']];
+            }
+
+            return collect($userIds)
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
         }
 
         return [];
+    }
+
+    private function normalizeNotificationType(string $type): string
+    {
+        if (array_key_exists($type, InAppNotificationService::TYPES)) {
+            return $type;
+        }
+
+        return $this->mapAdminNotificationType($type);
+    }
+
+    private function mapPushNavigationType(string $category): string
+    {
+        return match ($category) {
+            'content' => 'content',
+            'subscription' => 'subscription',
+            'payment' => 'payment',
+            default => 'system',
+        };
     }
 
     private function mapAdminNotificationType(string $type): string
@@ -923,5 +1024,176 @@ class NotificationController extends Controller
         $raw = (int) $request->input('perPage', $request->input('per_page', 20));
 
         return min(100, max(1, $raw ?: 20));
+    }
+
+    public function apiComposeOptions()
+    {
+        return AdminApiResponse::success([
+            'types' => $this->formatLabelValueMap(InAppNotificationService::TYPES),
+            'categories' => $this->formatLabelValueMap(InAppNotificationService::CATEGORIES),
+            'priorities' => $this->formatLabelValueMap(InAppNotificationService::PRIORITIES),
+            'roles' => [
+                ['value' => User::ROLE_PARENT, 'label' => 'والد'],
+                ['value' => User::ROLE_CHILD, 'label' => 'کودک'],
+                ['value' => User::ROLE_BASIC, 'label' => 'کاربر پایه'],
+                ['value' => User::ROLE_VOICE_ACTOR, 'label' => 'صداپیشه'],
+                ['value' => User::ROLE_ADMIN, 'label' => 'مدیر'],
+                ['value' => User::ROLE_SUPER_ADMIN, 'label' => 'مدیر ارشد'],
+            ],
+            'recipient_modes' => [
+                ['value' => 'all', 'label' => 'همه کاربران فعال'],
+                ['value' => 'roles', 'label' => 'بر اساس نقش کاربری'],
+                ['value' => 'users', 'label' => 'کاربران مشخص'],
+            ],
+            'action_types' => [
+                ['value' => 'button', 'label' => 'دکمه'],
+                ['value' => 'link', 'label' => 'لینک'],
+                ['value' => 'dismiss', 'label' => 'بستن'],
+            ],
+        ]);
+    }
+
+    public function apiSendPush(Request $request)
+    {
+        $validated = $this->validatePushPayload($request);
+        $validated['category'] = $validated['category'] ?? 'system';
+        $validated['priority'] = $validated['priority'] ?? 'normal';
+        $validated['send_push'] = $request->boolean('send_push', true);
+        $validated['is_important'] = $request->boolean('is_important', false);
+
+        $recipientCount = count($this->resolveRecipientUserIds([
+            'recipient_mode' => $validated['recipient_mode'],
+            'roles' => $validated['roles'] ?? [],
+            'user_ids' => $validated['user_ids'] ?? [],
+        ]));
+
+        if ($recipientCount === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ گیرنده‌ای برای ارسال یافت نشد.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        if ($recipientCount > 20000) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تعداد گیرندگان بیش از حد مجاز است. لطفاً فیلتر دقیق‌تری انتخاب کنید.',
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $result = $this->dispatchPushNotifications($validated);
+
+        if ($result['sent_count'] === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ارسال اعلان برای هیچ کاربری موفق نبود.',
+                'error' => 'SERVER_ERROR',
+                'data' => $result,
+            ], 500);
+        }
+
+        $message = "اعلان برای {$result['sent_count']} کاربر ارسال شد.";
+        if ($result['failed_count'] > 0) {
+            $message .= " ({$result['failed_count']} مورد ناموفق)";
+        }
+
+        return AdminApiResponse::success($result, $message);
+    }
+
+    public function apiTestSend(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'type' => 'required|string|in:'.implode(',', array_keys(InAppNotificationService::TYPES)),
+            'category' => 'nullable|string|in:'.implode(',', array_keys(InAppNotificationService::CATEGORIES)),
+            'priority' => 'nullable|string|in:'.implode(',', array_keys(InAppNotificationService::PRIORITIES)),
+            'is_important' => 'nullable|boolean',
+            'send_push' => 'nullable|boolean',
+            'action_type' => 'nullable|string|in:link,button,dismiss',
+            'action_url' => 'nullable|string|max:500',
+            'action_text' => 'nullable|string|max:100',
+            'story_id' => 'nullable|integer|exists:stories,id',
+            'episode_id' => 'nullable|integer|exists:episodes,id',
+        ], [
+            'user_id.required' => 'انتخاب کاربر برای ارسال تست الزامی است.',
+            'title.required' => 'عنوان اعلان الزامی است.',
+            'message.required' => 'متن اعلان الزامی است.',
+        ]);
+
+        $payload = array_merge($validated, [
+            'recipient_mode' => 'users',
+            'user_ids' => [(int) $validated['user_id']],
+            'send_push' => $request->boolean('send_push', true),
+            'is_important' => $request->boolean('is_important', true),
+            'category' => $validated['category'] ?? 'system',
+            'priority' => $validated['priority'] ?? 'high',
+        ]);
+
+        $result = $this->dispatchPushNotifications($payload);
+
+        if ($result['sent_count'] === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ارسال تست ناموفق بود.',
+                'error' => 'SERVER_ERROR',
+            ], 500);
+        }
+
+        return AdminApiResponse::success($result, 'اعلان تست با موفقیت ارسال شد.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validatePushPayload(Request $request): array
+    {
+        return $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:1000',
+            'type' => 'required|string|in:'.implode(',', array_keys(InAppNotificationService::TYPES)),
+            'category' => 'nullable|string|in:'.implode(',', array_keys(InAppNotificationService::CATEGORIES)),
+            'priority' => 'nullable|string|in:'.implode(',', array_keys(InAppNotificationService::PRIORITIES)),
+            'recipient_mode' => 'required|string|in:all,roles,users',
+            'roles' => 'required_if:recipient_mode,roles|array|min:1',
+            'roles.*' => 'string|in:'.implode(',', [
+                User::ROLE_PARENT,
+                User::ROLE_CHILD,
+                User::ROLE_BASIC,
+                User::ROLE_VOICE_ACTOR,
+                User::ROLE_ADMIN,
+                User::ROLE_SUPER_ADMIN,
+            ]),
+            'user_ids' => 'required_if:recipient_mode,users|array|min:1',
+            'user_ids.*' => 'integer|exists:users,id',
+            'is_important' => 'nullable|boolean',
+            'send_push' => 'nullable|boolean',
+            'action_type' => 'nullable|string|in:link,button,dismiss',
+            'action_url' => 'nullable|string|max:500',
+            'action_text' => 'nullable|string|max:100',
+            'story_id' => 'nullable|integer|exists:stories,id',
+            'episode_id' => 'nullable|integer|exists:episodes,id',
+        ], [
+            'title.required' => 'عنوان اعلان الزامی است.',
+            'message.required' => 'متن اعلان الزامی است.',
+            'recipient_mode.required' => 'نوع گیرنده الزامی است.',
+            'roles.required_if' => 'حداقل یک نقش کاربری انتخاب کنید.',
+            'user_ids.required_if' => 'حداقل یک کاربر انتخاب کنید.',
+        ]);
+    }
+
+    /**
+     * @param  array<string, string>  $map
+     * @return list<array{value: string, label: string}>
+     */
+    private function formatLabelValueMap(array $map): array
+    {
+        return collect($map)
+            ->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])
+            ->values()
+            ->all();
     }
 }
