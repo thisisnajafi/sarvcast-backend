@@ -3,49 +3,31 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Services\TelegramNotificationService;
+use App\Services\AdminPushNotificationService;
 
 class SendDailySalesSummary extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'telegram:daily-sales-summary';
+    protected $signature = 'notifications:daily-sales-summary';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Send daily sales summary to Telegram';
+    protected $description = 'Send daily sales summary push to admin users';
 
-    protected $telegramService;
-
-    /**
-     * Create a new command instance.
-     */
-    public function __construct(TelegramNotificationService $telegramService)
-    {
+    public function __construct(
+        protected AdminPushNotificationService $adminPushService
+    ) {
         parent::__construct();
-        $this->telegramService = $telegramService;
     }
 
-    /**
-     * Execute the console command.
-     */
     public function handle()
     {
-        $this->info('Sending daily sales summary to Telegram...');
-        
+        $this->info('Sending daily sales summary to admins...');
+
         try {
-            $success = $this->telegramService->sendDailySalesSummary();
-            
-            if ($success) {
-                $this->info('Daily sales summary sent successfully!');
+            $sent = $this->adminPushService->sendDailySalesSummary();
+
+            if ($sent > 0) {
+                $this->info("Daily sales summary sent to {$sent} admin(s).");
             } else {
-                $this->error('Failed to send daily sales summary.');
+                $this->warn('No admin users received the daily sales summary.');
             }
         } catch (\Exception $e) {
             $this->error('Error sending daily sales summary: ' . $e->getMessage());

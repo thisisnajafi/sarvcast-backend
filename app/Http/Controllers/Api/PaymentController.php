@@ -121,6 +121,12 @@ class PaymentController extends Controller
                     'cancelled_at' => now()->toISOString()
                 ])
             ]);
+
+            $this->notificationService->sendSubscriptionNotification(
+                $payment->user,
+                'payment_cancelled',
+                ['payment_id' => $payment->id]
+            );
             
             return response()->json([
                 'success' => false,
@@ -176,17 +182,14 @@ class PaymentController extends Controller
                             'actual_status' => $updatedSubscription->status
                         ]);
                     } else {
-                        // Send payment success and subscription activated notifications
                         $user = $payment->user;
                         $this->notificationService->sendSubscriptionNotification(
                             $user,
-                            'payment_success',
-                            ['payment_id' => $payment->id, 'subscription_id' => $subscription->id]
-                        );
-                        $this->notificationService->sendSubscriptionNotification(
-                            $user,
                             'subscription_activated',
-                            ['subscription_id' => $subscription->id]
+                            [
+                                'payment_id' => $payment->id,
+                                'subscription_id' => $subscription->id,
+                            ]
                         );
                     }
                 } catch (\Exception $e) {

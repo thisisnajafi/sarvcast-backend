@@ -336,6 +336,11 @@ class NotificationService
                 'title' => 'پرداخت ناموفق',
                 'message' => 'پرداخت شما انجام نشد. لطفاً مجدداً تلاش کنید',
                 'type' => 'error'
+            ],
+            'payment_cancelled' => [
+                'title' => 'پرداخت لغو شد',
+                'message' => 'پرداخت توسط شما لغو شد. در صورت تمایل می‌توانید مجدداً تلاش کنید',
+                'type' => 'info'
             ]
         ];
 

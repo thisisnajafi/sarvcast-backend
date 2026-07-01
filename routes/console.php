@@ -28,10 +28,17 @@ Schedule::job(new ScheduledBackupJob('files', false))
     ->description('Create monthly files backup');
 
 // Schedule daily sales summary at midnight (00:00)
-Schedule::command('telegram:daily-sales-summary')
+Schedule::command('notifications:daily-sales-summary')
     ->dailyAt('00:00')
     ->name('daily-sales-summary')
-    ->description('Send daily sales summary to Telegram')
+    ->description('Send daily sales summary push to admins')
+    ->appendOutputTo(storage_path('logs/scheduler.log'));
+
+// Subscription expiring / expired reminders
+Schedule::command('notifications:check-subscriptions')
+    ->dailyAt('09:00')
+    ->name('check-subscription-notifications')
+    ->description('Send subscription expiring and expired push notifications')
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
 // Prune old activity logs according to retention policy

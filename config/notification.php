@@ -72,6 +72,8 @@ return [
         'retention_days' => env('NOTIFICATION_RETENTION_DAYS', 30),
     ],
 
+    'subscription_expiring_days' => env('SUBSCRIPTION_EXPIRING_DAYS', 3),
+
     'channels' => [
         'default' => ['in_app', 'push'],
         'subscription' => ['in_app', 'push'],

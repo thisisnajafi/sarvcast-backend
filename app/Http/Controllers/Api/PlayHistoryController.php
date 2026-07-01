@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\PlayHistory;
 use App\Models\Episode;
+use App\Services\StoryCompletionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -12,6 +13,9 @@ use Illuminate\Support\Facades\Log;
 
 class PlayHistoryController extends Controller
 {
+    public function __construct(
+        protected StoryCompletionService $storyCompletionService
+    ) {}
     /**
      * Get user's play history
      */
@@ -116,6 +120,14 @@ class PlayHistoryController extends Controller
                 $deviceInfo
             );
 
+            if ($playHistory->completed) {
+                $this->storyCompletionService->checkAndNotify(
+                    $user->id,
+                    $episode->story_id,
+                    $episodeId
+                );
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -192,7 +204,16 @@ class PlayHistoryController extends Controller
                 ], 422);
             }
 
+            $wasCompleted = (bool) $playHistory->completed;
             $updated = $playHistory->updateProgress($durationPlayed, $totalDuration);
+
+            if ($updated && $playHistory->completed && !$wasCompleted) {
+                $this->storyCompletionService->checkAndNotify(
+                    $user->id,
+                    $playHistory->story_id,
+                    $playHistory->episode_id
+                );
+            }
 
             if ($updated) {
                 return response()->json([

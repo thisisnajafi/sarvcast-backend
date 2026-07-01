@@ -5,7 +5,6 @@ namespace App\Providers;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Event;
 
 // Events
 use App\Events\SalesNotificationEvent;
@@ -15,12 +14,12 @@ use App\Events\SubscriptionRenewalEvent;
 use App\Events\SubscriptionCancellationEvent;
 
 // Listeners
-use App\Listeners\SendTelegramSalesNotification;
-use App\Listeners\SendTelegramInfluencerCommissionNotification;
-use App\Listeners\SendTelegramNewUserNotification;
+use App\Listeners\SendAdminPushSalesNotification;
+use App\Listeners\SendAdminPushInfluencerCommissionNotification;
+use App\Listeners\SendAdminPushNewUserNotification;
 use App\Listeners\SendWelcomeInAppNotification;
-use App\Listeners\SendTelegramSubscriptionRenewalNotification;
-use App\Listeners\SendTelegramSubscriptionCancellationNotification;
+use App\Listeners\SendAdminPushSubscriptionRenewalNotification;
+use App\Listeners\SendAdminPushSubscriptionCancellationNotification;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -33,27 +32,26 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
-        
-        // Telegram Notification Events
+
         SalesNotificationEvent::class => [
-            SendTelegramSalesNotification::class,
+            SendAdminPushSalesNotification::class,
         ],
-        
+
         InfluencerCommissionEvent::class => [
-            SendTelegramInfluencerCommissionNotification::class,
+            SendAdminPushInfluencerCommissionNotification::class,
         ],
-        
+
         NewUserRegistrationEvent::class => [
-            SendTelegramNewUserNotification::class,
+            SendAdminPushNewUserNotification::class,
             SendWelcomeInAppNotification::class,
         ],
-        
+
         SubscriptionRenewalEvent::class => [
-            SendTelegramSubscriptionRenewalNotification::class,
+            SendAdminPushSubscriptionRenewalNotification::class,
         ],
-        
+
         SubscriptionCancellationEvent::class => [
-            SendTelegramSubscriptionCancellationNotification::class,
+            SendAdminPushSubscriptionCancellationNotification::class,
         ],
     ];
 
