@@ -367,14 +367,6 @@ foreach ($results as $line) {
     }
 }
 
-function deployResultLineIsFailure(string $line): bool
-{
-    // Case-sensitive: avoid matching benign "Failed to ..." htaccess/dir warnings.
-    return str_contains($line, ' FAILED')
-        || str_contains($line, 'FAILED:')
-        || str_contains($line, 'bootstrap failed:');
-}
-
 http_response_code($hasFailure ? 500 : 200);
 
 echo json_encode([

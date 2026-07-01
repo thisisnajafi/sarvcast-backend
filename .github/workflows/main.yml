@@ -123,6 +123,7 @@ jobs:
           echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do echo "  - $line"; done
 
           if [[ "$HTTP_CODE" != "200" ]] || [[ "$(echo "$BODY" | jq -r '.status // "unknown"')" != "success" ]]; then
+            echo "Raw response: $BODY"
             echo "::error::php artisan config:clear failed on server"
             echo "::endgroup::"
             exit 1
