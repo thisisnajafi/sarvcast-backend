@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -15,8 +16,18 @@ return new class extends Migration
             return;
         }
 
+        // The original table indexed fcm_token (varchar 500). MySQL cannot widen an
+        // indexed utf8mb4 varchar beyond ~768 chars, so drop the index first.
+        $indexes = collect(DB::select('SHOW INDEX FROM user_devices WHERE Column_name = ?', ['fcm_token']));
+        foreach ($indexes->pluck('Key_name')->unique() as $indexName) {
+            if ($indexName === 'PRIMARY') {
+                continue;
+            }
+            DB::statement(sprintf('ALTER TABLE `user_devices` DROP INDEX `%s`', $indexName));
+        }
+
         Schema::table('user_devices', function (Blueprint $table) {
-            $table->string('fcm_token', 2000)->nullable()->change();
+            $table->text('fcm_token')->nullable()->change();
         });
     }
 
@@ -31,6 +42,10 @@ return new class extends Migration
 
         Schema::table('user_devices', function (Blueprint $table) {
             $table->string('fcm_token', 500)->nullable()->change();
+        });
+
+        Schema::table('user_devices', function (Blueprint $table) {
+            $table->index('fcm_token');
         });
     }
 };
