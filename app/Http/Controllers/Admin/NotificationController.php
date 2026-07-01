@@ -7,6 +7,7 @@ use App\Http\Support\AdminApiResponse;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\InAppNotificationService;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -426,28 +427,46 @@ class NotificationController extends Controller
     }
 
     /**
-     * @return array{sent_count: int, failed_count: int, recipient_count: int}
+     * @return array{
+     *   sent_count: int,
+     *   failed_count: int,
+     *   recipient_count: int,
+     *   push_delivered_count: int,
+     *   push_failed_count: int,
+     *   users_without_fcm_token: int
+     * }
      */
     private function dispatchPushNotifications(array $notificationData): array
     {
         $recipientIds = $this->resolveRecipientUserIds($notificationData);
         if ($recipientIds === []) {
-            return ['sent_count' => 0, 'failed_count' => 0, 'recipient_count' => 0];
+            return [
+                'sent_count' => 0,
+                'failed_count' => 0,
+                'recipient_count' => 0,
+                'push_delivered_count' => 0,
+                'push_failed_count' => 0,
+                'users_without_fcm_token' => 0,
+            ];
         }
 
-        $sendPush = (bool) ($notificationData['send_push'] ?? true);
+        $shouldPush = (bool) ($notificationData['send_push'] ?? true);
         $type = $this->normalizeNotificationType($notificationData['type'] ?? 'system');
         $category = $notificationData['category'] ?? 'system';
         $pushNavType = $this->mapPushNavigationType($category);
+        $notificationService = app(NotificationService::class);
         $sent = 0;
         $failed = 0;
+        $pushDelivered = 0;
+        $pushFailed = 0;
+        $withoutToken = 0;
 
         foreach ($recipientIds as $userId) {
             try {
                 $options = [
                     'category' => $category,
                     'priority' => $this->mapAdminPriority($notificationData['priority'] ?? 'normal'),
-                    'send_push' => $sendPush,
+                    'send_push' => false,
                     'is_important' => (bool) ($notificationData['is_important'] ?? false),
                     'data' => array_filter([
                         'type' => $pushNavType,
@@ -483,6 +502,34 @@ class NotificationController extends Controller
                     $options
                 );
                 $sent++;
+
+                if (! $shouldPush) {
+                    continue;
+                }
+
+                $user = User::find($userId);
+                if (! $user) {
+                    $pushFailed++;
+                    continue;
+                }
+
+                if ($this->countUserFcmTokens($userId) === 0) {
+                    $withoutToken++;
+                    $pushFailed++;
+                    continue;
+                }
+
+                $pushData = $options['data'] ?? [];
+                if ($notificationService->sendPushNotification(
+                    $user,
+                    $notificationData['title'],
+                    $notificationData['message'],
+                    $pushData
+                )) {
+                    $pushDelivered++;
+                } else {
+                    $pushFailed++;
+                }
             } catch (\Exception $e) {
                 $failed++;
                 Log::error('Admin notification send failed', [
@@ -497,7 +544,43 @@ class NotificationController extends Controller
             'sent_count' => $sent,
             'failed_count' => $failed,
             'recipient_count' => count($recipientIds),
+            'push_delivered_count' => $pushDelivered,
+            'push_failed_count' => $pushFailed,
+            'users_without_fcm_token' => $withoutToken,
         ];
+    }
+
+    private function countUserFcmTokens(int $userId): int
+    {
+        return (int) DB::table('user_devices')
+            ->where('user_id', $userId)
+            ->whereNotNull('fcm_token')
+            ->where('fcm_token', '!=', '')
+            ->count();
+    }
+
+    private function buildPushDeliveryMessage(array $result, bool $isTest = false): string
+    {
+        $prefix = $isTest ? 'اعلان تست' : 'اعلان';
+
+        if (($result['push_delivered_count'] ?? 0) > 0) {
+            $message = "{$prefix} برای {$result['push_delivered_count']} دستگاه پوش ارسال شد.";
+            if (($result['users_without_fcm_token'] ?? 0) > 0) {
+                $message .= " ({$result['users_without_fcm_token']} کاربر توکن FCM نداشت)";
+            }
+
+            return $message;
+        }
+
+        if (($result['users_without_fcm_token'] ?? 0) > 0) {
+            return "{$prefix} درون‌برنامه‌ای ثبت شد، اما توکن FCM برای این کاربر ثبت نشده است. اپ را باز کنید، وارد شوید و اعلان‌ها را مجاز کنید.";
+        }
+
+        if (($result['sent_count'] ?? 0) > 0) {
+            return "{$prefix} درون‌برنامه‌ای ثبت شد، اما ارسال پوش به FCM ناموفق بود. لاگ سرور را بررسی کنید.";
+        }
+
+        return 'ارسال اعلان ناموفق بود.';
     }
 
     /**
@@ -1094,10 +1177,7 @@ class NotificationController extends Controller
             ], 500);
         }
 
-        $message = "اعلان برای {$result['sent_count']} کاربر ارسال شد.";
-        if ($result['failed_count'] > 0) {
-            $message .= " ({$result['failed_count']} مورد ناموفق)";
-        }
+        $message = $this->buildPushDeliveryMessage($result);
 
         return AdminApiResponse::success($result, $message);
     }
@@ -1143,7 +1223,7 @@ class NotificationController extends Controller
             ], 500);
         }
 
-        return AdminApiResponse::success($result, 'اعلان تست با موفقیت ارسال شد.');
+        return AdminApiResponse::success($result, $this->buildPushDeliveryMessage($result, true));
     }
 
     /**
