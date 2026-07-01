@@ -458,17 +458,31 @@ class NotificationService
     protected function handleFcmSendFailure(User $user, string $token, $response): void
     {
         $body = $response->body();
+        $projectId = $this->firebaseProjectId;
         Log::warning('FCM v1 notification failed for token', [
             'user_id' => $user->id,
+            'firebase_project_id' => $projectId,
             'token_preview' => substr($token, 0, 20) . '...',
             'status' => $response->status(),
             'response' => $body,
         ]);
 
         if (
+            $response->status() === 403
+            && str_contains($body, 'PERMISSION_DENIED')
+            && str_contains($body, 'sarvcast-20d5c')
+        ) {
+            Log::error('FCM project mismatch: server or token still references old Firebase project sarvcast-20d5c. Set FIREBASE_PROJECT_ID=manjiapp-3028e on production, run config:clear, and reinstall the app so devices register new tokens.', [
+                'configured_project_id' => $projectId,
+                'user_id' => $user->id,
+            ]);
+        }
+
+        if (
             str_contains($body, 'UNREGISTERED')
             || str_contains($body, 'INVALID_ARGUMENT')
             || str_contains($body, 'NOT_FOUND')
+            || str_contains($body, 'SenderId mismatch')
         ) {
             $this->removeInvalidFcmToken($user->id, $token);
         }
