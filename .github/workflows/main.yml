@@ -103,8 +103,8 @@ jobs:
 
       - name: Run php artisan migrate --force on server
         run: |
-          echo "::group::php artisan migrate --force (via deploy helper)"
-          echo "Post-deploy on server: extract vendor.zip, php artisan migrate --force, RolePermissionSeeder, cache rebuild"
+          echo "::group::Post-deploy server tasks (via deploy helper)"
+          echo "Post-deploy on server: extract vendor.zip, php artisan config:clear, php artisan firebase:verify --clear-cache, php artisan migrate --force, RolePermissionSeeder, cache rebuild"
 
           set +e
           RESPONSE=$(curl -sS -w "\n%{http_code}" \
@@ -150,6 +150,18 @@ jobs:
             exit 1
           fi
 
+          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "php artisan firebase:verify --clear-cache FAILED"; then
+            echo "::error::php artisan firebase:verify --clear-cache failed on server (check service account JSON and FCM IAM)"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan firebase:verify --clear-cache OK"; then
+            echo "::error::php artisan firebase:verify --clear-cache did not report success"
+            echo "::endgroup::"
+            exit 1
+          fi
+
           if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan migrate --force OK"; then
             echo "::error::php artisan migrate --force did not report success"
             echo "::endgroup::"
@@ -173,7 +185,7 @@ jobs:
             echo "⚠️ $PENDING pending migration(s) reported before migrate step"
           fi
 
-          echo "✅ php artisan migrate --force completed; dependencies installed and caches rebuilt"
+          echo "✅ Post-deploy completed: config cleared, Firebase verified, migrations applied, caches rebuilt"
           echo "::endgroup::"
 
       - name: Verify production site responds

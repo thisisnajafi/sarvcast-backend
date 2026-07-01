@@ -177,6 +177,8 @@ try {
 
     $commands = [
         'clear-compiled'  => [],
+        'config:clear'    => [],
+        'firebase:verify' => ['--clear-cache' => true],
         'migrate:status'  => [],
         'migrate'         => ['--force' => true],
         'stories:sync-episode-status' => [],
@@ -203,14 +205,24 @@ try {
                     continue;
                 }
 
-                $label = $cmd === 'migrate' ? 'php artisan migrate --force' : $cmd;
+                $label = match ($cmd) {
+                    'migrate' => 'php artisan migrate --force',
+                    'firebase:verify' => 'php artisan firebase:verify --clear-cache',
+                    'config:clear' => 'php artisan config:clear',
+                    default => $cmd,
+                };
                 $results[] = $label . ' FAILED (exit ' . $exitCode . ')'
                     . ($output ? ': ' . $output : '');
 
                 continue;
             }
 
-            $label = $cmd === 'migrate' ? 'php artisan migrate --force' : $cmd;
+            $label = match ($cmd) {
+                'migrate' => 'php artisan migrate --force',
+                'firebase:verify' => 'php artisan firebase:verify --clear-cache',
+                'config:clear' => 'php artisan config:clear',
+                default => $cmd,
+            };
             $suffix = $output !== '' ? ': ' . $output : '';
             $results[] = $label . ' OK' . $suffix;
         } catch (Throwable $e) {

@@ -577,6 +577,10 @@ class NotificationController extends Controller
         }
 
         if (($result['sent_count'] ?? 0) > 0) {
+            if (NotificationService::$lastPushFailureCode === 'fcm_iam_denied') {
+                return "{$prefix} درون‌برنامه‌ای ثبت شد، اما سرور اجازه ارسال پوش FCM ندارد. فایل service account را روی سرور آپلود کنید و در Google Cloud نقش Firebase Cloud Messaging API Admin را بدهید، سپس php artisan firebase:verify --clear-cache را اجرا کنید.";
+            }
+
             return "{$prefix} درون‌برنامه‌ای ثبت شد، اما ارسال پوش به FCM ناموفق بود. لاگ سرور را بررسی کنید.";
         }
 

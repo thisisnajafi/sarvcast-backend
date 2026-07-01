@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
+    public static ?string $lastPushFailureCode = null;
+
     protected $firebaseProjectId;
     protected $firebaseAuthService;
     protected $smsApiKey;
@@ -30,6 +32,7 @@ class NotificationService
      */
     public function sendPushNotification(User $user, string $title, string $body, array $data = []): bool
     {
+        self::$lastPushFailureCode = null;
         if (! config('notification.push.enabled', true)) {
             Log::info('Push notifications disabled via config', ['user_id' => $user->id]);
             return false;
@@ -466,6 +469,27 @@ class NotificationService
             'status' => $response->status(),
             'response' => $body,
         ]);
+
+        if (
+            $response->status() === 403
+            && str_contains($body, 'PERMISSION_DENIED')
+            && str_contains($body, 'cloudmessaging.messages.create')
+        ) {
+            $serviceAccountPath = config('notification.firebase.service_account_path');
+            $serviceAccountEmail = null;
+            if ($serviceAccountPath && file_exists($serviceAccountPath)) {
+                $sa = json_decode(file_get_contents($serviceAccountPath), true);
+                $serviceAccountEmail = $sa['client_email'] ?? null;
+            }
+
+            Log::error('FCM IAM permission denied: service account cannot send push messages. In Google Cloud Console (project manjiapp-3028e) grant the service account the role "Firebase Cloud Messaging API Admin", enable the Firebase Cloud Messaging API, then run: php artisan firebase:verify', [
+                'configured_project_id' => $projectId,
+                'service_account_email' => $serviceAccountEmail,
+                'user_id' => $user->id,
+                'iam_troubleshooter' => 'https://console.cloud.google.com/iam-admin/iam?project=' . $projectId,
+            ]);
+            self::$lastPushFailureCode = 'fcm_iam_denied';
+        }
 
         if (
             $response->status() === 403
