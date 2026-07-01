@@ -101,10 +101,88 @@ jobs:
             storage/framework/views/**
             storage/framework/cache/data/**
 
+      - name: Run php artisan config:clear on server
+        run: |
+          echo "::group::php artisan config:clear (via deploy helper)"
+          set +e
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=config_clear" \
+            --max-time 300 --connect-timeout 30)
+          CURL_EXIT=$?
+          set -e
+
+          if [[ "$CURL_EXIT" -ne 0 ]]; then
+            echo "::error::Could not reach deploy helper (config:clear)"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP status: $HTTP_CODE"
+          echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do echo "  - $line"; done
+
+          if [[ "$HTTP_CODE" != "200" ]] || [[ "$(echo "$BODY" | jq -r '.status // "unknown"')" != "success" ]]; then
+            echo "::error::php artisan config:clear failed on server"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan config:clear OK"; then
+            echo "::error::php artisan config:clear did not report success"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          echo "✅ php artisan config:clear completed"
+          echo "::endgroup::"
+
+      - name: Run php artisan firebase:verify --clear-cache on server
+        run: |
+          echo "::group::php artisan firebase:verify --clear-cache (via deploy helper)"
+          set +e
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=firebase_verify" \
+            --max-time 300 --connect-timeout 30)
+          CURL_EXIT=$?
+          set -e
+
+          if [[ "$CURL_EXIT" -ne 0 ]]; then
+            echo "::error::Could not reach deploy helper (firebase:verify)"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP status: $HTTP_CODE"
+          echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do echo "  - $line"; done
+
+          if [[ "$HTTP_CODE" != "200" ]] || [[ "$(echo "$BODY" | jq -r '.status // "unknown"')" != "success" ]]; then
+            echo "::error::php artisan firebase:verify --clear-cache failed on server (check service account JSON and FCM IAM)"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "php artisan firebase:verify --clear-cache FAILED"; then
+            echo "::error::php artisan firebase:verify --clear-cache failed on server"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan firebase:verify --clear-cache OK"; then
+            echo "::error::php artisan firebase:verify --clear-cache did not report success"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          echo "✅ php artisan firebase:verify --clear-cache completed"
+          echo "::endgroup::"
+
       - name: Run php artisan migrate --force on server
         run: |
           echo "::group::Post-deploy server tasks (via deploy helper)"
-          echo "Post-deploy on server: extract vendor.zip, php artisan config:clear, php artisan firebase:verify --clear-cache, php artisan migrate --force, RolePermissionSeeder, cache rebuild"
+          echo "Post-deploy on server: extract vendor.zip, php artisan migrate --force, RolePermissionSeeder, cache rebuild"
 
           set +e
           RESPONSE=$(curl -sS -w "\n%{http_code}" \
@@ -150,18 +228,6 @@ jobs:
             exit 1
           fi
 
-          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "php artisan firebase:verify --clear-cache FAILED"; then
-            echo "::error::php artisan firebase:verify --clear-cache failed on server (check service account JSON and FCM IAM)"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan firebase:verify --clear-cache OK"; then
-            echo "::error::php artisan firebase:verify --clear-cache did not report success"
-            echo "::endgroup::"
-            exit 1
-          fi
-
           if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan migrate --force OK"; then
             echo "::error::php artisan migrate --force did not report success"
             echo "::endgroup::"
@@ -185,7 +251,7 @@ jobs:
             echo "⚠️ $PENDING pending migration(s) reported before migrate step"
           fi
 
-          echo "✅ Post-deploy completed: config cleared, Firebase verified, migrations applied, caches rebuilt"
+          echo "✅ Post-deploy completed: migrations applied, caches rebuilt"
           echo "::endgroup::"
 
       - name: Verify production site responds

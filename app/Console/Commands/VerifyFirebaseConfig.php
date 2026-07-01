@@ -26,13 +26,24 @@ class VerifyFirebaseConfig extends Command
         $ok = true;
         $backendProjectId = (string) config('notification.firebase.project_id');
         $serviceAccountPath = (string) config('notification.firebase.service_account_path');
-        $flutterJsonPath = base_path('../manji-flutter/android/app/google-services.json');
+        $flutterJsonCandidates = array_values(array_filter([
+            base_path('../manji-flutter/android/app/google-services.json'),
+            storage_path('app/google-services.json'),
+        ]));
+        $flutterJsonPath = null;
+        foreach ($flutterJsonCandidates as $candidate) {
+            if (File::exists($candidate)) {
+                $flutterJsonPath = $candidate;
+                break;
+            }
+        }
 
         $this->newLine();
-        $this->info('1. Flutter google-services.json');
-        if (! File::exists($flutterJsonPath)) {
-            $this->error("   Missing: {$flutterJsonPath}");
-            $ok = false;
+        $this->info('1. Flutter google-services.json (optional on server)');
+        if ($flutterJsonPath === null) {
+            $this->warn('   Skipped: google-services.json not found (not required for server push).');
+            $this->line('   Checked: ' . implode(', ', $flutterJsonCandidates));
+            $this->line('   Server push only needs the Firebase service account JSON + FIREBASE_PROJECT_ID.');
         } else {
             $flutterConfig = json_decode(File::get($flutterJsonPath), true);
             $flutterProjectId = $flutterConfig['project_info']['project_id'] ?? null;

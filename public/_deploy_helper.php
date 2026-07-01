@@ -14,6 +14,27 @@ if ($token !== $expected) {
 
 $basePath = dirname(__DIR__);
 $results = [];
+$only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
+$allowedOnlyModes = ['config_clear', 'firebase_verify'];
+
+if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
+    http_response_code(400);
+    die(json_encode([
+        'status' => 'error',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify',
+        'only' => $only,
+    ]));
+}
+
+function artisanCommandLabel(string $cmd): string
+{
+    return match ($cmd) {
+        'migrate' => 'php artisan migrate --force',
+        'firebase:verify' => 'php artisan firebase:verify --clear-cache',
+        'config:clear' => 'php artisan config:clear',
+        default => $cmd,
+    };
+}
 
 function activateHtaccessFiles(string $basePath): array
 {
@@ -175,10 +196,17 @@ try {
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
 
-    $commands = [
+    $onlyCommands = [
+        'config_clear' => [
+            'config:clear' => [],
+        ],
+        'firebase_verify' => [
+            'firebase:verify' => ['--clear-cache' => true],
+        ],
+    ];
+
+    $defaultCommands = [
         'clear-compiled'  => [],
-        'config:clear'    => [],
-        'firebase:verify' => ['--clear-cache' => true],
         'migrate:status'  => [],
         'migrate'         => ['--force' => true],
         'stories:sync-episode-status' => [],
@@ -190,6 +218,12 @@ try {
         'optimize'        => [],
         'storage:link'    => ['--force' => true],
     ];
+
+    $commands = ($only !== '' && isset($onlyCommands[$only]))
+        ? $onlyCommands[$only]
+        : $defaultCommands;
+
+    $isFullDeploy = ! isset($onlyCommands[$only]);
 
     foreach ($commands as $cmd => $args) {
         try {
@@ -205,24 +239,14 @@ try {
                     continue;
                 }
 
-                $label = match ($cmd) {
-                    'migrate' => 'php artisan migrate --force',
-                    'firebase:verify' => 'php artisan firebase:verify --clear-cache',
-                    'config:clear' => 'php artisan config:clear',
-                    default => $cmd,
-                };
+                $label = artisanCommandLabel($cmd);
                 $results[] = $label . ' FAILED (exit ' . $exitCode . ')'
                     . ($output ? ': ' . $output : '');
 
                 continue;
             }
 
-            $label = match ($cmd) {
-                'migrate' => 'php artisan migrate --force',
-                'firebase:verify' => 'php artisan firebase:verify --clear-cache',
-                'config:clear' => 'php artisan config:clear',
-                default => $cmd,
-            };
+            $label = artisanCommandLabel($cmd);
             $suffix = $output !== '' ? ': ' . $output : '';
             $results[] = $label . ' OK' . $suffix;
         } catch (Throwable $e) {
@@ -236,7 +260,7 @@ try {
         }
     }
 
-    if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+    if ($isFullDeploy && \Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
         $results[] = 'Verified activity_logs table exists';
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('activity_logs', 'event_uuid')) {
@@ -248,15 +272,17 @@ try {
         $results[] = 'activity_logs verification FAILED: table missing after migrate';
     }
 
-    $auditViewExists = \App\Models\Permission::query()->where('name', 'audit.view')->exists();
-    $auditExportExists = \App\Models\Permission::query()->where('name', 'audit.export')->exists();
-    if ($auditViewExists && $auditExportExists) {
-        $results[] = 'Verified audit.view and audit.export permissions exist';
-    } else {
-        $results[] = 'audit permissions verification FAILED: run RolePermissionSeeder';
+    if ($isFullDeploy) {
+        $auditViewExists = \App\Models\Permission::query()->where('name', 'audit.view')->exists();
+        $auditExportExists = \App\Models\Permission::query()->where('name', 'audit.export')->exists();
+        if ($auditViewExists && $auditExportExists) {
+            $results[] = 'Verified audit.view and audit.export permissions exist';
+        } else {
+            $results[] = 'audit permissions verification FAILED: run RolePermissionSeeder';
+        }
     }
 
-    if (isset($_GET['generate_bootstrap_secret']) && $_GET['generate_bootstrap_secret'] === '1') {
+    if ($isFullDeploy && isset($_GET['generate_bootstrap_secret']) && $_GET['generate_bootstrap_secret'] === '1') {
         try {
             $secret = app(\App\Services\LocalImportAccessService::class)->generateBootstrapSecret();
             $localImportPayload = [
@@ -269,7 +295,7 @@ try {
         }
     }
 
-    if (isset($_GET['issue_local_import_token']) && $_GET['issue_local_import_token'] === '1') {
+    if ($isFullDeploy && isset($_GET['issue_local_import_token']) && $_GET['issue_local_import_token'] === '1') {
         try {
             $phone = isset($_GET['phone']) ? trim((string) $_GET['phone']) : null;
             $issued = app(\App\Services\LocalImportAccessService::class)->issueToken(
@@ -337,6 +363,7 @@ http_response_code($hasFailure ? 500 : 200);
 
 echo json_encode([
     'status' => $hasFailure ? 'error' : 'success',
+    'only' => $only !== '' ? $only : 'full',
     'results' => $results,
     'local_import' => $localImportPayload ?? null,
     'time' => date('c'),
