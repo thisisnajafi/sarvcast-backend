@@ -60,6 +60,8 @@ class Story extends Model
         'rating',
         'tags',
         'status',
+        'is_featured',
+        'featured_order',
         'published_at',
         'moderation_status',
         'moderator_id',
@@ -219,6 +221,8 @@ class Story extends Model
             'completion_rate' => 'decimal:2',
             'is_premium' => 'boolean',
             'is_completely_free' => 'boolean',
+            'is_featured' => 'boolean',
+            'featured_order' => 'integer',
             'allow_resubmission' => 'boolean',
             'use_image_timeline' => 'boolean',
         ];
@@ -413,6 +417,14 @@ class Story extends Model
     public function scopePublished($query)
     {
         return $query->where('status', 'published');
+    }
+
+    /**
+     * Scope a query to only include featured stories.
+     */
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true)->orderBy('featured_order');
     }
 
     /**

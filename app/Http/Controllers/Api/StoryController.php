@@ -337,10 +337,18 @@ class StoryController extends Controller
         $stories = Story::with(['category', 'narrator', 'author', 'director', 'people', 'characters.voiceActor'])
             ->withSum('episodes', 'play_count')
             ->published()
-            ->where('is_featured', true)
-            ->orderBy('featured_order', 'asc')
+            ->featured()
             ->limit($limit)
             ->get();
+
+        if ($stories->isEmpty()) {
+            $stories = Story::with(['category', 'narrator', 'author', 'director', 'people', 'characters.voiceActor'])
+                ->withSum('episodes', 'play_count')
+                ->published()
+                ->orderByDesc('play_count')
+                ->limit($limit)
+                ->get();
+        }
 
         return response()->json([
             'success' => true,

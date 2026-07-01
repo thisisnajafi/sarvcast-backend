@@ -503,10 +503,23 @@ class NotificationService
         }
 
         if (
+            str_contains($body, 'SENDER_ID_MISMATCH')
+            || str_contains($body, 'SenderId mismatch')
+        ) {
+            self::$lastPushFailureCode = 'fcm_stale_token';
+            Log::warning('FCM stale device token removed (SenderId mismatch — app needs a fresh token from manjiapp-3028e)', [
+                'user_id' => $user->id,
+                'configured_project_id' => $projectId,
+                'token_preview' => substr($token, 0, 20) . '...',
+            ]);
+        }
+
+        if (
             str_contains($body, 'UNREGISTERED')
             || str_contains($body, 'INVALID_ARGUMENT')
             || str_contains($body, 'NOT_FOUND')
             || str_contains($body, 'SenderId mismatch')
+            || str_contains($body, 'SENDER_ID_MISMATCH')
         ) {
             $this->removeInvalidFcmToken($user->id, $token);
         }

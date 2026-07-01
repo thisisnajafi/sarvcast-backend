@@ -573,10 +573,14 @@ class NotificationController extends Controller
         }
 
         if (($result['users_without_fcm_token'] ?? 0) > 0) {
-            return "{$prefix} درون‌برنامه‌ای ثبت شد، اما توکن FCM برای این کاربر ثبت نشده است. اپ را باز کنید، وارد شوید و اعلان‌ها را مجاز کنید.";
+            return "{$prefix} درون‌برنامه‌ای ثبت شد، اما توکن FCM برای این کاربر ثبت نشده است. اپ مانجی را باز کنید، وارد شوید و اعلان‌ها را مجاز کنید تا توکن جدید ثبت شود.";
         }
 
         if (($result['sent_count'] ?? 0) > 0) {
+            if (NotificationService::$lastPushFailureCode === 'fcm_stale_token') {
+                return "{$prefix} درون‌برنامه‌ای ثبت شد، اما توکن پوش قدیمی (پروژه Firebase قبلی) حذف شد. اپ را باز کنید، دوباره وارد شوید و اعلان‌ها را مجاز کنید، سپس دوباره تست کنید.";
+            }
+
             if (NotificationService::$lastPushFailureCode === 'fcm_iam_denied') {
                 return "{$prefix} درون‌برنامه‌ای ثبت شد، اما سرور اجازه ارسال پوش FCM ندارد. فایل service account را روی سرور آپلود کنید و در Google Cloud نقش Firebase Cloud Messaging API Admin را بدهید، سپس php artisan firebase:verify --clear-cache را اجرا کنید.";
             }
