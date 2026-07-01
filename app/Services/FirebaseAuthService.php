@@ -15,22 +15,28 @@ class FirebaseAuthService
     public function getAccessToken(): ?string
     {
         $cacheKey = 'firebase_access_token';
+        $cache = $this->cache();
 
-        // Try to get from cache first
-        $token = Cache::get($cacheKey);
+        $token = $cache->get($cacheKey);
         if ($token) {
             return $token;
         }
 
-        // Generate new token
         $token = $this->generateAccessToken();
 
         if ($token) {
-            // Cache for 50 minutes (tokens expire after 1 hour)
-            Cache::put($cacheKey, $token, now()->addMinutes(50));
+            $cache->put($cacheKey, $token, now()->addMinutes(50));
         }
 
         return $token;
+    }
+
+    /**
+     * Use file cache so FCM works even when the default cache driver (e.g. database) is unavailable.
+     */
+    protected function cache(): \Illuminate\Contracts\Cache\Repository
+    {
+        return Cache::store('file');
     }
 
     /**

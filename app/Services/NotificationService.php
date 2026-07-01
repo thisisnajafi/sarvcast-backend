@@ -30,6 +30,16 @@ class NotificationService
      */
     public function sendPushNotification(User $user, string $title, string $body, array $data = []): bool
     {
+        if (! config('notification.push.enabled', true)) {
+            Log::info('Push notifications disabled via config', ['user_id' => $user->id]);
+            return false;
+        }
+
+        if (! $this->userAllowsPushNotifications($user)) {
+            Log::info('Push notifications disabled by user preference', ['user_id' => $user->id]);
+            return false;
+        }
+
         try {
             // Get user's FCM tokens
             $fcmTokens = $this->getUserFcmTokens($user);
@@ -109,11 +119,7 @@ class NotificationService
                 if ($response->successful()) {
                     $successCount++;
                 } else {
-                    Log::warning('FCM v1 notification failed for token', [
-                        'token_preview' => substr($token, 0, 20) . '...',
-                        'status' => $response->status(),
-                        'response' => $response->body(),
-                    ]);
+                    $this->handleFcmSendFailure($user, $token, $response);
                 }
             }
 
@@ -425,6 +431,64 @@ class NotificationService
         }
 
         return $results;
+    }
+
+    /**
+     * Whether the user has push notifications enabled in preferences.
+     */
+    public function userAllowsPushNotifications(User $user): bool
+    {
+        $preferences = $user->preferences ?? [];
+
+        if (! is_array($preferences)) {
+            return true;
+        }
+
+        return ($preferences['push_notifications_enabled'] ?? true) === true;
+    }
+
+    /**
+     * Log and optionally remove invalid FCM tokens.
+     */
+    protected function handleFcmSendFailure(User $user, string $token, $response): void
+    {
+        $body = $response->body();
+        Log::warning('FCM v1 notification failed for token', [
+            'user_id' => $user->id,
+            'token_preview' => substr($token, 0, 20) . '...',
+            'status' => $response->status(),
+            'response' => $body,
+        ]);
+
+        if (
+            str_contains($body, 'UNREGISTERED')
+            || str_contains($body, 'INVALID_ARGUMENT')
+            || str_contains($body, 'NOT_FOUND')
+        ) {
+            $this->removeInvalidFcmToken($user->id, $token);
+        }
+    }
+
+    /**
+     * Remove a stale device token after FCM rejects it.
+     */
+    protected function removeInvalidFcmToken(int $userId, string $token): void
+    {
+        try {
+            $deleted = \DB::table('user_devices')
+                ->where('user_id', $userId)
+                ->where('fcm_token', $token)
+                ->delete();
+
+            if ($deleted > 0) {
+                Log::info('Removed invalid FCM token', [
+                    'user_id' => $userId,
+                    'token_preview' => substr($token, 0, 20) . '...',
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to remove invalid FCM token: ' . $e->getMessage());
+        }
     }
 
     /**

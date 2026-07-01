@@ -88,8 +88,10 @@ class InAppNotificationService
                         $pushData['type'] = 'payment';
                     }
 
-                    // Send push notification
-                    $this->notificationService->sendPushNotification($user, $title, $message, $pushData);
+                    // Send push notification (unless explicitly disabled)
+                    if ($options['send_push'] ?? true) {
+                        $this->notificationService->sendPushNotification($user, $title, $message, $pushData);
+                    }
                 } catch (\Exception $e) {
                     // Log but don't fail if push notification fails
                     Log::warning('Failed to send push notification', [

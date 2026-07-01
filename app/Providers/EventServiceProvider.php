@@ -18,6 +18,7 @@ use App\Events\SubscriptionCancellationEvent;
 use App\Listeners\SendTelegramSalesNotification;
 use App\Listeners\SendTelegramInfluencerCommissionNotification;
 use App\Listeners\SendTelegramNewUserNotification;
+use App\Listeners\SendWelcomeInAppNotification;
 use App\Listeners\SendTelegramSubscriptionRenewalNotification;
 use App\Listeners\SendTelegramSubscriptionCancellationNotification;
 
@@ -44,6 +45,7 @@ class EventServiceProvider extends ServiceProvider
         
         NewUserRegistrationEvent::class => [
             SendTelegramNewUserNotification::class,
+            SendWelcomeInAppNotification::class,
         ],
         
         SubscriptionRenewalEvent::class => [

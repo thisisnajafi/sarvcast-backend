@@ -142,10 +142,47 @@ class StoryEditorRepository
 
         return [
             'episode' => $parsed,
+            'raw_markdown' => $raw,
             'master_characters' => $masterCharacters,
             'invalid_character_ids' => $invalidIds,
             'file_path' => $episode['file_path'],
             'last_modified' => date('c', filemtime($episode['file_path'])),
+        ];
+    }
+
+    /**
+     * @return array{episode: array, backup_path: string, master_characters: array, invalid_character_ids: array, file_path: string, last_modified: string}|null
+     */
+    public function saveRawMarkdown(string $storyId, string $episodeId, string $rawMarkdown): ?array
+    {
+        $storyDir = $this->findStoryDirectory($storyId);
+        if ($storyDir === null) {
+            return null;
+        }
+
+        $episode = $this->findEpisode($storyDir, $episodeId);
+        if ($episode === null) {
+            return null;
+        }
+
+        $backupPath = $this->createBackup($episode['file_path']);
+        $normalized = str_replace(["\r\n", "\r"], "\n", $rawMarkdown);
+
+        if (file_put_contents($episode['file_path'], $normalized) === false) {
+            throw new \RuntimeException('Failed to write episode markdown file.');
+        }
+
+        $reparsed = $this->markdownService->parse($normalized);
+        $masterCharacters = $this->readMasterCharacters($storyDir);
+
+        return [
+            'episode' => $reparsed,
+            'raw_markdown' => $normalized,
+            'master_characters' => $masterCharacters,
+            'invalid_character_ids' => $this->findInvalidCharacterIds($reparsed['characters'] ?? [], $masterCharacters),
+            'file_path' => $episode['file_path'],
+            'last_modified' => date('c', filemtime($episode['file_path'])),
+            'backup_path' => $backupPath,
         ];
     }
 

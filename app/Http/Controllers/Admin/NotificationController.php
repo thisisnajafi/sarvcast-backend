@@ -6,14 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Http\Support\AdminApiResponse;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\InAppNotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Mail;
 
 class NotificationController extends Controller
 {
+    public function __construct(
+        protected InAppNotificationService $inAppNotificationService
+    ) {
+    }
+
     /**
      * Display a listing of notifications.
      */
@@ -412,25 +418,82 @@ class NotificationController extends Controller
     /**
      * Send notifications through various channels.
      */
-    private function sendNotifications($notificationData)
+    private function sendNotifications(array $notificationData): void
     {
-        // In a real application, you would implement actual sending logic here
-        // For now, we'll just simulate the process
-        
-        if ($notificationData['send_email']) {
-            // Send email notification
-            // Mail::to($user)->send(new NotificationMail($notificationData));
+        $recipientIds = $this->resolveRecipientUserIds($notificationData);
+        if ($recipientIds === []) {
+            return;
         }
 
-        if ($notificationData['send_sms']) {
-            // Send SMS notification
-            // SMS::send($user->phone, $notificationData['message']);
+        $sendPush = (bool) ($notificationData['send_push'] ?? true);
+        $type = $this->mapAdminNotificationType($notificationData['type'] ?? 'system');
+
+        foreach ($recipientIds as $userId) {
+            try {
+                $this->inAppNotificationService->createNotification(
+                    $userId,
+                    $type,
+                    $notificationData['title'],
+                    $notificationData['message'],
+                    [
+                        'category' => 'system',
+                        'priority' => $this->mapAdminPriority($notificationData['priority'] ?? 'normal'),
+                        'send_push' => $sendPush,
+                        'data' => [
+                            'type' => 'system',
+                            'admin_notification' => true,
+                        ],
+                    ]
+                );
+            } catch (\Exception $e) {
+                Log::error('Admin notification send failed', [
+                    'user_id' => $userId,
+                    'title' => $notificationData['title'] ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function resolveRecipientUserIds(array $notificationData): array
+    {
+        $recipientType = $notificationData['recipient_type'] ?? null;
+
+        if ($recipientType === 'all') {
+            return User::query()
+                ->where('is_active', true)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
         }
 
-        if ($notificationData['send_push']) {
-            // Send push notification
-            // PushNotification::send($user, $notificationData);
+        $recipientId = $notificationData['recipient_id'] ?? $notificationData['user_id'] ?? null;
+        if ($recipientId) {
+            return [(int) $recipientId];
         }
+
+        return [];
+    }
+
+    private function mapAdminNotificationType(string $type): string
+    {
+        return match ($type) {
+            'alert', 'marketing' => 'warning',
+            'user' => 'info',
+            default => 'system',
+        };
+    }
+
+    private function mapAdminPriority(string $priority): string
+    {
+        return match ($priority) {
+            'urgent', 'high' => 'high',
+            'low' => 'low',
+            default => 'normal',
+        };
     }
 
     // API Methods

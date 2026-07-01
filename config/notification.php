@@ -15,7 +15,7 @@ return [
         'server_key' => env('FIREBASE_SERVER_KEY'),
 
         // FCM v1 API Configuration (Recommended)
-        'project_id' => env('FIREBASE_PROJECT_ID', 'manji-20d5c'),
+        'project_id' => env('FIREBASE_PROJECT_ID', 'manjiapp-3028e'),
         'service_account_path' => (function() {
             $path = env('FIREBASE_SERVICE_ACCOUNT_PATH');
             if (!$path) {

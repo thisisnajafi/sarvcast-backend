@@ -253,11 +253,62 @@ class StoryEditorController extends Controller
         return AdminApiResponse::success($data);
     }
 
-    public function update(UpdateStoryEpisodeRequest $request, string $storyId, string $episodeId)
+    public function update(Request $request, string $storyId, string $episodeId)
     {
+        if ($request->has('raw_markdown')) {
+            $validated = $request->validate([
+                'raw_markdown' => ['required', 'string'],
+            ]);
+
+            try {
+                $before = $this->repository->getEpisode($storyId, $episodeId);
+                $result = $this->repository->saveRawMarkdown(
+                    $storyId,
+                    $episodeId,
+                    $validated['raw_markdown'],
+                );
+
+                if ($result === null) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'قسمت یافت نشد.',
+                        'error' => 'NOT_FOUND',
+                    ], 404);
+                }
+
+                if ($before !== null) {
+                    $this->activityLog->recordStoryEditorEpisodeSaved(
+                        $request,
+                        $storyId,
+                        $episodeId,
+                        $before['episode'] ?? [],
+                        $result['episode'] ?? [],
+                        $result['backup_path'] ?? null,
+                    );
+                }
+
+                return AdminApiResponse::success($result, 'قسمت با موفقیت ذخیره شد. نسخه پشتیبان ایجاد شد.');
+            } catch (\Throwable $e) {
+                Log::error('Story editor save raw markdown failed', [
+                    'story_id' => $storyId,
+                    'episode_id' => $episodeId,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'خطا در ذخیره فایل قسمت.',
+                ], 500);
+            }
+        }
+
+        $structuredRequest = UpdateStoryEpisodeRequest::createFrom($request);
+        $structuredRequest->setContainer(app())->setRedirector(app('redirect'));
+        $structuredRequest->validateResolved();
+
         try {
             $before = $this->repository->getEpisode($storyId, $episodeId);
-            $payload = $request->validated();
+            $payload = $structuredRequest->validated();
             $result = $this->repository->saveEpisode($storyId, $episodeId, $payload);
 
             if ($result === null) {
