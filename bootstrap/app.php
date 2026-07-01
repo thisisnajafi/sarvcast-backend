@@ -40,6 +40,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 if ($e instanceof \Illuminate\Database\QueryException) {
                     $sql = $e->getMessage();
+                    \Illuminate\Support\Facades\Log::error('API database error', [
+                        'url' => $request->fullUrl(),
+                        'method' => $request->method(),
+                        'sql' => $sql,
+                    ]);
                     if ($request->bearerToken() && str_contains($sql, 'personal_access_tokens')) {
                         return response()->json([
                             'success' => false,

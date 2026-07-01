@@ -10,9 +10,12 @@ use App\Models\User;
 use App\Models\PlayHistory;
 use App\Models\Favorite;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class MobileController extends Controller
 {
@@ -561,28 +564,71 @@ class MobileController extends Controller
         ]);
 
         $user = Auth::user();
-        
-        // Store device information (you might want to create a devices table)
-        DB::table('user_devices')->updateOrInsert(
-            [
+
+        $deviceId = Str::limit((string) $validated['device_id'], 100, '');
+        $deviceModel = isset($validated['device_model'])
+            ? Str::limit((string) $validated['device_model'], 100, '')
+            : null;
+        $osVersion = isset($validated['os_version'])
+            ? Str::limit((string) $validated['os_version'], 50, '')
+            : null;
+        $appVersion = isset($validated['app_version'])
+            ? Str::limit((string) $validated['app_version'], 20, '')
+            : null;
+        $fcmToken = isset($validated['fcm_token'])
+            ? Str::limit((string) $validated['fcm_token'], 2000, '')
+            : null;
+
+        try {
+            $now = now();
+            $exists = DB::table('user_devices')
+                ->where('user_id', $user->id)
+                ->where('device_id', $deviceId)
+                ->exists();
+
+            if ($exists) {
+                DB::table('user_devices')
+                    ->where('user_id', $user->id)
+                    ->where('device_id', $deviceId)
+                    ->update([
+                        'device_type' => $validated['device_type'],
+                        'device_model' => $deviceModel,
+                        'os_version' => $osVersion,
+                        'app_version' => $appVersion,
+                        'fcm_token' => $fcmToken,
+                        'last_active' => $now,
+                        'updated_at' => $now,
+                    ]);
+            } else {
+                DB::table('user_devices')->insert([
+                    'user_id' => $user->id,
+                    'device_id' => $deviceId,
+                    'device_type' => $validated['device_type'],
+                    'device_model' => $deviceModel,
+                    'os_version' => $osVersion,
+                    'app_version' => $appVersion,
+                    'fcm_token' => $fcmToken,
+                    'last_active' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        } catch (QueryException $e) {
+            Log::error('Device registration failed', [
                 'user_id' => $user->id,
-                'device_id' => $validated['device_id'],
-            ],
-            [
-                'device_type' => $validated['device_type'],
-                'device_model' => $validated['device_model'],
-                'os_version' => $validated['os_version'],
-                'app_version' => $validated['app_version'],
-                'fcm_token' => $validated['fcm_token'],
-                'last_active' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
+                'device_id' => $deviceId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'ثبت دستگاه ناموفق بود. لطفاً دوباره تلاش کنید.',
+            ], 503);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'دستگاه ثبت شد'
+            'message' => 'دستگاه ثبت شد',
         ]);
     }
 

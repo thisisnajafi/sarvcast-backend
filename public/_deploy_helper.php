@@ -280,6 +280,20 @@ try {
         } else {
             $results[] = 'activity_logs verification FAILED: table missing after migrate';
         }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('user_devices')) {
+            $results[] = 'Verified user_devices table exists';
+            $requiredDeviceColumns = ['user_id', 'device_id', 'device_type', 'fcm_token', 'last_active'];
+            foreach ($requiredDeviceColumns as $column) {
+                if (\Illuminate\Support\Facades\Schema::hasColumn('user_devices', $column)) {
+                    $results[] = 'Verified user_devices.' . $column . ' column exists';
+                } else {
+                    $results[] = 'user_devices verification FAILED: ' . $column . ' column missing';
+                }
+            }
+        } else {
+            $results[] = 'user_devices verification FAILED: table missing after migrate';
+        }
     }
 
     if ($isFullDeploy) {
