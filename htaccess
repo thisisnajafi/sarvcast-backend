@@ -1,8 +1,14 @@
-# Laravel .htaccess Configuration
-# This file provides comprehensive security, performance, and routing configuration
+# Laravel — document root is the project folder (not public/).
+# Route "/" to the front controller; everything else goes through public/.
 
-# Enable URL rewriting and redirect all requests to public directory
 <IfModule mod_rewrite.c>
-   RewriteEngine On
-   RewriteRule ^(.*)$ public/$1 [L]
+    RewriteEngine On
+
+    # Avoid 403 when "/" maps to the public/ directory (directory listing disabled).
+    RewriteRule ^$ public/index.php [L]
+
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
+
+DirectoryIndex index.php index.html

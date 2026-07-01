@@ -77,15 +77,22 @@ class MonitoringService
     private function checkRedis(): array
     {
         try {
+            if (config('database.redis.client') === 'phpredis' && ! extension_loaded('redis')) {
+                return [
+                    'status' => 'degraded',
+                    'message' => 'Redis PHP extension is not installed on this server',
+                ];
+            }
+
             Redis::ping();
             $responseTime = $this->measureRedisTime();
-            
+
             return [
                 'status' => 'healthy',
                 'response_time' => $responseTime,
                 'message' => 'Redis connection successful',
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return [
                 'status' => 'unhealthy',
                 'message' => 'Redis connection failed: ' . $e->getMessage(),

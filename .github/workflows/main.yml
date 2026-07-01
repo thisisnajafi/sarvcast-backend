@@ -176,6 +176,29 @@ jobs:
           echo "✅ php artisan migrate --force completed; dependencies installed and caches rebuilt"
           echo "::endgroup::"
 
+      - name: Verify production site responds
+        run: |
+          set -euo pipefail
+          for path in "/" "/api/v1/health"; do
+            code=$(curl -sS -o /tmp/manji-body.txt -w "%{http_code}" \
+              "${{ env.SITE_URL }}${path}" --max-time 60)
+            echo "${{ env.SITE_URL }}${path} → HTTP ${code}"
+            if [[ "${path}" == "/" && "${code}" == "403" ]]; then
+              echo "::error::Homepage still returns 403 — check root .htaccess routes / to public/index.php"
+              exit 1
+            fi
+            if [[ "${path}" == "/" && ! "${code}" =~ ^(200|302|301)$ ]]; then
+              echo "::error::Homepage returned unexpected HTTP ${code}"
+              exit 1
+            fi
+            if [[ "${path}" == "/api/v1/health" && ! "${code}" =~ ^(200|503)$ ]]; then
+              echo "::error::Health endpoint returned HTTP ${code}"
+              head -c 500 /tmp/manji-body.txt || true
+              exit 1
+            fi
+          done
+          echo "OK: site smoke checks passed"
+
       # Token must be created ON THE SERVER (CI runner has no MySQL). Set env
       # ISSUE_LOCAL_IMPORT_TOKEN to "true" to run after each deploy (rotates token every deploy).
       - name: Issue local import API token on server

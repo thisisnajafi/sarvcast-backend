@@ -15,6 +15,33 @@ if ($token !== $expected) {
 $basePath = dirname(__DIR__);
 $results = [];
 
+function activateHtaccessFiles(string $basePath): array
+{
+    $activated = [];
+    $pairs = [
+        [$basePath . '/htaccess', $basePath . '/.htaccess'],
+        [$basePath . '/public/htaccess', $basePath . '/public/.htaccess'],
+    ];
+
+    foreach ($pairs as [$source, $destination]) {
+        if (!is_file($source)) {
+            continue;
+        }
+
+        if (!is_file($destination) || @md5_file($source) !== @md5_file($destination)) {
+            if (@copy($source, $destination)) {
+                $activated[] = 'Activated ' . str_replace($basePath . '/', '', $destination);
+            } else {
+                $activated[] = 'Failed to activate ' . str_replace($basePath . '/', '', $destination);
+            }
+        }
+    }
+
+    return $activated;
+}
+
+$results = array_merge($results, activateHtaccessFiles($basePath));
+
 function extractVendorArchive(string $basePath): array
 {
     $zipPath = $basePath . '/vendor.zip';

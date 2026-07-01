@@ -2,8 +2,9 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
 use Carbon\Carbon;
 use App\Helpers\JalaliHelper;
 use App\Models\Episode;
@@ -32,6 +33,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->environment('production')) {
+            $appUrl = config('app.url');
+            if (is_string($appUrl) && $appUrl !== '') {
+                URL::forceRootUrl(rtrim($appUrl, '/'));
+            }
+            URL::forceScheme('https');
+        }
+
         // Disable all caching if configured
         if (env('DISABLE_ALL_CACHING', false)) {
             $this->disableAllCaching();
