@@ -9,7 +9,7 @@ class SmsSystemTemplateSeeder extends Seeder
 {
     public function run(): void
     {
-        $bodyId = (int) config('services.melipayamk.templates.verification', 372382);
+        $bodyId = (int) config('services.melipayamk.templates.verification', 485459);
 
         SmsTemplate::updateOrCreate(
             ['slug' => 'verification-otp'],

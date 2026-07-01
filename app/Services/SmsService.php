@@ -266,7 +266,7 @@ class SmsService
     }
 
     /**
-     * Generate and send OTP code using Melipayamak template pattern 372382
+     * Generate and send OTP code using Melipayamak template pattern 485459
      * Falls back to regular SMS if template fails
      */
     public function sendOtp(string $phoneNumber, string $purpose = 'verification'): array
@@ -277,7 +277,7 @@ class SmsService
         $cacheKey = "otp_{$phoneNumber}_{$purpose}";
         Cache::put($cacheKey, $otpCode, 300); // 5 minutes
 
-        // Try template SMS first (pattern 372382)
+        // Try template SMS first (pattern 485459)
         $templateResult = $this->sendOtpWithTemplate($phoneNumber, $otpCode, $purpose);
 
         if ($templateResult['success']) {
@@ -304,7 +304,7 @@ class SmsService
     }
 
     /**
-     * Send OTP using Melipayamak template pattern 372382
+     * Send OTP using Melipayamak template pattern 485459
      * Template message: "کد ورود شما: {0} این کد 5 دقیقه اعتبار دارد مانجی"
      */
     private function sendOtpWithTemplate(string $phoneNumber, string $otpCode, string $purpose): array
@@ -346,14 +346,14 @@ class SmsService
                 'template_message' => "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد مانجی"
             ];
 
-            // Send SMS with template pattern 372382
+            // Send SMS with template pattern 485459
             // Parameters: text (semicolon-separated string), to (phone), bodyId (pattern code)
             $text = $otpCode; // Single parameter, no need for semicolon
             $response = $sms->sendByBaseNumber($text, $phoneNumber, $templateId);
             $json = json_decode($response);
 
             // Log the response
-            Log::info('SMS sent via Melipayamk template pattern 372382 (GitHub package fallback)', [
+            Log::info('SMS sent via Melipayamk template pattern 485459 (GitHub package fallback)', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $sendingData,
                 'response' => $json,
@@ -428,7 +428,7 @@ class SmsService
     }
 
     /**
-     * Generate 6-digit OTP code for template pattern 372382
+     * Generate 6-digit OTP code for template pattern 485459
      */
     private function generateOtpCode(): string
     {
@@ -650,7 +650,7 @@ class SmsService
             return (int) $template->melipayamak_body_id;
         }
 
-        return (int) config('services.melipayamk.templates.verification', 372382);
+        return (int) config('services.melipayamk.templates.verification', 485459);
     }
 
     /**

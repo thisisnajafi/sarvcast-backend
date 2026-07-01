@@ -87,20 +87,20 @@ class SmsDeliveryPollingTest extends TestCase
             'is_active' => true,
         ]);
 
-        config(['services.melipayamk.templates.verification' => 372382]);
+        config(['services.melipayamk.templates.verification' => 485459]);
 
         $this->assertSame(999888, app(SmsService::class)->resolveVerificationTemplateId());
     }
 
     public function test_system_template_seeder_creates_verification_otp_template(): void
     {
-        config(['services.melipayamk.templates.verification' => 372382]);
+        config(['services.melipayamk.templates.verification' => 485459]);
 
         $this->seed(SmsSystemTemplateSeeder::class);
 
         $this->assertDatabaseHas('sms_templates', [
             'slug' => 'verification-otp',
-            'melipayamak_body_id' => 372382,
+            'melipayamak_body_id' => 485459,
             'category' => 'system',
             'is_active' => true,
         ]);

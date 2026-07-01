@@ -107,9 +107,9 @@ class SmsTemplateIntegrationTest extends TestCase
     /** @test */
     public function it_uses_correct_template_id()
     {
-        $templateId = config('services.melipayamk.templates.verification', 371085);
-        
-        $this->assertEquals(371085, $templateId);
+        $templateId = config('services.melipayamk.templates.verification', 485459);
+
+        $this->assertEquals(485459, $templateId);
     }
 
     /** @test */
