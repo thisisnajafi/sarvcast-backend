@@ -559,7 +559,7 @@ class MobileController extends Controller
             'device_type' => 'required|string|in:android,ios',
             'device_model' => 'nullable|string',
             'os_version' => 'nullable|string',
-            'app_version' => 'nullable|string',
+            'app_version' => 'nullable|string|max:64',
             'fcm_token' => 'nullable|string',
         ]);
 
@@ -573,10 +573,10 @@ class MobileController extends Controller
             ? Str::limit((string) $validated['os_version'], 50, '')
             : null;
         $appVersion = isset($validated['app_version'])
-            ? Str::limit((string) $validated['app_version'], 20, '')
+            ? Str::limit((string) $validated['app_version'], 64, '')
             : null;
         $fcmToken = isset($validated['fcm_token'])
-            ? Str::limit((string) $validated['fcm_token'], 2000, '')
+            ? Str::limit((string) $validated['fcm_token'], 4096, '')
             : null;
 
         try {
@@ -638,17 +638,17 @@ class MobileController extends Controller
     public function updateFcmToken(Request $request)
     {
         $validated = $request->validate([
-            'device_id' => 'required|string',
-            'fcm_token' => 'required|string',
+            'device_id' => 'required|string|max:100',
+            'fcm_token' => 'required|string|max:2000',
         ]);
 
         $user = Auth::user();
-        
+
         DB::table('user_devices')
             ->where('user_id', $user->id)
-            ->where('device_id', $validated['device_id'])
+            ->where('device_id', Str::limit((string) $validated['device_id'], 100, ''))
             ->update([
-                'fcm_token' => $validated['fcm_token'],
+                'fcm_token' => Str::limit((string) $validated['fcm_token'], 2000, ''),
                 'updated_at' => now(),
             ]);
 
