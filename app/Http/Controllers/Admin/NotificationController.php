@@ -181,7 +181,7 @@ class NotificationController extends Controller
     public function show(Notification $notification)
     {
         $notification->load(['sender', 'recipient']);
-        
+
         // Get related notifications
         $relatedNotifications = Notification::where('type', $notification->type)
             ->where('id', '!=', $notification->id)
@@ -597,7 +597,7 @@ class NotificationController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error creating notification: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در ایجاد اعلان: ' . $e->getMessage(),
@@ -658,7 +658,7 @@ class NotificationController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating notification: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در به‌روزرسانی اعلان: ' . $e->getMessage(),
@@ -676,7 +676,7 @@ class NotificationController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error deleting notification: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در حذف اعلان: ' . $e->getMessage(),
@@ -825,7 +825,7 @@ class NotificationController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error sending notification: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در ارسال اعلان: ' . $e->getMessage(),

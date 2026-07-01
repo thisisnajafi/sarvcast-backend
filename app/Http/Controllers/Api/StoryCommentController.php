@@ -70,7 +70,12 @@ class StoryCommentController extends Controller
             ]);
 
             $query = $story->comments()
-                ->with(['user', 'replies.user'])
+                ->with([
+                    'user',
+                    'replies' => function ($q) {
+                        $q->approved()->visible()->with('user')->oldest();
+                    },
+                ])
                 ->topLevel(); // Only get top-level comments
 
             if (!$includePending) {
