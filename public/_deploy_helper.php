@@ -268,16 +268,18 @@ try {
         }
     }
 
-    if ($isFullDeploy && \Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
-        $results[] = 'Verified activity_logs table exists';
+    if ($isFullDeploy) {
+        if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+            $results[] = 'Verified activity_logs table exists';
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('activity_logs', 'event_uuid')) {
-            $results[] = 'Verified activity_logs.event_uuid column exists';
+            if (\Illuminate\Support\Facades\Schema::hasColumn('activity_logs', 'event_uuid')) {
+                $results[] = 'Verified activity_logs.event_uuid column exists';
+            } else {
+                $results[] = 'activity_logs verification FAILED: event_uuid column missing';
+            }
         } else {
-            $results[] = 'activity_logs verification FAILED: event_uuid column missing';
+            $results[] = 'activity_logs verification FAILED: table missing after migrate';
         }
-    } else {
-        $results[] = 'activity_logs verification FAILED: table missing after migrate';
     }
 
     if ($isFullDeploy) {
