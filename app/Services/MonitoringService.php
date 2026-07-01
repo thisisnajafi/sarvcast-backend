@@ -37,12 +37,31 @@ class MonitoringService
         // Check external services
         $health['checks']['external_services'] = $this->checkExternalServices();
         
-        // Determine overall status
-        $failedChecks = array_filter($health['checks'], function($check) {
-            return $check['status'] === 'unhealthy';
-        });
-        
-        if (!empty($failedChecks)) {
+        // Determine overall status (supports nested external service checks).
+        $hasUnhealthy = false;
+        foreach ($health['checks'] as $check) {
+            if (isset($check['status'])) {
+                if ($check['status'] === 'unhealthy') {
+                    $hasUnhealthy = true;
+                    break;
+                }
+
+                continue;
+            }
+
+            if (! is_array($check)) {
+                continue;
+            }
+
+            foreach ($check as $nested) {
+                if (is_array($nested) && ($nested['status'] ?? null) === 'unhealthy') {
+                    $hasUnhealthy = true;
+                    break 2;
+                }
+            }
+        }
+
+        if ($hasUnhealthy) {
             $health['status'] = 'unhealthy';
         }
 
