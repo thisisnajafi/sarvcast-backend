@@ -36,6 +36,14 @@ function artisanCommandLabel(string $cmd): string
     };
 }
 
+function deployResultLineIsFailure(string $line): bool
+{
+    // Case-sensitive: avoid matching benign "Failed to ..." htaccess/dir warnings.
+    return str_contains($line, ' FAILED')
+        || str_contains($line, 'FAILED:')
+        || str_contains($line, 'bootstrap failed:');
+}
+
 function activateHtaccessFiles(string $basePath): array
 {
     $activated = [];
@@ -53,7 +61,7 @@ function activateHtaccessFiles(string $basePath): array
             if (@copy($source, $destination)) {
                 $activated[] = 'Activated ' . str_replace($basePath . '/', '', $destination);
             } else {
-                $activated[] = 'Failed to activate ' . str_replace($basePath . '/', '', $destination);
+                $activated[] = 'Warn: could not activate ' . str_replace($basePath . '/', '', $destination);
             }
         }
     }
@@ -150,7 +158,7 @@ foreach ($dirs as $dir) {
         if (@mkdir($full, 0755, true)) {
             $results[] = 'Created ' . $dir;
         } else {
-            $results[] = 'Failed to create ' . $dir;
+            $results[] = 'Warn: could not create ' . $dir;
         }
     }
 }
@@ -353,10 +361,18 @@ if (function_exists('opcache_reset')) {
 
 $hasFailure = false;
 foreach ($results as $line) {
-    if (stripos($line, 'FAILED') !== false) {
+    if (deployResultLineIsFailure($line)) {
         $hasFailure = true;
         break;
     }
+}
+
+function deployResultLineIsFailure(string $line): bool
+{
+    // Case-sensitive: avoid matching benign "Failed to ..." htaccess/dir warnings.
+    return str_contains($line, ' FAILED')
+        || str_contains($line, 'FAILED:')
+        || str_contains($line, 'bootstrap failed:');
 }
 
 http_response_code($hasFailure ? 500 : 200);
