@@ -86,24 +86,6 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
-      - name: Reset stale FTP sync state
-        run: |
-          set -euo pipefail
-          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
-            set ftp:passive-mode true;
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set ssl:check-hostname no;
-            set net:timeout 120;
-            set net:max-retries 5;
-            set cmd:fail-exit no;
-            cd /;
-            rm -f .ftp-deploy-sync-state.json;
-            bye;
-          "
-          echo "OK: removed stale .ftp-deploy-sync-state.json (if present)"
-
       - name: Prepare critical FTP directories
         run: |
           set -euo pipefail

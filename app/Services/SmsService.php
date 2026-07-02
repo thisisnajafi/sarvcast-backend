@@ -17,8 +17,14 @@ class SmsService
 
     public function __construct()
     {
-        $this->apiToken = config('melipayamak.password');
         $this->username = config('melipayamak.username');
+        $this->apiToken = config('melipayamak.password');
+    }
+
+    private function ensureCredentials(): void
+    {
+        $this->username ??= config('melipayamak.username');
+        $this->apiToken ??= config('melipayamak.password');
 
         if (empty($this->apiToken) || empty($this->username)) {
             throw new \RuntimeException('Melipayamak credentials are not configured. Please set MELIPAYAMAK_USERNAME and MELIPAYAMAK_PASSWORD in your .env file.');
@@ -32,6 +38,7 @@ class SmsService
     public function sendSms(string $to, string $message): array
     {
         try {
+            $this->ensureCredentials();
             // Use Melipayamak library exactly as documented
             $username = $this->username;
             $password = $this->apiToken;
@@ -110,6 +117,8 @@ class SmsService
      */
     public function sendSmsWithTemplate(string $to, int $templateId, array $parameters = [], array $logContext = []): array
     {
+        $this->ensureCredentials();
+
         // Use procedural PHP method as primary (it works!)
         try {
             $text = implode(';', $parameters);
@@ -271,6 +280,8 @@ class SmsService
      */
     public function sendOtp(string $phoneNumber, string $purpose = 'verification'): array
     {
+        $this->ensureCredentials();
+
         $otpCode = $this->generateOtpCode();
 
         // Store OTP in cache for 5 minutes
@@ -659,6 +670,8 @@ class SmsService
     public function checkDeliveryStatus(string|int $recId): array
     {
         try {
+            $this->ensureCredentials();
+
             $data = [
                 'username' => $this->username,
                 'password' => $this->apiToken,

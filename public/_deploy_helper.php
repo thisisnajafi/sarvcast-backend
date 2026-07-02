@@ -192,6 +192,34 @@ if (is_dir($viewsDir)) {
     }
 }
 
+// config:clear only needs to drop cached config files — no full Laravel bootstrap
+// (avoids SmsService and other services failing when artisan loads commands).
+if ($only === 'config_clear') {
+    $zipPath = $basePath . '/vendor.zip';
+    if (is_file($zipPath) && is_file($basePath . '/vendor/autoload.php')) {
+        if (@unlink($zipPath)) {
+            $results[] = 'Removed vendor.zip after extraction';
+        }
+    }
+
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+        $results[] = 'OPcache cleared';
+    }
+
+    $results[] = 'php artisan config:clear OK (file cache removed without Laravel bootstrap)';
+
+    http_response_code(200);
+    echo json_encode([
+        'status' => 'success',
+        'only' => 'config_clear',
+        'results' => $results,
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
+}
+
 // 4. Bootstrap Laravel and run artisan commands
 $localImportPayload = null;
 

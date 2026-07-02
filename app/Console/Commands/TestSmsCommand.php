@@ -21,18 +21,7 @@ class TestSmsCommand extends Command
      */
     protected $description = 'Test SMS sending functionality';
 
-    protected $smsService;
-
-    public function __construct(SmsService $smsService)
-    {
-        parent::__construct();
-        $this->smsService = $smsService;
-    }
-
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    public function handle(SmsService $smsService): int
     {
         $phone = $this->argument('phone') ?: '09123456789';
         $message = $this->option('message') ?: 'Test SMS from Manji';
@@ -47,12 +36,13 @@ class TestSmsCommand extends Command
 
         try {
             if ($method === 'otp') {
-                $result = $this->smsService->sendOtp($phone, 'test');
+                $result = $smsService->sendOtp($phone, 'test');
             } elseif ($method === 'regular') {
-                $result = $this->smsService->sendSms($phone, $message);
+                $result = $smsService->sendSms($phone, $message);
             } else {
                 $this->error("Invalid method. Use 'otp' or 'regular'");
-                return;
+
+                return self::FAILURE;
             }
 
             $endTime = microtime(true);
@@ -70,7 +60,6 @@ class TestSmsCommand extends Command
             }
 
             $this->info("Response: " . json_encode($result, JSON_PRETTY_PRINT));
-
         } catch (\Exception $e) {
             $endTime = microtime(true);
             $duration = round($endTime - $startTime, 2);
@@ -80,5 +69,7 @@ class TestSmsCommand extends Command
             $this->error("Error: " . $e->getMessage());
             $this->error("Type: " . get_class($e));
         }
+
+        return self::SUCCESS;
     }
 }
