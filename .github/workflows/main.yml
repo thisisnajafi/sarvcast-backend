@@ -144,10 +144,11 @@ jobs:
             set net:max-retries 5;
             set net:reconnect-interval-base 10;
             set mirror:parallel-directories false;
+            set mirror:no-empty-dirs false;
             set cmd:fail-exit yes;
             lcd .;
             cd /;
-            mirror -R --parallel=3 --only-newer --create-empty-dirs \
+            mirror -R --parallel=3 --only-newer \
               --exclude-glob .git/ \
               --exclude-glob .git/** \
               --exclude-glob node_modules/** \
