@@ -105,6 +105,28 @@ jobs:
             storage/framework/views/**
             storage/framework/cache/data/**
 
+      - name: Prepare production .env for server
+        env:
+          PRODUCTION_DOTENV: ${{ secrets.PRODUCTION_DOTENV }}
+          PRODUCTION_APP_KEY: ${{ secrets.PRODUCTION_APP_KEY }}
+          PRODUCTION_DB_DATABASE: ${{ secrets.PRODUCTION_DB_DATABASE }}
+          PRODUCTION_DB_USERNAME: ${{ secrets.PRODUCTION_DB_USERNAME }}
+          PRODUCTION_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+          PRODUCTION_MELIPAYAMAK_USERNAME: ${{ secrets.PRODUCTION_MELIPAYAMAK_USERNAME }}
+          PRODUCTION_MELIPAYAMAK_PASSWORD: ${{ secrets.PRODUCTION_MELIPAYAMAK_PASSWORD }}
+          PRODUCTION_CAFEBAZAAR_API_KEY: ${{ secrets.PRODUCTION_CAFEBAZAAR_API_KEY }}
+          PRODUCTION_MYKET_API_KEY: ${{ secrets.PRODUCTION_MYKET_API_KEY }}
+          PRODUCTION_ZARINPAL_MERCHANT_ID: ${{ secrets.PRODUCTION_ZARINPAL_MERCHANT_ID }}
+        run: bash scripts/prepare-production-env.sh
+
+      - name: Upload production .env to server
+        run: |
+          set -euo pipefail
+          curl -sSf --ftp-create-dirs -T deploy-upload/.env \
+            --user "${{ env.FTP_USERNAME }}:${{ env.FTP_PASSWORD }}" \
+            "ftp://${{ env.FTP_SERVER }}/.env"
+          echo "Uploaded production .env ($(wc -c < deploy-upload/.env) bytes)"
+
       - name: Run php artisan config:clear on server
         run: |
           echo "::group::php artisan config:clear (via deploy helper)"
@@ -227,6 +249,12 @@ jobs:
             exit 1
           fi
 
+          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "Database connection FAILED"; then
+            echo "::error::Server database credentials are wrong — set GitHub secret PRODUCTION_DOTENV (full .env) or PRODUCTION_DB_PASSWORD"
+            echo "::endgroup::"
+            exit 1
+          fi
+
           if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "php artisan migrate --force FAILED"; then
             echo "::error::php artisan migrate --force failed on server"
             echo "::endgroup::"
@@ -235,6 +263,12 @@ jobs:
 
           if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan migrate --force OK"; then
             echo "::error::php artisan migrate --force did not report success"
+            echo "::endgroup::"
+            exit 1
+          fi
+
+          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "Database connection OK"; then
+            echo "::error::Deploy helper did not confirm database connection"
             echo "::endgroup::"
             exit 1
           fi

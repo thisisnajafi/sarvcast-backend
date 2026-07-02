@@ -286,6 +286,29 @@ try {
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
 
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $results[] = 'Database connection OK';
+    } catch (Throwable $dbError) {
+        $results[] = 'Database connection FAILED: ' . $dbError->getMessage()
+            . ' — upload correct production .env (PRODUCTION_DOTENV / PRODUCTION_DB_PASSWORD in CI)';
+
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+            $results[] = 'OPcache cleared';
+        }
+
+        http_response_code(500);
+        echo json_encode([
+            'status' => 'error',
+            'only' => $only !== '' ? $only : 'full',
+            'results' => $results,
+            'local_import' => null,
+            'time' => date('c'),
+        ]);
+        exit;
+    }
+
     $onlyCommands = [
         'config_clear' => [
             'config:clear' => [],
@@ -318,8 +341,24 @@ try {
         : $defaultCommands;
 
     $isFullDeploy = ! isset($onlyCommands[$only]);
+    $deployBlocked = false;
+    $skipAfterMigrateFail = [
+        'stories:sync-episode-status',
+        'db:seed',
+        'queue:work',
+        'config:cache',
+        'route:cache',
+        'view:cache',
+        'optimize',
+    ];
 
     foreach ($commands as $cmd => $args) {
+        if ($deployBlocked && in_array($cmd, $skipAfterMigrateFail, true)) {
+            $results[] = artisanCommandLabel($cmd) . ' skipped: migrate step failed';
+
+            continue;
+        }
+
         try {
             $exitCode = $kernel->call($cmd, $args);
             $output = trim($kernel->output());
@@ -337,6 +376,10 @@ try {
                 $results[] = $label . ' FAILED (exit ' . $exitCode . ')'
                     . ($output ? ': ' . $output : '');
 
+                if ($cmd === 'migrate') {
+                    $deployBlocked = true;
+                }
+
                 continue;
             }
 
@@ -351,6 +394,10 @@ try {
             }
 
             $results[] = $cmd . ' FAILED: ' . $e->getMessage();
+
+            if ($cmd === 'migrate') {
+                $deployBlocked = true;
+            }
         }
     }
 
