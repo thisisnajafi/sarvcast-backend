@@ -18,6 +18,32 @@ strip_wrapping_quotes() {
   printf '%s' "$value"
 }
 
+# Values with # must be quoted in .env or everything after # is treated as a comment.
+quote_env_value() {
+  local v="$1"
+  v="${v//\\/\\\\}"
+  v="${v//\"/\\\"}"
+  printf '"%s"' "$v"
+}
+
+needs_env_quoting() {
+  local v="$1"
+  [[ "$v" == *"#"* ]] || [[ "$v" == *" "* ]] || [[ "$v" == *$'\t'* ]] || [[ "$v" == *'"'* ]]
+}
+
+set_db_password_line() {
+  local raw="$1"
+  local formatted="$raw"
+
+  if needs_env_quoting "$raw"; then
+    formatted="$(quote_env_value "$raw")"
+  fi
+
+  local escaped
+  escaped="$(escape_sed_replacement "$formatted")"
+  sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${escaped}|" "$OUT" || true
+}
+
 apply_ci_db_overrides() {
   if [ ! -f "$OUT" ]; then
     return 1
@@ -35,11 +61,32 @@ apply_ci_db_overrides() {
     sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${db_user}|" "$OUT" || true
   fi
 
-  if [ -n "${PRODUCTION_DB_PASSWORD:-}" ]; then
-    local db_pass
-    db_pass="$(escape_sed_replacement "$(strip_wrapping_quotes "$PRODUCTION_DB_PASSWORD")")"
-    sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${db_pass}|" "$OUT" || true
-    echo "prepare-production-env: applied PRODUCTION_DB_PASSWORD from CI secret"
+  local effective_db_pass="${PRODUCTION_DB_PASSWORD:-${FTP_PASSWORD:-}}"
+  if [ -n "$effective_db_pass" ]; then
+    set_db_password_line "$(strip_wrapping_quotes "$effective_db_pass")"
+    if [ -n "${PRODUCTION_DB_PASSWORD:-}" ]; then
+      echo "prepare-production-env: applied PRODUCTION_DB_PASSWORD from CI secret"
+    else
+      echo "prepare-production-env: applied DB_PASSWORD from FTP_PASSWORD (CI env)"
+    fi
+  fi
+}
+
+ensure_db_password_env_safe() {
+  if [ ! -f "$OUT" ]; then
+    return 1
+  fi
+
+  local line raw
+  line="$(grep -m1 '^DB_PASSWORD=' "$OUT" || true)"
+  [ -z "$line" ] && return 1
+
+  raw="${line#DB_PASSWORD=}"
+  raw="$(strip_wrapping_quotes "$raw")"
+
+  if needs_env_quoting "$raw"; then
+    set_db_password_line "$raw"
+    echo "prepare-production-env: quoted DB_PASSWORD for safe .env parsing (# and special chars)"
   fi
 }
 
@@ -48,10 +95,8 @@ normalize_production_env() {
     return 1
   fi
 
-  # Strip wrapping quotes from DB_PASSWORD (common cause of MySQL access denied).
-  sed -i -E "s/^DB_PASSWORD=['\"](.*)['\"]\s*$/DB_PASSWORD=\\1/" "$OUT" || true
+  # Do NOT strip quotes from DB_PASSWORD — passwords with # break when unquoted in .env.
 
-  # Ensure production URLs when refreshing an old server file.
   sed -i 's|^APP_URL=.*|APP_URL=https://my.manjiapp.ir|' "$OUT" || true
   sed -i 's|^APP_ENV=.*|APP_ENV=production|' "$OUT" || true
   sed -i 's|^APP_DEBUG=.*|APP_DEBUG=false|' "$OUT" || true
@@ -80,6 +125,11 @@ validate_env_file() {
 
   if ! grep -q '^DB_PASSWORD=.\+' "$OUT"; then
     echo "prepare-production-env: ERROR — DB_PASSWORD is missing"
+    exit 1
+  fi
+
+  if grep -E '^DB_PASSWORD=[^"\047].*#' "$OUT" >/dev/null 2>&1; then
+    echo "prepare-production-env: ERROR — DB_PASSWORD contains # but is not quoted (Laravel would truncate the password)"
     exit 1
   fi
 
@@ -113,7 +163,7 @@ if [ -n "${PRODUCTION_DOTENV:-}" ]; then
   normalize_production_env
   echo "prepare-production-env: wrote .env from PRODUCTION_DOTENV secret"
 elif [ "${DOWNLOAD_SERVER_ENV:-}" = "true" ] && download_server_env; then
-  if [ -z "${PRODUCTION_DB_PASSWORD:-}" ]; then
+  if [ -z "${PRODUCTION_DB_PASSWORD:-}" ] && [ -z "${FTP_PASSWORD:-}" ]; then
     echo "prepare-production-env: warning — using server DB_PASSWORD as-is; set PRODUCTION_DB_PASSWORD if migrate fails"
   fi
 elif [ -f "$TEMPLATE" ]; then
@@ -177,5 +227,6 @@ fi
 
 normalize_production_env
 apply_ci_db_overrides
+ensure_db_password_env_safe
 validate_env_file
 echo "prepare-production-env: OK ($(wc -c < "$OUT") bytes)"
