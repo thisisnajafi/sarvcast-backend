@@ -31,8 +31,9 @@ needs_env_quoting() {
   [[ "$v" == *"#"* ]] || [[ "$v" == *" "* ]] || [[ "$v" == *$'\t'* ]] || [[ "$v" == *'"'* ]]
 }
 
-set_db_password_line() {
-  local raw="$1"
+set_env_line() {
+  local key="$1"
+  local raw="$2"
   local formatted="$raw"
 
   if needs_env_quoting "$raw"; then
@@ -41,53 +42,66 @@ set_db_password_line() {
 
   local escaped
   escaped="$(escape_sed_replacement "$formatted")"
-  sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${escaped}|" "$OUT" || true
+  sed -i "s|^${key}=.*|${key}=${escaped}|" "$OUT" || true
 }
 
-apply_ci_db_overrides() {
+SENSITIVE_ENV_KEYS=(
+  DB_PASSWORD
+  MELIPAYAMAK_PASSWORD
+)
+
+apply_ci_secret_overrides() {
   if [ ! -f "$OUT" ]; then
     return 1
   fi
 
   if [ -n "${PRODUCTION_DB_DATABASE:-}" ]; then
-    local db_name
-    db_name="$(escape_sed_replacement "$(strip_wrapping_quotes "$PRODUCTION_DB_DATABASE")")"
-    sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${db_name}|" "$OUT" || true
+    set_env_line DB_DATABASE "$(strip_wrapping_quotes "$PRODUCTION_DB_DATABASE")"
   fi
 
   if [ -n "${PRODUCTION_DB_USERNAME:-}" ]; then
-    local db_user
-    db_user="$(escape_sed_replacement "$(strip_wrapping_quotes "$PRODUCTION_DB_USERNAME")")"
-    sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${db_user}|" "$OUT" || true
+    set_env_line DB_USERNAME "$(strip_wrapping_quotes "$PRODUCTION_DB_USERNAME")"
   fi
 
   local effective_db_pass="${PRODUCTION_DB_PASSWORD:-${FTP_PASSWORD:-}}"
   if [ -n "$effective_db_pass" ]; then
-    set_db_password_line "$(strip_wrapping_quotes "$effective_db_pass")"
+    set_env_line DB_PASSWORD "$(strip_wrapping_quotes "$effective_db_pass")"
     if [ -n "${PRODUCTION_DB_PASSWORD:-}" ]; then
       echo "prepare-production-env: applied PRODUCTION_DB_PASSWORD from CI secret"
     else
       echo "prepare-production-env: applied DB_PASSWORD from FTP_PASSWORD (CI env)"
     fi
   fi
+
+  local effective_sms_pass="${PRODUCTION_MELIPAYAMAK_PASSWORD:-${FTP_PASSWORD:-}}"
+  if [ -n "$effective_sms_pass" ]; then
+    set_env_line MELIPAYAMAK_PASSWORD "$(strip_wrapping_quotes "$effective_sms_pass")"
+    if [ -n "${PRODUCTION_MELIPAYAMAK_PASSWORD:-}" ]; then
+      echo "prepare-production-env: applied PRODUCTION_MELIPAYAMAK_PASSWORD from CI secret"
+    else
+      echo "prepare-production-env: applied MELIPAYAMAK_PASSWORD from FTP_PASSWORD (CI env)"
+    fi
+  fi
 }
 
-ensure_db_password_env_safe() {
+ensure_sensitive_env_values_quoted() {
   if [ ! -f "$OUT" ]; then
     return 1
   fi
 
-  local line raw
-  line="$(grep -m1 '^DB_PASSWORD=' "$OUT" || true)"
-  [ -z "$line" ] && return 1
+  local key line raw
+  for key in "${SENSITIVE_ENV_KEYS[@]}"; do
+    line="$(grep -m1 "^${key}=" "$OUT" || true)"
+    [ -z "$line" ] && continue
 
-  raw="${line#DB_PASSWORD=}"
-  raw="$(strip_wrapping_quotes "$raw")"
+    raw="${line#${key}=}"
+    raw="$(strip_wrapping_quotes "$raw")"
 
-  if needs_env_quoting "$raw"; then
-    set_db_password_line "$raw"
-    echo "prepare-production-env: quoted DB_PASSWORD for safe .env parsing (# and special chars)"
-  fi
+    if needs_env_quoting "$raw"; then
+      set_env_line "$key" "$raw"
+      echo "prepare-production-env: quoted ${key} for safe .env parsing (# and special chars)"
+    fi
+  done
 }
 
 normalize_production_env() {
@@ -130,6 +144,11 @@ validate_env_file() {
 
   if grep -E '^DB_PASSWORD=[^"\047].*#' "$OUT" >/dev/null 2>&1; then
     echo "prepare-production-env: ERROR — DB_PASSWORD contains # but is not quoted (Laravel would truncate the password)"
+    exit 1
+  fi
+
+  if grep -E '^MELIPAYAMAK_PASSWORD=[^"\047].*#' "$OUT" >/dev/null 2>&1; then
+    echo "prepare-production-env: ERROR — MELIPAYAMAK_PASSWORD contains # but is not quoted (SMS auth will fail)"
     exit 1
   fi
 
@@ -226,7 +245,7 @@ else
 fi
 
 normalize_production_env
-apply_ci_db_overrides
-ensure_db_password_env_safe
+apply_ci_secret_overrides
+ensure_sensitive_env_values_quoted
 validate_env_file
 echo "prepare-production-env: OK ($(wc -c < "$OUT") bytes)"

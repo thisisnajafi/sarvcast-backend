@@ -32,6 +32,52 @@ class SmsService
     }
 
     /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function redactSendingData(array $data): array
+    {
+        if (isset($data['password'])) {
+            $password = (string) $data['password'];
+            $data['password'] = '[redacted]';
+            $data['password_length'] = strlen($password);
+            $data['password_has_hash'] = str_contains($password, '#');
+        }
+
+        return $data;
+    }
+
+    private function melipayamakResponseSucceeded(mixed $json): bool
+    {
+        if (! is_object($json)) {
+            return false;
+        }
+
+        if (isset($json->RetStatus) && (int) $json->RetStatus === 1) {
+            return true;
+        }
+
+        $messageId = $json->Value ?? null;
+
+        return is_numeric($messageId) && (int) $messageId > 0;
+    }
+
+    private function melipayamakResponseError(mixed $json): string
+    {
+        if (! is_object($json)) {
+            return 'Unknown error';
+        }
+
+        $status = $json->StrRetStatus ?? $json->RetStatus ?? 'Unknown error';
+
+        if (($json->StrRetStatus ?? null) === 'InvalidData' && ! str_contains((string) $this->apiToken, '#')) {
+            return $status.' — check MELIPAYAMAK_PASSWORD in .env (values with # must be quoted)';
+        }
+
+        return (string) $status;
+    }
+
+    /**
      * Send SMS using Melipayamk service
      * Based on: https://github.com/Melipayamak/melipayamak-php
      */
@@ -71,16 +117,19 @@ class SmsService
             // Log the response
             Log::info('SMS sent via Melipayamk', [
                 'melipayamak_username' => $this->username,
-                'sending_data' => $sendingData,
+                'sending_data' => $this->redactSendingData($sendingData),
                 'response' => $json,
                 'raw_response' => $response,
                 'message_id' => $json->Value ?? null
             ]);
 
+            $success = $this->melipayamakResponseSucceeded($json);
+
             return [
-                'success' => isset($json->RetStatus) && $json->RetStatus == 1,
+                'success' => $success,
                 'response' => $json,
-                'message_id' => $json->Value ?? $json->StrRetStatus ?? null
+                'message_id' => $json->Value ?? $json->StrRetStatus ?? null,
+                'error' => $success ? null : $this->melipayamakResponseError($json),
             ];
 
         } catch (\Exception $e) {
@@ -96,7 +145,7 @@ class SmsService
 
             Log::error('SMS sending failed via Melipayamak library', [
                 'melipayamak_username' => $this->username,
-                'sending_data' => $sendingData,
+                'sending_data' => $this->redactSendingData($sendingData),
                 'error' => $e->getMessage(),
                 'error_type' => get_class($e),
                 'timeout_possible' => strpos($e->getMessage(), 'timeout') !== false || strpos($e->getMessage(), 'Timeout') !== false,
@@ -169,16 +218,17 @@ class SmsService
             // Log the response
             Log::info('SMS sent via Melipayamk with template (GitHub package fallback)', [
                 'melipayamak_username' => $this->username,
-                'sending_data' => $sendingData,
+                'sending_data' => $this->redactSendingData($sendingData),
                 'response' => $json,
                 'raw_response' => $response,
                 'message_id' => $json->Value ?? null
             ]);
 
             return $this->finalizeTemplateResult($to, $templateId, $parameters, [
-                'success' => isset($json->RetStatus) && $json->RetStatus == 1,
+                'success' => $this->melipayamakResponseSucceeded($json),
                 'response' => $json,
-                'message_id' => $json->Value ?? $json->StrRetStatus ?? null
+                'message_id' => $json->Value ?? $json->StrRetStatus ?? null,
+                'error' => $this->melipayamakResponseSucceeded($json) ? null : $this->melipayamakResponseError($json),
             ], $logContext);
 
         } catch (\Exception $e) {
@@ -195,7 +245,7 @@ class SmsService
 
             Log::error('Both procedural and GitHub package methods failed in sendSmsWithTemplate', [
                 'melipayamak_username' => $this->username,
-                'sending_data' => $sendingData,
+                'sending_data' => $this->redactSendingData($sendingData),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -366,13 +416,13 @@ class SmsService
             // Log the response
             Log::info('SMS sent via Melipayamk template pattern 485459 (GitHub package fallback)', [
                 'melipayamak_username' => $this->username,
-                'sending_data' => $sendingData,
+                'sending_data' => $this->redactSendingData($sendingData),
                 'response' => $json,
                 'raw_response' => $response,
                 'message_id' => $json->Value ?? null
             ]);
 
-            $success = isset($json->RetStatus) && $json->RetStatus == 1;
+            $success = $this->melipayamakResponseSucceeded($json);
 
             if ($success) {
                 // Store OTP attempt in database
@@ -383,7 +433,8 @@ class SmsService
                 'success' => $success,
                 'response' => $json,
                 'message_id' => $json->Value ?? $json->StrRetStatus ?? null,
-                'method' => 'template_fallback'
+                'method' => 'template_fallback',
+                'error' => $success ? null : $this->melipayamakResponseError($json),
             ];
 
         } catch (\Exception $e) {
@@ -627,11 +678,14 @@ class SmsService
 
             $result = json_decode($response);
 
+            $success = $this->melipayamakResponseSucceeded($result);
+
             return [
-                'success' => isset($result->RetStatus) && $result->RetStatus == 1,
+                'success' => $success,
                 'response' => $result,
                 'message_id' => $result->Value ?? null,
-                'method' => 'procedural_php'
+                'method' => 'procedural_php',
+                'error' => $success ? null : $this->melipayamakResponseError($result),
             ];
 
         } catch (\Exception $e) {
