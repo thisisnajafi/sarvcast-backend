@@ -104,6 +104,31 @@ jobs:
           "
           echo "OK: removed stale .ftp-deploy-sync-state.json (if present)"
 
+      - name: Prepare critical FTP directories
+        run: |
+          set -euo pipefail
+          echo "Ensuring nested FTP paths exist (fixes 550 on public/js/admin, app/Notifications, etc.)"
+
+          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set ssl:check-hostname no;
+            set net:timeout 120;
+            set net:max-retries 5;
+            set cmd:fail-exit no;
+            cd /;
+            mkdir -p app/Notifications;
+            cd public/js;
+            rm -f admin;
+            rmdir admin;
+            mkdir -p admin;
+            cd /;
+            bye;
+          "
+          echo "OK: critical FTP directories prepared"
+
       - name: Deploy via FTP (lftp mirror)
         run: |
           set -euo pipefail
@@ -118,10 +143,11 @@ jobs:
             set net:timeout 120;
             set net:max-retries 5;
             set net:reconnect-interval-base 10;
+            set mirror:parallel-directories false;
             set cmd:fail-exit yes;
             lcd .;
             cd /;
-            mirror -R --parallel=10 --only-newer \
+            mirror -R --parallel=3 --only-newer --create-empty-dirs \
               --exclude-glob .git/ \
               --exclude-glob .git/** \
               --exclude-glob node_modules/** \
