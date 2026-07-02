@@ -2,7 +2,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 name: Deploy Laravel Backend via FTP
 
@@ -20,14 +19,6 @@ env:
   DEPLOY_TOKEN: "manji-ftp-deploy-x7k9m2"
   TELEGRAM_BOT_TOKEN: "7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc"
   TELEGRAM_CHAT_ID: "-1002796302613_97"
-  # Production .env fallback when PRODUCTION_DOTENV secret is not set (prefer the secret).
-  PRODUCTION_APP_KEY: "base64:XjGMTbcH+8xI1qUg1Wwl7mVLPiPgI8AcoPVdAMM++Gc="
-  PRODUCTION_DB_DATABASE: "h352418_sarv"
-  PRODUCTION_DB_USERNAME: "h352418_sarv"
-  PRODUCTION_MELIPAYAMAK_USERNAME: "09136708883"
-  PRODUCTION_CAFEBAZAAR_API_KEY: "eyJhbGciOiJIUzI1NiIsImtpZCI6ImFuY2llbnQiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJuYXNoZXItcGlzaGtoYW4tYXBpIiwiaWF0IjoxNzY0NzQxMDIzLCJleHAiOjQ5MTgzNDEwMjMsImFwaV9hZ2VudF9pZCI6NDM4M30.c7Ttu4ScQA7lP5ezP5vw43NSIqL5F3gtuqNH1yKx5gU"
-  PRODUCTION_MYKET_API_KEY: "52e30b4f-2e99-4ca0-9379-d20ac22ac457"
-  PRODUCTION_ZARINPAL_MERCHANT_ID: "77751ff3-c1cc-411b-869d-2ac7d7b02f88"
 
 jobs:
   deploy:
@@ -72,68 +63,6 @@ jobs:
           (cd vendor && zip -r -9 -q ../vendor.zip .)
           ls -lh vendor.zip
 
-      - name: Prepare Firebase service account for deploy bundle
-        env:
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: |
-          set -euo pipefail
-          mkdir -p storage/app
-          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON}" ]; then
-            printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > storage/app/firebase-service-account.json
-            echo "OK: firebase-service-account.json from GitHub secret"
-          else
-            for candidate in storage/app/*-firebase-adminsdk*.json; do
-              if [ -f "$candidate" ]; then
-                cp "$candidate" storage/app/firebase-service-account.json
-                echo "OK: copied $(basename "$candidate") to firebase-service-account.json"
-                exit 0
-              fi
-            done
-            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON GitHub secret is not set."
-            echo "Add it at: Settings → Secrets and variables → Actions → New repository secret"
-            echo "Name: FIREBASE_SERVICE_ACCOUNT_JSON"
-            echo "Value: full JSON from Firebase Console → Project settings → Service accounts → Generate new private key"
-            echo "Use the manjiapp-3028e project key (same as storage/app/*-firebase-adminsdk*.json locally)."
-            exit 1
-          fi
-          php -r 'json_decode(file_get_contents("storage/app/firebase-service-account.json")); if (json_last_error() !== JSON_ERROR_NONE) { fwrite(STDERR, "Invalid JSON in firebase service account\n"); exit(1); }'
-          echo "OK: firebase-service-account.json is valid JSON"
-
-      - name: Prepare deploy bundle
-        run: bash scripts/prepare-ftp-deploy.sh
-        env:
-          DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-
-      - name: Prepare production .env for deploy
-        run: bash scripts/prepare-production-env.sh
-        env:
-          PRODUCTION_DOTENV: ${{ secrets.PRODUCTION_DOTENV }}
-          PRODUCTION_APP_KEY: ${{ env.PRODUCTION_APP_KEY }}
-          PRODUCTION_DB_PASSWORD: ${{ env.FTP_PASSWORD }}
-          PRODUCTION_DB_DATABASE: ${{ env.PRODUCTION_DB_DATABASE }}
-          PRODUCTION_DB_USERNAME: ${{ env.PRODUCTION_DB_USERNAME }}
-          PRODUCTION_MELIPAYAMAK_USERNAME: ${{ env.PRODUCTION_MELIPAYAMAK_USERNAME }}
-          PRODUCTION_MELIPAYAMAK_PASSWORD: ${{ env.FTP_PASSWORD }}
-          PRODUCTION_CAFEBAZAAR_API_KEY: ${{ env.PRODUCTION_CAFEBAZAAR_API_KEY }}
-          PRODUCTION_MYKET_API_KEY: ${{ env.PRODUCTION_MYKET_API_KEY }}
-          PRODUCTION_ZARINPAL_MERCHANT_ID: ${{ env.PRODUCTION_ZARINPAL_MERCHANT_ID }}
-          FTP_PASSWORD: ${{ env.FTP_PASSWORD }}
-
-      - name: Report deploy bundle size
-        run: |
-          du -sh deploy-upload/deploy.zip deploy-upload/vendor.zip
-          ls -lh deploy-upload/
-
-      - name: Verify Firebase file in deploy bundle
-        run: |
-          set -euo pipefail
-          if ! unzip -l deploy-upload/deploy.zip | grep -q 'storage/app/firebase-service-account.json'; then
-            echo "::error::storage/app/firebase-service-account.json missing from deploy.zip"
-            exit 1
-          fi
-          echo "OK: firebase-service-account.json is in deploy.zip"
-
       - name: Verify migration files are present in deploy bundle
         run: |
           test -f database/migrations/2026_06_27_100000_add_onboarding_fields_to_users_table.php
@@ -149,122 +78,32 @@ jobs:
           test -f database/migrations/2026_01_02_125031_create_user_devices_table.php
           test -f database/migrations/2026_07_01_190000_extend_fcm_token_on_user_devices_table.php
           test -f database/migrations/2026_07_01_200000_extend_app_version_on_user_devices_table.php
-          test -f database/migrations/2026_06_28_120000_create_team_members_table.php
           test -f config/activity_log.php
           echo "Required migration files and config present in deploy bundle"
 
-      - name: Install lftp
-        run: sudo apt-get update -qq && sudo apt-get install -y lftp
-
-      - name: Prepare critical FTP directories
-        run: |
-          set -euo pipefail
-          echo "Ensuring nested FTP paths exist (fixes 550 on public/js/admin, app/Notifications, etc.)"
-
-          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
-            set ftp:passive-mode true;
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set ssl:check-hostname no;
-            set net:timeout 120;
-            set net:max-retries 5;
-            set cmd:fail-exit no;
-            cd /;
-            mkdir -p app/Notifications;
-            cd public/js;
-            rm -f admin;
-            rmdir admin;
-            mkdir -p admin;
-            cd /;
-            bye;
-          "
-          echo "OK: critical FTP directories prepared"
-
-      - name: Deploy via FTP (fast zip upload)
-        run: |
-          set -euo pipefail
-          echo "Fast deploy: uploading deploy.zip + vendor.zip + extract-deploy.php"
-
-          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
-            set ftp:passive-mode true;
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set ssl:check-hostname no;
-            set net:timeout 120;
-            set net:max-retries 5;
-            set net:reconnect-interval-base 10;
-            set cmd:fail-exit yes;
-            lcd deploy-upload;
-            cd /;
-            put -O . deploy.zip;
-            put -O . vendor.zip;
-            put -O . htaccess.deploy;
-            mirror -R --parallel=3 public public;
-            bye;
-          "
-
-          echo "Extracting deploy archive on server..."
-          EXTRACT_OUT=$(curl -fsS --max-time 600 \
-            "${{ env.SITE_URL }}/extract-deploy.php?token=${{ env.DEPLOY_TOKEN }}")
-          echo "$EXTRACT_OUT"
-
-          if ! echo "$EXTRACT_OUT" | grep -q "Laravel deploy extracted successfully"; then
-            echo "::error::Server extract failed"
-            exit 1
-          fi
-
-          echo "OK: fast tar deploy completed"
-
-      - name: Upload Firebase service account to server (FTP)
-        env:
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        run: |
-          set -euo pipefail
-          if [ -z "${FIREBASE_SERVICE_ACCOUNT_JSON}" ]; then
-            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON secret is required"
-            exit 1
-          fi
-          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase-service-account.json
-          php -r 'json_decode(file_get_contents("/tmp/firebase-service-account.json")); if (json_last_error() !== JSON_ERROR_NONE) { fwrite(STDERR, "Invalid JSON\n"); exit(1); }'
-
-          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
-            set ftp:passive-mode true;
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set ssl:check-hostname no;
-            set net:timeout 120;
-            set net:max-retries 5;
-            set cmd:fail-exit yes;
-            lcd /tmp;
-            cd /;
-            mkdir -p storage/app;
-            put -O storage/app firebase-service-account.json;
-            bye;
-          "
-          echo "OK: firebase-service-account.json uploaded to storage/app/"
-
-      - name: Upload production .env to server (FTP)
-        run: |
-          set -euo pipefail
-          test -f deploy-upload/.env
-          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
-            set ftp:passive-mode true;
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set ssl:check-hostname no;
-            set net:timeout 120;
-            set net:max-retries 5;
-            set cmd:fail-exit yes;
-            lcd deploy-upload;
-            cd /;
-            put -O . .env;
-            bye;
-          "
-          echo "OK: production .env uploaded"
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ env.FTP_SERVER }}
+          username: ${{ env.FTP_USERNAME }}
+          password: ${{ env.FTP_PASSWORD }}
+          server-dir: /
+          timeout: 600000
+          log-level: minimal
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/vendor/**
+            vendor/**
+            .env
+            .env.*
+            .github/**
+            tests/**
+            storage/logs/**
+            storage/framework/sessions/**
+            storage/framework/views/**
+            storage/framework/cache/data/**
 
       - name: Run php artisan config:clear on server
         run: |
