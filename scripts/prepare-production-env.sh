@@ -9,6 +9,40 @@ escape_sed_replacement() {
   printf '%s' "$1" | sed -e 's/[\/&]/\\&/g'
 }
 
+strip_wrapping_quotes() {
+  local value="$1"
+  value="${value#\'}"
+  value="${value%\'}"
+  value="${value#\"}"
+  value="${value%\"}"
+  printf '%s' "$value"
+}
+
+apply_ci_db_overrides() {
+  if [ ! -f "$OUT" ]; then
+    return 1
+  fi
+
+  if [ -n "${PRODUCTION_DB_DATABASE:-}" ]; then
+    local db_name
+    db_name="$(escape_sed_replacement "$(strip_wrapping_quotes "$PRODUCTION_DB_DATABASE")")"
+    sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${db_name}|" "$OUT" || true
+  fi
+
+  if [ -n "${PRODUCTION_DB_USERNAME:-}" ]; then
+    local db_user
+    db_user="$(escape_sed_replacement "$(strip_wrapping_quotes "$PRODUCTION_DB_USERNAME")")"
+    sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${db_user}|" "$OUT" || true
+  fi
+
+  if [ -n "${PRODUCTION_DB_PASSWORD:-}" ]; then
+    local db_pass
+    db_pass="$(escape_sed_replacement "$(strip_wrapping_quotes "$PRODUCTION_DB_PASSWORD")")"
+    sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${db_pass}|" "$OUT" || true
+    echo "prepare-production-env: applied PRODUCTION_DB_PASSWORD from CI secret"
+  fi
+}
+
 normalize_production_env() {
   if [ ! -f "$OUT" ]; then
     return 1
@@ -79,7 +113,9 @@ if [ -n "${PRODUCTION_DOTENV:-}" ]; then
   normalize_production_env
   echo "prepare-production-env: wrote .env from PRODUCTION_DOTENV secret"
 elif [ "${DOWNLOAD_SERVER_ENV:-}" = "true" ] && download_server_env; then
-  :
+  if [ -z "${PRODUCTION_DB_PASSWORD:-}" ]; then
+    echo "prepare-production-env: warning — using server DB_PASSWORD as-is; set PRODUCTION_DB_PASSWORD if migrate fails"
+  fi
 elif [ -f "$TEMPLATE" ]; then
   APP_KEY="${PRODUCTION_APP_KEY:-}"
   DB_DATABASE="${PRODUCTION_DB_DATABASE:-h352418_sarv}"
@@ -139,5 +175,7 @@ else
   exit 1
 fi
 
+normalize_production_env
+apply_ci_db_overrides
 validate_env_file
 echo "prepare-production-env: OK ($(wc -c < "$OUT") bytes)"
