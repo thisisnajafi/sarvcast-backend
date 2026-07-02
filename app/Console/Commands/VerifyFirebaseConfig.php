@@ -26,6 +26,7 @@ class VerifyFirebaseConfig extends Command
         $ok = true;
         $backendProjectId = (string) config('notification.firebase.project_id');
         $serviceAccountPath = (string) config('notification.firebase.service_account_path');
+        $serviceAccountPath = $this->resolveServiceAccountPath($serviceAccountPath);
         $flutterJsonCandidates = array_values(array_filter([
             base_path('../manji-flutter/android/app/google-services.json'),
             storage_path('app/google-services.json'),
@@ -162,5 +163,19 @@ class VerifyFirebaseConfig extends Command
         }
 
         $this->warn("   ⚠️ FCM probe returned HTTP {$response->status()} (check API is enabled)");
+    }
+
+    protected function resolveServiceAccountPath(string $configuredPath): string
+    {
+        if (File::exists($configuredPath)) {
+            return $configuredPath;
+        }
+
+        $alternatives = glob(storage_path('app/*-firebase-adminsdk*.json')) ?: [];
+        if ($alternatives !== []) {
+            return $alternatives[0];
+        }
+
+        return $configuredPath;
     }
 }

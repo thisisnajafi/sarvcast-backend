@@ -45,7 +45,7 @@ class FirebaseAuthService
     protected function generateAccessToken(): ?string
     {
         try {
-            $serviceAccountPath = config('notification.firebase.service_account_path');
+            $serviceAccountPath = $this->resolveServiceAccountPath(config('notification.firebase.service_account_path'));
 
             if (!$serviceAccountPath || !file_exists($serviceAccountPath)) {
                 Log::error('Firebase service account file not found', [
@@ -133,6 +133,17 @@ class FirebaseAuthService
     protected function base64UrlEncode(string $data): string
     {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    protected function resolveServiceAccountPath(?string $configuredPath): ?string
+    {
+        if (is_string($configuredPath) && $configuredPath !== '' && file_exists($configuredPath)) {
+            return $configuredPath;
+        }
+
+        $alternatives = glob(storage_path('app/*-firebase-adminsdk*.json')) ?: [];
+
+        return $alternatives[0] ?? $configuredPath;
     }
 }
 

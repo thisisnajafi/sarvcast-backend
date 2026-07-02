@@ -11,6 +11,8 @@
 /composer.phar
 /composer-setup.php
 vendor.zip
+deploy-upload/
+deploy-staging/
 .env.backup
 .env.production
 .phpactor.json
