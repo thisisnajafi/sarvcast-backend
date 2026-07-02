@@ -15,13 +15,13 @@ if ($token !== $expected) {
 $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
-$allowedOnlyModes = ['config_clear', 'firebase_verify'];
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate',
         'only' => $only,
     ]));
 }
@@ -211,6 +211,10 @@ try {
         'firebase_verify' => [
             'firebase:verify' => ['--clear-cache' => true],
         ],
+        'migrate' => [
+            'migrate:status' => [],
+            'migrate' => ['--force' => true],
+        ],
     ];
 
     $defaultCommands = [
@@ -269,6 +273,12 @@ try {
     }
 
     if ($isFullDeploy) {
+        if (\Illuminate\Support\Facades\Schema::hasTable('team_members')) {
+            $results[] = 'Verified team_members table exists';
+        } else {
+            $results[] = 'team_members verification FAILED: table missing after migrate';
+        }
+
         if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
             $results[] = 'Verified activity_logs table exists';
 

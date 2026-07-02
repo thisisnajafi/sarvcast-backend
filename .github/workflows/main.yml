@@ -78,6 +78,7 @@ jobs:
           test -f database/migrations/2026_01_02_125031_create_user_devices_table.php
           test -f database/migrations/2026_07_01_190000_extend_fcm_token_on_user_devices_table.php
           test -f database/migrations/2026_07_01_200000_extend_app_version_on_user_devices_table.php
+          test -f database/migrations/2026_06_28_120000_create_team_members_table.php
           test -f config/activity_log.php
           echo "Required migration files and config present in deploy bundle"
 

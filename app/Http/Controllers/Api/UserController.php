@@ -8,9 +8,12 @@ use App\Models\Favorite;
 use App\Models\PlayHistory;
 use App\Models\Story;
 use App\Models\User;
+use App\Models\TeamMember;
 use App\Models\ProfileView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class UserController extends Controller
 {
@@ -410,19 +413,42 @@ class UserController extends Controller
      */
     public function getTeamMembers(Request $request)
     {
-        $members = \App\Models\TeamMember::query()
-            ->visible()
-            ->ordered()
-            ->whereHas('user')
-            ->with('user:id,first_name,last_name,phone_number,profile_image_url,bio')
-            ->get()
-            ->map(fn (\App\Models\TeamMember $member) => $member->toPublicArray())
-            ->filter(fn (array $row) => ! empty($row))
-            ->values();
+        try {
+            if (! Schema::hasTable('team_members')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                ]);
+            }
 
-        return response()->json([
-            'success' => true,
-            'data' => $members,
-        ]);
+            $userColumns = ['id', 'first_name', 'last_name', 'phone_number', 'profile_image_url'];
+            if (Schema::hasColumn('users', 'bio')) {
+                $userColumns[] = 'bio';
+            }
+
+            $members = TeamMember::query()
+                ->visible()
+                ->ordered()
+                ->whereHas('user')
+                ->with(['user' => fn ($query) => $query->select($userColumns)])
+                ->get()
+                ->map(fn (TeamMember $member) => $member->toPublicArray())
+                ->filter(fn (array $row) => ! empty($row))
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $members,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('public team-members endpoint failed', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to load team members',
+            ], 500);
+        }
     }
 }
