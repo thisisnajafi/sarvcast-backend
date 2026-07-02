@@ -71,6 +71,51 @@ function activateHtaccessFiles(string $basePath): array
 
 $results = array_merge($results, activateHtaccessFiles($basePath));
 
+function clearConfigCacheFiles(string $basePath): array
+{
+    $cleared = [];
+    $patterns = [
+        'bootstrap/cache/config.php',
+        'bootstrap/cache/routes-v7.php',
+        'bootstrap/cache/routes.php',
+        'bootstrap/cache/events.php',
+        'bootstrap/cache/services.php',
+        'bootstrap/cache/packages.php',
+    ];
+
+    foreach ($patterns as $file) {
+        $full = $basePath . '/' . $file;
+        if (is_file($full) && @unlink($full)) {
+            $cleared[] = 'Deleted stale ' . $file;
+        }
+    }
+
+    return $cleared;
+}
+
+function ensureProductionEnvFile(string $basePath): ?string
+{
+    $envPath = $basePath . '/.env';
+    if (! is_file($envPath)) {
+        return '.env missing on server — CI must upload PRODUCTION_DOTENV before migrate';
+    }
+
+    $env = @file_get_contents($envPath);
+    if ($env === false || trim($env) === '') {
+        return '.env exists but is empty';
+    }
+
+    if (! preg_match('/^DB_CONNECTION=mysql/m', $env)) {
+        return '.env must set DB_CONNECTION=mysql (found sqlite or missing DB settings)';
+    }
+
+    if (! preg_match('/^APP_KEY=.+$/m', $env)) {
+        return '.env is missing APP_KEY';
+    }
+
+    return null;
+}
+
 function extractVendorArchive(string $basePath): array
 {
     $zipPath = $basePath . '/vendor.zip';
@@ -167,18 +212,7 @@ foreach ($dirs as $dir) {
 $results = array_merge($results, extractVendorArchive($basePath));
 
 // 3. Delete stale cache files before bootstrapping Laravel
-$staleFiles = [
-    'bootstrap/cache/config.php',
-    'bootstrap/cache/routes-v7.php',
-];
-
-foreach ($staleFiles as $file) {
-    $full = $basePath . '/' . $file;
-    if (file_exists($full)) {
-        @unlink($full);
-        $results[] = 'Deleted stale ' . $file;
-    }
-}
+$results = array_merge($results, clearConfigCacheFiles($basePath));
 
 $viewsDir = $basePath . '/storage/framework/views';
 if (is_dir($viewsDir)) {
@@ -222,6 +256,26 @@ if ($only === 'config_clear') {
 
 // 4. Bootstrap Laravel and run artisan commands
 $localImportPayload = null;
+
+$envError = ensureProductionEnvFile($basePath);
+if ($envError !== null) {
+    $results[] = 'bootstrap failed: ' . $envError;
+
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+        $results[] = 'OPcache cleared';
+    }
+
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'only' => $only !== '' ? $only : 'full',
+        'results' => $results,
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
+}
 
 try {
     define('LARAVEL_START', microtime(true));

@@ -97,6 +97,11 @@ jobs:
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
 
+      - name: Prepare production .env for deploy
+        run: bash scripts/prepare-production-env.sh
+        env:
+          PRODUCTION_DOTENV: ${{ secrets.PRODUCTION_DOTENV }}
+
       - name: Report deploy bundle size
         run: |
           du -sh deploy-upload/deploy.zip deploy-upload/vendor.zip
@@ -222,6 +227,26 @@ jobs:
             bye;
           "
           echo "OK: firebase-service-account.json uploaded to storage/app/"
+
+      - name: Upload production .env to server (FTP)
+        run: |
+          set -euo pipefail
+          test -f deploy-upload/.env
+          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set ssl:check-hostname no;
+            set net:timeout 120;
+            set net:max-retries 5;
+            set cmd:fail-exit yes;
+            lcd deploy-upload;
+            cd /;
+            put -O . .env;
+            bye;
+          "
+          echo "OK: production .env uploaded"
 
       - name: Run php artisan config:clear on server
         run: |
