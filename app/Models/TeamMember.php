@@ -45,11 +45,14 @@ class TeamMember extends Model
     public function toPublicArray(): array
     {
         $user = $this->user;
+        if (! $user) {
+            return [];
+        }
 
         return [
             'id' => $user->id,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
+            'first_name' => $user->first_name ?? '',
+            'last_name' => $user->last_name ?? '',
             'phone_number' => $user->phone_number,
             'profile_image_url' => $user->profile_image_url,
             'bio' => $user->bio,

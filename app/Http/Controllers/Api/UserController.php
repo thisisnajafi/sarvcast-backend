@@ -413,9 +413,11 @@ class UserController extends Controller
         $members = \App\Models\TeamMember::query()
             ->visible()
             ->ordered()
+            ->whereHas('user')
             ->with('user:id,first_name,last_name,phone_number,profile_image_url,bio')
             ->get()
             ->map(fn (\App\Models\TeamMember $member) => $member->toPublicArray())
+            ->filter(fn (array $row) => ! empty($row))
             ->values();
 
         return response()->json([
