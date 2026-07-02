@@ -9,6 +9,25 @@ escape_sed_replacement() {
   printf '%s' "$1" | sed -e 's/[\/&]/\\&/g'
 }
 
+normalize_production_env() {
+  if [ ! -f "$OUT" ]; then
+    return 1
+  fi
+
+  # Strip wrapping quotes from DB_PASSWORD (common cause of MySQL access denied).
+  sed -i -E "s/^DB_PASSWORD=['\"](.*)['\"]\s*$/DB_PASSWORD=\\1/" "$OUT" || true
+
+  # Ensure production URLs when refreshing an old server file.
+  sed -i 's|^APP_URL=.*|APP_URL=https://my.manjiapp.ir|' "$OUT" || true
+  sed -i 's|^APP_ENV=.*|APP_ENV=production|' "$OUT" || true
+  sed -i 's|^APP_DEBUG=.*|APP_DEBUG=false|' "$OUT" || true
+  sed -i 's|^FIREBASE_SERVICE_ACCOUNT_PATH=.*|FIREBASE_SERVICE_ACCOUNT_PATH=storage/app/firebase-service-account.json|' "$OUT" || true
+
+  if ! grep -q '^ADMIN_DASHBOARD_URL=' "$OUT"; then
+    echo 'ADMIN_DASHBOARD_URL=https://admin.manjiapp.ir' >> "$OUT"
+  fi
+}
+
 validate_env_file() {
   if ! grep -q '^APP_KEY=.\+' "$OUT"; then
     echo "prepare-production-env: ERROR — APP_KEY is missing"
@@ -25,26 +44,47 @@ validate_env_file() {
     exit 1
   fi
 
+  if ! grep -q '^DB_PASSWORD=.\+' "$OUT"; then
+    echo "prepare-production-env: ERROR — DB_PASSWORD is missing"
+    exit 1
+  fi
+
   if ! grep -q '^APP_URL=https://my\.manjiapp\.ir' "$OUT"; then
     echo "prepare-production-env: warning — APP_URL should be https://my.manjiapp.ir for production"
   fi
+}
+
+download_server_env() {
+  local server="${FTP_SERVER:-}"
+  local user="${FTP_USERNAME:-}"
+  local pass="${FTP_PASSWORD:-}"
+
+  if [ -z "$server" ] || [ -z "$user" ] || [ -z "$pass" ]; then
+    return 1
+  fi
+
+  if curl -sSf --user "${user}:${pass}" "ftp://${server}/.env" -o "$OUT"; then
+    normalize_production_env
+    echo "prepare-production-env: downloaded existing server .env via FTP"
+    return 0
+  fi
+
+  return 1
 }
 
 mkdir -p "$(dirname "$OUT")"
 
 if [ -n "${PRODUCTION_DOTENV:-}" ]; then
   printf '%s' "$PRODUCTION_DOTENV" > "$OUT"
+  normalize_production_env
   echo "prepare-production-env: wrote .env from PRODUCTION_DOTENV secret"
-else
-  if [ ! -f "$TEMPLATE" ]; then
-    echo "prepare-production-env: ERROR — template missing at .github/production.env.template"
-    exit 1
-  fi
-
-  APP_KEY="${PRODUCTION_APP_KEY:-${APP_KEY:-}}"
+elif [ "${DOWNLOAD_SERVER_ENV:-}" = "true" ] && download_server_env; then
+  :
+elif [ -f "$TEMPLATE" ]; then
+  APP_KEY="${PRODUCTION_APP_KEY:-}"
   DB_DATABASE="${PRODUCTION_DB_DATABASE:-h352418_sarv}"
   DB_USERNAME="${PRODUCTION_DB_USERNAME:-h352418_sarv}"
-  DB_PASSWORD="${PRODUCTION_DB_PASSWORD:-}"
+  DB_PASSWORD="${PRODUCTION_DB_PASSWORD:-${FTP_PASSWORD:-}}"
   MELIPAYAMAK_USERNAME="${PRODUCTION_MELIPAYAMAK_USERNAME:-09136708883}"
   MELIPAYAMAK_PASSWORD="${PRODUCTION_MELIPAYAMAK_PASSWORD:-${MELIPAYAMAK_PASSWORD:-${FTP_PASSWORD:-}}}"
   CAFEBAZAAR_API_KEY="${PRODUCTION_CAFEBAZAAR_API_KEY:-}"
@@ -52,19 +92,25 @@ else
   ZARINPAL_MERCHANT_ID="${PRODUCTION_ZARINPAL_MERCHANT_ID:-}"
 
   missing=()
-  [ -z "$APP_KEY" ] && missing+=("PRODUCTION_APP_KEY or APP_KEY")
-  [ -z "$DB_PASSWORD" ] && missing+=("PRODUCTION_DB_PASSWORD (or set GitHub secret PRODUCTION_DOTENV with full .env)")
-  [ -z "$CAFEBAZAAR_API_KEY" ] && missing+=("PRODUCTION_CAFEBAZAAR_API_KEY")
-  [ -z "$MYKET_API_KEY" ] && missing+=("PRODUCTION_MYKET_API_KEY")
-  [ -z "$ZARINPAL_MERCHANT_ID" ] && missing+=("PRODUCTION_ZARINPAL_MERCHANT_ID")
+  [ -z "$APP_KEY" ] && missing+=("PRODUCTION_APP_KEY")
+  [ -z "$DB_PASSWORD" ] && missing+=("PRODUCTION_DB_PASSWORD or FTP_PASSWORD")
 
   if [ "${#missing[@]}" -gt 0 ]; then
     echo "prepare-production-env: ERROR — missing values for template fallback:"
     for item in "${missing[@]}"; do
       echo "  - $item"
     done
-    echo "Either set GitHub secret PRODUCTION_DOTENV (full .env), or add the values above to workflow env / secrets."
+    echo ""
+    echo "Fix (pick one):"
+    echo "  1. Set GitHub secret PRODUCTION_DOTENV (full production .env) — recommended"
+    echo "     Run: .\\scripts\\set-production-dotenv-github-secret.ps1"
+    echo "  2. Set secrets PRODUCTION_APP_KEY + PRODUCTION_DB_PASSWORD"
+    echo "  3. Ensure server already has .env so CI can download it via FTP"
     exit 1
+  fi
+
+  if [ -z "$CAFEBAZAAR_API_KEY" ] || [ -z "$MYKET_API_KEY" ] || [ -z "$ZARINPAL_MERCHANT_ID" ]; then
+    echo "prepare-production-env: warning — payment API keys not in CI secrets; using empty values in template"
   fi
 
   cp "$TEMPLATE" "$OUT"
@@ -86,7 +132,11 @@ else
     sed -i "s/${key}/${value}/g" "$OUT"
   done
 
-  echo "prepare-production-env: built .env from production template + workflow env"
+  normalize_production_env
+  echo "prepare-production-env: built .env from production template + CI secrets"
+else
+  echo "prepare-production-env: ERROR — template missing at .github/production.env.template"
+  exit 1
 fi
 
 validate_env_file

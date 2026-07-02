@@ -117,6 +117,10 @@ jobs:
           PRODUCTION_CAFEBAZAAR_API_KEY: ${{ secrets.PRODUCTION_CAFEBAZAAR_API_KEY }}
           PRODUCTION_MYKET_API_KEY: ${{ secrets.PRODUCTION_MYKET_API_KEY }}
           PRODUCTION_ZARINPAL_MERCHANT_ID: ${{ secrets.PRODUCTION_ZARINPAL_MERCHANT_ID }}
+          FTP_SERVER: ${{ env.FTP_SERVER }}
+          FTP_USERNAME: ${{ env.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ env.FTP_PASSWORD }}
+          DOWNLOAD_SERVER_ENV: "true"
         run: bash scripts/prepare-production-env.sh
 
       - name: Upload production .env to server
