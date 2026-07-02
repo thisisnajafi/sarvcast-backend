@@ -162,8 +162,8 @@ jobs:
               --exclude-glob storage/framework/views/** \
               --exclude-glob storage/framework/cache/data/** \
               --exclude-glob .ftp-deploy-sync-state.json;
-            put -o .htaccess htaccess;
-            put -o public/.htaccess public/htaccess;
+            put htaccess -o .htaccess;
+            put public/htaccess -o public/.htaccess;
             bye;
           "
 
