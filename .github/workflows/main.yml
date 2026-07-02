@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 name: Deploy Laravel Backend via FTP
 
@@ -82,29 +83,64 @@ jobs:
           test -f config/activity_log.php
           echo "Required migration files and config present in deploy bundle"
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ env.FTP_SERVER }}
-          username: ${{ env.FTP_USERNAME }}
-          password: ${{ env.FTP_PASSWORD }}
-          server-dir: /
-          timeout: 600000
-          log-level: minimal
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/vendor/**
-            vendor/**
-            .env
-            .env.*
-            .github/**
-            tests/**
-            storage/logs/**
-            storage/framework/sessions/**
-            storage/framework/views/**
-            storage/framework/cache/data/**
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Reset stale FTP sync state
+        run: |
+          set -euo pipefail
+          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set ssl:check-hostname no;
+            set net:timeout 120;
+            set net:max-retries 5;
+            set cmd:fail-exit no;
+            cd /;
+            rm -f .ftp-deploy-sync-state.json;
+            bye;
+          "
+          echo "OK: removed stale .ftp-deploy-sync-state.json (if present)"
+
+      - name: Deploy via FTP (lftp mirror)
+        run: |
+          set -euo pipefail
+          echo "Uploading Laravel backend to ${{ env.FTP_SERVER }} as ${{ env.FTP_USERNAME }}"
+
+          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set ssl:check-hostname no;
+            set net:timeout 120;
+            set net:max-retries 5;
+            set net:reconnect-interval-base 10;
+            set cmd:fail-exit yes;
+            lcd .;
+            cd /;
+            mirror -R --parallel=10 --only-newer \
+              --exclude-glob .git/ \
+              --exclude-glob .git/** \
+              --exclude-glob node_modules/** \
+              --exclude-glob vendor/** \
+              --exclude-glob .env \
+              --exclude-glob .env.* \
+              --exclude-glob .github/** \
+              --exclude-glob tests/** \
+              --exclude-glob storage/logs/** \
+              --exclude-glob storage/framework/sessions/** \
+              --exclude-glob storage/framework/views/** \
+              --exclude-glob storage/framework/cache/data/** \
+              --exclude-glob .ftp-deploy-sync-state.json;
+            put -o .htaccess htaccess;
+            put -o public/.htaccess public/htaccess;
+            bye;
+          "
+
+          echo "OK: lftp mirror deploy completed"
 
       - name: Run php artisan config:clear on server
         run: |
