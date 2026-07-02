@@ -91,7 +91,7 @@ jobs:
 
       - name: Report deploy bundle size
         run: |
-          du -sh deploy-upload/deploy.tar.gz deploy-upload/vendor.zip
+          du -sh deploy-upload/deploy.zip deploy-upload/vendor.zip
           ls -lh deploy-upload/
 
       - name: Verify migration files are present in deploy bundle
@@ -141,10 +141,10 @@ jobs:
           "
           echo "OK: critical FTP directories prepared"
 
-      - name: Deploy via FTP (fast tar upload)
+      - name: Deploy via FTP (fast zip upload)
         run: |
           set -euo pipefail
-          echo "Fast deploy: uploading deploy.tar.gz + vendor.zip + extract-deploy.php"
+          echo "Fast deploy: uploading deploy.zip + vendor.zip + extract-deploy.php"
 
           lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
             set ftp:passive-mode true;
@@ -158,7 +158,7 @@ jobs:
             set cmd:fail-exit yes;
             lcd deploy-upload;
             cd /;
-            put -O . deploy.tar.gz;
+            put -O . deploy.zip;
             put -O . vendor.zip;
             put -O . htaccess.deploy;
             mirror -R --parallel=3 public public;

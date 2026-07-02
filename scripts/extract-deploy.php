@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+@ini_set('memory_limit', '768M');
+@set_time_limit(0);
+
 header('Content-Type: text/plain; charset=utf-8');
 
 const DEPLOY_TOKEN = '__DEPLOY_EXTRACT_TOKEN__';
@@ -14,72 +17,150 @@ if (!hash_equals(DEPLOY_TOKEN, (string) ($_GET['token'] ?? ''))) {
 
 $publicRoot = __DIR__;
 $root = dirname($publicRoot);
-$archive = $root . '/deploy.tar.gz';
 $htaccessDeploy = $root . '/htaccess.deploy';
 $publicHtaccessDeploy = $publicRoot . '/htaccess.deploy';
 
-if (!is_file($archive)) {
+$archive = null;
+foreach ([$root . '/deploy.zip', $root . '/deploy.tar.gz'] as $candidate) {
+    if (is_file($candidate)) {
+        $archive = $candidate;
+        break;
+    }
+}
+
+if ($archive === null) {
     http_response_code(404);
-    echo "deploy.tar.gz not found at {$archive}\n";
+    echo "deploy.zip (or deploy.tar.gz) not found under {$root}\n";
     exit;
 }
 
-function extractWithExec(string $archive, string $root): ?string
+function runShellCommand(string $command): array
 {
-    if (!function_exists('exec')) {
-        return 'exec() disabled';
+    if (function_exists('proc_open')) {
+        $descriptors = [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $process = @proc_open($command, $descriptors, $pipes);
+        if (is_resource($process)) {
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            $code = proc_close($process);
+
+            return [
+                'code' => $code,
+                'output' => trim($stdout . "\n" . $stderr),
+            ];
+        }
     }
 
-    $cmd = 'tar -xzf ' . escapeshellarg($archive) . ' -C ' . escapeshellarg($root) . ' 2>&1';
-    $output = [];
-    $code = 1;
-    @exec($cmd, $output, $code);
+    if (function_exists('exec')) {
+        $output = [];
+        $code = 1;
+        @exec($command . ' 2>&1', $output, $code);
 
-    if ($code === 0) {
+        return [
+            'code' => $code,
+            'output' => trim(implode("\n", $output)),
+        ];
+    }
+
+    if (function_exists('shell_exec')) {
+        $output = @shell_exec($command . ' 2>&1');
+
+        return [
+            'code' => $output === null ? 1 : 0,
+            'output' => trim((string) $output),
+        ];
+    }
+
+    return [
+        'code' => 1,
+        'output' => 'No shell execution functions available',
+    ];
+}
+
+function extractWithZipArchive(string $archive, string $root): ?string
+{
+    if (!class_exists(ZipArchive::class)) {
+        return 'ZipArchive unavailable';
+    }
+
+    $zip = new ZipArchive();
+    $opened = $zip->open($archive);
+    if ($opened !== true) {
+        return "ZipArchive::open failed (code {$opened})";
+    }
+
+    if (!$zip->extractTo($root)) {
+        $zip->close();
+
+        return 'ZipArchive::extractTo failed';
+    }
+
+    $zip->close();
+
+    return null;
+}
+
+function extractWithShell(string $archive, string $root): ?string
+{
+    if (str_ends_with($archive, '.zip')) {
+        $command = 'unzip -o ' . escapeshellarg($archive) . ' -d ' . escapeshellarg($root);
+    } else {
+        $command = 'tar -xzf ' . escapeshellarg($archive) . ' -C ' . escapeshellarg($root);
+    }
+
+    $result = runShellCommand($command);
+    if ($result['code'] === 0) {
         return null;
     }
 
-    return trim(implode("\n", $output)) ?: "tar exit code {$code}";
+    return $result['output'] !== '' ? $result['output'] : 'shell extract failed';
 }
 
-function extractWithPhar(string $archive, string $root): ?string
+function extractArchive(string $archive, string $root): ?string
 {
-    if (!class_exists(PharData::class)) {
-        return 'PharData unavailable';
-    }
+    echo 'Archive: ' . basename($archive) . "\n";
 
-    $tarPath = preg_replace('/\.gz$/', '', $archive);
+    if (str_ends_with($archive, '.zip')) {
+        $zipError = extractWithZipArchive($archive, $root);
+        if ($zipError === null) {
+            echo "Extracted with ZipArchive\n";
 
-    try {
-        $phar = new PharData($archive);
-
-        if (is_file($tarPath)) {
-            @unlink($tarPath);
+            return null;
         }
 
-        $phar->decompress();
-        $tar = new PharData($tarPath);
-        $tar->extractTo($root, null, true);
-        @unlink($tarPath);
+        echo "ZipArchive failed: {$zipError}\n";
+        echo "Trying unzip command...\n";
+        $shellError = extractWithShell($archive, $root);
+        if ($shellError === null) {
+            echo "Extracted with unzip\n";
+
+            return null;
+        }
+
+        return $shellError;
+    }
+
+    echo "Trying tar command...\n";
+    $shellError = extractWithShell($archive, $root);
+    if ($shellError === null) {
+        echo "Extracted with tar\n";
 
         return null;
-    } catch (Throwable $e) {
-        @unlink($tarPath);
-
-        return $e->getMessage();
     }
+
+    return $shellError;
 }
 
-$execError = extractWithExec($archive, $root);
-if ($execError !== null) {
-    echo "tar exec failed: {$execError}\n";
-    echo "Trying Phar fallback...\n";
-    $pharError = extractWithPhar($archive, $root);
-    if ($pharError !== null) {
-        http_response_code(500);
-        echo 'Extract failed: ' . $pharError . "\n";
-        exit;
-    }
+$extractError = extractArchive($archive, $root);
+if ($extractError !== null) {
+    http_response_code(500);
+    echo 'Extract failed: ' . $extractError . "\n";
+    exit;
 }
 
 @unlink($archive);

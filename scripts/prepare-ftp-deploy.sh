@@ -27,6 +27,10 @@ rsync -a \
   --exclude='.env.*' \
   --exclude='vendor.zip' \
   --exclude='deploy.tar.gz' \
+  --exclude='deploy.zip' \
+  --exclude='docs/' \
+  --exclude='storage/app/manji-stories/' \
+  --exclude='storage/app/*-firebase-adminsdk*.json' \
   "$ROOT/" "$STAGING/"
 
 mkdir -p "$STAGING/storage/app"
@@ -77,8 +81,11 @@ fi
   find . -type f ! -path './deploy-manifest.txt' | sed 's|^\./||' | sort > deploy-manifest.txt
 )
 
-echo "prepare-ftp-deploy: creating deploy.tar.gz..."
-tar -czf "$UPLOAD/deploy.tar.gz" -C "$STAGING" .
+echo "prepare-ftp-deploy: creating deploy.zip..."
+(
+  cd "$STAGING"
+  zip -r -q -9 "$UPLOAD/deploy.zip" .
+)
 
 TEMPLATE="$ROOT/scripts/extract-deploy.php"
 DEST="$UPLOAD/public/extract-deploy.php"
@@ -89,10 +96,10 @@ fi
 
 sed "s/__DEPLOY_EXTRACT_TOKEN__/${TOKEN//\//\\/}/" "$TEMPLATE" > "$DEST"
 
-TAR_MB=$(du -m "$UPLOAD/deploy.tar.gz" | awk '{print $1}')
+ZIP_MB=$(du -m "$UPLOAD/deploy.zip" | awk '{print $1}')
 VENDOR_MB=$(du -m "$UPLOAD/vendor.zip" | awk '{print $1}')
-FILE_COUNT=$(tar -tzf "$UPLOAD/deploy.tar.gz" | wc -l | tr -d ' ')
+FILE_COUNT=$(unzip -l "$UPLOAD/deploy.zip" | tail -n 1 | awk '{print $2}')
 
-echo "prepare-ftp-deploy: deploy.tar.gz ${TAR_MB} MB (${FILE_COUNT} entries)"
+echo "prepare-ftp-deploy: deploy.zip ${ZIP_MB} MB (${FILE_COUNT} entries)"
 echo "prepare-ftp-deploy: vendor.zip ${VENDOR_MB} MB"
 echo "prepare-ftp-deploy: ready in deploy-upload/"
