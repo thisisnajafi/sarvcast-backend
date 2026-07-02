@@ -68,6 +68,7 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
+          set -euo pipefail
           mkdir -p storage/app
           if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON}" ]; then
             printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > storage/app/firebase-service-account.json
@@ -80,8 +81,15 @@ jobs:
                 exit 0
               fi
             done
-            echo "::warning::FIREBASE_SERVICE_ACCOUNT_JSON secret not set — add it in GitHub repo secrets for push notifications"
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON GitHub secret is not set."
+            echo "Add it at: Settings → Secrets and variables → Actions → New repository secret"
+            echo "Name: FIREBASE_SERVICE_ACCOUNT_JSON"
+            echo "Value: full JSON from Firebase Console → Project settings → Service accounts → Generate new private key"
+            echo "Use the manjiapp-3028e project key (same as storage/app/*-firebase-adminsdk*.json locally)."
+            exit 1
           fi
+          php -r 'json_decode(file_get_contents("storage/app/firebase-service-account.json")); if (json_last_error() !== JSON_ERROR_NONE) { fwrite(STDERR, "Invalid JSON in firebase service account\n"); exit(1); }'
+          echo "OK: firebase-service-account.json is valid JSON"
 
       - name: Prepare deploy bundle
         run: bash scripts/prepare-ftp-deploy.sh
@@ -93,6 +101,15 @@ jobs:
         run: |
           du -sh deploy-upload/deploy.zip deploy-upload/vendor.zip
           ls -lh deploy-upload/
+
+      - name: Verify Firebase file in deploy bundle
+        run: |
+          set -euo pipefail
+          if ! unzip -l deploy-upload/deploy.zip | grep -q 'storage/app/firebase-service-account.json'; then
+            echo "::error::storage/app/firebase-service-account.json missing from deploy.zip"
+            exit 1
+          fi
+          echo "OK: firebase-service-account.json is in deploy.zip"
 
       - name: Verify migration files are present in deploy bundle
         run: |
@@ -176,6 +193,35 @@ jobs:
           fi
 
           echo "OK: fast tar deploy completed"
+
+      - name: Upload Firebase service account to server (FTP)
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FIREBASE_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT_JSON secret is required"
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase-service-account.json
+          php -r 'json_decode(file_get_contents("/tmp/firebase-service-account.json")); if (json_last_error() !== JSON_ERROR_NONE) { fwrite(STDERR, "Invalid JSON\n"); exit(1); }'
+
+          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set ssl:check-hostname no;
+            set net:timeout 120;
+            set net:max-retries 5;
+            set cmd:fail-exit yes;
+            lcd /tmp;
+            cd /;
+            mkdir -p storage/app;
+            put -O storage/app firebase-service-account.json;
+            bye;
+          "
+          echo "OK: firebase-service-account.json uploaded to storage/app/"
 
       - name: Run php artisan config:clear on server
         run: |

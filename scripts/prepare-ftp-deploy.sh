@@ -53,7 +53,9 @@ else
 fi
 
 if [ ! -f "$FIREBASE_DEST" ]; then
-  echo "prepare-ftp-deploy: warning — no Firebase service account in bundle"
+  echo "prepare-ftp-deploy: ERROR — no Firebase service account in bundle"
+  echo "Set GitHub secret FIREBASE_SERVICE_ACCOUNT_JSON (full service account JSON)."
+  exit 1
 fi
 
 if [ ! -f "$ROOT/vendor.zip" ]; then
