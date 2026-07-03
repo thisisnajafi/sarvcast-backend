@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FTP_SERVER: "1540664912.cloudylink.com"
+  FTP_SERVER: "ftp.manjiapp.ir"
   FTP_USERNAME: "my@manjiapp.ir"
   FTP_PASSWORD: "Prof48017421@#"
   SITE_URL: "https://my.manjiapp.ir"
@@ -81,29 +81,77 @@ jobs:
           test -f config/activity_log.php
           echo "Required migration files and config present in deploy bundle"
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ env.FTP_SERVER }}
-          username: ${{ env.FTP_USERNAME }}
-          password: ${{ env.FTP_PASSWORD }}
-          server-dir: /
-          timeout: 600000
-          log-level: minimal
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/vendor/**
-            vendor/**
-            .env
-            .env.*
-            .github/**
-            tests/**
-            storage/logs/**
-            storage/framework/sessions/**
-            storage/framework/views/**
-            storage/framework/cache/data/**
+      - name: Prepare FTP deploy bundle
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
+          ALLOW_MISSING_FIREBASE_BUNDLE: "true"
+        run: bash scripts/prepare-ftp-deploy.sh
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Deploy via FTPS (lftp)
+        env:
+          FTP_SERVER: ${{ env.FTP_SERVER }}
+          FTP_USERNAME: ${{ env.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ env.FTP_PASSWORD }}
+          FTP_SERVER_DIR: /
+          DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
+          SITE_URL: ${{ env.SITE_URL }}
+        run: |
+          set -euo pipefail
+          SERVER_DIR="${FTP_SERVER_DIR:-/}"
+
+          echo "Connecting to ${FTP_SERVER} as ${FTP_USERNAME} (FTPS)"
+
+          for attempt in 1 2 3; do
+            echo "FTP deploy attempt ${attempt}/3"
+            if lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${FTP_SERVER}" -e "
+              set ftp:passive-mode true;
+              set ftp:ssl-allow true;
+              set ftp:ssl-force true;
+              set ssl:verify-certificate no;
+              set ssl:check-hostname no;
+              set net:timeout 120;
+              set net:max-retries 5;
+              set net:reconnect-interval-base 10;
+              set cmd:fail-exit yes;
+              lcd deploy-upload;
+              cd ${SERVER_DIR};
+              put -O . deploy.zip;
+              put -O . vendor.zip;
+              put -O . htaccess.deploy;
+              cd public;
+              put -O . extract-deploy.php;
+              put -O . _deploy_helper.php;
+              put -O . htaccess.deploy;
+              bye;
+            "; then
+              echo "FTP upload completed on attempt ${attempt}"
+              break
+            fi
+
+            if [[ "${attempt}" -eq 3 ]]; then
+              echo "::error::FTP upload failed after 3 attempts (530 usually means wrong host/protocol or password special chars with plain FTP)"
+              exit 1
+            fi
+
+            echo "FTP upload failed, retrying in 30s..."
+            sleep 30
+          done
+
+          echo "Extracting deploy.zip on server..."
+          EXTRACT_OUT=$(curl -fsS --max-time 600 \
+            "${SITE_URL}/extract-deploy.php?token=${DEPLOY_EXTRACT_TOKEN}")
+          echo "${EXTRACT_OUT}"
+
+          if ! echo "${EXTRACT_OUT}" | grep -q "Laravel deploy extracted successfully"; then
+            echo "::error::Server extract-deploy.php did not complete successfully"
+            exit 1
+          fi
+
+          echo "Deploy bundle extracted on server"
 
       - name: Prepare production .env for server
         env:
@@ -126,9 +174,18 @@ jobs:
       - name: Upload production .env to server
         run: |
           set -euo pipefail
-          curl -sSf --ftp-create-dirs -T deploy-upload/.env \
-            --user "${{ env.FTP_USERNAME }}:${{ env.FTP_PASSWORD }}" \
-            "ftp://${{ env.FTP_SERVER }}/.env"
+          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-allow true;
+            set ftp:ssl-force true;
+            set ssl:verify-certificate no;
+            set ssl:check-hostname no;
+            set cmd:fail-exit yes;
+            lcd deploy-upload;
+            cd /;
+            put -O . .env;
+            bye;
+          "
           echo "Uploaded production .env ($(wc -c < deploy-upload/.env) bytes)"
 
       - name: Run php artisan config:clear on server
