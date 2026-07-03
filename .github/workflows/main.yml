@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FTP_SERVER: "ftp.manjiapp.ir"
+  FTP_SERVER: "1540664912.cloudylink.com"
   FTP_USERNAME: "my@manjiapp.ir"
   FTP_PASSWORD: "Prof48017421@#"
   SITE_URL: "https://my.manjiapp.ir"
