@@ -54,7 +54,7 @@ return [
     ],
 
     'cafebazaar' => [
-        'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.avinpishtazan.manji'),
+        'package_name' => env('CAFEBAZAAR_PACKAGE_NAME', 'com.avinpishtazan.manji.cafebazaar'),
         // API key from Pishkhan; sent in header CAFEBAZAAR-PISHKHAN-API-SECRET (doc: developers.cafebazaar.ir)
         'api_key' => env('CAFEBAZAAR_API_KEY'),
         'api_header_name' => env('CAFEBAZAAR_API_HEADER_NAME', 'CAFEBAZAAR-PISHKHAN-API-SECRET'),
@@ -82,7 +82,7 @@ return [
     ],
 
     'myket' => [
-        'package_name' => env('MYKET_PACKAGE_NAME', 'com.avinpishtazan.manji'),
+        'package_name' => env('MYKET_PACKAGE_NAME', 'com.avinpishtazan.manji.myket'),
         // X-Access-Token from Myket developer panel → In-App Billing (server-side only)
         'api_key' => env('MYKET_API_KEY'),
         'api_base_url' => env('MYKET_API_BASE_URL', 'https://developer.myket.ir/api/partners/applications'),

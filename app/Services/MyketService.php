@@ -33,7 +33,7 @@ class MyketService
 
     public function __construct(SubscriptionService $subscriptionService)
     {
-        $this->packageName = config('services.myket.package_name', 'com.avinpishtazan.manji');
+        $this->packageName = config('services.myket.package_name', 'com.avinpishtazan.manji.myket');
         $this->accessToken = config('services.myket.api_key');
         $this->partnersApiBaseUrl = rtrim(
             config('services.myket.api_base_url', 'https://developer.myket.ir/api/partners/applications'),

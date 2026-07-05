@@ -115,6 +115,21 @@ normalize_production_env() {
   sed -i 's|^APP_ENV=.*|APP_ENV=production|' "$OUT" || true
   sed -i 's|^APP_DEBUG=.*|APP_DEBUG=false|' "$OUT" || true
   sed -i 's|^FIREBASE_SERVICE_ACCOUNT_PATH=.*|FIREBASE_SERVICE_ACCOUNT_PATH=storage/app/firebase-service-account.json|' "$OUT" || true
+  sed -i 's|^FIREBASE_PROJECT_ID=.*|FIREBASE_PROJECT_ID=manjiapp-3028e|' "$OUT" || true
+  sed -i 's|^CAFEBAZAAR_PACKAGE_NAME=.*|CAFEBAZAAR_PACKAGE_NAME=com.avinpishtazan.manji.cafebazaar|' "$OUT" || true
+  sed -i 's|^MYKET_PACKAGE_NAME=.*|MYKET_PACKAGE_NAME=com.avinpishtazan.manji.myket|' "$OUT" || true
+
+  if ! grep -q '^FIREBASE_PROJECT_ID=' "$OUT"; then
+    echo 'FIREBASE_PROJECT_ID=manjiapp-3028e' >> "$OUT"
+  fi
+
+  if ! grep -q '^CAFEBAZAAR_PACKAGE_NAME=' "$OUT"; then
+    echo 'CAFEBAZAAR_PACKAGE_NAME=com.avinpishtazan.manji.cafebazaar' >> "$OUT"
+  fi
+
+  if ! grep -q '^MYKET_PACKAGE_NAME=' "$OUT"; then
+    echo 'MYKET_PACKAGE_NAME=com.avinpishtazan.manji.myket' >> "$OUT"
+  fi
 
   if ! grep -q '^ADMIN_DASHBOARD_URL=' "$OUT"; then
     echo 'ADMIN_DASHBOARD_URL=https://admin.manjiapp.ir' >> "$OUT"
@@ -154,6 +169,16 @@ validate_env_file() {
 
   if ! grep -q '^APP_URL=https://my\.manjiapp\.ir' "$OUT"; then
     echo "prepare-production-env: warning — APP_URL should be https://my.manjiapp.ir for production"
+  fi
+
+  if grep -q '^FIREBASE_PROJECT_ID=sarvcast-20d5c' "$OUT"; then
+    echo "prepare-production-env: ERROR — FIREBASE_PROJECT_ID must be manjiapp-3028e (found legacy sarvcast-20d5c)"
+    exit 1
+  fi
+
+  if ! grep -q '^FIREBASE_PROJECT_ID=manjiapp-3028e' "$OUT"; then
+    echo "prepare-production-env: ERROR — FIREBASE_PROJECT_ID must be manjiapp-3028e"
+    exit 1
   fi
 }
 

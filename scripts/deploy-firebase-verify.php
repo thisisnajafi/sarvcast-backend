@@ -119,15 +119,46 @@ function deployFirebaseCreateJwt(array $serviceAccount): ?string
     return $signatureInput . '.' . deployBase64UrlEncode($signature);
 }
 
-function deployHttpPostForm(string $url, array $fields): array
+function deployHttpRequest(string $method, string $url, array $options = []): array
 {
-    $body = http_build_query($fields);
-    $context = stream_context_create([
+    $headers = $options['headers'] ?? [];
+    $body = $options['body'] ?? null;
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, strtoupper($method));
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+
+        if ($headers !== []) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        }
+
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        }
+
+        $response = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        return [
+            'status' => $status,
+            'body' => is_string($response) ? $response : '',
+            'error' => $error,
+        ];
+    }
+
+    $headerLines = implode("\r\n", $headers);
+    $contextOptions = [
         'http' => [
-            'method' => 'POST',
-            'header' => "Content-Type: application/x-www-form-urlencoded\r\n"
-                . 'Content-Length: ' . strlen($body) . "\r\n",
-            'content' => $body,
+            'method' => strtoupper($method),
+            'header' => $headerLines,
+            'content' => $body ?? '',
             'timeout' => 30,
             'ignore_errors' => true,
         ],
@@ -135,9 +166,9 @@ function deployHttpPostForm(string $url, array $fields): array
             'verify_peer' => true,
             'verify_peer_name' => true,
         ],
-    ]);
+    ];
 
-    $response = @file_get_contents($url, false, $context);
+    $response = @file_get_contents($url, false, stream_context_create($contextOptions));
     $status = 0;
     if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $matches)) {
         $status = (int) $matches[1];
@@ -146,38 +177,42 @@ function deployHttpPostForm(string $url, array $fields): array
     return [
         'status' => $status,
         'body' => is_string($response) ? $response : '',
+        'error' => is_string($response) ? '' : 'HTTP request failed (enable curl extension or allow_url_fopen)',
     ];
+}
+
+function deployHttpPostForm(string $url, array $fields): array
+{
+    return deployHttpRequest('POST', $url, [
+        'headers' => ['Content-Type: application/x-www-form-urlencoded'],
+        'body' => http_build_query($fields),
+    ]);
 }
 
 function deployHttpPostJson(string $url, array $payload, string $accessToken): array
 {
     $body = json_encode($payload);
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'POST',
-            'header' => "Authorization: Bearer {$accessToken}\r\n"
-                . "Content-Type: application/json\r\n"
-                . 'Content-Length: ' . strlen((string) $body) . "\r\n",
-            'content' => $body,
-            'timeout' => 30,
-            'ignore_errors' => true,
-        ],
-        'ssl' => [
-            'verify_peer' => true,
-            'verify_peer_name' => true,
-        ],
-    ]);
 
-    $response = @file_get_contents($url, false, $context);
-    $status = 0;
-    if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $matches)) {
-        $status = (int) $matches[1];
+    return deployHttpRequest('POST', $url, [
+        'headers' => [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json',
+        ],
+        'body' => is_string($body) ? $body : '{}',
+    ]);
+}
+
+function deployFormatHttpFailure(string $label, array $response): string
+{
+    $message = $label . ' HTTP ' . $response['status'];
+    if (($response['error'] ?? '') !== '') {
+        $message .= ' (' . $response['error'] . ')';
+    }
+    if (($response['body'] ?? '') !== '') {
+        $message .= ': ' . $response['body'];
     }
 
-    return [
-        'status' => $status,
-        'body' => is_string($response) ? $response : '',
-    ];
+    return $message;
 }
 
 function deployStandaloneFirebaseVerify(string $basePath): array
@@ -189,7 +224,7 @@ function deployStandaloneFirebaseVerify(string $basePath): array
     }
 
     $env = deployReadEnvValues($basePath . '/.env');
-    $projectId = $env['FIREBASE_PROJECT_ID'] ?? 'manjiapp-3028e';
+    $envProjectId = trim($env['FIREBASE_PROJECT_ID'] ?? '');
     $configuredPath = $env['FIREBASE_SERVICE_ACCOUNT_PATH'] ?? 'storage/app/firebase-service-account.json';
     $serviceAccountPath = deployFindServiceAccountPath($basePath, $configuredPath);
 
@@ -207,10 +242,19 @@ function deployStandaloneFirebaseVerify(string $basePath): array
         return array_merge($results, ['php artisan firebase:verify --clear-cache FAILED: invalid service account JSON']);
     }
 
-    $fileProjectId = $serviceAccount['project_id'] ?? null;
-    if ($fileProjectId !== null && $fileProjectId !== $projectId) {
-        $results[] = 'Warn: FIREBASE_PROJECT_ID (' . $projectId . ') differs from JSON project_id (' . $fileProjectId . ')';
-        $projectId = $fileProjectId;
+    $fileProjectId = trim((string) ($serviceAccount['project_id'] ?? ''));
+    if ($fileProjectId === '') {
+        return array_merge($results, ['php artisan firebase:verify --clear-cache FAILED: service account JSON missing project_id']);
+    }
+
+    $projectId = $fileProjectId;
+    $results[] = 'Firebase project ID OK: ' . $projectId;
+
+    if ($envProjectId !== '' && $envProjectId !== $projectId) {
+        $results[] = 'Warn: .env FIREBASE_PROJECT_ID=' . $envProjectId
+            . ' will be corrected to ' . $projectId . ' on next .env upload';
+    } elseif ($envProjectId === '') {
+        $results[] = 'Warn: FIREBASE_PROJECT_ID missing in .env (using service account project_id)';
     }
 
     $jwt = deployFirebaseCreateJwt($serviceAccount);
@@ -225,8 +269,8 @@ function deployStandaloneFirebaseVerify(string $basePath): array
 
     if ($tokenResponse['status'] !== 200) {
         return array_merge($results, [
-            'php artisan firebase:verify --clear-cache FAILED: OAuth token request HTTP '
-            . $tokenResponse['status'] . ($tokenResponse['body'] !== '' ? ': ' . $tokenResponse['body'] : ''),
+            'php artisan firebase:verify --clear-cache FAILED: '
+            . deployFormatHttpFailure('OAuth token request', $tokenResponse),
         ]);
     }
 
@@ -262,7 +306,7 @@ function deployStandaloneFirebaseVerify(string $basePath): array
     }
 
     return array_merge($results, [
-        'php artisan firebase:verify --clear-cache FAILED: FCM probe HTTP '
-        . $probeResponse['status'] . ($probeResponse['body'] !== '' ? ': ' . $probeResponse['body'] : ''),
+        'php artisan firebase:verify --clear-cache FAILED: '
+        . deployFormatHttpFailure('FCM probe', $probeResponse),
     ]);
 }
