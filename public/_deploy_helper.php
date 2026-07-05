@@ -66,13 +66,64 @@ function deployPhpVersionResultLine(): string
         . ' — set PHP 8.2 in hosting panel (cPanel: MultiPHP Manager) and redeploy';
 }
 
-function deployAbortIfPhpVersionUnsupported(array $results, string $only): void
+function deployRequiredPhpExtensions(): array
 {
-    if (deployPhpVersionIsSupported()) {
-        return;
+    return [
+        'iconv' => 'iconv',
+        'mbstring' => 'mbstring',
+        'curl' => 'curl',
+        'json' => 'json',
+        'openssl' => 'openssl',
+        'pdo_mysql' => 'pdo_mysql',
+        'zip' => 'zip',
+        'intl' => 'intl',
+        'bcmath' => 'bcmath',
+        'fileinfo' => 'fileinfo',
+        'gd' => 'gd',
+    ];
+}
+
+function deployMissingPhpExtensions(): array
+{
+    $missing = [];
+
+    foreach (deployRequiredPhpExtensions() as $label => $extension) {
+        if (! extension_loaded($extension)) {
+            $missing[] = $label;
+        }
     }
 
-    $results[] = deployPhpVersionResultLine();
+    return $missing;
+}
+
+function deployPhpExtensionsResultLines(): array
+{
+    $missing = deployMissingPhpExtensions();
+    if ($missing === []) {
+        return ['PHP extensions OK'];
+    }
+
+    return [
+        'PHP extensions FAILED: missing ' . implode(', ', $missing)
+        . ' — enable them in hosting panel (cPanel: MultiPHP INI Editor / Select PHP Extensions)',
+    ];
+}
+
+function deployAbortIfPhpRuntimeUnsupported(array $results, string $only): void
+{
+    if (! deployPhpVersionIsSupported()) {
+        $results[] = deployPhpVersionResultLine();
+    } else {
+        $results[] = deployPhpVersionResultLine();
+    }
+
+    foreach (deployPhpExtensionsResultLines() as $line) {
+        $results[] = $line;
+    }
+
+    if (deployPhpVersionIsSupported() && deployMissingPhpExtensions() === []) {
+        return;
+    }
 
     if (function_exists('opcache_reset')) {
         @opcache_reset();
@@ -86,10 +137,16 @@ function deployAbortIfPhpVersionUnsupported(array $results, string $only): void
         'results' => $results,
         'php_version' => PHP_VERSION,
         'required_php' => deployRequiredPhpVersion(),
+        'missing_extensions' => deployMissingPhpExtensions(),
         'local_import' => null,
         'time' => date('c'),
     ]);
     exit;
+}
+
+function deployAbortIfPhpVersionUnsupported(array $results, string $only): void
+{
+    deployAbortIfPhpRuntimeUnsupported($results, $only);
 }
 
 function activateHtaccessFiles(string $basePath): array
@@ -303,13 +360,16 @@ if ($only === 'config_clear') {
 }
 
 if ($only === 'php_check') {
-    http_response_code(deployPhpVersionIsSupported() ? 200 : 500);
+    $checkResults = [deployPhpVersionResultLine(), ...deployPhpExtensionsResultLines()];
+    $ok = deployPhpVersionIsSupported() && deployMissingPhpExtensions() === [];
+    http_response_code($ok ? 200 : 500);
     echo json_encode([
-        'status' => deployPhpVersionIsSupported() ? 'success' : 'error',
+        'status' => $ok ? 'success' : 'error',
         'only' => 'php_check',
-        'results' => [deployPhpVersionResultLine()],
+        'results' => $checkResults,
         'php_version' => PHP_VERSION,
         'required_php' => deployRequiredPhpVersion(),
+        'missing_extensions' => deployMissingPhpExtensions(),
         'local_import' => null,
         'time' => date('c'),
     ]);
