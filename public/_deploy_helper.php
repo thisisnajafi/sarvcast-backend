@@ -75,19 +75,43 @@ $results = array_merge($results, activateHtaccessFiles($basePath));
 function clearConfigCacheFiles(string $basePath): array
 {
     $cleared = [];
-    $patterns = [
-        'bootstrap/cache/config.php',
-        'bootstrap/cache/routes-v7.php',
-        'bootstrap/cache/routes.php',
-        'bootstrap/cache/events.php',
-        'bootstrap/cache/services.php',
-        'bootstrap/cache/packages.php',
-    ];
+    $cacheDir = $basePath . '/bootstrap/cache';
 
-    foreach ($patterns as $file) {
-        $full = $basePath . '/' . $file;
-        if (is_file($full) && @unlink($full)) {
-            $cleared[] = 'Deleted stale ' . $file;
+    if (is_dir($cacheDir)) {
+        foreach (glob($cacheDir . '/*.php') ?: [] as $file) {
+            if (@unlink($file)) {
+                $cleared[] = 'Deleted bootstrap/cache/' . basename($file);
+            }
+        }
+    }
+
+    return $cleared;
+}
+
+function clearFrameworkCacheFiles(string $basePath): array
+{
+    $cleared = [];
+
+    $viewDir = $basePath . '/storage/framework/views';
+    if (is_dir($viewDir)) {
+        foreach (glob($viewDir . '/*.php') ?: [] as $file) {
+            if (@unlink($file)) {
+                $cleared[] = 'Deleted storage/framework/views/' . basename($file);
+            }
+        }
+    }
+
+    $cacheDataDir = $basePath . '/storage/framework/cache/data';
+    if (is_dir($cacheDataDir)) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($cacheDataDir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            if ($item->isFile() && @unlink($item->getPathname())) {
+                $cleared[] = 'Deleted ' . str_replace($basePath . '/', '', $item->getPathname());
+            }
         }
     }
 
@@ -214,18 +238,7 @@ $results = array_merge($results, extractVendorArchive($basePath));
 
 // 3. Delete stale cache files before bootstrapping Laravel
 $results = array_merge($results, clearConfigCacheFiles($basePath));
-
-$viewsDir = $basePath . '/storage/framework/views';
-if (is_dir($viewsDir)) {
-    $count = 0;
-    foreach (glob($viewsDir . '/*.php') as $file) {
-        @unlink($file);
-        $count++;
-    }
-    if ($count > 0) {
-        $results[] = 'Cleared ' . $count . ' compiled views';
-    }
-}
+$results = array_merge($results, clearFrameworkCacheFiles($basePath));
 
 // config:clear only needs to drop cached config files — no full Laravel bootstrap
 // (avoids SmsService and other services failing when artisan loads commands).
@@ -345,6 +358,7 @@ try {
             ] : []
         ),
         'cache_rebuild' => [
+            'config:clear' => [],
             'clear-compiled' => [],
             'config:cache' => [],
             'route:cache' => [],

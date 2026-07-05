@@ -94,59 +94,65 @@ jobs:
       - name: Plan deploy steps
         id: plan
         run: |
-          force_full="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_full_deploy == 'true' }}"
           force_env="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_env == 'true' }}"
           force_vendor="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_vendor == 'true' }}"
           force_firebase="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_firebase == 'true' }}"
           lean_deploy="${{ env.LEAN_DEPLOY }}"
 
           if [[ "$lean_deploy" == "false" ]]; then
-            force_full=true
-            echo "LEAN_DEPLOY=false — running all post-deploy steps"
-          else
-            echo "LEAN_DEPLOY=true — post-deploy steps depend on changed paths"
-          fi
-
-          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "$force_vendor" == "true" ]]; then
+            echo "LEAN_DEPLOY=false — full deploy: vendor, env, cache clear, firebase, migrate, cache rebuild"
             echo "run_composer=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_composer=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "$force_env" == "true" ]]; then
             echo "run_env=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_env=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "$force_vendor" == "true" ]] || [[ "$force_env" == "true" ]]; then
             echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_config_clear=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.firebase }}" == "true" ]] || [[ "$force_firebase" == "true" ]]; then
             echo "run_firebase=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_firebase=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]]; then
             echo "run_migrate=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_migrate=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.seeders }}" == "true" ]]; then
             echo "run_seed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_seed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "${{ steps.changes.outputs.routes }}" == "true" ]] || [[ "${{ steps.changes.outputs.views }}" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]]; then
             echo "run_cache_rebuild=true" >> "$GITHUB_OUTPUT"
           else
-            echo "run_cache_rebuild=false" >> "$GITHUB_OUTPUT"
+            echo "LEAN_DEPLOY=true — post-deploy steps depend on changed paths"
+            force_full="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_full_deploy == 'true' }}"
+
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "$force_vendor" == "true" ]]; then
+              echo "run_composer=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_composer=false" >> "$GITHUB_OUTPUT"
+            fi
+
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "$force_env" == "true" ]]; then
+              echo "run_env=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_env=false" >> "$GITHUB_OUTPUT"
+            fi
+
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "$force_vendor" == "true" ]] || [[ "$force_env" == "true" ]]; then
+              echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_config_clear=false" >> "$GITHUB_OUTPUT"
+            fi
+
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.firebase }}" == "true" ]] || [[ "$force_firebase" == "true" ]]; then
+              echo "run_firebase=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_firebase=false" >> "$GITHUB_OUTPUT"
+            fi
+
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]]; then
+              echo "run_migrate=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_migrate=false" >> "$GITHUB_OUTPUT"
+            fi
+
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.seeders }}" == "true" ]]; then
+              echo "run_seed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_seed=false" >> "$GITHUB_OUTPUT"
+            fi
+
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "${{ steps.changes.outputs.routes }}" == "true" ]] || [[ "${{ steps.changes.outputs.views }}" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]]; then
+              echo "run_cache_rebuild=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_cache_rebuild=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
           echo "Deploy plan:"
@@ -229,6 +235,16 @@ jobs:
 
           echo "Deploy bundle extracted on server"
 
+      - name: Clear server bootstrap cache (config:clear)
+        if: steps.plan.outputs.run_config_clear == 'true'
+        run: |
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "only=config_clear" \
+            "php artisan config:clear (via deploy helper)" \
+            300
+
       - name: Prepare production .env for server
         if: steps.plan.outputs.run_env == 'true'
         env:
@@ -266,14 +282,14 @@ jobs:
           "
           echo "Uploaded production .env ($(wc -c < deploy-upload/.env) bytes)"
 
-      - name: Run php artisan config:clear on server
-        if: steps.plan.outputs.run_config_clear == 'true'
+      - name: Clear server cache after .env upload
+        if: steps.plan.outputs.run_env == 'true'
         run: |
           bash scripts/ci-call-deploy-helper.sh \
             "${{ env.SITE_URL }}" \
             "${{ env.DEPLOY_TOKEN }}" \
             "only=config_clear" \
-            "php artisan config:clear (via deploy helper)" \
+            "Clear bootstrap cache after .env upload" \
             300
 
       - name: Run php artisan firebase:verify --clear-cache on server
