@@ -15,13 +15,14 @@ if ($token !== $expected) {
 $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
-$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate'];
+$runSeed = isset($_GET['seed']) && $_GET['seed'] === '1';
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild',
         'only' => $only,
     ]));
 }
@@ -257,6 +258,18 @@ if ($only === 'config_clear') {
 // 4. Bootstrap Laravel and run artisan commands
 $localImportPayload = null;
 
+if ($only === '') {
+    http_response_code(400);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Missing only mode. Use config_clear, firebase_verify, migrate, or cache_rebuild',
+        'results' => $results,
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
+}
+
 $envError = ensureProductionEnvFile($basePath);
 if ($envError !== null) {
     $results[] = 'bootstrap failed: ' . $envError;
@@ -321,43 +334,50 @@ try {
         'firebase_verify' => [
             'firebase:verify' => ['--clear-cache' => true],
         ],
-        'migrate' => [
-            'migrate:status' => [],
-            'migrate' => ['--force' => true],
+        'migrate' => array_merge(
+            [
+                'migrate:status' => [],
+                'migrate' => ['--force' => true],
+                'stories:sync-episode-status' => [],
+            ],
+            $runSeed ? [
+                'db:seed' => ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true],
+            ] : []
+        ),
+        'cache_rebuild' => [
+            'clear-compiled' => [],
+            'config:cache' => [],
+            'route:cache' => [],
+            'view:cache' => [],
+            'optimize' => [],
         ],
     ];
 
-    $defaultCommands = [
-        'clear-compiled'  => [],
-        'migrate:status'  => [],
-        'migrate'         => ['--force' => true],
-        'stories:sync-episode-status' => [],
-        'db:seed'         => ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true],
-        'queue:work'      => ['--stop-when-empty' => true, '--max-jobs' => 500, '--max-time' => 120],
-        'config:cache'    => [],
-        'route:cache'     => [],
-        'view:cache'      => [],
-        'optimize'        => [],
-        'storage:link'    => ['--force' => true],
-    ];
-
-    $commands = ($only !== '' && isset($onlyCommands[$only]))
-        ? $onlyCommands[$only]
-        : $defaultCommands;
-
-    $isFullDeploy = ! isset($onlyCommands[$only]);
+    $commands = $onlyCommands[$only] ?? [];
     $deployBlocked = false;
     $skipAfterMigrateFail = [
         'stories:sync-episode-status',
         'db:seed',
-        'queue:work',
         'config:cache',
         'route:cache',
         'view:cache',
         'optimize',
     ];
 
+    $forbiddenArtisanCommands = [
+        'migrate:fresh',
+        'migrate:refresh',
+        'migrate:reset',
+        'db:wipe',
+    ];
+
     foreach ($commands as $cmd => $args) {
+        if (in_array($cmd, $forbiddenArtisanCommands, true)) {
+            $results[] = $cmd . ' BLOCKED: destructive database command is never allowed during deploy';
+
+            continue;
+        }
+
         if ($deployBlocked && in_array($cmd, $skipAfterMigrateFail, true)) {
             $results[] = artisanCommandLabel($cmd) . ' skipped: migrate step failed';
 
@@ -369,14 +389,6 @@ try {
             $output = trim($kernel->output());
 
             if ($exitCode !== 0) {
-                // queue:work exits 0 when empty; non-zero may mean no worker table — do not fail deploy
-                if ($cmd === 'queue:work') {
-                    $results[] = $cmd . ' skipped or partial (exit ' . $exitCode . ')'
-                        . ($output ? ': ' . $output : '');
-
-                    continue;
-                }
-
                 $label = artisanCommandLabel($cmd);
                 $results[] = $label . ' FAILED (exit ' . $exitCode . ')'
                     . ($output ? ': ' . $output : '');
@@ -392,12 +404,6 @@ try {
             $suffix = $output !== '' ? ': ' . $output : '';
             $results[] = $label . ' OK' . $suffix;
         } catch (Throwable $e) {
-            if ($cmd === 'queue:work') {
-                $results[] = $cmd . ' skipped: ' . $e->getMessage();
-
-                continue;
-            }
-
             $results[] = $cmd . ' FAILED: ' . $e->getMessage();
 
             if ($cmd === 'migrate') {
@@ -406,64 +412,27 @@ try {
         }
     }
 
-    if ($isFullDeploy) {
-        if (\Illuminate\Support\Facades\Schema::hasTable('team_members')) {
-            $results[] = 'Verified team_members table exists';
+    if ($only === 'cache_rebuild') {
+        $storageLink = $basePath . '/public/storage';
+        if (is_link($storageLink) || file_exists($storageLink)) {
+            $results[] = 'storage:link skipped (link already exists)';
         } else {
-            $results[] = 'team_members verification FAILED: table missing after migrate';
-        }
-
-        if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
-            $results[] = 'Verified activity_logs table exists';
-
-            if (\Illuminate\Support\Facades\Schema::hasColumn('activity_logs', 'event_uuid')) {
-                $results[] = 'Verified activity_logs.event_uuid column exists';
-            } else {
-                $results[] = 'activity_logs verification FAILED: event_uuid column missing';
-            }
-        } else {
-            $results[] = 'activity_logs verification FAILED: table missing after migrate';
-        }
-
-        if (\Illuminate\Support\Facades\Schema::hasTable('user_devices')) {
-            $results[] = 'Verified user_devices table exists';
-            $requiredDeviceColumns = ['user_id', 'device_id', 'device_type', 'fcm_token', 'last_active'];
-            foreach ($requiredDeviceColumns as $column) {
-                if (\Illuminate\Support\Facades\Schema::hasColumn('user_devices', $column)) {
-                    $results[] = 'Verified user_devices.' . $column . ' column exists';
+            try {
+                $exitCode = $kernel->call('storage:link', ['--force' => true]);
+                $output = trim($kernel->output());
+                if ($exitCode !== 0) {
+                    $results[] = 'storage:link FAILED (exit ' . $exitCode . ')'
+                        . ($output ? ': ' . $output : '');
                 } else {
-                    $results[] = 'user_devices verification FAILED: ' . $column . ' column missing';
+                    $results[] = 'storage:link OK' . ($output !== '' ? ': ' . $output : '');
                 }
+            } catch (Throwable $e) {
+                $results[] = 'storage:link FAILED: ' . $e->getMessage();
             }
-        } else {
-            $results[] = 'user_devices verification FAILED: table missing after migrate';
         }
     }
 
-    if ($isFullDeploy) {
-        $auditViewExists = \App\Models\Permission::query()->where('name', 'audit.view')->exists();
-        $auditExportExists = \App\Models\Permission::query()->where('name', 'audit.export')->exists();
-        if ($auditViewExists && $auditExportExists) {
-            $results[] = 'Verified audit.view and audit.export permissions exist';
-        } else {
-            $results[] = 'audit permissions verification FAILED: run RolePermissionSeeder';
-        }
-    }
-
-    if ($isFullDeploy && isset($_GET['generate_bootstrap_secret']) && $_GET['generate_bootstrap_secret'] === '1') {
-        try {
-            $secret = app(\App\Services\LocalImportAccessService::class)->generateBootstrapSecret();
-            $localImportPayload = [
-                'bootstrap_secret' => $secret,
-                'env_line' => 'LOCAL_IMPORT_BOOTSTRAP_SECRET=' . $secret,
-            ];
-            $results[] = 'local import bootstrap secret generated (add to server .env once)';
-        } catch (Throwable $e) {
-            $results[] = 'local import bootstrap secret FAILED: ' . $e->getMessage();
-        }
-    }
-
-    if ($isFullDeploy && isset($_GET['issue_local_import_token']) && $_GET['issue_local_import_token'] === '1') {
+    if ($only === 'migrate' && isset($_GET['issue_local_import_token']) && $_GET['issue_local_import_token'] === '1') {
         try {
             $phone = isset($_GET['phone']) ? trim((string) $_GET['phone']) : null;
             $issued = app(\App\Services\LocalImportAccessService::class)->issueToken(

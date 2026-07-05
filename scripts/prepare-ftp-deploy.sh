@@ -19,9 +19,7 @@ rsync -a \
   --exclude='tests/' \
   --exclude='deploy-staging/' \
   --exclude='deploy-upload/' \
-  --exclude='storage/logs/' \
-  --exclude='storage/framework/' \
-  --exclude='storage/app/public/' \
+  --exclude='storage/' \
   --exclude='bootstrap/cache/*.php' \
   --exclude='.env' \
   --exclude='.env.*' \
@@ -29,30 +27,36 @@ rsync -a \
   --exclude='deploy.tar.gz' \
   --exclude='deploy.zip' \
   --exclude='docs/' \
-  --exclude='storage/app/manji-stories/' \
-  --exclude='storage/app/*-firebase-adminsdk*.json' \
+  --exclude='database/*.sqlite' \
+  --exclude='database/*.sqlite-journal' \
   "$ROOT/" "$STAGING/"
 
-mkdir -p "$STAGING/storage/app"
 FIREBASE_DEST="$STAGING/storage/app/firebase-service-account.json"
+BUNDLE_FIREBASE="${BUNDLE_FIREBASE:-false}"
 
 if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+  mkdir -p "$STAGING/storage/app"
   printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$FIREBASE_DEST"
+  BUNDLE_FIREBASE=true
   echo "prepare-ftp-deploy: wrote firebase-service-account.json from CI secret"
 elif [ -f "$ROOT/storage/app/firebase-service-account.json" ]; then
+  mkdir -p "$STAGING/storage/app"
   cp "$ROOT/storage/app/firebase-service-account.json" "$FIREBASE_DEST"
+  BUNDLE_FIREBASE=true
   echo "prepare-ftp-deploy: bundled existing firebase-service-account.json"
 else
   for candidate in "$ROOT"/storage/app/*-firebase-adminsdk*.json; do
     if [ -f "$candidate" ]; then
+      mkdir -p "$STAGING/storage/app"
       cp "$candidate" "$FIREBASE_DEST"
+      BUNDLE_FIREBASE=true
       echo "prepare-ftp-deploy: bundled $(basename "$candidate") as firebase-service-account.json"
       break
     fi
   done
 fi
 
-if [ ! -f "$FIREBASE_DEST" ]; then
+if [ "$BUNDLE_FIREBASE" = "false" ]; then
   if [ "${ALLOW_MISSING_FIREBASE_BUNDLE:-}" = "true" ]; then
     echo "prepare-ftp-deploy: warning — no Firebase JSON in bundle (server may already have storage/app/firebase-service-account.json)"
   else
@@ -63,12 +67,16 @@ if [ ! -f "$FIREBASE_DEST" ]; then
   fi
 fi
 
-if [ ! -f "$ROOT/vendor.zip" ]; then
-  echo "prepare-ftp-deploy: ERROR — vendor.zip missing (run composer install + zip first)"
-  exit 1
-fi
+if [ "${SKIP_VENDOR_BUNDLE:-false}" = "true" ]; then
+  echo "prepare-ftp-deploy: skipping vendor.zip (composer.lock unchanged)"
+else
+  if [ ! -f "$ROOT/vendor.zip" ]; then
+    echo "prepare-ftp-deploy: ERROR — vendor.zip missing (run composer install + zip first)"
+    exit 1
+  fi
 
-cp "$ROOT/vendor.zip" "$UPLOAD/vendor.zip"
+  cp "$ROOT/vendor.zip" "$UPLOAD/vendor.zip"
+fi
 
 mkdir -p "$UPLOAD/public"
 cp "$ROOT/public/_deploy_helper.php" "$UPLOAD/public/_deploy_helper.php"
@@ -104,9 +112,13 @@ fi
 sed "s/__DEPLOY_EXTRACT_TOKEN__/${TOKEN//\//\\/}/" "$TEMPLATE" > "$DEST"
 
 ZIP_MB=$(du -m "$UPLOAD/deploy.zip" | awk '{print $1}')
-VENDOR_MB=$(du -m "$UPLOAD/vendor.zip" | awk '{print $1}')
 FILE_COUNT=$(unzip -l "$UPLOAD/deploy.zip" | tail -n 1 | awk '{print $2}')
 
 echo "prepare-ftp-deploy: deploy.zip ${ZIP_MB} MB (${FILE_COUNT} entries)"
-echo "prepare-ftp-deploy: vendor.zip ${VENDOR_MB} MB"
+if [ -f "$UPLOAD/vendor.zip" ]; then
+  VENDOR_MB=$(du -m "$UPLOAD/vendor.zip" | awk '{print $1}')
+  echo "prepare-ftp-deploy: vendor.zip ${VENDOR_MB} MB"
+else
+  echo "prepare-ftp-deploy: vendor.zip not included in upload bundle"
+fi
 echo "prepare-ftp-deploy: ready in deploy-upload/"

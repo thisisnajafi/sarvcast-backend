@@ -82,6 +82,28 @@ function runShellCommand(string $command): array
     ];
 }
 
+function deployExtractPathIsProtected(string $relativePath): bool
+{
+    $normalized = str_replace('\\', '/', $relativePath);
+
+    $protectedPrefixes = [
+        'storage/app/public/',
+        'storage/app/manji-stories/',
+        'storage/logs/',
+        'storage/framework/',
+        '.env',
+        'database/database.sqlite',
+    ];
+
+    foreach ($protectedPrefixes as $prefix) {
+        if ($normalized === rtrim($prefix, '/') || str_starts_with($normalized, $prefix)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function extractWithZipArchive(string $archive, string $root): ?string
 {
     if (!class_exists(ZipArchive::class)) {
@@ -94,13 +116,36 @@ function extractWithZipArchive(string $archive, string $root): ?string
         return "ZipArchive::open failed (code {$opened})";
     }
 
-    if (!$zip->extractTo($root)) {
-        $zip->close();
+    $extracted = 0;
+    $skipped = 0;
 
-        return 'ZipArchive::extractTo failed';
+    for ($index = 0; $index < $zip->numFiles; $index++) {
+        $name = $zip->getNameIndex($index);
+        if ($name === false || str_ends_with($name, '/')) {
+            continue;
+        }
+
+        if (deployExtractPathIsProtected($name)) {
+            $skipped++;
+            continue;
+        }
+
+        if (!$zip->extractTo($root, [$name])) {
+            $zip->close();
+
+            return 'ZipArchive::extractTo failed for ' . $name;
+        }
+
+        $extracted++;
     }
 
     $zip->close();
+
+    echo "Extracted {$extracted} file(s)";
+    if ($skipped > 0) {
+        echo ", skipped {$skipped} protected path(s) (storage/.env preserved on server)";
+    }
+    echo "\n";
 
     return null;
 }

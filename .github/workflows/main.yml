@@ -2,8 +2,29 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      force_full_deploy:
+        description: Run all deploy steps (vendor, env, migrate, cache, firebase)
+        type: boolean
+        default: false
+      force_env:
+        description: Upload production .env
+        type: boolean
+        default: false
+      force_vendor:
+        description: Rebuild and upload vendor.zip
+        type: boolean
+        default: false
+      force_firebase:
+        description: Run firebase:verify on server
+        type: boolean
+        default: false
 
 name: Deploy Laravel Backend via FTP
+
+# Deploy is additive only: migrate --force (never fresh/wipe), storage and .env are
+# excluded from deploy.zip and protected during server-side extract.
 
 # Prevent overlapping deploys; a new push cancels a slow in-progress upload.
 concurrency:
@@ -15,7 +36,6 @@ env:
   FTP_USERNAME: "my@manjiapp.ir"
   FTP_PASSWORD: "Prof48017421@#"
   SITE_URL: "https://my.manjiapp.ir"
-  ISSUE_LOCAL_IMPORT_TOKEN: "false"
   DEPLOY_TOKEN: "manji-ftp-deploy-x7k9m2"
   TELEGRAM_BOT_TOKEN: "7488407974:AAFl4Ek9IanbvlkKlRoikQAqdkDtFYbD0Gc"
   TELEGRAM_CHAT_ID: "-1002796302613_97"
@@ -29,8 +49,105 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            composer:
+              - 'composer.json'
+              - 'composer.lock'
+            migrations:
+              - 'database/migrations/**'
+            seeders:
+              - 'database/seeders/**'
+            env:
+              - '.github/production.env.template'
+              - 'scripts/prepare-production-env.sh'
+            config:
+              - 'config/**'
+              - 'bootstrap/app.php'
+            routes:
+              - 'routes/**'
+            views:
+              - 'resources/views/**'
+            firebase:
+              - 'config/firebase.php'
+              - 'app/**/Firebase*'
+              - 'app/Services/*Firebase*'
+              - 'storage/app/firebase-service-account.json'
+              - 'storage/app/*-firebase-adminsdk*.json'
+            deploy_scripts:
+              - 'public/_deploy_helper.php'
+              - 'scripts/extract-deploy.php'
+              - 'scripts/prepare-ftp-deploy.sh'
+              - 'htaccess'
+              - 'public/htaccess'
+
+      - name: Plan deploy steps
+        id: plan
+        run: |
+          force_full="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_full_deploy == 'true' }}"
+          force_env="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_env == 'true' }}"
+          force_vendor="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_vendor == 'true' }}"
+          force_firebase="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_firebase == 'true' }}"
+
+          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "$force_vendor" == "true" ]]; then
+            echo "run_composer=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_composer=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "$force_env" == "true" ]]; then
+            echo "run_env=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_env=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "$force_vendor" == "true" ]] || [[ "$force_env" == "true" ]]; then
+            echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_config_clear=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.firebase }}" == "true" ]] || [[ "$force_firebase" == "true" ]]; then
+            echo "run_firebase=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_firebase=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]]; then
+            echo "run_migrate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_migrate=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.seeders }}" == "true" ]]; then
+            echo "run_seed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_seed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "${{ steps.changes.outputs.routes }}" == "true" ]] || [[ "${{ steps.changes.outputs.views }}" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]]; then
+            echo "run_cache_rebuild=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_cache_rebuild=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Deploy plan:"
+          echo "  composer/vendor: $(grep run_composer= "$GITHUB_OUTPUT" | cut -d= -f2)"
+          echo "  .env upload:     $(grep run_env= "$GITHUB_OUTPUT" | cut -d= -f2)"
+          echo "  config_clear:    $(grep run_config_clear= "$GITHUB_OUTPUT" | cut -d= -f2)"
+          echo "  firebase_verify: $(grep run_firebase= "$GITHUB_OUTPUT" | cut -d= -f2)"
+          echo "  migrate:         $(grep run_migrate= "$GITHUB_OUTPUT" | cut -d= -f2)"
+          echo "  seed:            $(grep run_seed= "$GITHUB_OUTPUT" | cut -d= -f2)"
+          echo "  cache_rebuild:   $(grep run_cache_rebuild= "$GITHUB_OUTPUT" | cut -d= -f2)"
 
       - name: Setup PHP
+        if: steps.plan.outputs.run_composer == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
@@ -38,14 +155,13 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Validate Composer lock file
-        run: composer validate --no-check-publish
-
       - name: Get Composer cache directory
+        if: steps.plan.outputs.run_composer == 'true'
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Composer packages
+        if: steps.plan.outputs.run_composer == 'true'
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
@@ -54,38 +170,23 @@ jobs:
             ${{ runner.os }}-composer-
 
       - name: Install production dependencies
+        if: steps.plan.outputs.run_composer == 'true'
         run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
       - name: Package vendor directory
+        if: steps.plan.outputs.run_composer == 'true'
         run: |
           echo "Vendor size before packaging:"
           du -sh vendor
           (cd vendor && zip -r -9 -q ../vendor.zip .)
           ls -lh vendor.zip
 
-      - name: Verify migration files are present in deploy bundle
-        run: |
-          test -f database/migrations/2026_06_27_100000_add_onboarding_fields_to_users_table.php
-          test -f database/migrations/2026_06_27_100001_set_profile_completion_needed_for_incomplete_users.php
-          test -f database/migrations/2026_06_27_100002_create_search_histories_table.php
-          test -f database/migrations/2026_06_27_120000_create_sponsors_table.php
-          test -f database/migrations/2026_06_27_120001_add_sponsor_id_to_stories_table.php
-          test -f database/migrations/2026_06_30_120004_fix_stories_sponsor_id_foreign_key.php
-          test -f database/migrations/2026_06_29_100000_create_activity_logs_table.php
-          test -f database/migrations/2026_06_29_110000_add_event_uuid_to_activity_logs_table.php
-          test -f database/migrations/2026_06_30_100000_add_archived_status_to_episodes_table.php
-          test -f database/migrations/2026_07_01_180000_add_featured_fields_to_stories_table.php
-          test -f database/migrations/2026_01_02_125031_create_user_devices_table.php
-          test -f database/migrations/2026_07_01_190000_extend_fcm_token_on_user_devices_table.php
-          test -f database/migrations/2026_07_01_200000_extend_app_version_on_user_devices_table.php
-          test -f config/activity_log.php
-          echo "Required migration files and config present in deploy bundle"
-
       - name: Prepare FTP deploy bundle
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
           ALLOW_MISSING_FIREBASE_BUNDLE: "true"
+          SKIP_VENDOR_BUNDLE: ${{ steps.plan.outputs.run_composer == 'true' && 'false' || 'true' }}
         run: bash scripts/prepare-ftp-deploy.sh
 
       - name: Install lftp
@@ -99,47 +200,10 @@ jobs:
           FTP_SERVER_DIR: /
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
           SITE_URL: ${{ env.SITE_URL }}
+          UPLOAD_VENDOR: ${{ steps.plan.outputs.run_composer }}
         run: |
           set -euo pipefail
-          SERVER_DIR="${FTP_SERVER_DIR:-/}"
-
-          echo "Connecting to ${FTP_SERVER} as ${FTP_USERNAME} (FTPS)"
-
-          for attempt in 1 2 3; do
-            echo "FTP deploy attempt ${attempt}/3"
-            if lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${FTP_SERVER}" -e "
-              set ftp:passive-mode true;
-              set ftp:ssl-allow true;
-              set ftp:ssl-force true;
-              set ssl:verify-certificate no;
-              set ssl:check-hostname no;
-              set net:timeout 120;
-              set net:max-retries 5;
-              set net:reconnect-interval-base 10;
-              set cmd:fail-exit yes;
-              lcd deploy-upload;
-              cd ${SERVER_DIR};
-              put -O . deploy.zip;
-              put -O . vendor.zip;
-              put -O . htaccess.deploy;
-              cd public;
-              put -O . extract-deploy.php;
-              put -O . _deploy_helper.php;
-              put -O . htaccess.deploy;
-              bye;
-            "; then
-              echo "FTP upload completed on attempt ${attempt}"
-              break
-            fi
-
-            if [[ "${attempt}" -eq 3 ]]; then
-              echo "::error::FTP upload failed after 3 attempts (530 usually means wrong host/protocol or password special chars with plain FTP)"
-              exit 1
-            fi
-
-            echo "FTP upload failed, retrying in 30s..."
-            sleep 30
-          done
+          bash scripts/ftp-upload-deploy.sh
 
           echo "Extracting deploy.zip on server..."
           EXTRACT_OUT=$(curl -fsS --max-time 600 \
@@ -154,6 +218,7 @@ jobs:
           echo "Deploy bundle extracted on server"
 
       - name: Prepare production .env for server
+        if: steps.plan.outputs.run_env == 'true'
         env:
           PRODUCTION_DOTENV: ${{ secrets.PRODUCTION_DOTENV }}
           PRODUCTION_APP_KEY: ${{ secrets.PRODUCTION_APP_KEY }}
@@ -172,6 +237,7 @@ jobs:
         run: bash scripts/prepare-production-env.sh
 
       - name: Upload production .env to server
+        if: steps.plan.outputs.run_env == 'true'
         run: |
           set -euo pipefail
           lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
@@ -189,170 +255,49 @@ jobs:
           echo "Uploaded production .env ($(wc -c < deploy-upload/.env) bytes)"
 
       - name: Run php artisan config:clear on server
+        if: steps.plan.outputs.run_config_clear == 'true'
         run: |
-          echo "::group::php artisan config:clear (via deploy helper)"
-          set +e
-          RESPONSE=$(curl -sS -w "\n%{http_code}" \
-            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=config_clear" \
-            --max-time 300 --connect-timeout 30)
-          CURL_EXIT=$?
-          set -e
-
-          if [[ "$CURL_EXIT" -ne 0 ]]; then
-            echo "::error::Could not reach deploy helper (config:clear)"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          echo "HTTP status: $HTTP_CODE"
-          echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do echo "  - $line"; done
-
-          if [[ "$HTTP_CODE" != "200" ]] || [[ "$(echo "$BODY" | jq -r '.status // "unknown"')" != "success" ]]; then
-            echo "Raw response: $BODY"
-            echo "::error::php artisan config:clear failed on server"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan config:clear OK"; then
-            echo "::error::php artisan config:clear did not report success"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          echo "✅ php artisan config:clear completed"
-          echo "::endgroup::"
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "only=config_clear" \
+            "php artisan config:clear (via deploy helper)" \
+            300
 
       - name: Run php artisan firebase:verify --clear-cache on server
+        if: steps.plan.outputs.run_firebase == 'true'
         run: |
-          echo "::group::php artisan firebase:verify --clear-cache (via deploy helper)"
-          set +e
-          RESPONSE=$(curl -sS -w "\n%{http_code}" \
-            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=firebase_verify" \
-            --max-time 300 --connect-timeout 30)
-          CURL_EXIT=$?
-          set -e
-
-          if [[ "$CURL_EXIT" -ne 0 ]]; then
-            echo "::error::Could not reach deploy helper (firebase:verify)"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          echo "HTTP status: $HTTP_CODE"
-          echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do echo "  - $line"; done
-
-          if [[ "$HTTP_CODE" != "200" ]] || [[ "$(echo "$BODY" | jq -r '.status // "unknown"')" != "success" ]]; then
-            echo "::error::php artisan firebase:verify --clear-cache failed on server (check service account JSON and FCM IAM)"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "php artisan firebase:verify --clear-cache FAILED"; then
-            echo "::error::php artisan firebase:verify --clear-cache failed on server"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan firebase:verify --clear-cache OK"; then
-            echo "::error::php artisan firebase:verify --clear-cache did not report success"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          echo "✅ php artisan firebase:verify --clear-cache completed"
-          echo "::endgroup::"
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "only=firebase_verify" \
+            "php artisan firebase:verify --clear-cache (via deploy helper)" \
+            300
 
       - name: Run php artisan migrate --force on server
+        if: steps.plan.outputs.run_migrate == 'true'
         run: |
-          echo "::group::Post-deploy server tasks (via deploy helper)"
-          echo "Post-deploy on server: extract vendor.zip, php artisan migrate --force, RolePermissionSeeder, cache rebuild"
-
-          set +e
-          RESPONSE=$(curl -sS -w "\n%{http_code}" \
-            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}" \
-            --max-time 600 --connect-timeout 30)
-          CURL_EXIT=$?
-          set -e
-
-          if [[ "$CURL_EXIT" -ne 0 ]]; then
-            echo "::error::Could not reach deploy helper at ${{ env.SITE_URL }} (curl exit ${CURL_EXIT}). Check DNS/SSL for the server URL used in CI."
-            echo "::endgroup::"
-            exit 1
+          QUERY="only=migrate"
+          if [[ "${{ steps.plan.outputs.run_seed }}" == "true" ]]; then
+            QUERY="${QUERY}&seed=1"
           fi
 
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "${QUERY}" \
+            "php artisan migrate --force (via deploy helper)" \
+            600
 
-          echo "HTTP status: $HTTP_CODE"
-          echo "Raw response: $BODY"
-
-          if [[ "$HTTP_CODE" != "200" ]]; then
-            echo "::error::Deploy helper returned HTTP $HTTP_CODE"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
-          echo "Helper status: $STATUS"
-          echo "Command results:"
-          echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do
-            echo "  - $line"
-          done
-
-          if [[ "$STATUS" != "success" ]]; then
-            echo "::error::Server post-deploy failed"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "Database connection FAILED"; then
-            echo "::error::Server database credentials are wrong — set GitHub secret PRODUCTION_DOTENV (full .env) or PRODUCTION_DB_PASSWORD"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "php artisan migrate --force FAILED"; then
-            echo "::error::php artisan migrate --force failed on server"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -qE "php artisan migrate --force OK"; then
-            echo "::error::php artisan migrate --force did not report success"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if ! echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "Database connection OK"; then
-            echo "::error::Deploy helper did not confirm database connection"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "activity_logs verification FAILED"; then
-            echo "::error::activity_logs migration verification failed on server"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          if echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -q "audit permissions verification FAILED"; then
-            echo "::error::audit permissions missing after RolePermissionSeeder"
-            echo "::endgroup::"
-            exit 1
-          fi
-
-          PENDING=$(echo "$BODY" | jq -r '.results[]?' 2>/dev/null | grep -c "Pending" || true)
-          if [[ "$PENDING" -gt 0 ]]; then
-            echo "⚠️ $PENDING pending migration(s) reported before migrate step"
-          fi
-
-          echo "✅ Post-deploy completed: migrations applied, caches rebuilt"
-          echo "::endgroup::"
+      - name: Rebuild Laravel caches on server
+        if: steps.plan.outputs.run_cache_rebuild == 'true'
+        run: |
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "only=cache_rebuild" \
+            "Laravel cache rebuild (via deploy helper)" \
+            600
 
       - name: Verify production site responds
         run: |
@@ -376,51 +321,6 @@ jobs:
             fi
           done
           echo "OK: site smoke checks passed"
-
-      # Token must be created ON THE SERVER (CI runner has no MySQL). Set env
-      # ISSUE_LOCAL_IMPORT_TOKEN to "true" to run after each deploy (rotates token every deploy).
-      - name: Issue local import API token on server
-        if: env.ISSUE_LOCAL_IMPORT_TOKEN == 'true'
-        id: local_import_token
-        run: |
-          echo "::group::Issue local import token via deploy helper"
-          RESPONSE=$(curl -sS -w "\n%{http_code}" \
-            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&issue_local_import_token=1&phone=09136708883" \
-            --max-time 120 --connect-timeout 30)
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          echo "HTTP status: $HTTP_CODE"
-          TOKEN=$(echo "$BODY" | jq -r '.local_import.token // empty')
-          if [[ -n "$TOKEN" ]]; then
-            # Do NOT use ::add-mask:: here — the token must be copyable from this log once.
-            ENV_FILE="local-import.env"
-            {
-              echo "LOCAL_IMPORT_API_BASE_URL=${{ env.SITE_URL }}/api/admin"
-              echo "LOCAL_IMPORT_API_TOKEN=${TOKEN}"
-            } > "$ENV_FILE"
-            echo "issued=true" >> "$GITHUB_OUTPUT"
-            echo ""
-            echo "========== LOCAL .env (copy into manji-laravel/.env on your PC) =========="
-            cat "$ENV_FILE"
-            echo "=========================================================================="
-            echo ""
-            echo "If GitHub masks the token above, download the workflow artifact: local-import-env"
-            TOKEN_B64=$(printf '%s' "$TOKEN" | base64 -w0)
-            echo "Or decode from base64: echo ${TOKEN_B64} | base64 -d"
-          else
-            echo "$BODY" | jq .
-            echo "::warning::Local import token was not issued — check deploy helper results"
-          fi
-          echo "::endgroup::"
-
-      - name: Upload local import env artifact
-        if: env.ISSUE_LOCAL_IMPORT_TOKEN == 'true' && steps.local_import_token.outputs.issued == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: local-import-env
-          path: local-import.env
-          retention-days: 2
-          if-no-files-found: error
 
       - name: Notify Telegram (success)
         if: success()
