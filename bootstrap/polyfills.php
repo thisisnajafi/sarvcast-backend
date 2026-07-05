@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 /**
- * iconv must exist before Composer autoload — symfony/polyfill-mbstring calls iconv()
- * from a namespace; without global iconv(), PHP fatals or recurses through mb polyfill.
+ * Hosting-safe polyfills for Laravel bootstrap on shared PHP without full ext-iconv / ext-mbstring.
  *
- * Do NOT load polyfill-mbstring here; Composer autoload handles it after iconv is ready.
+ * Load order: iconv first, then mbstring polyfill, then mb_split (not in symfony polyfill).
  */
 $vendorDir = dirname(__DIR__) . '/vendor';
 
@@ -20,9 +19,6 @@ foreach ([
 }
 
 if (! extension_loaded('iconv') && ! function_exists('iconv')) {
-    /**
-     * Use only the native mbstring extension — never polyfilled mb_* (those call iconv() again).
-     */
     function iconv(?string $from_encoding, ?string $to_encoding, $string): string|false
     {
         if ($string === null || $string === false) {
@@ -123,5 +119,29 @@ if (! extension_loaded('iconv') && ! function_exists('iconv')) {
 
             return $string;
         }
+    }
+}
+
+foreach ([
+    'symfony/polyfill-mbstring/bootstrap.php',
+] as $bootstrap) {
+    $file = $vendorDir . '/' . $bootstrap;
+    if (is_file($file)) {
+        require_once $file;
+    }
+}
+
+if (! function_exists('mb_split')) {
+    function mb_split(string $pattern, string $string, int $limit = -1): array|false
+    {
+        $regex = '/'.str_replace('/', '\/', $pattern).'/u';
+
+        if ($limit < 0) {
+            $parts = preg_split($regex, $string);
+        } else {
+            $parts = preg_split($regex, $string, $limit);
+        }
+
+        return $parts === false ? false : $parts;
     }
 }

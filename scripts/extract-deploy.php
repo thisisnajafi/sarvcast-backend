@@ -185,6 +185,8 @@ function clearBootstrapCache(string $root): void
 
 function extractVendorZip(string $root): void
 {
+    require_once $root . '/scripts/deploy-vendor-extract.php';
+
     $zipPath = $root . '/vendor.zip';
     if (! is_file($zipPath)) {
         echo "vendor.zip not uploaded; keeping existing vendor/\n";
@@ -192,41 +194,13 @@ function extractVendorZip(string $root): void
         return;
     }
 
-    if (! class_exists(ZipArchive::class)) {
-        echo "Warning: ZipArchive unavailable — vendor.zip left for _deploy_helper\n";
-
-        return;
-    }
-
     $vendorDir = $root . '/vendor';
-    if (! is_dir($vendorDir) && ! @mkdir($vendorDir, 0755, true)) {
-        http_response_code(500);
-        echo "Failed to create vendor directory\n";
-        exit;
-    }
-
     @unlink($vendorDir . '/.deploy-package-hash');
 
-    $zip = new ZipArchive();
-    $opened = $zip->open($zipPath);
-    if ($opened !== true) {
+    $error = deployExtractVendorZipToDirectory($zipPath, $vendorDir);
+    if ($error !== null) {
         http_response_code(500);
-        echo "vendor extract FAILED: unable to open vendor.zip (code {$opened})\n";
-        exit;
-    }
-
-    if (! $zip->extractTo($vendorDir)) {
-        $zip->close();
-        http_response_code(500);
-        echo "vendor extract FAILED: ZipArchive::extractTo failed\n";
-        exit;
-    }
-
-    $zip->close();
-
-    if (! is_file($vendorDir . '/autoload.php')) {
-        http_response_code(500);
-        echo "vendor extract FAILED: vendor/autoload.php missing after extraction\n";
+        echo "vendor extract FAILED: {$error}\n";
         exit;
     }
 

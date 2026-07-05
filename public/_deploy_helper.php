@@ -74,6 +74,7 @@ function activateHtaccessFiles(string $basePath): array
 $results = array_merge($results, activateHtaccessFiles($basePath));
 
 require_once dirname(__DIR__) . '/scripts/deploy-firebase-verify.php';
+require_once dirname(__DIR__) . '/scripts/zip-extract-utils.php';
 
 if ($only === 'firebase_verify') {
     $results = array_merge($results, deployStandaloneFirebaseVerify($basePath));
@@ -194,24 +195,18 @@ function ensureProductionEnvFile(string $basePath): ?string
 
 function extractVendorArchive(string $basePath): array
 {
+    require_once $basePath . '/scripts/deploy-vendor-extract.php';
+
     $zipPath = $basePath . '/vendor.zip';
     $vendorDir = $basePath . '/vendor';
     $hashFile = $vendorDir . '/.deploy-package-hash';
 
-    if (!file_exists($zipPath)) {
+    if (! file_exists($zipPath)) {
         if (is_file($vendorDir . '/autoload.php')) {
             return ['vendor archive skipped (using existing vendor/)'];
         }
 
         return ['vendor extract FAILED: vendor.zip missing and vendor/ is not installed'];
-    }
-
-    if (!class_exists('ZipArchive')) {
-        if (is_file($vendorDir . '/autoload.php')) {
-            return ['ZipArchive unavailable; using existing vendor/'];
-        }
-
-        return ['vendor extract FAILED: ZipArchive extension is not enabled'];
     }
 
     $zipHash = @md5_file($zipPath);
@@ -232,26 +227,16 @@ function extractVendorArchive(string $basePath): array
         return ['vendor archive unchanged; skipped extraction'];
     }
 
-    if (!is_dir($vendorDir) && !@mkdir($vendorDir, 0755, true)) {
-        return ['vendor extract FAILED: unable to create vendor directory'];
+    $error = deployExtractVendorZipToDirectory($zipPath, $vendorDir);
+    if ($error !== null) {
+        if ($forceVendor || ! is_file($vendorDir . '/autoload.php')) {
+            return ['vendor extract FAILED: ' . $error];
+        }
+
+        return ['vendor extract WARN: ' . $error . ' — using existing vendor/'];
     }
 
-    $zip = new ZipArchive();
-    $opened = $zip->open($zipPath);
-
-    if ($opened !== true) {
-        return ['vendor extract FAILED: unable to open vendor.zip (code ' . $opened . ')'];
-    }
-
-    if (!$zip->extractTo($vendorDir)) {
-        $zip->close();
-
-        return ['vendor extract FAILED: ZipArchive::extractTo failed'];
-    }
-
-    $zip->close();
-
-    if (!is_file($vendorDir . '/autoload.php')) {
+    if (! is_file($vendorDir . '/autoload.php')) {
         return ['vendor extract FAILED: vendor/autoload.php missing after extraction'];
     }
 
