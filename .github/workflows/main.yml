@@ -32,6 +32,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # true  = skip post-deploy steps unless related files changed (faster code-only deploys)
+  # false = always run .env, config:clear, firebase, migrate, and cache rebuild after FTP
+  LEAN_DEPLOY: "true"
   FTP_SERVER: "ftp.manjiapp.ir"
   FTP_USERNAME: "my@manjiapp.ir"
   FTP_PASSWORD: "Prof48017421@#"
@@ -94,6 +97,14 @@ jobs:
           force_env="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_env == 'true' }}"
           force_vendor="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_vendor == 'true' }}"
           force_firebase="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_firebase == 'true' }}"
+          lean_deploy="${{ env.LEAN_DEPLOY }}"
+
+          if [[ "$lean_deploy" == "false" ]]; then
+            force_full=true
+            echo "LEAN_DEPLOY=false — running all post-deploy steps"
+          else
+            echo "LEAN_DEPLOY=true — post-deploy steps depend on changed paths"
+          fi
 
           if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "$force_vendor" == "true" ]]; then
             echo "run_composer=true" >> "$GITHUB_OUTPUT"
