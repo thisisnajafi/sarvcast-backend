@@ -143,7 +143,6 @@ jobs:
           echo "  composer/vendor: $(grep run_composer= "$GITHUB_OUTPUT" | cut -d= -f2)"
           echo "  .env upload:     $(grep run_env= "$GITHUB_OUTPUT" | cut -d= -f2)"
           echo "  config_clear:    $(grep run_config_clear= "$GITHUB_OUTPUT" | cut -d= -f2)"
-          echo "  firebase_verify: $(grep run_firebase= "$GITHUB_OUTPUT" | cut -d= -f2)"
           echo "  migrate:         $(grep run_migrate= "$GITHUB_OUTPUT" | cut -d= -f2)"
           echo "  seed:            $(grep run_seed= "$GITHUB_OUTPUT" | cut -d= -f2)"
           echo "  cache_rebuild:   $(grep run_cache_rebuild= "$GITHUB_OUTPUT" | cut -d= -f2)"
@@ -280,22 +279,15 @@ jobs:
             "Clear bootstrap cache after .env upload" \
             300
 
-      - name: Run php artisan firebase:verify --clear-cache on server
-        if: steps.plan.outputs.run_firebase == 'true'
-        run: |
-          bash scripts/ci-call-deploy-helper.sh \
-            "${{ env.SITE_URL }}" \
-            "${{ env.DEPLOY_TOKEN }}" \
-            "only=firebase_verify" \
-            "php artisan firebase:verify --clear-cache (via deploy helper)" \
-            300
-
       - name: Run php artisan migrate --force on server
         if: steps.plan.outputs.run_migrate == 'true'
         run: |
           QUERY="only=migrate"
           if [[ "${{ steps.plan.outputs.run_seed }}" == "true" ]]; then
             QUERY="${QUERY}&seed=1"
+          fi
+          if [[ "${{ steps.plan.outputs.run_composer }}" == "true" ]]; then
+            QUERY="${QUERY}&force_vendor=1"
           fi
 
           bash scripts/ci-call-deploy-helper.sh \
@@ -308,10 +300,15 @@ jobs:
       - name: Rebuild Laravel caches on server
         if: steps.plan.outputs.run_cache_rebuild == 'true'
         run: |
+          QUERY="only=cache_rebuild"
+          if [[ "${{ steps.plan.outputs.run_composer }}" == "true" ]]; then
+            QUERY="${QUERY}&force_vendor=1"
+          fi
+
           bash scripts/ci-call-deploy-helper.sh \
             "${{ env.SITE_URL }}" \
             "${{ env.DEPLOY_TOKEN }}" \
-            "only=cache_rebuild" \
+            "${QUERY}" \
             "Laravel cache rebuild (via deploy helper)" \
             600
 

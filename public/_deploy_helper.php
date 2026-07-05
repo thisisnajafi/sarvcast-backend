@@ -103,17 +103,17 @@ if ($only === 'firebase_verify') {
 
 function deployLoadComposerAutoload(string $basePath): void
 {
+    $polyfills = $basePath . '/bootstrap/polyfills.php';
+    if (is_file($polyfills)) {
+        require_once $polyfills;
+    }
+
     $autoload = $basePath . '/vendor/autoload.php';
     if (! is_file($autoload)) {
         throw new RuntimeException('vendor/autoload.php missing on server');
     }
 
     require $autoload;
-
-    $polyfills = $basePath . '/bootstrap/polyfills.php';
-    if (is_file($polyfills)) {
-        require_once $polyfills;
-    }
 }
 
 function clearConfigCacheFiles(string $basePath): array
@@ -292,13 +292,6 @@ $results = array_merge($results, clearFrameworkCacheFiles($basePath));
 // config:clear only needs to drop cached config files — no full Laravel bootstrap
 // (avoids SmsService and other services failing when artisan loads commands).
 if ($only === 'config_clear') {
-    $zipPath = $basePath . '/vendor.zip';
-    if (is_file($zipPath) && is_file($basePath . '/vendor/autoload.php')) {
-        if (@unlink($zipPath)) {
-            $results[] = 'Removed vendor.zip after extraction';
-        }
-    }
-
     if (function_exists('opcache_reset')) {
         @opcache_reset();
         $results[] = 'OPcache cleared';
@@ -534,9 +527,9 @@ try {
     }
 }
 
-// 5. Remove vendor.zip after successful extraction to save disk space
+// 5. Remove vendor.zip only after the final deploy step (cache_rebuild)
 $zipPath = $basePath . '/vendor.zip';
-if (is_file($zipPath) && is_file($basePath . '/vendor/autoload.php')) {
+if ($only === 'cache_rebuild' && is_file($zipPath) && is_file($basePath . '/vendor/autoload.php')) {
     if (@unlink($zipPath)) {
         $results[] = 'Removed vendor.zip after extraction';
     }
