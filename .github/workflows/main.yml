@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       force_full_deploy:
-        description: Run all deploy steps (vendor, env, migrate, cache, firebase)
+        description: Run all deploy steps (vendor, env, migrate, cache)
         type: boolean
         default: false
       force_env:
@@ -14,10 +14,6 @@ on:
         default: false
       force_vendor:
         description: Rebuild and upload vendor.zip
-        type: boolean
-        default: false
-      force_firebase:
-        description: Run firebase:verify on server
         type: boolean
         default: false
 
@@ -34,7 +30,7 @@ concurrency:
 
 env:
   # true  = skip post-deploy steps unless related files changed (faster code-only deploys)
-  # false = always run .env, config:clear, firebase, migrate, and cache rebuild after FTP
+  # false = always run .env, config:clear, migrate, and cache rebuild after FTP
   LEAN_DEPLOY: "false"
   FTP_SERVER: "ftp.manjiapp.ir"
   FTP_USERNAME: "my@manjiapp.ir"
@@ -78,12 +74,6 @@ jobs:
               - 'routes/**'
             views:
               - 'resources/views/**'
-            firebase:
-              - 'config/firebase.php'
-              - 'app/**/Firebase*'
-              - 'app/Services/*Firebase*'
-              - 'storage/app/firebase-service-account.json'
-              - 'storage/app/*-firebase-adminsdk*.json'
             deploy_scripts:
               - 'public/_deploy_helper.php'
               - 'scripts/extract-deploy.php'
@@ -98,15 +88,13 @@ jobs:
         run: |
           force_env="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_env == 'true' }}"
           force_vendor="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_vendor == 'true' }}"
-          force_firebase="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_firebase == 'true' }}"
           lean_deploy="${{ env.LEAN_DEPLOY }}"
 
           if [[ "$lean_deploy" == "false" ]]; then
-            echo "LEAN_DEPLOY=false — full deploy: vendor, env, cache clear, firebase, migrate, cache rebuild"
+            echo "LEAN_DEPLOY=false — full deploy: vendor, env, cache clear, migrate, cache rebuild"
             echo "run_composer=true" >> "$GITHUB_OUTPUT"
             echo "run_env=true" >> "$GITHUB_OUTPUT"
             echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
-            echo "run_firebase=true" >> "$GITHUB_OUTPUT"
             echo "run_migrate=true" >> "$GITHUB_OUTPUT"
             echo "run_seed=true" >> "$GITHUB_OUTPUT"
             echo "run_cache_rebuild=true" >> "$GITHUB_OUTPUT"
@@ -130,12 +118,6 @@ jobs:
               echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
             else
               echo "run_config_clear=false" >> "$GITHUB_OUTPUT"
-            fi
-
-            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.firebase }}" == "true" ]] || [[ "$force_firebase" == "true" ]]; then
-              echo "run_firebase=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "run_firebase=false" >> "$GITHUB_OUTPUT"
             fi
 
             if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]]; then
