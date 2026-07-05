@@ -1,6 +1,7 @@
 <?php
 
 set_time_limit(0);
+@ini_set('memory_limit', '1024M');
 
 header('Content-Type: application/json');
 
@@ -114,6 +115,12 @@ function deployLoadComposerAutoload(string $basePath): void
     }
 
     require $autoload;
+
+    if (! extension_loaded('iconv') && ! function_exists('iconv') && ! is_file($basePath . '/vendor/symfony/polyfill-iconv/bootstrap.php')) {
+        throw new RuntimeException(
+            'iconv unavailable: enable ext-iconv in cPanel or deploy vendor with symfony/polyfill-iconv'
+        );
+    }
 }
 
 function clearConfigCacheFiles(string $basePath): array

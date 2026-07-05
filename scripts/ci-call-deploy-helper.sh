@@ -26,6 +26,13 @@ HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
 BODY=$(echo "$RESPONSE" | sed '$d')
 echo "HTTP status: ${HTTP_CODE}"
 echo "Raw response: ${BODY}"
+
+if echo "$BODY" | grep -qE 'Fatal error|Parse error|memory size of .* exhausted'; then
+  echo "::error::PHP fatal error in deploy helper response (${LABEL})"
+  echo "::endgroup::"
+  exit 1
+fi
+
 echo "Command results:"
 echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do
   echo "  - $line"
