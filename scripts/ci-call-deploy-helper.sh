@@ -34,22 +34,6 @@ done
 STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
 
 if [[ "$HTTP_CODE" != "200" ]] || [[ "$STATUS" != "success" ]]; then
-  PHP_VERSION=$(echo "$BODY" | jq -r '.php_version // empty')
-  MISSING=$(echo "$BODY" | jq -r '.missing_extensions // [] | join(", ")')
-  OPTIONAL=$(echo "$BODY" | jq -r '.missing_optional_extensions // [] | join(", ")')
-  MESSAGE=$(echo "$BODY" | jq -r '.message // empty')
-  if [[ -n "$PHP_VERSION" ]]; then
-    echo "Server web PHP version: ${PHP_VERSION} ($(echo "$BODY" | jq -r '.php_sapi // "unknown"'))"
-  fi
-  if [[ -n "$MISSING" ]]; then
-    echo "::error::Missing critical PHP extensions: ${MISSING}"
-  fi
-  if [[ -n "$OPTIONAL" ]]; then
-    echo "Missing optional PHP extensions: ${OPTIONAL}"
-  fi
-  if [[ -n "$MESSAGE" ]]; then
-    echo "::error::${MESSAGE}"
-  fi
   echo "::error::${LABEL} failed"
   echo "::endgroup::"
   exit 1

@@ -16,13 +16,13 @@ $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
 $runSeed = isset($_GET['seed']) && $_GET['seed'] === '1';
-$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild', 'php_check'];
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild, php_check',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild',
         'only' => $only,
     ]));
 }
@@ -43,155 +43,6 @@ function deployResultLineIsFailure(string $line): bool
     return str_contains($line, ' FAILED')
         || str_contains($line, 'FAILED:')
         || str_contains($line, 'bootstrap failed:');
-}
-
-function deployRequiredPhpVersion(): string
-{
-    return '8.2.0';
-}
-
-function deployPhpVersionIsSupported(): bool
-{
-    return version_compare(PHP_VERSION, deployRequiredPhpVersion(), '>=');
-}
-
-function deployPhpVersionResultLine(): string
-{
-    if (deployPhpVersionIsSupported()) {
-        return 'PHP version OK (' . PHP_VERSION . ')';
-    }
-
-    return 'PHP version FAILED: server runs ' . PHP_VERSION
-        . ', required >= ' . deployRequiredPhpVersion()
-        . ' — set PHP 8.2 in hosting panel (cPanel: MultiPHP Manager) and redeploy';
-}
-
-function deployRequiredPhpExtensions(): array
-{
-    return [
-        'mbstring' => 'mbstring',
-        'curl' => 'curl',
-        'openssl' => 'openssl',
-        'json' => 'json',
-        'pdo_mysql' => 'pdo_mysql',
-    ];
-}
-
-function deployOptionalPhpExtensions(): array
-{
-    return [
-        'zip' => 'zip',
-        'intl' => 'intl',
-        'bcmath' => 'bcmath',
-        'fileinfo' => 'fileinfo',
-        'gd' => 'gd',
-    ];
-}
-
-function deployMissingLoadedExtensions(array $extensions): array
-{
-    $missing = [];
-
-    foreach ($extensions as $label => $extension) {
-        if (! extension_loaded($extension)) {
-            $missing[] = $label;
-        }
-    }
-
-    return $missing;
-}
-
-function deployMissingCriticalPhpExtensions(): array
-{
-    $missing = deployMissingLoadedExtensions(deployRequiredPhpExtensions());
-
-    if (! function_exists('iconv')) {
-        $missing[] = 'iconv';
-    }
-
-    return array_values(array_unique($missing));
-}
-
-function deployMissingOptionalPhpExtensions(): array
-{
-    return deployMissingLoadedExtensions(deployOptionalPhpExtensions());
-}
-
-function deployMissingPhpExtensions(): array
-{
-    return array_merge(
-        deployMissingCriticalPhpExtensions(),
-        deployMissingOptionalPhpExtensions()
-    );
-}
-
-function deployPhpExtensionsResultLines(): array
-{
-    $lines = [];
-    $critical = deployMissingCriticalPhpExtensions();
-    $optional = deployMissingOptionalPhpExtensions();
-
-    if ($critical === []) {
-        $lines[] = 'PHP critical extensions OK';
-    } else {
-        $lines[] = 'PHP critical extensions FAILED: missing '
-            . implode(', ', $critical)
-            . ' — enable in hosting panel (cPanel: MultiPHP INI Editor / Select PHP Extensions)';
-    }
-
-    if ($optional !== []) {
-        $lines[] = 'PHP optional extensions missing: '
-            . implode(', ', $optional)
-            . ' (deploy continues; enable for images/intl/zip features)';
-    }
-
-    return $lines;
-}
-
-function deployPhpRuntimeIsSupported(): bool
-{
-    return deployPhpVersionIsSupported() && deployMissingCriticalPhpExtensions() === [];
-}
-
-function deployAbortIfPhpRuntimeUnsupported(array $results, string $only): void
-{
-    if (! deployPhpVersionIsSupported()) {
-        $results[] = deployPhpVersionResultLine();
-    } else {
-        $results[] = deployPhpVersionResultLine();
-    }
-
-    foreach (deployPhpExtensionsResultLines() as $line) {
-        $results[] = $line;
-    }
-
-    if (deployPhpRuntimeIsSupported()) {
-        return;
-    }
-
-    if (function_exists('opcache_reset')) {
-        @opcache_reset();
-        $results[] = 'OPcache cleared';
-    }
-
-    http_response_code(500);
-    echo json_encode([
-        'status' => 'error',
-        'only' => $only,
-        'results' => $results,
-        'php_version' => PHP_VERSION,
-        'required_php' => deployRequiredPhpVersion(),
-        'missing_extensions' => deployMissingCriticalPhpExtensions(),
-        'missing_optional_extensions' => deployMissingOptionalPhpExtensions(),
-        'local_import' => null,
-        'time' => date('c'),
-    ]);
-    exit;
-}
-
-function deployAbortIfPhpVersionUnsupported(array $results, string $only): void
-{
-    deployAbortIfPhpRuntimeUnsupported($results, $only);
 }
 
 function activateHtaccessFiles(string $basePath): array
@@ -217,25 +68,6 @@ function activateHtaccessFiles(string $basePath): array
     }
 
     return $activated;
-}
-
-if ($only === 'php_check') {
-    $checkResults = [deployPhpVersionResultLine(), ...deployPhpExtensionsResultLines()];
-    $ok = deployPhpRuntimeIsSupported();
-    http_response_code($ok ? 200 : 500);
-    echo json_encode([
-        'status' => $ok ? 'success' : 'error',
-        'only' => 'php_check',
-        'results' => $checkResults,
-        'php_version' => PHP_VERSION,
-        'php_sapi' => PHP_SAPI,
-        'required_php' => deployRequiredPhpVersion(),
-        'missing_extensions' => deployMissingCriticalPhpExtensions(),
-        'missing_optional_extensions' => deployMissingOptionalPhpExtensions(),
-        'local_import' => null,
-        'time' => date('c'),
-    ]);
-    exit;
 }
 
 $results = array_merge($results, activateHtaccessFiles($basePath));
@@ -457,8 +289,6 @@ if ($envError !== null) {
     ]);
     exit;
 }
-
-deployAbortIfPhpVersionUnsupported($results, $only !== '' ? $only : 'bootstrap');
 
 try {
     define('LARAVEL_START', microtime(true));
