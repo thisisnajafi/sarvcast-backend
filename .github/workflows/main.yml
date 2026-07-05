@@ -98,7 +98,6 @@ jobs:
           FTP_PASSWORD: ${{ env.FTP_PASSWORD }}
           FTP_SERVER_DIR: /
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
-          SITE_URL: ${{ env.SITE_URL }}
         run: |
           set -euo pipefail
           SERVER_DIR="${FTP_SERVER_DIR:-/}"
