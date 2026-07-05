@@ -16,13 +16,13 @@ $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
 $runSeed = isset($_GET['seed']) && $_GET['seed'] === '1';
-$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild'];
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild', 'php_check'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild, php_check',
         'only' => $only,
     ]));
 }
@@ -43,6 +43,53 @@ function deployResultLineIsFailure(string $line): bool
     return str_contains($line, ' FAILED')
         || str_contains($line, 'FAILED:')
         || str_contains($line, 'bootstrap failed:');
+}
+
+function deployRequiredPhpVersion(): string
+{
+    return '8.2.0';
+}
+
+function deployPhpVersionIsSupported(): bool
+{
+    return version_compare(PHP_VERSION, deployRequiredPhpVersion(), '>=');
+}
+
+function deployPhpVersionResultLine(): string
+{
+    if (deployPhpVersionIsSupported()) {
+        return 'PHP version OK (' . PHP_VERSION . ')';
+    }
+
+    return 'PHP version FAILED: server runs ' . PHP_VERSION
+        . ', required >= ' . deployRequiredPhpVersion()
+        . ' — set PHP 8.2 in hosting panel (cPanel: MultiPHP Manager) and redeploy';
+}
+
+function deployAbortIfPhpVersionUnsupported(array $results, string $only): void
+{
+    if (deployPhpVersionIsSupported()) {
+        return;
+    }
+
+    $results[] = deployPhpVersionResultLine();
+
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+        $results[] = 'OPcache cleared';
+    }
+
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'only' => $only,
+        'results' => $results,
+        'php_version' => PHP_VERSION,
+        'required_php' => deployRequiredPhpVersion(),
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
 }
 
 function activateHtaccessFiles(string $basePath): array
@@ -255,6 +302,20 @@ if ($only === 'config_clear') {
     exit;
 }
 
+if ($only === 'php_check') {
+    http_response_code(deployPhpVersionIsSupported() ? 200 : 500);
+    echo json_encode([
+        'status' => deployPhpVersionIsSupported() ? 'success' : 'error',
+        'only' => 'php_check',
+        'results' => [deployPhpVersionResultLine()],
+        'php_version' => PHP_VERSION,
+        'required_php' => deployRequiredPhpVersion(),
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
+}
+
 // 4. Bootstrap Laravel and run artisan commands
 $localImportPayload = null;
 
@@ -289,6 +350,8 @@ if ($envError !== null) {
     ]);
     exit;
 }
+
+deployAbortIfPhpVersionUnsupported($results, $only !== '' ? $only : 'bootstrap');
 
 try {
     define('LARAVEL_START', microtime(true));

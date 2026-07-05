@@ -34,7 +34,8 @@ concurrency:
 env:
   # true  = skip post-deploy steps unless related files changed (faster code-only deploys)
   # false = always run .env, config:clear, firebase, migrate, and cache rebuild after FTP
-  LEAN_DEPLOY: "false"
+  LEAN_DEPLOY: "true"
+  REQUIRED_PHP_VERSION: "8.2.0"
   FTP_SERVER: "ftp.manjiapp.ir"
   FTP_USERNAME: "my@manjiapp.ir"
   FTP_PASSWORD: "Prof48017421@#"
@@ -227,6 +228,20 @@ jobs:
           fi
 
           echo "Deploy bundle extracted on server"
+
+      - name: Verify server PHP version
+        if: |
+          steps.plan.outputs.run_config_clear == 'true' ||
+          steps.plan.outputs.run_firebase == 'true' ||
+          steps.plan.outputs.run_migrate == 'true' ||
+          steps.plan.outputs.run_cache_rebuild == 'true'
+        run: |
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "only=php_check" \
+            "Verify server PHP >= ${{ env.REQUIRED_PHP_VERSION }}" \
+            60
 
       - name: Prepare production .env for server
         if: steps.plan.outputs.run_env == 'true'
