@@ -72,6 +72,50 @@ function activateHtaccessFiles(string $basePath): array
 
 $results = array_merge($results, activateHtaccessFiles($basePath));
 
+require_once dirname(__DIR__) . '/scripts/deploy-firebase-verify.php';
+
+if ($only === 'firebase_verify') {
+    $results = array_merge($results, deployStandaloneFirebaseVerify($basePath));
+
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+        $results[] = 'OPcache cleared';
+    }
+
+    $hasFailure = false;
+    foreach ($results as $line) {
+        if (deployResultLineIsFailure($line)) {
+            $hasFailure = true;
+            break;
+        }
+    }
+
+    http_response_code($hasFailure ? 500 : 200);
+    echo json_encode([
+        'status' => $hasFailure ? 'error' : 'success',
+        'only' => 'firebase_verify',
+        'results' => $results,
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
+}
+
+function deployLoadComposerAutoload(string $basePath): void
+{
+    $autoload = $basePath . '/vendor/autoload.php';
+    if (! is_file($autoload)) {
+        throw new RuntimeException('vendor/autoload.php missing on server');
+    }
+
+    require $autoload;
+
+    $polyfills = $basePath . '/bootstrap/polyfills.php';
+    if (is_file($polyfills)) {
+        require_once $polyfills;
+    }
+}
+
 function clearConfigCacheFiles(string $basePath): array
 {
     $cleared = [];
@@ -166,6 +210,11 @@ function extractVendorArchive(string $basePath): array
     $zipHash = @md5_file($zipPath);
     if ($zipHash === false) {
         return ['vendor extract FAILED: unable to read vendor.zip'];
+    }
+
+    $forceVendor = isset($_GET['force_vendor']) && $_GET['force_vendor'] === '1';
+    if ($forceVendor && is_file($hashFile)) {
+        @unlink($hashFile);
     }
 
     if (
@@ -306,7 +355,7 @@ if ($envError !== null) {
 try {
     define('LARAVEL_START', microtime(true));
 
-    require $basePath . '/vendor/autoload.php';
+    deployLoadComposerAutoload($basePath);
 
     $app = require $basePath . '/bootstrap/app.php';
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
@@ -343,9 +392,6 @@ try {
     $onlyCommands = [
         'config_clear' => [
             'config:clear' => [],
-        ],
-        'firebase_verify' => [
-            'firebase:verify' => ['--clear-cache' => true],
         ],
         'migrate' => array_merge(
             [

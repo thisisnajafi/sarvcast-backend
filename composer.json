@@ -20,6 +20,7 @@
         "morilog/jalali": "3.*",
         "pusher/pusher-php-server": "^7.0",
         "spatie/laravel-permission": "^6.0",
+        "symfony/polyfill-iconv": "^1.37",
         "tymon/jwt-auth": "^2.0",
         "zarinpal/zarinpal-php-sdk": "^2.0"
     },

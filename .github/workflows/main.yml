@@ -87,7 +87,9 @@ jobs:
             deploy_scripts:
               - 'public/_deploy_helper.php'
               - 'scripts/extract-deploy.php'
+              - 'scripts/deploy-firebase-verify.php'
               - 'scripts/prepare-ftp-deploy.sh'
+              - 'bootstrap/polyfills.php'
               - 'htaccess'
               - 'public/htaccess'
 
@@ -238,10 +240,14 @@ jobs:
       - name: Clear server bootstrap cache (config:clear)
         if: steps.plan.outputs.run_config_clear == 'true'
         run: |
+          QUERY="only=config_clear"
+          if [[ "${{ steps.plan.outputs.run_composer }}" == "true" ]]; then
+            QUERY="${QUERY}&force_vendor=1"
+          fi
           bash scripts/ci-call-deploy-helper.sh \
             "${{ env.SITE_URL }}" \
             "${{ env.DEPLOY_TOKEN }}" \
-            "only=config_clear" \
+            "${QUERY}" \
             "php artisan config:clear (via deploy helper)" \
             300
 
