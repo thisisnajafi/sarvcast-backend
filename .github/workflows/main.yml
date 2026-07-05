@@ -230,7 +230,7 @@ jobs:
 
           echo "Deploy bundle extracted on server"
 
-      - name: Verify server PHP version
+      - name: Verify server PHP runtime
         if: |
           steps.plan.outputs.run_config_clear == 'true' ||
           steps.plan.outputs.run_firebase == 'true' ||
@@ -241,7 +241,7 @@ jobs:
             "${{ env.SITE_URL }}" \
             "${{ env.DEPLOY_TOKEN }}" \
             "only=php_check" \
-            "Verify server PHP >= ${{ env.REQUIRED_PHP_VERSION }}" \
+            "Verify server PHP runtime (web SAPI >= ${{ env.REQUIRED_PHP_VERSION }})" \
             60
 
       - name: Prepare production .env for server

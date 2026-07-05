@@ -69,12 +69,17 @@ function deployPhpVersionResultLine(): string
 function deployRequiredPhpExtensions(): array
 {
     return [
-        'iconv' => 'iconv',
         'mbstring' => 'mbstring',
         'curl' => 'curl',
-        'json' => 'json',
         'openssl' => 'openssl',
+        'json' => 'json',
         'pdo_mysql' => 'pdo_mysql',
+    ];
+}
+
+function deployOptionalPhpExtensions(): array
+{
+    return [
         'zip' => 'zip',
         'intl' => 'intl',
         'bcmath' => 'bcmath',
@@ -83,11 +88,11 @@ function deployRequiredPhpExtensions(): array
     ];
 }
 
-function deployMissingPhpExtensions(): array
+function deployMissingLoadedExtensions(array $extensions): array
 {
     $missing = [];
 
-    foreach (deployRequiredPhpExtensions() as $label => $extension) {
+    foreach ($extensions as $label => $extension) {
         if (! extension_loaded($extension)) {
             $missing[] = $label;
         }
@@ -96,17 +101,56 @@ function deployMissingPhpExtensions(): array
     return $missing;
 }
 
-function deployPhpExtensionsResultLines(): array
+function deployMissingCriticalPhpExtensions(): array
 {
-    $missing = deployMissingPhpExtensions();
-    if ($missing === []) {
-        return ['PHP extensions OK'];
+    $missing = deployMissingLoadedExtensions(deployRequiredPhpExtensions());
+
+    if (! function_exists('iconv')) {
+        $missing[] = 'iconv';
     }
 
-    return [
-        'PHP extensions FAILED: missing ' . implode(', ', $missing)
-        . ' — enable them in hosting panel (cPanel: MultiPHP INI Editor / Select PHP Extensions)',
-    ];
+    return array_values(array_unique($missing));
+}
+
+function deployMissingOptionalPhpExtensions(): array
+{
+    return deployMissingLoadedExtensions(deployOptionalPhpExtensions());
+}
+
+function deployMissingPhpExtensions(): array
+{
+    return array_merge(
+        deployMissingCriticalPhpExtensions(),
+        deployMissingOptionalPhpExtensions()
+    );
+}
+
+function deployPhpExtensionsResultLines(): array
+{
+    $lines = [];
+    $critical = deployMissingCriticalPhpExtensions();
+    $optional = deployMissingOptionalPhpExtensions();
+
+    if ($critical === []) {
+        $lines[] = 'PHP critical extensions OK';
+    } else {
+        $lines[] = 'PHP critical extensions FAILED: missing '
+            . implode(', ', $critical)
+            . ' — enable in hosting panel (cPanel: MultiPHP INI Editor / Select PHP Extensions)';
+    }
+
+    if ($optional !== []) {
+        $lines[] = 'PHP optional extensions missing: '
+            . implode(', ', $optional)
+            . ' (deploy continues; enable for images/intl/zip features)';
+    }
+
+    return $lines;
+}
+
+function deployPhpRuntimeIsSupported(): bool
+{
+    return deployPhpVersionIsSupported() && deployMissingCriticalPhpExtensions() === [];
 }
 
 function deployAbortIfPhpRuntimeUnsupported(array $results, string $only): void
@@ -121,7 +165,7 @@ function deployAbortIfPhpRuntimeUnsupported(array $results, string $only): void
         $results[] = $line;
     }
 
-    if (deployPhpVersionIsSupported() && deployMissingPhpExtensions() === []) {
+    if (deployPhpRuntimeIsSupported()) {
         return;
     }
 
@@ -137,7 +181,8 @@ function deployAbortIfPhpRuntimeUnsupported(array $results, string $only): void
         'results' => $results,
         'php_version' => PHP_VERSION,
         'required_php' => deployRequiredPhpVersion(),
-        'missing_extensions' => deployMissingPhpExtensions(),
+        'missing_extensions' => deployMissingCriticalPhpExtensions(),
+        'missing_optional_extensions' => deployMissingOptionalPhpExtensions(),
         'local_import' => null,
         'time' => date('c'),
     ]);
@@ -172,6 +217,25 @@ function activateHtaccessFiles(string $basePath): array
     }
 
     return $activated;
+}
+
+if ($only === 'php_check') {
+    $checkResults = [deployPhpVersionResultLine(), ...deployPhpExtensionsResultLines()];
+    $ok = deployPhpRuntimeIsSupported();
+    http_response_code($ok ? 200 : 500);
+    echo json_encode([
+        'status' => $ok ? 'success' : 'error',
+        'only' => 'php_check',
+        'results' => $checkResults,
+        'php_version' => PHP_VERSION,
+        'php_sapi' => PHP_SAPI,
+        'required_php' => deployRequiredPhpVersion(),
+        'missing_extensions' => deployMissingCriticalPhpExtensions(),
+        'missing_optional_extensions' => deployMissingOptionalPhpExtensions(),
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
 }
 
 $results = array_merge($results, activateHtaccessFiles($basePath));
@@ -353,23 +417,6 @@ if ($only === 'config_clear') {
         'status' => 'success',
         'only' => 'config_clear',
         'results' => $results,
-        'local_import' => null,
-        'time' => date('c'),
-    ]);
-    exit;
-}
-
-if ($only === 'php_check') {
-    $checkResults = [deployPhpVersionResultLine(), ...deployPhpExtensionsResultLines()];
-    $ok = deployPhpVersionIsSupported() && deployMissingPhpExtensions() === [];
-    http_response_code($ok ? 200 : 500);
-    echo json_encode([
-        'status' => $ok ? 'success' : 'error',
-        'only' => 'php_check',
-        'results' => $checkResults,
-        'php_version' => PHP_VERSION,
-        'required_php' => deployRequiredPhpVersion(),
-        'missing_extensions' => deployMissingPhpExtensions(),
         'local_import' => null,
         'time' => date('c'),
     ]);
