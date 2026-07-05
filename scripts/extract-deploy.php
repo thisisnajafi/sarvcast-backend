@@ -166,6 +166,79 @@ function extractWithShell(string $archive, string $root): ?string
     return $result['output'] !== '' ? $result['output'] : 'shell extract failed';
 }
 
+function clearBootstrapCache(string $root): void
+{
+    $cacheDir = $root . '/bootstrap/cache';
+    if (! is_dir($cacheDir)) {
+        return;
+    }
+
+    $count = 0;
+    foreach (glob($cacheDir . '/*.php') ?: [] as $file) {
+        if (@unlink($file)) {
+            $count++;
+        }
+    }
+
+    echo "OK: cleared {$count} bootstrap/cache file(s)\n";
+}
+
+function extractVendorZip(string $root): void
+{
+    $zipPath = $root . '/vendor.zip';
+    if (! is_file($zipPath)) {
+        echo "vendor.zip not uploaded; keeping existing vendor/\n";
+
+        return;
+    }
+
+    if (! class_exists(ZipArchive::class)) {
+        echo "Warning: ZipArchive unavailable — vendor.zip left for _deploy_helper\n";
+
+        return;
+    }
+
+    $vendorDir = $root . '/vendor';
+    if (! is_dir($vendorDir) && ! @mkdir($vendorDir, 0755, true)) {
+        http_response_code(500);
+        echo "Failed to create vendor directory\n";
+        exit;
+    }
+
+    @unlink($vendorDir . '/.deploy-package-hash');
+
+    $zip = new ZipArchive();
+    $opened = $zip->open($zipPath);
+    if ($opened !== true) {
+        http_response_code(500);
+        echo "vendor extract FAILED: unable to open vendor.zip (code {$opened})\n";
+        exit;
+    }
+
+    if (! $zip->extractTo($vendorDir)) {
+        $zip->close();
+        http_response_code(500);
+        echo "vendor extract FAILED: ZipArchive::extractTo failed\n";
+        exit;
+    }
+
+    $zip->close();
+
+    if (! is_file($vendorDir . '/autoload.php')) {
+        http_response_code(500);
+        echo "vendor extract FAILED: vendor/autoload.php missing after extraction\n";
+        exit;
+    }
+
+    $zipHash = @md5_file($zipPath);
+    if ($zipHash !== false) {
+        @file_put_contents($vendorDir . '/.deploy-package-hash', $zipHash);
+    }
+
+    @unlink($zipPath);
+    echo "OK: vendor.zip extracted\n";
+}
+
 function extractArchive(string $archive, string $root): ?string
 {
     echo 'Archive: ' . basename($archive) . "\n";
@@ -209,6 +282,9 @@ if ($extractError !== null) {
 }
 
 @unlink($archive);
+
+clearBootstrapCache($root);
+extractVendorZip($root);
 
 if (is_file($htaccessDeploy)) {
     if (@copy($htaccessDeploy, $root . '/.htaccess')) {
