@@ -34,7 +34,7 @@ concurrency:
 env:
   # true  = skip post-deploy steps unless related files changed (faster code-only deploys)
   # false = always run .env, config:clear, firebase, migrate, and cache rebuild after FTP
-  LEAN_DEPLOY: "true"
+  LEAN_DEPLOY: "false"
   REQUIRED_PHP_VERSION: "8.2.0"
   FTP_SERVER: "ftp.manjiapp.ir"
   FTP_USERNAME: "my@manjiapp.ir"
