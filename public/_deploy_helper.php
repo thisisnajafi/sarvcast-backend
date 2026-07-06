@@ -47,13 +47,13 @@ $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
 $runSeed = isset($_GET['seed']) && $_GET['seed'] === '1';
-$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild', 'php_extensions'];
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild', 'php_extensions', 'db_probe'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild, php_extensions',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild, php_extensions, db_probe',
         'only' => $only,
     ]));
 }
@@ -110,6 +110,73 @@ if ($only === 'php_extensions') {
         'loaded_extensions' => get_loaded_extensions(),
         'time' => date('c'),
     ], JSON_PRETTY_PRINT);
+    exit;
+}
+
+if ($only === 'db_probe') {
+    require_once dirname(__DIR__) . '/bootstrap/hosting-extensions.php';
+
+    $pdoDrivers = class_exists('PDO') ? PDO::getAvailableDrivers() : [];
+    $payload = [
+        'status' => 'success',
+        'only' => 'db_probe',
+        'php' => [
+            'version' => PHP_VERSION,
+            'sapi' => PHP_SAPI,
+            'handler_note' => 'Must match Laravel web requests (litespeed/cgi). CLI "Connected!" does not prove web PHP has pdo_mysql.',
+        ],
+        'checks' => [
+            'pdo_drivers' => $pdoDrivers,
+            'mysql_driver' => in_array('mysql', $pdoDrivers, true),
+            'extension_loaded_pdo_mysql' => extension_loaded('pdo_mysql'),
+            'enable_dl' => ini_get('enable_dl'),
+        ],
+        'time' => date('c'),
+    ];
+
+    if (! in_array('mysql', $pdoDrivers, true)) {
+        $payload['db_connect'] = 'skipped_no_mysql_driver';
+        $payload['hosting_hint'] = deployDatabaseExtensionCheck();
+        http_response_code(200);
+        echo json_encode($payload, JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    $envPath = $basePath . '/.env';
+    $envVars = [];
+    if (is_file($envPath)) {
+        foreach (file($envPath, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '#') || ! str_contains($line, '=')) {
+                continue;
+            }
+            [$key, $value] = explode('=', $line, 2);
+            $envVars[trim($key)] = trim($value, " \t\"'");
+        }
+    }
+
+    $host = $envVars['DB_HOST'] ?? '127.0.0.1';
+    $port = $envVars['DB_PORT'] ?? '3306';
+    $database = $envVars['DB_DATABASE'] ?? '';
+    $username = $envVars['DB_USERNAME'] ?? '';
+    $password = $envVars['DB_PASSWORD'] ?? '';
+
+    try {
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s', $host, $port, $database);
+        $pdo = new PDO($dsn, $username, $password, [
+            PDO::ATTR_TIMEOUT => 5,
+        ]);
+        $pdo->query('SELECT 1');
+        $payload['db_connect'] = 'ok';
+        $payload['db_host'] = $host;
+        $payload['db_database'] = $database;
+    } catch (Throwable $e) {
+        $payload['db_connect'] = 'failed';
+        $payload['db_error'] = $e->getMessage();
+    }
+
+    http_response_code(200);
+    echo json_encode($payload, JSON_PRETTY_PRINT);
     exit;
 }
 

@@ -5,8 +5,10 @@ declare(strict_types=1);
 /**
  * Hosting-safe polyfills for Laravel bootstrap on shared PHP without full ext-iconv / ext-mbstring.
  *
- * Load order: iconv first, then mbstring polyfill, then mb_split (not in symfony polyfill).
+ * Load order: extensions (pdo_mysql, etc.) → iconv → mbstring polyfill → mb_split.
  */
+require_once __DIR__ . '/hosting-extensions.php';
+
 $vendorDir = dirname(__DIR__) . '/vendor';
 
 foreach ([
