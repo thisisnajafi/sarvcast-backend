@@ -324,25 +324,53 @@ jobs:
       - name: Verify production site responds
         run: |
           set -euo pipefail
-          for path in "/" "/api/v1/health"; do
-            code=$(curl -sS -o /tmp/manji-body.txt -w "%{http_code}" \
-              "${{ env.SITE_URL }}${path}" --max-time 60)
-            echo "${{ env.SITE_URL }}${path} → HTTP ${code}"
-            if [[ "${path}" == "/" && "${code}" == "403" ]]; then
-              echo "::error::Homepage still returns 403 — check root .htaccess routes / to public/index.php"
-              exit 1
+
+          echo "Checking web PHP extensions..."
+          EXT_JSON=$(curl -sS --max-time 60 \
+            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=php_extensions")
+          echo "$EXT_JSON" | jq -r '.checks | to_entries[] | "  \(.key): \(.value)"' || true
+
+          if ! echo "$EXT_JSON" | jq -e '.checks.class_exists_PDO == true' >/dev/null 2>&1; then
+            echo "::warning::Web PHP still missing PDO — .user.ini may take up to 5 minutes to apply on LiteSpeed"
+            echo "Waiting 90s for PHP config reload..."
+            sleep 90
+            EXT_JSON=$(curl -sS --max-time 60 \
+              "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=php_extensions")
+            echo "$EXT_JSON" | jq -r '.checks | to_entries[] | "  \(.key): \(.value)"' || true
+          fi
+
+          for attempt in 1 2 3; do
+            echo "Smoke check attempt ${attempt}/3"
+            failed=0
+            for path in "/" "/api/v1/health"; do
+              code=$(curl -sS -o /tmp/manji-body.txt -w "%{http_code}" \
+                "${{ env.SITE_URL }}${path}" --max-time 60)
+              echo "${{ env.SITE_URL }}${path} → HTTP ${code}"
+              if [[ "${path}" == "/" && "${code}" == "403" ]]; then
+                echo "::error::Homepage still returns 403 — check root .htaccess routes / to public/index.php"
+                failed=1
+              fi
+              if [[ "${path}" == "/" && ! "${code}" =~ ^(200|302|301)$ ]]; then
+                echo "::error::Homepage returned unexpected HTTP ${code}"
+                head -c 1000 /tmp/manji-body.txt || true
+                failed=1
+              fi
+              if [[ "${path}" == "/api/v1/health" && ! "${code}" =~ ^(200|503)$ ]]; then
+                echo "::error::Health endpoint returned HTTP ${code}"
+                head -c 1000 /tmp/manji-body.txt || true
+                failed=1
+              fi
+            done
+            if [[ "$failed" -eq 0 ]]; then
+              echo "OK: site smoke checks passed"
+              exit 0
             fi
-            if [[ "${path}" == "/" && ! "${code}" =~ ^(200|302|301)$ ]]; then
-              echo "::error::Homepage returned unexpected HTTP ${code}"
-              exit 1
-            fi
-            if [[ "${path}" == "/api/v1/health" && ! "${code}" =~ ^(200|503)$ ]]; then
-              echo "::error::Health endpoint returned HTTP ${code}"
-              head -c 500 /tmp/manji-body.txt || true
-              exit 1
+            if [[ "${attempt}" -lt 3 ]]; then
+              echo "Smoke check failed, waiting 60s before retry..."
+              sleep 60
             fi
           done
-          echo "OK: site smoke checks passed"
+          exit 1
 
       - name: Notify Telegram (success)
         if: success()
