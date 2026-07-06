@@ -22,9 +22,6 @@
 
     RewriteEngine On
 
-    # LiteSpeed: pass PHPRC via rewrite env when mod_env SetEnv is ignored.
-    RewriteRule .* - [E=PHPRC:%{DOCUMENT_ROOT}]
-
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
