@@ -118,6 +118,21 @@ normalize_production_env() {
   sed -i 's|^FIREBASE_PROJECT_ID=.*|FIREBASE_PROJECT_ID=manjiapp-3028e|' "$OUT" || true
   sed -i 's|^CAFEBAZAAR_PACKAGE_NAME=.*|CAFEBAZAAR_PACKAGE_NAME=com.avinpishtazan.manji.cafebazaar|' "$OUT" || true
   sed -i 's|^MYKET_PACKAGE_NAME=.*|MYKET_PACKAGE_NAME=com.avinpishtazan.manji.myket|' "$OUT" || true
+  sed -i 's|^SESSION_DRIVER=.*|SESSION_DRIVER=file|' "$OUT" || true
+  sed -i 's|^CACHE_STORE=.*|CACHE_STORE=file|' "$OUT" || true
+  sed -i 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=sync|' "$OUT" || true
+
+  if ! grep -q '^SESSION_DRIVER=' "$OUT"; then
+    echo 'SESSION_DRIVER=file' >> "$OUT"
+  fi
+
+  if ! grep -q '^CACHE_STORE=' "$OUT"; then
+    echo 'CACHE_STORE=file' >> "$OUT"
+  fi
+
+  if ! grep -q '^QUEUE_CONNECTION=' "$OUT"; then
+    echo 'QUEUE_CONNECTION=sync' >> "$OUT"
+  fi
 
   if ! grep -q '^FIREBASE_PROJECT_ID=' "$OUT"; then
     echo 'FIREBASE_PROJECT_ID=manjiapp-3028e' >> "$OUT"

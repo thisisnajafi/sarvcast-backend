@@ -100,6 +100,11 @@ if ($only === 'php_extensions') {
             'pdo_drivers' => $pdoDrivers,
         ],
         'module_files' => $moduleFiles,
+        'hosting_hint' => deployDatabaseExtensionCheck() === null
+            ? null
+            : 'pdo_mysql.so exists on disk but is not loaded in web PHP. extension= in .user.ini is ignored by PHP. '
+                . 'In cPanel go to Domains → my.manjiapp.ir → set PHP 8.2 and Save (not only account-level Select PHP Version). '
+                . 'If still broken, open a ticket: LiteSpeed LSAPI must load pdo_mysql for domain my.manjiapp.ir.',
         'loaded_extensions' => get_loaded_extensions(),
         'time' => date('c'),
     ], JSON_PRETTY_PRINT);
