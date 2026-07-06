@@ -223,6 +223,47 @@ function ensureProductionEnvFile(string $basePath): ?string
     return null;
 }
 
+function deployDatabaseExtensionCheck(): ?string
+{
+    $phpVersion = PHP_VERSION;
+    $missing = [];
+
+    if (! class_exists('PDO')) {
+        $missing[] = 'pdo';
+    }
+
+    if (! extension_loaded('pdo_mysql')) {
+        $missing[] = 'pdo_mysql';
+    }
+
+    if ($missing === []) {
+        return null;
+    }
+
+    return 'PHP extensions missing for MySQL: ' . implode(', ', $missing)
+        . " (PHP {$phpVersion} via " . PHP_SAPI . ')'
+        . ' — in cPanel open MultiPHP INI Editor for this domain, enable pdo and pdo_mysql, then redeploy';
+}
+
+function deployFormatDatabaseConnectionError(Throwable $dbError): string
+{
+    $message = $dbError->getMessage();
+
+    if (str_contains($message, 'Class "PDO" not found') || str_contains($message, "Class 'PDO' not found")) {
+        return deployDatabaseExtensionCheck()
+            ?? 'PDO extension is not enabled for web PHP — enable pdo and pdo_mysql in cPanel MultiPHP INI Editor';
+    }
+
+    if (str_contains($message, 'could not find driver') || str_contains($message, 'PDOException')) {
+        if (! extension_loaded('pdo_mysql')) {
+            return deployDatabaseExtensionCheck()
+                ?? 'pdo_mysql extension is not enabled — enable it in cPanel MultiPHP INI Editor';
+        }
+    }
+
+    return $message . ' — verify PRODUCTION_DB_* secrets and server .env DB_* values';
+}
+
 function extractVendorArchive(string $basePath): array
 {
     $zipPath = $basePath . '/vendor.zip';
@@ -380,12 +421,31 @@ try {
     $requiresDatabase = $only !== 'firebase_verify';
 
     if ($requiresDatabase) {
+        $extensionError = deployDatabaseExtensionCheck();
+        if ($extensionError !== null) {
+            $results[] = 'Database connection FAILED: ' . $extensionError;
+
+            if (function_exists('opcache_reset')) {
+                @opcache_reset();
+                $results[] = 'OPcache cleared';
+            }
+
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'only' => $only !== '' ? $only : 'full',
+                'results' => $results,
+                'local_import' => null,
+                'time' => date('c'),
+            ]);
+            exit;
+        }
+
         try {
             \Illuminate\Support\Facades\DB::connection()->getPdo();
             $results[] = 'Database connection OK';
         } catch (Throwable $dbError) {
-            $results[] = 'Database connection FAILED: ' . $dbError->getMessage()
-                . ' — upload correct production .env (PRODUCTION_DOTENV / PRODUCTION_DB_PASSWORD in CI)';
+            $results[] = 'Database connection FAILED: ' . deployFormatDatabaseConnectionError($dbError);
 
             if (function_exists('opcache_reset')) {
                 @opcache_reset();
