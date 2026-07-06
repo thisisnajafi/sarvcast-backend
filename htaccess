@@ -1,9 +1,15 @@
 # Laravel — document root is the project folder (not public/).
 # Route "/" to the front controller; everything else goes through public/.
 
-# Force PHP 8.2 (ea-php82) for LiteSpeed / Apache — must match MultiPHP Manager domain setting.
+# LiteSpeed + cPanel: ___litespeed handler loads full ea-php82 (with PDO, mbstring, etc.).
+# Plain ea-php82 often runs a stripped PHP binary on LiteSpeed.
 <IfModule mime_module>
-  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
+  AddHandler application/x-httpd-ea-php82___litespeed .php .php8 .phtml
+</IfModule>
+
+# Tell PHP where to find php.ini in this directory.
+<IfModule mod_env.c>
+  SetEnv PHPRC %{DOCUMENT_ROOT}e
 </IfModule>
 
 <IfModule mod_rewrite.c>

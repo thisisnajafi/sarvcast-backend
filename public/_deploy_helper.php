@@ -71,6 +71,9 @@ if ($only === 'php_extensions') {
             'ini_loaded_file' => php_ini_loaded_file() ?: null,
             'ini_scanned_files' => php_ini_scanned_files() ?: null,
             'extension_dir' => ini_get('extension_dir') ?: null,
+            'user_ini_filename' => ini_get('user_ini.filename') ?: null,
+            'document_root' => $_SERVER['DOCUMENT_ROOT'] ?? null,
+            'script_filename' => $_SERVER['SCRIPT_FILENAME'] ?? null,
         ],
         'checks' => [
             'class_exists_PDO' => class_exists('PDO'),

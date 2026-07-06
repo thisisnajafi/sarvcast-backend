@@ -331,7 +331,7 @@ jobs:
           echo "$EXT_JSON" | jq -r '.checks | to_entries[] | "  \(.key): \(.value)"' || true
 
           if ! echo "$EXT_JSON" | jq -e '.checks.class_exists_PDO == true' >/dev/null 2>&1; then
-            echo "::warning::Web PHP still missing PDO — .user.ini may take up to 5 minutes to apply on LiteSpeed"
+            echo "::warning::Web PHP still missing PDO — ensure .htaccess uses application/x-httpd-ea-php82___litespeed handler"
             echo "Waiting 90s for PHP config reload..."
             sleep 90
             EXT_JSON=$(curl -sS --max-time 60 \

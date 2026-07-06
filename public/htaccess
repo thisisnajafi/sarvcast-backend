@@ -1,6 +1,10 @@
-# Laravel 12 requires PHP 8.2+. cPanel / LiteSpeed hosts often honor this handler in .htaccess.
+# Laravel 12 requires PHP 8.2+. Use LiteSpeed-specific ea-php82 handler on cPanel.
 <IfModule mime_module>
-  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
+  AddHandler application/x-httpd-ea-php82___litespeed .php .php8 .phtml
+</IfModule>
+
+<IfModule mod_env.c>
+  SetEnv PHPRC %{DOCUMENT_ROOT}e
 </IfModule>
 
 <IfModule mod_headers.c>
