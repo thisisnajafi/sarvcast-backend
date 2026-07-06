@@ -454,17 +454,24 @@ if ($envError !== null) {
 }
 
 $webDatabaseUnavailable = deployDatabaseExtensionCheck();
-if (
-    $webDatabaseUnavailable !== null
-    && $only === 'migrate'
-) {
-    $cliPhp = deployResolveCliPhpWithMysql();
+if ($webDatabaseUnavailable !== null && in_array($only, ['migrate', 'cache_rebuild'], true)) {
+    $cliPhp = $only === 'migrate'
+        ? deployResolveCliPhpWithMysql()
+        : deployResolveCliPhp();
+
     if ($cliPhp !== null) {
         $results[] = 'Web PHP: ' . $webDatabaseUnavailable;
         $results[] = 'Using CLI PHP fallback: ' . $cliPhp;
 
         $cliRun = deployRunOnlyModeViaCli($basePath, $cliPhp, $only, $runSeed);
         $results = array_merge($results, $cliRun['lines']);
+
+        if ($only === 'cache_rebuild') {
+            $zipPath = $basePath . '/vendor.zip';
+            if (is_file($zipPath) && is_file($basePath . '/vendor/autoload.php') && @unlink($zipPath)) {
+                $results[] = 'Removed vendor.zip after extraction';
+            }
+        }
 
         if (function_exists('opcache_reset')) {
             @opcache_reset();
@@ -482,8 +489,12 @@ if (
         exit;
     }
 
-    $results[] = 'Database connection FAILED: ' . $webDatabaseUnavailable
-        . ' — CLI PHP with PDO also unavailable on server';
+    if ($only === 'migrate') {
+        $results[] = 'Database connection FAILED: ' . $webDatabaseUnavailable
+            . ' — CLI PHP with PDO also unavailable on server';
+    } else {
+        $results[] = 'Cache rebuild FAILED: web PHP missing extensions and CLI PHP unavailable';
+    }
 
     if (function_exists('opcache_reset')) {
         @opcache_reset();
@@ -510,8 +521,8 @@ try {
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
 
-    // firebase:verify only checks service account + FCM — no database required.
-    $requiresDatabase = $only !== 'firebase_verify';
+    // firebase:verify and cache_rebuild do not require a live database connection.
+    $requiresDatabase = ! in_array($only, ['firebase_verify', 'cache_rebuild'], true);
 
     if ($requiresDatabase) {
         try {

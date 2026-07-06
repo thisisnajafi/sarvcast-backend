@@ -52,6 +52,19 @@ function deployResolveCliPhpWithMysql(): ?string
     return null;
 }
 
+function deployResolveCliPhp(): ?string
+{
+    foreach (deployFindCliPhpBinaries() as $binary) {
+        $result = deployRunShellCommand(escapeshellarg($binary) . ' -r "echo PHP_VERSION;"');
+
+        if ($result['code'] === 0 && trim($result['output']) !== '') {
+            return $binary;
+        }
+    }
+
+    return null;
+}
+
 /**
  * @param  array<int|string, mixed>  $args
  * @return array{code: int, output: string}
