@@ -1,22 +1,14 @@
 # Laravel — document root is the project folder (not public/).
 # Route "/" to the front controller; everything else goes through public/.
 
-# LiteSpeed + cPanel: ___litespeed handler loads full ea-php82 (with PDO, mbstring, etc.).
-# Plain ea-php82 often runs a stripped PHP binary on LiteSpeed.
+# cPanel + LiteSpeed: use standard ea-php82 handler so CloudLinux PHP Selector extensions apply.
+# (The ___litespeed suffix loaded PDO only, without pdo_mysql.)
 <IfModule mime_module>
-  AddHandler application/x-httpd-ea-php82___litespeed .php .php8 .phtml
-</IfModule>
-
-# Tell PHP where to find php.ini (SetEnv alone is ignored on some LiteSpeed hosts).
-<IfModule mod_env.c>
-  SetEnv PHPRC %{DOCUMENT_ROOT}e
+  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
 </IfModule>
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
-
-    # LiteSpeed: pass PHPRC via rewrite env when mod_env SetEnv is ignored.
-    RewriteRule .* - [E=PHPRC:%{DOCUMENT_ROOT}]
 
     # Avoid 403 when "/" maps to the public/ directory (directory listing disabled).
     RewriteRule ^$ public/index.php [L]
