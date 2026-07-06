@@ -3,18 +3,6 @@
   AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
 </IfModule>
 
-<IfModule mod_headers.c>
-  # CORS for browser clients (landing manjiapp.ir, web app app.manjiapp.ir)
-  SetEnvIf Origin "^https://(www\.)?manjiapp\.ir$" CORS=1
-  SetEnvIf Origin "^https://app\.manjiapp\.ir$" CORS=1
-  SetEnvIf Origin "^https://admin\.manjiapp\.ir$" CORS=1
-  Header always set Access-Control-Allow-Origin "%{HTTP_ORIGIN}e" env=CORS
-  Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" env=CORS
-  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Accept, X-Requested-With, X-XSRF-Token" env=CORS
-  Header always set Access-Control-Max-Age "86400" env=CORS
-  Header always append Vary "Origin" env=CORS
-</IfModule>
-
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

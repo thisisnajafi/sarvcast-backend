@@ -121,6 +121,8 @@ normalize_production_env() {
   sed -i 's|^SESSION_DRIVER=.*|SESSION_DRIVER=file|' "$OUT" || true
   sed -i 's|^CACHE_STORE=.*|CACHE_STORE=file|' "$OUT" || true
   sed -i 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=sync|' "$OUT" || true
+  sed -i 's|^CORS_ALLOWED_ORIGINS=.*|CORS_ALLOWED_ORIGINS=https://manjiapp.ir,https://www.manjiapp.ir,https://app.manjiapp.ir,https://admin.manjiapp.ir,https://my.manjiapp.ir|' "$OUT" || true
+  sed -i 's|^ADMIN_DASHBOARD_ENFORCE_ORIGIN=.*|ADMIN_DASHBOARD_ENFORCE_ORIGIN=false|' "$OUT" || true
 
   if ! grep -q '^SESSION_DRIVER=' "$OUT"; then
     echo 'SESSION_DRIVER=file' >> "$OUT"
@@ -148,6 +150,14 @@ normalize_production_env() {
 
   if ! grep -q '^ADMIN_DASHBOARD_URL=' "$OUT"; then
     echo 'ADMIN_DASHBOARD_URL=https://admin.manjiapp.ir' >> "$OUT"
+  fi
+
+  if ! grep -q '^CORS_ALLOWED_ORIGINS=' "$OUT"; then
+    echo 'CORS_ALLOWED_ORIGINS=https://manjiapp.ir,https://www.manjiapp.ir,https://app.manjiapp.ir,https://admin.manjiapp.ir,https://my.manjiapp.ir' >> "$OUT"
+  fi
+
+  if ! grep -q '^ADMIN_DASHBOARD_ENFORCE_ORIGIN=' "$OUT"; then
+    echo 'ADMIN_DASHBOARD_ENFORCE_ORIGIN=false' >> "$OUT"
   fi
 }
 

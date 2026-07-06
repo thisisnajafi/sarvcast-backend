@@ -8,6 +8,19 @@ $defaultOrigins = implode(',', [
     'https://my.manjiapp.ir',
 ]);
 
+$allowedOrigins = array_values(array_filter(array_map(
+    'trim',
+    explode(',', env('CORS_ALLOWED_ORIGINS', $defaultOrigins))
+)));
+
+$adminDashboardUrl = trim((string) env('ADMIN_DASHBOARD_URL', 'https://admin.manjiapp.ir'));
+if ($adminDashboardUrl !== '') {
+    $adminOrigin = rtrim($adminDashboardUrl, '/');
+    if (! in_array($adminOrigin, $allowedOrigins, true)) {
+        $allowedOrigins[] = $adminOrigin;
+    }
+}
+
 return [
 
     /*
@@ -16,7 +29,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Public API routes (e.g. /api/v1/public/team-members) are called from the
-    | static landing (manjiapp.ir) and web app (app.manjiapp.ir).
+    | static landing (manjiapp.ir), web app (app.manjiapp.ir), and the Next.js
+    | admin dashboard (admin.manjiapp.ir).
     |
     */
 
@@ -24,13 +38,13 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', env('CORS_ALLOWED_ORIGINS', $defaultOrigins))
-    ))),
+    'allowed_origins' => $allowedOrigins,
 
     'allowed_origins_patterns' => [
         '#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#',
+        // Any HTTPS manjiapp.ir host (admin/app/my/www/apex) — avoids single-origin
+        // optimization returning the wrong Access-Control-Allow-Origin header.
+        '#^https://([a-z0-9-]+\.)*manjiapp\.ir$#',
     ],
 
     'allowed_headers' => ['*'],
