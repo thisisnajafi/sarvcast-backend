@@ -47,15 +47,43 @@ $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
 $runSeed = isset($_GET['seed']) && $_GET['seed'] === '1';
-$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild'];
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild', 'php_extensions'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild, php_extensions',
         'only' => $only,
     ]));
+}
+
+if ($only === 'php_extensions') {
+    $pdoDrivers = class_exists('PDO') ? PDO::getAvailableDrivers() : [];
+
+    http_response_code(200);
+    echo json_encode([
+        'status' => 'success',
+        'only' => 'php_extensions',
+        'php' => [
+            'version' => PHP_VERSION,
+            'sapi' => PHP_SAPI,
+            'ini_loaded_file' => php_ini_loaded_file() ?: null,
+            'ini_scanned_files' => php_ini_scanned_files() ?: null,
+            'extension_dir' => ini_get('extension_dir') ?: null,
+        ],
+        'checks' => [
+            'class_exists_PDO' => class_exists('PDO'),
+            'extension_loaded_pdo' => extension_loaded('pdo'),
+            'extension_loaded_pdo_mysql' => extension_loaded('pdo_mysql'),
+            'extension_loaded_nd_pdo_mysql' => extension_loaded('nd_pdo_mysql'),
+            'pdo_mysql_driver' => in_array('mysql', $pdoDrivers, true),
+            'pdo_drivers' => $pdoDrivers,
+        ],
+        'loaded_extensions' => get_loaded_extensions(),
+        'time' => date('c'),
+    ], JSON_PRETTY_PRINT);
+    exit;
 }
 
 function artisanCommandLabel(string $cmd): string
@@ -105,6 +133,7 @@ $results = array_merge($results, activateHtaccessFiles($basePath));
 
 require_once dirname(__DIR__) . '/scripts/deploy-firebase-verify.php';
 require_once dirname(__DIR__) . '/scripts/zip-extract-utils.php';
+require_once dirname(__DIR__) . '/scripts/deploy-cli-artisan.php';
 
 if ($only === 'firebase_verify') {
     $results = array_merge($results, deployStandaloneFirebaseVerify($basePath));
@@ -223,26 +252,42 @@ function ensureProductionEnvFile(string $basePath): ?string
     return null;
 }
 
+function deployPdoMysqlAvailable(): bool
+{
+    if (! class_exists('PDO')) {
+        return false;
+    }
+
+    if (in_array('mysql', PDO::getAvailableDrivers(), true)) {
+        return true;
+    }
+
+    return extension_loaded('pdo_mysql') || extension_loaded('nd_pdo_mysql');
+}
+
 function deployDatabaseExtensionCheck(): ?string
 {
     $phpVersion = PHP_VERSION;
-    $missing = [];
+    $iniFile = php_ini_loaded_file() ?: 'unknown';
 
-    if (! class_exists('PDO')) {
-        $missing[] = 'pdo';
-    }
-
-    if (! extension_loaded('pdo_mysql')) {
-        $missing[] = 'pdo_mysql';
-    }
-
-    if ($missing === []) {
+    if (deployPdoMysqlAvailable()) {
         return null;
     }
 
-    return 'PHP extensions missing for MySQL: ' . implode(', ', $missing)
-        . " (PHP {$phpVersion} via " . PHP_SAPI . ')'
-        . ' — in cPanel open MultiPHP INI Editor for this domain, enable pdo and pdo_mysql, then redeploy';
+    $hints = [];
+
+    if (! class_exists('PDO') && ! extension_loaded('pdo')) {
+        $hints[] = 'pdo is not loaded';
+    }
+
+    if (! deployPdoMysqlAvailable()) {
+        $hints[] = 'pdo_mysql / mysql PDO driver is not loaded';
+    }
+
+    return 'PHP MySQL driver unavailable: ' . implode('; ', $hints)
+        . " (PHP {$phpVersion} via " . PHP_SAPI . ", ini: {$iniFile})"
+        . ' — in cPanel set MultiPHP Manager: assign PHP 8.2 to my.manjiapp.ir, then MultiPHP INI Editor for that domain and enable pdo + pdo_mysql'
+        . ' — after saving, wait 2 minutes or run deploy with only=php_extensions to verify';
 }
 
 function deployFormatDatabaseConnectionError(Throwable $dbError): string
@@ -408,6 +453,61 @@ if ($envError !== null) {
     exit;
 }
 
+$webDatabaseUnavailable = deployDatabaseExtensionCheck();
+if (
+    $webDatabaseUnavailable !== null
+    && $only === 'migrate'
+) {
+    $cliPhp = deployResolveCliPhpWithMysql();
+    if ($cliPhp !== null) {
+        $results[] = 'Web PHP: ' . $webDatabaseUnavailable;
+        $results[] = 'Using CLI PHP fallback: ' . $cliPhp;
+
+        $cliRun = deployRunOnlyModeViaCli($basePath, $cliPhp, $only, $runSeed);
+        $results = array_merge($results, $cliRun['lines']);
+
+        if ($only === 'cache_rebuild') {
+            $zipPath = $basePath . '/vendor.zip';
+            if (is_file($zipPath) && is_file($basePath . '/vendor/autoload.php') && @unlink($zipPath)) {
+                $results[] = 'Removed vendor.zip after extraction';
+            }
+        }
+
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+            $results[] = 'OPcache cleared';
+        }
+
+        http_response_code($cliRun['ok'] ? 200 : 500);
+        echo json_encode([
+            'status' => $cliRun['ok'] ? 'success' : 'error',
+            'only' => $only,
+            'results' => $results,
+            'local_import' => null,
+            'time' => date('c'),
+        ]);
+        exit;
+    }
+
+    $results[] = 'Database connection FAILED: ' . $webDatabaseUnavailable
+        . ' — CLI PHP with PDO also unavailable on server';
+
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+        $results[] = 'OPcache cleared';
+    }
+
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'only' => $only,
+        'results' => $results,
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
+}
+
 try {
     define('LARAVEL_START', microtime(true));
 
@@ -421,26 +521,6 @@ try {
     $requiresDatabase = $only !== 'firebase_verify';
 
     if ($requiresDatabase) {
-        $extensionError = deployDatabaseExtensionCheck();
-        if ($extensionError !== null) {
-            $results[] = 'Database connection FAILED: ' . $extensionError;
-
-            if (function_exists('opcache_reset')) {
-                @opcache_reset();
-                $results[] = 'OPcache cleared';
-            }
-
-            http_response_code(500);
-            echo json_encode([
-                'status' => 'error',
-                'only' => $only !== '' ? $only : 'full',
-                'results' => $results,
-                'local_import' => null,
-                'time' => date('c'),
-            ]);
-            exit;
-        }
-
         try {
             \Illuminate\Support\Facades\DB::connection()->getPdo();
             $results[] = 'Database connection OK';
