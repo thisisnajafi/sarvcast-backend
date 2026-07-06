@@ -466,13 +466,6 @@ if (
         $cliRun = deployRunOnlyModeViaCli($basePath, $cliPhp, $only, $runSeed);
         $results = array_merge($results, $cliRun['lines']);
 
-        if ($only === 'cache_rebuild') {
-            $zipPath = $basePath . '/vendor.zip';
-            if (is_file($zipPath) && is_file($basePath . '/vendor/autoload.php') && @unlink($zipPath)) {
-                $results[] = 'Removed vendor.zip after extraction';
-            }
-        }
-
         if (function_exists('opcache_reset')) {
             @opcache_reset();
             $results[] = 'OPcache cleared';
