@@ -73,14 +73,16 @@ function deployRunArtisanViaCli(string $basePath, string $phpBinary, string $com
             continue;
         }
 
+        $option = str_starts_with((string) $key, '--') ? substr((string) $key, 2) : (string) $key;
+
         if ($value === true) {
-            $parts[] = escapeshellarg('--' . $key);
+            $parts[] = '--' . $option;
 
             continue;
         }
 
         if ($value !== false && $value !== null) {
-            $parts[] = escapeshellarg('--' . $key . '=' . $value);
+            $parts[] = '--' . $option . '=' . escapeshellarg((string) $value);
         }
     }
 
@@ -99,11 +101,11 @@ function deployRunOnlyModeViaCli(string $basePath, string $phpBinary, string $on
         'migrate' => array_merge(
             [
                 ['migrate:status', []],
-                ['migrate', ['--force' => true]],
+                ['migrate', ['force' => true]],
                 ['stories:sync-episode-status', []],
             ],
             $runSeed ? [
-                ['db:seed', ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true]],
+                ['db:seed', ['class' => 'Database\\Seeders\\RolePermissionSeeder', 'force' => true]],
             ] : []
         ),
         'cache_rebuild' => [
@@ -113,7 +115,7 @@ function deployRunOnlyModeViaCli(string $basePath, string $phpBinary, string $on
             ['route:cache', []],
             ['view:cache', []],
             ['optimize', []],
-            ['storage:link', ['--force' => true]],
+            ['storage:link', ['force' => true]],
         ],
     ];
 
