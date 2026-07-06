@@ -5,6 +5,36 @@ set_time_limit(0);
 
 header('Content-Type: application/json');
 
+$deployHelperFatal = static function (string $message, int $code = 500): void {
+    if (! headers_sent()) {
+        http_response_code($code);
+    }
+
+    echo json_encode([
+        'status' => 'error',
+        'message' => $message,
+        'only' => isset($_GET['only']) ? trim((string) $_GET['only']) : '',
+        'results' => [],
+        'local_import' => null,
+        'time' => date('c'),
+    ]);
+    exit;
+};
+
+register_shutdown_function(static function () use ($deployHelperFatal): void {
+    $error = error_get_last();
+    if ($error === null) {
+        return;
+    }
+
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR];
+    if (! in_array($error['type'], $fatalTypes, true)) {
+        return;
+    }
+
+    $deployHelperFatal($error['message'] . ' in ' . $error['file'] . ':' . $error['line']);
+});
+
 $token = isset($_GET['token']) ? $_GET['token'] : '';
 $expected = 'manji-ftp-deploy-x7k9m2';
 
@@ -195,8 +225,6 @@ function ensureProductionEnvFile(string $basePath): ?string
 
 function extractVendorArchive(string $basePath): array
 {
-    require_once $basePath . '/scripts/deploy-vendor-extract.php';
-
     $zipPath = $basePath . '/vendor.zip';
     $vendorDir = $basePath . '/vendor';
     $hashFile = $vendorDir . '/.deploy-package-hash';
@@ -274,8 +302,10 @@ foreach ($dirs as $dir) {
     }
 }
 
-// 2. Extract vendor.zip uploaded by CI (shared hosting disables shell/composer over HTTP)
-$results = array_merge($results, extractVendorArchive($basePath));
+// 2. Extract vendor.zip (skip for config_clear — cache-only step; migrate uses force_vendor)
+if ($only !== 'config_clear') {
+    $results = array_merge($results, extractVendorArchive($basePath));
+}
 
 // 3. Delete stale cache files before bootstrapping Laravel
 $results = array_merge($results, clearConfigCacheFiles($basePath));

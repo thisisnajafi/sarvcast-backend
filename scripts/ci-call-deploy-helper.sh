@@ -27,7 +27,11 @@ BODY=$(echo "$RESPONSE" | sed '$d')
 echo "HTTP status: ${HTTP_CODE}"
 echo "Raw response: ${BODY}"
 
-if echo "$BODY" | grep -qE 'Fatal error|Parse error|memory size of .* exhausted'; then
+if [[ -z "${BODY// }" ]]; then
+  echo "::warning::Deploy helper returned empty body (HTTP ${HTTP_CODE})"
+fi
+
+if echo "$BODY" | grep -qE 'Fatal error|Parse error|Cannot redeclare|memory size of .* exhausted'; then
   echo "::error::PHP fatal error in deploy helper response (${LABEL})"
   echo "::endgroup::"
   exit 1
@@ -39,6 +43,11 @@ echo "$BODY" | jq -r '.results[]?' 2>/dev/null | while read -r line; do
 done
 
 STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
+MESSAGE=$(echo "$BODY" | jq -r '.message // empty' 2>/dev/null)
+
+if [[ -n "$MESSAGE" && "$MESSAGE" != "null" ]]; then
+  echo "Error message: ${MESSAGE}"
+fi
 
 if [[ "$HTTP_CODE" != "200" ]] || [[ "$STATUS" != "success" ]]; then
   echo "::error::${LABEL} failed"

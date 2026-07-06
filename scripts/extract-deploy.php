@@ -185,7 +185,7 @@ function clearBootstrapCache(string $root): void
 
 function extractVendorZip(string $root): void
 {
-    require_once $root . '/scripts/deploy-vendor-extract.php';
+    require_once $root . '/scripts/zip-extract-utils.php';
 
     $zipPath = $root . '/vendor.zip';
     if (! is_file($zipPath)) {
