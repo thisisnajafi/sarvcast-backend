@@ -60,6 +60,17 @@ if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
 
 if ($only === 'php_extensions') {
     $pdoDrivers = class_exists('PDO') ? PDO::getAvailableDrivers() : [];
+    $extDir = ini_get('extension_dir') ?: '/opt/cpanel/ea-php82/root/usr/lib64/php/modules';
+    $extDir = rtrim((string) $extDir, '/\\');
+
+    $probeModules = ['mysqlnd', 'pdo_mysql', 'nd_pdo_mysql', 'mbstring', 'dom', 'xml', 'curl', 'tokenizer'];
+    $moduleFiles = [];
+    foreach ($probeModules as $module) {
+        $moduleFiles[$module] = [
+            'so_exists' => is_file($extDir . '/' . $module . '.so'),
+            'loaded' => extension_loaded($module),
+        ];
+    }
 
     http_response_code(200);
     echo json_encode([
@@ -70,7 +81,7 @@ if ($only === 'php_extensions') {
             'sapi' => PHP_SAPI,
             'ini_loaded_file' => php_ini_loaded_file() ?: null,
             'ini_scanned_files' => php_ini_scanned_files() ?: null,
-            'extension_dir' => ini_get('extension_dir') ?: null,
+            'extension_dir' => $extDir,
             'user_ini_filename' => ini_get('user_ini.filename') ?: null,
             'document_root' => $_SERVER['DOCUMENT_ROOT'] ?? null,
             'script_filename' => $_SERVER['SCRIPT_FILENAME'] ?? null,
@@ -83,9 +94,12 @@ if ($only === 'php_extensions') {
             'class_exists_DOMDocument' => class_exists('DOMDocument'),
             'extension_loaded_dom' => extension_loaded('dom'),
             'extension_loaded_xml' => extension_loaded('xml'),
+            'extension_loaded_mbstring' => extension_loaded('mbstring'),
+            'extension_loaded_curl' => extension_loaded('curl'),
             'pdo_mysql_driver' => in_array('mysql', $pdoDrivers, true),
             'pdo_drivers' => $pdoDrivers,
         ],
+        'module_files' => $moduleFiles,
         'loaded_extensions' => get_loaded_extensions(),
         'time' => date('c'),
     ], JSON_PRETTY_PRINT);

@@ -350,11 +350,14 @@ jobs:
                 echo "::error::Homepage still returns 403 — check root .htaccess routes / to public/index.php"
                 failed=1
               fi
-              if [[ "${path}" == "/" && ! "${code}" =~ ^(200|302|301)$ ]]; then
-                echo "::error::Homepage returned unexpected HTTP ${code}"
-                head -c 1000 /tmp/manji-body.txt || true
-                failed=1
+            if [[ "${path}" == "/" && ! "${code}" =~ ^(200|302|301)$ ]]; then
+              echo "::error::Homepage returned unexpected HTTP ${code}"
+              head -c 1000 /tmp/manji-body.txt || true
+              if [[ "${code}" == "500" ]] && echo "$EXT_JSON" | jq -e '.checks.pdo_mysql_driver == false' >/dev/null 2>&1; then
+                echo "::error::Likely cause: pdo_mysql not loaded on web PHP (pdo_drivers empty) — redeploy php.ini fix or contact host"
               fi
+              failed=1
+            fi
               if [[ "${path}" == "/api/v1/health" && ! "${code}" =~ ^(200|503)$ ]]; then
                 echo "::error::Health endpoint returned HTTP ${code}"
                 head -c 1000 /tmp/manji-body.txt || true
