@@ -31,10 +31,73 @@ function deployFindCliPhpBinaries(): array
     return array_values(array_unique($found));
 }
 
+function deployCliPhpExtensionLoaded(string $phpBinary, array $extraFlags, string $extension): bool
+{
+    $cmd = implode(' ', array_merge(
+        [escapeshellarg($phpBinary)],
+        $extraFlags,
+        ['-r', escapeshellarg("echo extension_loaded('{$extension}') ? 'yes' : 'no';")]
+    ));
+
+    $result = deployRunShellCommand($cmd);
+
+    return $result['code'] === 0 && trim($result['output']) === 'yes';
+}
+
+function deployCliGetExtensionDir(string $phpBinary): ?string
+{
+    $result = deployRunShellCommand(
+        escapeshellarg($phpBinary) . ' -r "echo ini_get(\'extension_dir\');"'
+    );
+
+    $dir = rtrim(trim($result['output']), '/\\');
+
+    return $dir !== '' ? $dir : null;
+}
+
+/**
+ * @return string[] php -d flags
+ */
+function deployCliBuildExtensionFlags(string $phpBinary): array
+{
+    $extensionDir = deployCliGetExtensionDir($phpBinary);
+    if ($extensionDir === null) {
+        return [];
+    }
+
+    $flags = [];
+    $loadOrder = ['xml', 'dom', 'tokenizer', 'mbstring', 'pdo', 'pdo_mysql'];
+
+    foreach ($loadOrder as $extension) {
+        if (deployCliPhpExtensionLoaded($phpBinary, $flags, $extension)) {
+            continue;
+        }
+
+        foreach ([$extension . '.so', 'php_' . $extension . '.so'] as $file) {
+            $path = $extensionDir . DIRECTORY_SEPARATOR . $file;
+            if (! is_file($path)) {
+                continue;
+            }
+
+            $candidateFlags = array_merge($flags, ['-d', 'extension=' . $path]);
+            if (deployCliPhpExtensionLoaded($phpBinary, $candidateFlags, $extension)) {
+                $flags = $candidateFlags;
+                break;
+            }
+        }
+    }
+
+    return $flags;
+}
+
 function deployCliPhpSupportsMysql(string $phpBinary): bool
 {
-    $cmd = escapeshellarg($phpBinary)
-        . " -r \"echo (class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers(), true)) ? 'yes' : 'no';\"";
+    $flags = deployCliBuildExtensionFlags($phpBinary);
+    $cmd = implode(' ', array_merge(
+        [escapeshellarg($phpBinary)],
+        $flags,
+        ['-r', escapeshellarg("echo (class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers(), true)) ? 'yes' : 'no';")]
+    ));
 
     $result = deployRunShellCommand($cmd);
 
@@ -71,13 +134,20 @@ function deployResolveCliPhp(): ?string
  */
 function deployRunArtisanViaCli(string $basePath, string $phpBinary, string $command, array $args = []): array
 {
+    $extensionFlags = deployCliBuildExtensionFlags($phpBinary);
+
     $parts = [
         'cd ' . escapeshellarg($basePath),
         '&&',
-        escapeshellarg($phpBinary),
-        escapeshellarg($basePath . '/artisan'),
-        $command,
+        'APP_DEBUG=false',
+        'COLUMNS=120',
     ];
+
+    $parts[] = escapeshellarg($phpBinary);
+    $parts = array_merge($parts, $extensionFlags);
+    $parts[] = escapeshellarg($basePath . '/artisan');
+    $parts[] = $command;
+    $parts[] = '--no-ansi';
 
     foreach ($args as $key => $value) {
         if (is_int($key)) {
@@ -153,4 +223,33 @@ function deployRunOnlyModeViaCli(string $basePath, string $phpBinary, string $on
     }
 
     return ['ok' => $ok, 'lines' => $lines];
+}
+
+/**
+ * @return array{ok: bool, lines: string[]}
+ */
+function deployFileOnlyCacheRebuild(string $basePath): array
+{
+    $lines = [];
+    $link = $basePath . '/public/storage';
+
+    if (is_link($link) || is_dir($link)) {
+        $lines[] = 'storage:link skipped (link already exists)';
+    } elseif (@symlink('../storage/app/public', $link)) {
+        $lines[] = 'storage:link OK (manual symlink)';
+    } else {
+        $saved = getcwd();
+        @chdir($basePath . '/public');
+        if (@symlink('../storage/app/public', 'storage')) {
+            $lines[] = 'storage:link OK (manual symlink fallback)';
+        } else {
+            $lines[] = 'Warn: could not create public/storage symlink';
+        }
+        @chdir($saved ?: $basePath);
+    }
+
+    $lines[] = 'Cache rebuild OK (file-only fallback — bootstrap cache already cleared; skipped config/route/view cache)';
+    $lines[] = 'Enable dom + xml in cPanel PHP extensions for full artisan cache rebuild';
+
+    return ['ok' => true, 'lines' => $lines];
 }

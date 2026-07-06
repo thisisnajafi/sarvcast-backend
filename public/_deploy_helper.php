@@ -77,6 +77,9 @@ if ($only === 'php_extensions') {
             'extension_loaded_pdo' => extension_loaded('pdo'),
             'extension_loaded_pdo_mysql' => extension_loaded('pdo_mysql'),
             'extension_loaded_nd_pdo_mysql' => extension_loaded('nd_pdo_mysql'),
+            'class_exists_DOMDocument' => class_exists('DOMDocument'),
+            'extension_loaded_dom' => extension_loaded('dom'),
+            'extension_loaded_xml' => extension_loaded('xml'),
             'pdo_mysql_driver' => in_array('mysql', $pdoDrivers, true),
             'pdo_drivers' => $pdoDrivers,
         ],
@@ -465,6 +468,12 @@ if ($webDatabaseUnavailable !== null && in_array($only, ['migrate', 'cache_rebui
 
         $cliRun = deployRunOnlyModeViaCli($basePath, $cliPhp, $only, $runSeed);
         $results = array_merge($results, $cliRun['lines']);
+
+        if ($only === 'cache_rebuild' && ! $cliRun['ok']) {
+            $fileOnly = deployFileOnlyCacheRebuild($basePath);
+            $results = array_merge($results, $fileOnly['lines']);
+            $cliRun['ok'] = $fileOnly['ok'];
+        }
 
         if ($only === 'cache_rebuild') {
             $zipPath = $basePath . '/vendor.zip';
