@@ -63,7 +63,7 @@ if ($only === 'php_extensions') {
     $extDir = ini_get('extension_dir') ?: '/opt/cpanel/ea-php82/root/usr/lib64/php/modules';
     $extDir = rtrim((string) $extDir, '/\\');
 
-    $probeModules = ['mysqlnd', 'pdo_mysql', 'nd_pdo_mysql', 'mbstring', 'dom', 'xml', 'curl', 'tokenizer'];
+    $probeModules = ['mysqlnd', 'pdo_mysql', 'nd_pdo_mysql', 'mbstring', 'dom', 'xml', 'curl', 'tokenizer', 'fileinfo'];
     $moduleFiles = [];
     foreach ($probeModules as $module) {
         $moduleFiles[$module] = [
@@ -96,6 +96,8 @@ if ($only === 'php_extensions') {
             'extension_loaded_xml' => extension_loaded('xml'),
             'extension_loaded_mbstring' => extension_loaded('mbstring'),
             'extension_loaded_curl' => extension_loaded('curl'),
+            'extension_loaded_fileinfo' => extension_loaded('fileinfo'),
+            'class_exists_finfo' => class_exists('finfo'),
             'pdo_mysql_driver' => in_array('mysql', $pdoDrivers, true),
             'pdo_drivers' => $pdoDrivers,
         ],
