@@ -1,6 +1,6 @@
-# cPanel ea-php82 — let PHP Selector extensions apply (avoid ___litespeed stripped build).
+# cPanel alt-php82 — PHP handler for web requests.
 <IfModule mime_module>
-  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
+  AddHandler application/x-httpd-alt-php82 .php .php8 .phtml
 </IfModule>
 
 <IfModule mod_rewrite.c>
