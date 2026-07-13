@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('people')) {
+            return;
+        }
+
         Schema::create('people', function (Blueprint $table) {
             $table->id();
             $table->string('name', 100);
@@ -26,7 +30,10 @@ return new class extends Migration
             
             $table->index('name');
             $table->index('is_verified');
-            $table->fullText(['name', 'bio']);
+
+            if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+                $table->fullText(['name', 'bio']);
+            }
         });
     }
 

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('payments') || ! Schema::hasTable('subscriptions')) {
+            return;
+        }
+
         // Add billing platform support to payments table
         Schema::table('payments', function (Blueprint $table) {
             // Billing platform: 'website' (Zarinpal), 'cafebazaar', 'myket'
@@ -92,6 +96,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasTable('payments') || ! Schema::hasTable('subscriptions')) {
+            return;
+        }
+
         Schema::table('payments', function (Blueprint $table) {
             $table->dropIndex(['billing_platform']);
             $table->dropIndex(['purchase_token']);

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('stories')) {
+            return;
+        }
+
         Schema::create('stories', function (Blueprint $table) {
             $table->id();
             $table->string('title', 200);
@@ -20,7 +24,6 @@ return new class extends Migration
             $table->string('cover_image_url', 500)->nullable();
             $table->unsignedBigInteger('category_id');
             $table->unsignedBigInteger('director_id')->nullable();
-            $table->unsignedBigInteger('writer_id')->nullable();
             $table->unsignedBigInteger('author_id')->nullable();
             $table->unsignedBigInteger('narrator_id')->nullable();
             $table->string('age_group', 20);
@@ -39,14 +42,16 @@ return new class extends Migration
             
             $table->foreign('category_id')->references('id')->on('categories')->onDelete('restrict');
             $table->foreign('director_id')->references('id')->on('people')->onDelete('set null');
-            $table->foreign('writer_id')->references('id')->on('people')->onDelete('set null');
             $table->foreign('author_id')->references('id')->on('people')->onDelete('set null');
             $table->foreign('narrator_id')->references('id')->on('people')->onDelete('set null');
             $table->index('category_id');
             $table->index('status');
             $table->index('is_premium');
             $table->index('age_group');
-            $table->fullText(['title', 'subtitle', 'description']);
+
+            if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+                $table->fullText(['title', 'subtitle', 'description']);
+            }
         });
     }
 
