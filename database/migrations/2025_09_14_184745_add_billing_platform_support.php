@@ -17,8 +17,12 @@ return new class extends Migration
         }
 
         Schema::table('payments', function (Blueprint $table) {
+            $paymentsAnchor = Schema::hasColumn('payments', 'payment_gateway')
+                ? 'payment_gateway'
+                : 'payment_method';
+
             if (! Schema::hasColumn('payments', 'billing_platform')) {
-                $table->enum('billing_platform', ['website', 'cafebazaar', 'myket'])->default('website')->after('payment_gateway');
+                $table->enum('billing_platform', ['website', 'cafebazaar', 'myket'])->default('website')->after($paymentsAnchor);
                 $table->index('billing_platform');
             }
             if (! Schema::hasColumn('payments', 'purchase_token')) {

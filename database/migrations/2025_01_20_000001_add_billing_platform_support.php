@@ -17,9 +17,13 @@ return new class extends Migration
 
         // Add billing platform support to payments table
         Schema::table('payments', function (Blueprint $table) {
+            $paymentsAnchor = Schema::hasColumn('payments', 'payment_gateway')
+                ? 'payment_gateway'
+                : 'payment_method';
+
             // Billing platform: 'website' (Zarinpal), 'cafebazaar', 'myket'
             if (!Schema::hasColumn('payments', 'billing_platform')) {
-                $table->enum('billing_platform', ['website', 'cafebazaar', 'myket'])->default('website')->after('payment_gateway');
+                $table->enum('billing_platform', ['website', 'cafebazaar', 'myket'])->default('website')->after($paymentsAnchor);
                 $table->index('billing_platform');
             }
 
