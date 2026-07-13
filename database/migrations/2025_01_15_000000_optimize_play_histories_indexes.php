@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('play_histories')) {
+            return;
+        }
+
         Schema::table('play_histories', function (Blueprint $table) {
             // Add composite indexes for common query patterns
             
@@ -52,6 +56,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasTable('play_histories')) {
+            return;
+        }
+
         Schema::table('play_histories', function (Blueprint $table) {
             // Drop the indexes
             $table->dropIndex('idx_user_played_at');
