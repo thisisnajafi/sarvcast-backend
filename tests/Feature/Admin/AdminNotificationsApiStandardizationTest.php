@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Events\NewUserRegistrationEvent;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -14,6 +16,8 @@ class AdminNotificationsApiStandardizationTest extends TestCase
 
     public function test_notifications_index_returns_canonical_meta_and_legacy_pagination(): void
     {
+        Event::fake([NewUserRegistrationEvent::class]);
+
         $admin = User::factory()->admin()->create();
 
         Sanctum::actingAs($admin);
@@ -30,6 +34,8 @@ class AdminNotificationsApiStandardizationTest extends TestCase
 
     public function test_notifications_index_loads_sender_and_recipient_relationships(): void
     {
+        Event::fake([NewUserRegistrationEvent::class]);
+
         $admin = User::factory()->admin()->create();
         $recipient = User::factory()->create(['status' => 'active']);
 
@@ -45,13 +51,20 @@ class AdminNotificationsApiStandardizationTest extends TestCase
 
         $response = $this->getJson('/api/admin/notifications?page=1&perPage=10');
 
-        $response->assertOk()
-            ->assertJsonPath('data.0.sender.id', $admin->id)
-            ->assertJsonPath('data.0.recipient.id', $recipient->id);
+        $response->assertOk();
+
+        $notification = collect($response->json('data'))
+            ->firstWhere('title', 'Test notification');
+
+        $this->assertNotNull($notification);
+        $this->assertSame($admin->id, $notification['sender']['id'] ?? null);
+        $this->assertSame($recipient->id, $notification['recipient']['id'] ?? null);
     }
 
     public function test_notifications_export_returns_csv_for_super_admin(): void
     {
+        Event::fake([NewUserRegistrationEvent::class]);
+
         $super = User::factory()->superAdmin()->create();
 
         Sanctum::actingAs($super);

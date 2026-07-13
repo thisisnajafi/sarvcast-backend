@@ -1107,7 +1107,7 @@ class NotificationController extends Controller
         if (! in_array($sortBy, $allowed, true)) {
             $sortBy = 'created_at';
         }
-        $query->orderBy($sortBy, $sortDir);
+        $query->orderBy($sortBy, $sortDir)->orderByDesc('id');
     }
 
     private function resolveNotificationPerPage(Request $request): int
