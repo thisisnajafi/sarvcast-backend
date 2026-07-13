@@ -12,11 +12,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Modify the role enum to include 'basic' and change default to 'basic'
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('parent', 'child', 'admin', 'basic') DEFAULT 'basic'");
-        
-        // Update existing users with 'parent' role to 'basic' if they don't have children
-        DB::statement("UPDATE users SET role = 'basic' WHERE role = 'parent' AND id NOT IN (SELECT DISTINCT parent_id FROM users WHERE parent_id IS NOT NULL)");
+        if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'role')) {
+            return;
+        }
+
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('parent', 'child', 'admin', 'basic') DEFAULT 'basic'");
+        }
+
+        $parentIdsWithChildren = DB::table('users')
+            ->whereNotNull('parent_id')
+            ->distinct()
+            ->pluck('parent_id');
+
+        $query = DB::table('users')->where('role', 'parent');
+
+        if ($parentIdsWithChildren->isNotEmpty()) {
+            $query->whereNotIn('id', $parentIdsWithChildren);
+        }
+
+        $query->update(['role' => 'basic']);
     }
 
     /**
@@ -24,10 +39,16 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Revert back to original enum values
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('parent', 'child', 'admin') DEFAULT 'parent'");
-        
-        // Convert 'basic' users back to 'parent'
-        DB::statement("UPDATE users SET role = 'parent' WHERE role = 'basic'");
+        if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'role')) {
+            return;
+        }
+
+        DB::table('users')
+            ->where('role', 'basic')
+            ->update(['role' => 'parent']);
+
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('parent', 'child', 'admin') DEFAULT 'parent'");
+        }
     }
 };
