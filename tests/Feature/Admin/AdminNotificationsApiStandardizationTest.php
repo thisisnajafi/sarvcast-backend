@@ -14,11 +14,7 @@ class AdminNotificationsApiStandardizationTest extends TestCase
 
     public function test_notifications_index_returns_canonical_meta_and_legacy_pagination(): void
     {
-        $admin = User::factory()->create([
-            'role' => 'admin',
-            'email' => 'notifications-meta@test.com',
-            'status' => 'active',
-        ]);
+        $admin = User::factory()->admin()->create();
 
         Sanctum::actingAs($admin);
 
@@ -34,11 +30,7 @@ class AdminNotificationsApiStandardizationTest extends TestCase
 
     public function test_notifications_index_loads_sender_and_recipient_relationships(): void
     {
-        $admin = User::factory()->create([
-            'role' => 'admin',
-            'email' => 'notifications-relations@test.com',
-            'status' => 'active',
-        ]);
+        $admin = User::factory()->admin()->create();
         $recipient = User::factory()->create(['status' => 'active']);
 
         Notification::query()->create([
@@ -60,11 +52,7 @@ class AdminNotificationsApiStandardizationTest extends TestCase
 
     public function test_notifications_export_returns_csv_for_super_admin(): void
     {
-        $super = User::factory()->create([
-            'role' => 'super_admin',
-            'email' => 'notifications-export@test.com',
-            'status' => 'active',
-        ]);
+        $super = User::factory()->superAdmin()->create();
 
         Sanctum::actingAs($super);
 
