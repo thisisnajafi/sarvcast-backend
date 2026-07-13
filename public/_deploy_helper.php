@@ -47,13 +47,13 @@ $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
 $runSeed = isset($_GET['seed']) && $_GET['seed'] === '1';
-$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'cache_rebuild', 'php_extensions', 'db_probe'];
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'migrate_verify', 'cache_rebuild', 'php_extensions', 'db_probe'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, cache_rebuild, php_extensions, db_probe',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, migrate_verify, cache_rebuild, php_extensions, db_probe',
         'only' => $only,
     ]));
 }
@@ -519,7 +519,7 @@ if ($only === '') {
     http_response_code(400);
     echo json_encode([
         'status' => 'error',
-        'message' => 'Missing only mode. Use config_clear, firebase_verify, migrate, or cache_rebuild',
+        'message' => 'Missing only mode. Use config_clear, firebase_verify, migrate, migrate_verify, or cache_rebuild',
         'results' => $results,
         'local_import' => null,
         'time' => date('c'),
@@ -646,6 +646,68 @@ try {
             ]);
             exit;
         }
+    }
+
+    if ($only === 'migrate_verify') {
+        $deployVerifyOk = true;
+        $exitCode = $kernel->call('migrate:status', ['--no-ansi' => true]);
+        $statusOutput = trim($kernel->output());
+        $results[] = $exitCode === 0
+            ? 'migrate:status OK'
+            : 'migrate:status FAILED (exit ' . $exitCode . ')';
+
+        $pendingCount = 0;
+        foreach (explode("\n", $statusOutput) as $line) {
+            if (stripos($line, 'Pending') !== false) {
+                $pendingCount++;
+            }
+        }
+
+        if ($exitCode !== 0) {
+            $deployVerifyOk = false;
+        } elseif ($pendingCount > 0) {
+            $results[] = 'migrate:verify FAILED: ' . $pendingCount . ' pending migration(s)';
+            $deployVerifyOk = false;
+        } else {
+            $results[] = 'migrate:verify OK (no pending migrations)';
+        }
+
+        $verifyColumns = isset($_GET['verify_columns'])
+            ? array_filter(array_map('trim', explode(',', (string) $_GET['verify_columns'])))
+            : [];
+
+        foreach ($verifyColumns as $tableColumn) {
+            if (! str_contains($tableColumn, '.')) {
+                $results[] = 'schema:verify skipped invalid column spec: ' . $tableColumn;
+                $deployVerifyOk = false;
+
+                continue;
+            }
+
+            [$table, $column] = explode('.', $tableColumn, 2);
+            $hasColumn = \Illuminate\Support\Facades\Schema::hasColumn($table, $column);
+            if ($hasColumn) {
+                $results[] = 'schema:verify OK ' . $tableColumn;
+            } else {
+                $results[] = 'schema:verify FAILED missing column ' . $tableColumn;
+                $deployVerifyOk = false;
+            }
+        }
+
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+            $results[] = 'OPcache cleared';
+        }
+
+        http_response_code($deployVerifyOk ? 200 : 500);
+        echo json_encode([
+            'status' => $deployVerifyOk ? 'success' : 'error',
+            'only' => 'migrate_verify',
+            'results' => $results,
+            'local_import' => null,
+            'time' => date('c'),
+        ]);
+        exit;
     }
 
     $onlyCommands = [

@@ -60,7 +60,7 @@ class NotificationController extends Controller
 
         // Filter by recipient
         if ($request->filled('recipient_id')) {
-            $query->where('recipient_id', $request->recipient_id);
+            $query->where('user_id', $request->recipient_id);
         }
 
         // Filter by date range
@@ -1064,7 +1064,7 @@ class NotificationController extends Controller
             $query->where('sender_id', $request->sender_id);
         }
         if ($request->filled('recipient_id')) {
-            $query->where('recipient_id', $request->recipient_id);
+            $query->where('user_id', $request->recipient_id);
         }
 
         if ($request->filled('dateFrom')) {

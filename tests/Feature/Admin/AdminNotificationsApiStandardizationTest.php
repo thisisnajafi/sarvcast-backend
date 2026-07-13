@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -29,6 +30,32 @@ class AdminNotificationsApiStandardizationTest extends TestCase
             'meta' => ['page', 'perPage', 'total', 'lastPage'],
             'pagination' => ['current_page', 'last_page', 'per_page', 'total'],
         ]);
+    }
+
+    public function test_notifications_index_loads_sender_and_recipient_relationships(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email' => 'notifications-relations@test.com',
+            'status' => 'active',
+        ]);
+        $recipient = User::factory()->create(['status' => 'active']);
+
+        Notification::query()->create([
+            'user_id' => $recipient->id,
+            'sender_id' => $admin->id,
+            'type' => 'info',
+            'title' => 'Test notification',
+            'message' => 'Relationship loading test',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/admin/notifications?page=1&perPage=10');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.sender.id', $admin->id)
+            ->assertJsonPath('data.0.recipient.id', $recipient->id);
     }
 
     public function test_notifications_export_returns_csv_for_super_admin(): void

@@ -85,6 +85,37 @@ class ActivityIngestApiTest extends TestCase
         $this->assertDatabaseCount('activity_logs', 1);
     }
 
+    public function test_duplicate_event_uuid_inside_same_batch_is_skipped(): void
+    {
+        $user = User::factory()->create(['status' => 'active']);
+        Sanctum::actingAs($user);
+
+        $eventUuid = (string) Str::uuid();
+
+        $response = $this->postJson('/api/v1/activity/batch', [
+            'device_id' => 'device-dedupe-same-batch',
+            'platform' => 'android',
+            'events' => [
+                [
+                    'event_uuid' => $eventUuid,
+                    'action' => 'app.lifecycle_resumed',
+                    'subject_type' => 'app',
+                ],
+                [
+                    'event_uuid' => $eventUuid,
+                    'action' => 'app.lifecycle_resumed',
+                    'subject_type' => 'app',
+                ],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.accepted', 1)
+            ->assertJsonPath('data.skipped', 1);
+
+        $this->assertDatabaseCount('activity_logs', 1);
+    }
+
     public function test_guest_cannot_ingest_activity_batch(): void
     {
         $this->postJson('/api/v1/activity/batch', [

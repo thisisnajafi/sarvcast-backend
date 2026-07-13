@@ -41,8 +41,43 @@ env:
   TELEGRAM_CHAT_ID: "-1002796302613_97"
 
 jobs:
+  test:
+    name: Test migrations and regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, xml, ctype, json, bcmath, curl, gd, zip, intl, fileinfo, pdo, pdo_mysql, sqlite3
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run database migrations
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:testing-key-for-manji
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+          php artisan migrate --force
+
+      - name: Run activity log and notification regression tests
+        run: ./vendor/bin/pest tests/Feature/Api/ActivityIngestApiTest.php tests/Feature/Admin/AdminNotificationsApiStandardizationTest.php
+
   deploy:
     name: Deploy
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -62,6 +97,10 @@ jobs:
               - 'composer.lock'
             migrations:
               - 'database/migrations/**'
+              - 'app/Models/Notification.php'
+              - 'app/Services/ActivityLogService.php'
+              - 'app/Jobs/LogActivityJob.php'
+              - 'app/Http/Controllers/Admin/NotificationController.php'
             seeders:
               - 'database/seeders/**'
             env:
@@ -305,6 +344,21 @@ jobs:
             "${QUERY}" \
             "php artisan migrate --force (via deploy helper)" \
             600
+
+      - name: Verify migrations applied on server
+        if: steps.plan.outputs.run_migrate == 'true'
+        run: |
+          VERIFY_QUERY="only=migrate_verify"
+          if [[ "${{ steps.changes.outputs.migrations }}" == "true" ]]; then
+            VERIFY_QUERY="${VERIFY_QUERY}&verify_columns=notifications.sender_id"
+          fi
+
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "${VERIFY_QUERY}" \
+            "Verify migrate:status and schema after migrate" \
+            300
 
       - name: Rebuild Laravel caches on server
         if: steps.plan.outputs.run_cache_rebuild == 'true'

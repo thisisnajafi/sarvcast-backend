@@ -7,6 +7,7 @@ use App\Jobs\LogActivityJob;
 use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
@@ -621,12 +622,19 @@ class ActivityLogService
     {
         $accepted = 0;
         $skipped = 0;
+        $seenInBatch = [];
 
         foreach ($events as $event) {
             $eventUuid = (string) ($event['event_uuid'] ?? '');
             if ($eventUuid === '') {
                 continue;
             }
+
+            if (isset($seenInBatch[$eventUuid])) {
+                $skipped++;
+                continue;
+            }
+            $seenInBatch[$eventUuid] = true;
 
             if (ActivityLog::query()
                 ->where('device_id', $deviceId)
@@ -640,28 +648,33 @@ class ActivityLogService
                 ? \Illuminate\Support\Carbon::parse($event['occurred_at'])
                 : now();
 
-            $this->record(new ActivityLogEntry(
-                channel: ActivityLog::CHANNEL_APP,
-                actorUserId: $user->id,
-                actorType: 'user',
-                action: (string) $event['action'],
-                subjectType: isset($event['subject_type']) ? (string) $event['subject_type'] : null,
-                subjectId: isset($event['subject_id']) ? (string) $event['subject_id'] : null,
-                subjectLabel: isset($event['subject_label']) ? (string) $event['subject_label'] : null,
-                description: $this->buildAppDescription((string) $event['action'], $event),
-                properties: is_array($event['properties'] ?? null) ? $event['properties'] : [],
-                ipAddress: $request->ip(),
-                userAgent: $request->userAgent(),
-                requestId: $this->resolveRequestId($request),
-                eventUuid: $eventUuid,
-                deviceId: $deviceId,
-                appVersion: $appVersion,
-                platform: $platform,
-                status: ActivityLog::STATUS_SUCCESS,
-                occurredAt: $occurredAt,
-            ));
+            try {
+                $this->record(new ActivityLogEntry(
+                    channel: ActivityLog::CHANNEL_APP,
+                    actorUserId: $user->id,
+                    actorType: 'user',
+                    action: (string) $event['action'],
+                    subjectType: isset($event['subject_type']) ? (string) $event['subject_type'] : null,
+                    subjectId: isset($event['subject_id']) ? (string) $event['subject_id'] : null,
+                    subjectLabel: isset($event['subject_label']) ? (string) $event['subject_label'] : null,
+                    description: $this->buildAppDescription((string) $event['action'], $event),
+                    properties: is_array($event['properties'] ?? null) ? $event['properties'] : [],
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent(),
+                    requestId: $this->resolveRequestId($request),
+                    eventUuid: $eventUuid,
+                    deviceId: $deviceId,
+                    appVersion: $appVersion,
+                    platform: $platform,
+                    status: ActivityLog::STATUS_SUCCESS,
+                    occurredAt: $occurredAt,
+                ));
 
-            $accepted++;
+                $accepted++;
+            } catch (UniqueConstraintViolationException) {
+                // Idempotent retry: another request may have inserted the same device/event pair.
+                $skipped++;
+            }
         }
 
         return ['accepted' => $accepted, 'skipped' => $skipped];
