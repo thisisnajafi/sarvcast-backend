@@ -114,6 +114,7 @@ normalize_production_env() {
   sed -i 's|^APP_URL=.*|APP_URL=https://my.manjiapp.ir|' "$OUT" || true
   sed -i 's|^APP_ENV=.*|APP_ENV=production|' "$OUT" || true
   sed -i 's|^APP_DEBUG=.*|APP_DEBUG=false|' "$OUT" || true
+  sed -i 's|^DB_HOST=.*|DB_HOST=localhost|' "$OUT" || true
   sed -i 's|^FIREBASE_SERVICE_ACCOUNT_PATH=.*|FIREBASE_SERVICE_ACCOUNT_PATH=storage/app/firebase-service-account.json|' "$OUT" || true
   sed -i 's|^FIREBASE_PROJECT_ID=.*|FIREBASE_PROJECT_ID=manjiapp-3028e|' "$OUT" || true
   sed -i 's|^CAFEBAZAAR_PACKAGE_NAME=.*|CAFEBAZAAR_PACKAGE_NAME=com.avinpishtazan.manji.cafebazaar|' "$OUT" || true

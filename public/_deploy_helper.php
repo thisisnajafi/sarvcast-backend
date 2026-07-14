@@ -160,19 +160,59 @@ if ($only === 'db_probe') {
     $database = $envVars['DB_DATABASE'] ?? '';
     $username = $envVars['DB_USERNAME'] ?? '';
     $password = $envVars['DB_PASSWORD'] ?? '';
+    $socket = $envVars['DB_SOCKET'] ?? '';
 
-    try {
-        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s', $host, $port, $database);
-        $pdo = new PDO($dsn, $username, $password, [
-            PDO::ATTR_TIMEOUT => 5,
-        ]);
-        $pdo->query('SELECT 1');
-        $payload['db_connect'] = 'ok';
-        $payload['db_host'] = $host;
-        $payload['db_database'] = $database;
-    } catch (Throwable $e) {
-        $payload['db_connect'] = 'failed';
-        $payload['db_error'] = $e->getMessage();
+    $attempts = [];
+    if ($socket !== '') {
+        $attempts[] = ['host' => 'localhost', 'port' => $port, 'socket' => $socket];
+    }
+    $attempts[] = ['host' => $host, 'port' => $port, 'socket' => null];
+    if ($host === '127.0.0.1') {
+        $attempts[] = ['host' => 'localhost', 'port' => $port, 'socket' => null];
+    }
+
+    $seen = [];
+    $lastError = null;
+    foreach ($attempts as $attempt) {
+        $key = ($attempt['socket'] ?? '') . '|' . $attempt['host'];
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+
+        $probe = deployTryPdoConnection(
+            $attempt['host'],
+            $attempt['port'],
+            $database,
+            $username,
+            $password,
+            $attempt['socket']
+        );
+        $payload['db_attempts'][] = [
+            'host' => $probe['host'],
+            'ok' => $probe['ok'],
+            'error' => $probe['error'],
+        ];
+
+        if ($probe['ok']) {
+            $payload['db_connect'] = 'ok';
+            $payload['db_host'] = $probe['host'];
+            $payload['db_database'] = $database;
+            if ($host === '127.0.0.1' && $probe['host'] === 'localhost') {
+                $payload['hosting_hint'] = 'DB_HOST=127.0.0.1 failed; localhost (Unix socket) works — update .env to DB_HOST=localhost';
+            }
+            http_response_code(200);
+            echo json_encode($payload, JSON_PRETTY_PRINT);
+            exit;
+        }
+
+        $lastError = $probe['error'];
+    }
+
+    $payload['db_connect'] = 'failed';
+    $payload['db_error'] = $lastError;
+    if ($host === '127.0.0.1' && is_string($lastError) && str_contains($lastError, 'Connection refused')) {
+        $payload['hosting_hint'] = 'Set DB_HOST=localhost in .env — cPanel MySQL does not accept TCP on 127.0.0.1:3306';
     }
 
     http_response_code(200);
@@ -400,7 +440,40 @@ function deployFormatDatabaseConnectionError(Throwable $dbError): string
         }
     }
 
+    if (str_contains($message, 'Connection refused') && str_contains($message, '127.0.0.1')) {
+        return $message
+            . ' — on cPanel/LiteSpeed shared hosting MySQL uses a Unix socket; set DB_HOST=localhost in .env (not 127.0.0.1)';
+    }
+
     return $message . ' — verify PRODUCTION_DB_* secrets and server .env DB_* values';
+}
+
+/**
+ * @return array{ok: bool, dsn: string, host: string, error: ?string}
+ */
+function deployTryPdoConnection(string $host, string $port, string $database, string $username, string $password, ?string $socket = null): array
+{
+    if ($socket !== null && $socket !== '') {
+        $dsn = sprintf('mysql:unix_socket=%s;dbname=%s', $socket, $database);
+        $effectiveHost = 'socket:' . $socket;
+    } elseif ($host === 'localhost') {
+        $dsn = sprintf('mysql:host=localhost;dbname=%s', $database);
+        $effectiveHost = 'localhost';
+    } else {
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s', $host, $port, $database);
+        $effectiveHost = $host;
+    }
+
+    try {
+        $pdo = new PDO($dsn, $username, $password, [
+            PDO::ATTR_TIMEOUT => 5,
+        ]);
+        $pdo->query('SELECT 1');
+
+        return ['ok' => true, 'dsn' => $dsn, 'host' => $effectiveHost, 'error' => null];
+    } catch (Throwable $e) {
+        return ['ok' => false, 'dsn' => $dsn, 'host' => $effectiveHost, 'error' => $e->getMessage()];
+    }
 }
 
 function extractVendorArchive(string $basePath): array

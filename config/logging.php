@@ -73,6 +73,22 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => env('LOG_SECURITY_LEVEL', 'info'),
+            'days' => env('LOG_SECURITY_DAYS', 90),
+            'replace_placeholders' => true,
+        ],
+
+        'application' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/application.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

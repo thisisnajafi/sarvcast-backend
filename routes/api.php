@@ -126,13 +126,13 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('health/performance', [HealthController::class, 'apiPerformance']);
 
     // Version management routes
-    Route::prefix('version')->group(function () {
-        Route::get('check', [VersionController::class, 'check']);
-        Route::post('check', [VersionController::class, 'checkForUpdates']);
-        Route::get('latest', [VersionController::class, 'getLatestVersion']);
-        Route::get('statistics', [VersionController::class, 'getStatistics']);
-        Route::get('config', [VersionController::class, 'getAppConfig']);
-        Route::post('report-usage', [VersionController::class, 'reportUsage']);
+    Route::prefix('version')->name('api.version.')->group(function () {
+        Route::get('check', [VersionController::class, 'check'])->name('check');
+        Route::post('check', [VersionController::class, 'checkForUpdates'])->name('check.updates');
+        Route::get('latest', [VersionController::class, 'getLatestVersion'])->name('latest');
+        Route::get('statistics', [VersionController::class, 'getStatistics'])->name('statistics');
+        Route::get('config', [VersionController::class, 'getAppConfig'])->name('config');
+        Route::post('report-usage', [VersionController::class, 'reportUsage'])->name('report-usage');
     });
 
     // User search routes

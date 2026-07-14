@@ -343,6 +343,21 @@ jobs:
             "Clear bootstrap cache after .env upload" \
             300
 
+      - name: Verify production database connectivity
+        if: steps.plan.outputs.run_env == 'true' || steps.plan.outputs.run_migrate == 'true'
+        run: |
+          set -euo pipefail
+          DB_JSON=$(curl -sS --max-time 60 \
+            "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=db_probe")
+          echo "$DB_JSON" | jq '.' || true
+          if ! echo "$DB_JSON" | jq -e '.db_connect == "ok"' >/dev/null 2>&1; then
+            echo "::error::Production database connection failed"
+            echo "$DB_JSON" | jq -r '.hosting_hint // .db_error // empty' || true
+            exit 1
+          fi
+          echo "$DB_JSON" | jq -r '.hosting_hint // empty' | grep -q . && \
+            echo "::warning::$(echo "$DB_JSON" | jq -r '.hosting_hint')" || true
+
       - name: Run php artisan migrate --force on server
         if: steps.plan.outputs.run_migrate == 'true'
         run: |
