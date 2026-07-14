@@ -36,6 +36,9 @@ class ApiAdminAuditMiddleware
             'ip' => $request->ip(),
             'status_code' => $response->getStatusCode(),
             'request_id' => $request->header('X-Request-Id'),
+            'validation_errors' => $response->getStatusCode() === 422
+                ? $this->extractValidationErrors($response)
+                : null,
         ]);
 
         try {
@@ -47,5 +50,23 @@ class ApiAdminAuditMiddleware
         }
 
         return $response;
+    }
+
+    /**
+     * @return array<string, array<int, string>>|null
+     */
+    private function extractValidationErrors(Response $response): ?array
+    {
+        $content = $response->getContent();
+        if (! is_string($content) || $content === '') {
+            return null;
+        }
+
+        $decoded = json_decode($content, true);
+        if (! is_array($decoded) || ! isset($decoded['errors']) || ! is_array($decoded['errors'])) {
+            return null;
+        }
+
+        return $decoded['errors'];
     }
 }
