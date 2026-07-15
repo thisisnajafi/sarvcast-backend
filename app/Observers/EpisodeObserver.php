@@ -4,9 +4,21 @@ namespace App\Observers;
 
 use App\Models\Episode;
 use App\Models\Story;
+use App\Services\EpisodeAssetCleanupService;
 
 class EpisodeObserver
 {
+    public function __construct(
+        private readonly EpisodeAssetCleanupService $assetCleanup,
+    ) {}
+
+    /**
+     * Handle the Episode "deleting" event.
+     */
+    public function deleting(Episode $episode): void
+    {
+        $this->assetCleanup->cleanupEpisodeAssets($episode);
+    }
     /**
      * Handle the Episode "created" event.
      */

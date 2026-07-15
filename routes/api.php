@@ -387,6 +387,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/', [EpisodeController::class, 'store']);
             Route::put('{episode}', [EpisodeController::class, 'update']);
             Route::delete('{episode}', [EpisodeController::class, 'destroy']);
+            Route::delete('{episode}/script', [EpisodeController::class, 'deleteScript']);
             Route::post('{episode}/upload-script', [EpisodeController::class, 'uploadScript']);
         });
     });
@@ -1442,6 +1443,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::post('/reorder', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiReorder']);
             Route::get('/{episode}', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiShow']);
             Route::put('/{episode}', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiUpdate']);
+            Route::delete('/{episode}/script', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiDeleteScript']);
             Route::delete('/{episode}', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiDestroy']);
             Route::post('/{episode}/publish', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiPublish']);
             Route::post('/{episode}/duplicate', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiDuplicate']);

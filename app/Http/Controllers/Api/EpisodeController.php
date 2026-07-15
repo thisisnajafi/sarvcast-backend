@@ -652,28 +652,6 @@ class EpisodeController extends Controller
     public function destroy(Episode $episode)
     {
         try {
-            // Delete associated files
-            if ($episode->audio_url) {
-                $audioPath = public_path($episode->audio_url);
-                if (file_exists($audioPath)) {
-                    unlink($audioPath);
-                }
-            }
-
-            if ($episode->cover_image_url) {
-                $imagePath = public_path('images/' . $episode->cover_image_url);
-                if (file_exists($imagePath)) {
-                    unlink($imagePath);
-                }
-            }
-
-            if ($episode->script_file_url) {
-                $scriptPath = str_replace('/storage/', '', parse_url($episode->script_file_url, PHP_URL_PATH));
-                if (Storage::disk('public')->exists($scriptPath)) {
-                    Storage::disk('public')->delete($scriptPath);
-                }
-            }
-
             $episode->delete();
 
             return response()->json([
@@ -693,6 +671,26 @@ class EpisodeController extends Controller
                 'message' => 'خطا در حذف قسمت: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Delete episode script file without removing the episode.
+     */
+    public function deleteScript(Episode $episode)
+    {
+        $deleted = app(\App\Services\EpisodeAssetCleanupService::class)->deleteEpisodeScript($episode);
+
+        if (! $deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فایل اسکریپت برای این قسمت موجود نیست.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'فایل اسکریپت با موفقیت حذف شد.',
+        ]);
     }
 
     /**

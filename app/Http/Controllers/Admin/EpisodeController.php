@@ -707,31 +707,6 @@ class EpisodeController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Delete associated files
-            if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
-                try {
-                    unlink(public_path($episode->audio_url));
-                    Log::info('Audio file deleted successfully', ['file' => $episode->audio_url]);
-                } catch (\Exception $e) {
-                    Log::warning('Failed to delete audio file', [
-                        'file' => $episode->audio_url,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-
-            if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
-                try {
-                    unlink(public_path('images/' . $episode->cover_image_url));
-                    Log::info('Cover image deleted successfully', ['file' => $episode->cover_image_url]);
-                } catch (\Exception $e) {
-                    Log::warning('Failed to delete cover image', [
-                        'file' => $episode->cover_image_url,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-
             $episode->delete();
 
             DB::commit();
@@ -806,29 +781,6 @@ class EpisodeController extends BaseController
                             break;
 
                         case 'delete':
-                            // Delete associated files
-                            if ($episode->audio_url && file_exists(public_path($episode->audio_url))) {
-                                try {
-                                    unlink(public_path($episode->audio_url));
-                                    Log::info('Audio file deleted successfully in bulk action', ['file' => $episode->audio_url]);
-                                } catch (\Exception $e) {
-                                    Log::warning('Failed to delete audio file in bulk action', [
-                                        'file' => $episode->audio_url,
-                                        'error' => $e->getMessage()
-                                    ]);
-                                }
-                            }
-                            if ($episode->cover_image_url && file_exists(public_path('images/' . $episode->cover_image_url))) {
-                                try {
-                                    unlink(public_path('images/' . $episode->cover_image_url));
-                                    Log::info('Cover image deleted successfully in bulk action', ['file' => $episode->cover_image_url]);
-                                } catch (\Exception $e) {
-                                    Log::warning('Failed to delete cover image in bulk action', [
-                                        'file' => $episode->cover_image_url,
-                                        'error' => $e->getMessage()
-                                    ]);
-                                }
-                            }
                             $episode->delete();
                             break;
 
@@ -1282,6 +1234,20 @@ class EpisodeController extends BaseController
         return AdminApiResponse::okMessage('Episode deleted successfully');
     }
 
+    public function apiDeleteScript(Episode $episode)
+    {
+        $deleted = app(\App\Services\EpisodeAssetCleanupService::class)->deleteEpisodeScript($episode);
+
+        if (! $deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فایل اسکریپت برای این قسمت موجود نیست.',
+            ], 404);
+        }
+
+        return AdminApiResponse::okMessage('Episode script deleted successfully');
+    }
+
     public function apiBulkAction(Request $request)
     {
         $validated = $request->validate([
@@ -1307,7 +1273,7 @@ class EpisodeController extends BaseController
 
         switch ($validated['action']) {
             case 'delete':
-                Episode::whereIn('id', $ids)->delete();
+                Episode::whereIn('id', $ids)->get()->each->delete();
                 $message = 'Episodes deleted successfully';
                 break;
             case 'publish':
