@@ -129,4 +129,33 @@ class EpisodeAssetCleanupTest extends TestCase
         Storage::disk('public')->assertMissing($scriptPath);
         $this->assertDatabaseHas('episodes', ['id' => $episode->id]);
     }
+
+    public function test_cleanup_accepts_web_storage_paths_without_open_basedir_error(): void
+    {
+        Sanctum::actingAs($this->admin);
+
+        $relative = 'stories/production/8-dostan-az-srzmynhay-dor/episodes/episode_1_dostan_az_srzmyn_hay_dor/episode_1_dostan_az_srzmyn_hay_dor_story.md';
+        Storage::disk('public')->put($relative, '# far friends');
+
+        $episode = Episode::create([
+            'story_id' => $this->story->id,
+            'title' => 'Open basedir path test',
+            'audio_url' => 'audio/episodes/keep.mp3',
+            'duration' => 5,
+            'episode_number' => 3,
+            'status' => 'draft',
+            // Stored exactly like production web paths that previously crashed is_file().
+            'script_file_url' => '/storage/' . $relative,
+        ]);
+
+        $response = $this->deleteJson("/api/admin/episodes/{$episode->id}/script");
+
+        $response->assertOk()
+            ->assertJsonPath('success', true);
+
+        $episode->refresh();
+        $this->assertNull($episode->script_file_url);
+        Storage::disk('public')->assertMissing($relative);
+        $this->assertDatabaseHas('episodes', ['id' => $episode->id]);
+    }
 }

@@ -21,8 +21,8 @@ class EpisodeScriptService
     public function readForEpisode(Episode $episode): ?array
     {
         $canonicalPath = $this->resolveCanonicalMarkdownPath($episode);
-        if ($canonicalPath !== null && is_file($canonicalPath)) {
-            $content = file_get_contents($canonicalPath);
+        if ($canonicalPath !== null) {
+            $content = $this->readLocalFileIfAllowed($canonicalPath);
             if (is_string($content) && $content !== '') {
                 return [
                     'script_content' => $content,
@@ -114,21 +114,19 @@ class EpisodeScriptService
     public function readFromStoredPath(string $pathOrUrl): ?string
     {
         foreach ($this->resolveFilesystemCandidates($pathOrUrl) as $candidate) {
-            if (is_file($candidate)) {
-                $content = file_get_contents($candidate);
-
-                return is_string($content) ? $content : null;
+            $diskRelative = $this->toPublicDiskRelative($candidate);
+            if ($diskRelative !== null && Storage::disk('public')->exists($diskRelative)) {
+                return Storage::disk('public')->get($diskRelative);
             }
 
-            if (Storage::disk('public')->exists($candidate)) {
-                return Storage::disk('public')->get($candidate);
+            $content = $this->readLocalFileIfAllowed($candidate);
+            if ($content !== null) {
+                return $content;
             }
 
-            $publicCandidate = public_path($candidate);
-            if (is_file($publicCandidate)) {
-                $content = file_get_contents($publicCandidate);
-
-                return is_string($content) ? $content : null;
+            $content = $this->readLocalFileIfAllowed(public_path(ltrim($candidate, '/\\')));
+            if ($content !== null) {
+                return $content;
             }
         }
 
@@ -233,11 +231,12 @@ class EpisodeScriptService
         }
 
         $metaPath = $storyDir . '/characters_and_objects.json';
-        if (! is_file($metaPath)) {
+        $metaContents = $this->readLocalFileIfAllowed($metaPath);
+        if ($metaContents === null) {
             return null;
         }
 
-        $json = json_decode((string) file_get_contents($metaPath), true);
+        $json = json_decode($metaContents, true);
         if (! is_array($json)) {
             return null;
         }
@@ -287,5 +286,84 @@ class EpisodeScriptService
         }
 
         return array_values(array_unique(array_filter($candidates)));
+    }
+
+    private function toPublicDiskRelative(string $path): ?string
+    {
+        $relative = ltrim(str_replace('\\', '/', $path), '/');
+
+        if ($relative === '' || str_contains($relative, '://')) {
+            return null;
+        }
+
+        if ($this->isAbsoluteFilesystemPath($relative)) {
+            return null;
+        }
+
+        if (str_starts_with($relative, 'storage/')) {
+            $relative = substr($relative, strlen('storage/'));
+        }
+
+        return $relative !== '' ? $relative : null;
+    }
+
+    private function readLocalFileIfAllowed(string $path): ?string
+    {
+        if (! $this->isSafeLocalFilesystemPath($path)) {
+            return null;
+        }
+
+        try {
+            if (! is_file($path)) {
+                return null;
+            }
+
+            $content = file_get_contents($path);
+
+            return is_string($content) ? $content : null;
+        } catch (\Throwable $e) {
+            Log::warning('Failed to read local episode script file', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function isSafeLocalFilesystemPath(string $path): bool
+    {
+        if ($path === '' || str_contains($path, '://')) {
+            return false;
+        }
+
+        if (! $this->isAbsoluteFilesystemPath($path)) {
+            return false;
+        }
+
+        $normalized = str_replace('\\', '/', $path);
+        $roots = [
+            str_replace('\\', '/', storage_path()),
+            str_replace('\\', '/', public_path()),
+            str_replace('\\', '/', base_path()),
+        ];
+
+        foreach ($roots as $root) {
+            $root = rtrim($root, '/');
+            if ($normalized === $root || str_starts_with($normalized, $root . '/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isAbsoluteFilesystemPath(string $path): bool
+    {
+        if (preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) === 1) {
+            return true;
+        }
+
+        return str_starts_with($path, '/') || str_starts_with($path, '\\');
     }
 }

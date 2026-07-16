@@ -134,7 +134,7 @@ class EpisodeAssetCleanupService
             $this->deleteStoredPath($file->storage_path);
         }
 
-        if ($file->source_path && is_file($file->source_path)) {
+        if ($file->source_path) {
             $this->safeUnlink($file->source_path);
         }
 
@@ -189,15 +189,17 @@ class EpisodeAssetCleanupService
         }
 
         foreach ($this->resolveFilesystemCandidates($pathOrUrl) as $candidate) {
+            // Prefer Storage disk for public URL paths so we never hit open_basedir
+            // with fake absolute paths like "/storage/stories/...".
+            if ($this->deleteFromPublicDisk($candidate)) {
+                return;
+            }
+
             if ($this->safeUnlink($candidate)) {
                 return;
             }
 
-            if ($this->safeUnlink(public_path($candidate))) {
-                return;
-            }
-
-            if ($this->deleteFromPublicDisk($candidate)) {
+            if ($this->safeUnlink(public_path(ltrim($candidate, '/\\')))) {
                 return;
             }
         }
@@ -240,9 +242,18 @@ class EpisodeAssetCleanupService
 
     private function deleteFromPublicDisk(string $relativePath): bool
     {
-        $relativePath = ltrim($relativePath, '/');
+        $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
 
-        if ($relativePath === '') {
+        if (str_starts_with($relativePath, 'storage/')) {
+            $relativePath = substr($relativePath, strlen('storage/'));
+        }
+
+        if ($relativePath === '' || str_contains($relativePath, '://')) {
+            return false;
+        }
+
+        // Absolute OS paths are handled by safeUnlink, not the public disk.
+        if ($this->isAbsoluteFilesystemPath($relativePath)) {
             return false;
         }
 
@@ -262,11 +273,15 @@ class EpisodeAssetCleanupService
 
     private function safeUnlink(string $path): bool
     {
-        if (! is_file($path)) {
+        if (! $this->isSafeLocalFilesystemPath($path)) {
             return false;
         }
 
         try {
+            if (! is_file($path)) {
+                return false;
+            }
+
             return unlink($path);
         } catch (\Throwable $e) {
             Log::warning('Failed to unlink file during episode cleanup', [
@@ -276,5 +291,45 @@ class EpisodeAssetCleanupService
 
             return false;
         }
+    }
+
+    /**
+     * Avoid is_file()/unlink() on web paths like "/storage/..." which PHP treats as
+     * filesystem-root absolute paths and can violate open_basedir on shared hosting.
+     */
+    private function isSafeLocalFilesystemPath(string $path): bool
+    {
+        if ($path === '' || str_contains($path, '://')) {
+            return false;
+        }
+
+        if (! $this->isAbsoluteFilesystemPath($path)) {
+            return false;
+        }
+
+        $normalized = str_replace('\\', '/', $path);
+        $roots = [
+            str_replace('\\', '/', storage_path()),
+            str_replace('\\', '/', public_path()),
+            str_replace('\\', '/', base_path()),
+        ];
+
+        foreach ($roots as $root) {
+            $root = rtrim($root, '/');
+            if ($normalized === $root || str_starts_with($normalized, $root . '/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isAbsoluteFilesystemPath(string $path): bool
+    {
+        if (preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) === 1) {
+            return true;
+        }
+
+        return str_starts_with($path, '/') || str_starts_with($path, '\\');
     }
 }
