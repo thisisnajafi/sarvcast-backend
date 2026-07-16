@@ -483,13 +483,18 @@ class StoryController extends Controller
 
         $oldNarratorId = $story->narrator_id;
         $story->update(['narrator_id' => $request->narrator_id]);
-        $story->load('narrator');
+        $story->refresh()->load(['narrator', 'author']);
+
+        // Keep episode narrators in sync with the story narrator (Person match).
+        if ($oldNarratorId != $story->narrator_id) {
+            $story->syncEpisodeNarrators();
+        }
 
         // Send notifications
         $notificationService = app(\App\Services\NotificationService::class);
-        
-        // If narrator was removed
-        if ($oldNarratorId && !$story->narrator_id) {
+
+        // If narrator was removed or replaced, notify the previous narrator
+        if ($oldNarratorId && $oldNarratorId != $story->narrator_id) {
             $oldNarrator = \App\Models\User::find($oldNarratorId);
             if ($oldNarrator) {
                 $notificationService->sendVoiceActorRemovalNotification(
@@ -502,7 +507,7 @@ class StoryController extends Controller
                 );
             }
         }
-        
+
         // If narrator was assigned
         if ($story->narrator_id) {
             $narrator = \App\Models\User::find($story->narrator_id);
@@ -521,7 +526,7 @@ class StoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'راوی با موفقیت به داستان اختصاص داده شد.',
-            'data' => $story
+            'data' => $story,
         ]);
     }
 
@@ -546,12 +551,12 @@ class StoryController extends Controller
         ]);
 
         $story->update(['author_id' => $request->author_id]);
-        $story->load('author');
+        $story->refresh()->load(['author', 'narrator']);
 
         return response()->json([
             'success' => true,
             'message' => 'نویسنده با موفقیت به داستان اختصاص داده شد.',
-            'data' => $story
+            'data' => $story,
         ]);
     }
 
