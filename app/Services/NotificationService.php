@@ -633,25 +633,29 @@ class NotificationService
      */
     public function sendVoiceActorAssignmentNotification(User $user, string $assignmentType, array $data): bool
     {
+        $storyTitle = (string) ($data['story_title'] ?? '');
+        $characterName = (string) ($data['character_name'] ?? '');
+        $episodeTitle = (string) ($data['episode_title'] ?? '');
+
         $notifications = [
             'story_narrator' => [
                 'title' => 'اختصاص راوی داستان',
-                'message' => "شما به عنوان راوی داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'message' => "شما به عنوان راوی داستان «{$storyTitle}» انتخاب شده‌اید.",
                 'type' => 'info'
             ],
             'character' => [
                 'title' => 'اختصاص صداپیشه شخصیت',
-                'message' => "شما به عنوان صداپیشه شخصیت «{$data['character_name']}» در داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'message' => "شما به عنوان صداپیشه شخصیت «{$characterName}» در داستان «{$storyTitle}» انتخاب شده‌اید.",
                 'type' => 'info'
             ],
             'episode_voice_actor' => [
                 'title' => 'اختصاص صداپیشه قسمت',
-                'message' => "شما به عنوان صداپیشه در قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'message' => "شما به عنوان صداپیشه در قسمت «{$episodeTitle}» از داستان «{$storyTitle}» انتخاب شده‌اید.",
                 'type' => 'info'
             ],
             'episode_narrator' => [
                 'title' => 'اختصاص راوی قسمت',
-                'message' => "شما به عنوان راوی قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» انتخاب شده‌اید.",
+                'message' => "شما به عنوان راوی قسمت «{$episodeTitle}» از داستان «{$storyTitle}» انتخاب شده‌اید.",
                 'type' => 'info'
             ]
         ];
@@ -702,20 +706,24 @@ class NotificationService
      */
     public function sendVoiceActorRemovalNotification(User $user, string $assignmentType, array $data): bool
     {
+        $storyTitle = (string) ($data['story_title'] ?? '');
+        $characterName = (string) ($data['character_name'] ?? '');
+        $episodeTitle = (string) ($data['episode_title'] ?? '');
+
         $notifications = [
             'story_narrator' => [
                 'title' => 'حذف از نقش راوی',
-                'message' => "شما از نقش راوی داستان «{$data['story_title']}» حذف شده‌اید.",
+                'message' => "شما از نقش راوی داستان «{$storyTitle}» حذف شده‌اید.",
                 'type' => 'warning'
             ],
             'character' => [
                 'title' => 'حذف از نقش صداپیشه',
-                'message' => "شما از نقش صداپیشه شخصیت «{$data['character_name']}» در داستان «{$data['story_title']}» حذف شده‌اید.",
+                'message' => "شما از نقش صداپیشه شخصیت «{$characterName}» در داستان «{$storyTitle}» حذف شده‌اید.",
                 'type' => 'warning'
             ],
             'episode_voice_actor' => [
                 'title' => 'حذف از نقش صداپیشه',
-                'message' => "شما از نقش صداپیشه در قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» حذف شده‌اید.",
+                'message' => "شما از نقش صداپیشه در قسمت «{$episodeTitle}» از داستان «{$storyTitle}» حذف شده‌اید.",
                 'type' => 'warning'
             ]
         ];
@@ -814,28 +822,32 @@ class NotificationService
      */
     public function sendContentPublishedNotification(User $user, string $contentType, array $data): bool
     {
+        $storyTitle = (string) ($data['story_title'] ?? '');
+        $characterName = (string) ($data['character_name'] ?? '');
+        $episodeTitle = (string) ($data['episode_title'] ?? '');
+
         $notifications = [
             'story' => [
                 'narrator' => [
                     'title' => 'داستان منتشر شد',
-                    'message' => "داستان «{$data['story_title']}» که شما راوی آن هستید منتشر شد! 🎉",
+                    'message' => "داستان «{$storyTitle}» که شما راوی آن هستید منتشر شد! 🎉",
                     'type' => 'success'
                 ],
                 'character_voice_actor' => [
                     'title' => 'داستان منتشر شد',
-                    'message' => "داستان «{$data['story_title']}» که شما صداپیشه شخصیت «{$data['character_name']}» در آن هستید منتشر شد! 🎉",
+                    'message' => "داستان «{$storyTitle}» که شما صداپیشه شخصیت «{$characterName}» در آن هستید منتشر شد! 🎉",
                     'type' => 'success'
                 ]
             ],
             'episode' => [
                 'narrator' => [
                     'title' => 'قسمت منتشر شد',
-                    'message' => "قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» که شما راوی آن هستید منتشر شد! 🎉",
+                    'message' => "قسمت «{$episodeTitle}» از داستان «{$storyTitle}» که شما راوی آن هستید منتشر شد! 🎉",
                     'type' => 'success'
                 ],
                 'voice_actor' => [
                     'title' => 'قسمت منتشر شد',
-                    'message' => "قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» که شما در آن صداپیشه هستید منتشر شد! 🎉",
+                    'message' => "قسمت «{$episodeTitle}» از داستان «{$storyTitle}» که شما در آن صداپیشه هستید منتشر شد! 🎉",
                     'type' => 'success'
                 ]
             ]
@@ -887,15 +899,18 @@ class NotificationService
      */
     public function sendScriptReadyNotification(User $user, string $contentType, array $data): bool
     {
+        $storyTitle = (string) ($data['story_title'] ?? '');
+        $episodeTitle = (string) ($data['episode_title'] ?? '');
+
         $notifications = [
             'story' => [
                 'title' => 'فیلمنامه آماده است',
-                'message' => "فیلمنامه داستان «{$data['story_title']}» آماده است. می‌توانید آن را مطالعه کنید.",
+                'message' => "فیلمنامه داستان «{$storyTitle}» آماده است. می‌توانید آن را مطالعه کنید.",
                 'type' => 'info'
             ],
             'episode' => [
                 'title' => 'فیلمنامه آماده است',
-                'message' => "فیلمنامه قسمت «{$data['episode_title']}» از داستان «{$data['story_title']}» آماده است.",
+                'message' => "فیلمنامه قسمت «{$episodeTitle}» از داستان «{$storyTitle}» آماده است.",
                 'type' => 'info'
             ]
         ];
