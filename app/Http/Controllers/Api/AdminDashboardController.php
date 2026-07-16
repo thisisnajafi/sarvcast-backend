@@ -54,11 +54,42 @@ class AdminDashboardController extends Controller
             ];
         })->values();
 
+        $publishedStories = Story::where('status', 'published')->count();
+        $totalStories = Story::count();
+        $publishedEpisodes = Episode::where('status', 'published')->count();
+        $totalEpisodes = Episode::count();
+        $activeUsers = User::where('status', 'active')->count();
+        $totalUsers = User::count();
+
+        $subscriptionByStatus = Subscription::query()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->map(fn ($count) => (int) $count)
+            ->all();
+
         return response()->json([
             'success' => true,
             'message' => 'Dashboard chart data loaded successfully.',
             'data' => [
                 'daily' => $series,
+                'breakdown' => [
+                    'content' => [
+                        'stories' => [
+                            'published' => $publishedStories,
+                            'unpublished' => max(0, $totalStories - $publishedStories),
+                        ],
+                        'episodes' => [
+                            'published' => $publishedEpisodes,
+                            'unpublished' => max(0, $totalEpisodes - $publishedEpisodes),
+                        ],
+                    ],
+                    'users' => [
+                        'active' => $activeUsers,
+                        'inactive' => max(0, $totalUsers - $activeUsers),
+                    ],
+                    'subscriptions' => $subscriptionByStatus,
+                ],
             ],
         ]);
     }
