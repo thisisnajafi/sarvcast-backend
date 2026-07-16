@@ -425,46 +425,23 @@ class EpisodeController extends Controller
      */
     public function getScript(Episode $episode)
     {
-        if (!$episode->script_file_url) {
+        $script = app(\App\Services\EpisodeScriptService::class)->readForEpisode($episode);
+
+        if ($script === null) {
             return response()->json([
                 'success' => false,
                 'message' => 'فایل اسکریپت برای این قسمت موجود نیست.'
             ], 404);
         }
 
-        try {
-            // Extract path from URL
-            $path = str_replace('/storage/', '', parse_url($episode->script_file_url, PHP_URL_PATH));
-            
-            if (!Storage::disk('public')->exists($path)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'فایل اسکریپت یافت نشد.'
-                ], 404);
-            }
-
-            $content = Storage::disk('public')->get($path);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'محتوای اسکریپت با موفقیت دریافت شد.',
-                'data' => [
-                    'script_content' => $content,
-                    'script_file_url' => $episode->script_file_url,
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Episode script retrieval failed', [
-                'error' => $e->getMessage(),
-                'episode_id' => $episode->id
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در دریافت فایل اسکریپت: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'محتوای اسکریپت با موفقیت دریافت شد.',
+            'data' => [
+                'script_content' => $script['script_content'],
+                'script_file_url' => $script['script_file_url'],
+            ]
+        ]);
     }
 
     /**

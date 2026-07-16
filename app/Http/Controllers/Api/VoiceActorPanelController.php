@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Story;
 use App\Models\Episode;
 use App\Models\Character;
+use App\Services\EpisodeScriptService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 
 class VoiceActorPanelController extends Controller
 {
+    public function __construct(
+        private readonly EpisodeScriptService $episodeScriptService,
+    ) {}
+
     /**
      * Get stories where user is narrator or voice actor
      * 
@@ -121,11 +125,7 @@ class VoiceActorPanelController extends Controller
 
         // Get episodes with script content
         $episodes = $story->episodes->map(function ($episode) {
-            $scriptContent = null;
-            
-            if ($episode->script_file_url) {
-                $scriptContent = $this->getScriptContent($episode->script_file_url);
-            }
+            $script = $this->episodeScriptService->readForEpisode($episode);
 
             return [
                 'id' => $episode->id,
@@ -134,7 +134,7 @@ class VoiceActorPanelController extends Controller
                 'episode_number' => $episode->episode_number,
                 'duration' => $episode->duration,
                 'script_file_url' => $episode->script_file_url,
-                'script_content' => $scriptContent,
+                'script_content' => $script['script_content'] ?? null,
                 'status' => $episode->status,
                 'is_premium' => $episode->is_premium,
             ];
@@ -224,20 +224,13 @@ class VoiceActorPanelController extends Controller
             ], 403);
         }
 
-        if (!$episode->script_file_url) {
+        $script = $this->episodeScriptService->readForEpisode($episode);
+
+        if ($script === null) {
             return response()->json([
                 'success' => false,
                 'message' => 'فایل اسکریپت برای این اپیزود موجود نیست.'
             ], 404);
-        }
-
-        $scriptContent = $this->getScriptContent($episode->script_file_url);
-
-        if ($scriptContent === null) {
-            return response()->json([
-                'success' => false,
-                'message' => 'خطا در خواندن فایل اسکریپت.'
-            ], 500);
         }
 
         return response()->json([
@@ -246,48 +239,9 @@ class VoiceActorPanelController extends Controller
                 'episode_id' => $episode->id,
                 'episode_title' => $episode->title,
                 'episode_number' => $episode->episode_number,
-                'script_file_url' => $episode->script_file_url,
-                'script_content' => $scriptContent,
+                'script_file_url' => $script['script_file_url'],
+                'script_content' => $script['script_content'],
             ]
         ]);
-    }
-
-    /**
-     * Read script content from file URL
-     * 
-     * @param string $fileUrl
-     * @return string|null
-     */
-    private function getScriptContent(string $fileUrl): ?string
-    {
-        try {
-            // Extract path from URL
-            // URL format: /storage/stories/scripts/filename.md or /storage/episodes/scripts/filename.md
-            $path = str_replace('/storage/', '', parse_url($fileUrl, PHP_URL_PATH));
-            
-            if (Storage::disk('public')->exists($path)) {
-                return Storage::disk('public')->get($path);
-            }
-
-            // Try alternative path extraction
-            $path = ltrim(parse_url($fileUrl, PHP_URL_PATH), '/');
-            if (Storage::disk('public')->exists($path)) {
-                return Storage::disk('public')->get($path);
-            }
-
-            \Log::warning('Script file not found', [
-                'file_url' => $fileUrl,
-                'extracted_path' => $path
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            \Log::error('Error reading script file', [
-                'file_url' => $fileUrl,
-                'error' => $e->getMessage()
-            ]);
-
-            return null;
-        }
     }
 }

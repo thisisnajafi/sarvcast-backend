@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateStoryEpisodeRequest;
 use App\Http\Support\AdminApiResponse;
 use App\Services\ActivityLogService;
+use App\Services\EpisodeScriptService;
 use App\Services\StoryEditorRepository;
 use App\Services\StoryProductionImportService;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class StoryEditorController extends Controller
         private readonly StoryEditorRepository $repository,
         private readonly StoryProductionImportService $importService,
         private readonly ActivityLogService $activityLog,
+        private readonly EpisodeScriptService $episodeScriptService,
     ) {}
 
     public function index()
@@ -287,6 +289,12 @@ class StoryEditorController extends Controller
                     );
                 }
 
+                $this->episodeScriptService->syncFromStoryEditor(
+                    $storyId,
+                    $episodeId,
+                    $validated['raw_markdown'],
+                );
+
                 return AdminApiResponse::success($result, 'قسمت با موفقیت ذخیره شد. نسخه پشتیبان ایجاد شد.');
             } catch (\Throwable $e) {
                 Log::error('Story editor save raw markdown failed', [
@@ -327,6 +335,15 @@ class StoryEditorController extends Controller
                     $before['episode'] ?? [],
                     $result['episode'] ?? [],
                     $result['backup_path'] ?? null,
+                );
+            }
+
+            $serializedMarkdown = file_get_contents($result['file_path'] ?? '');
+            if (is_string($serializedMarkdown) && $serializedMarkdown !== '') {
+                $this->episodeScriptService->syncFromStoryEditor(
+                    $storyId,
+                    $episodeId,
+                    $serializedMarkdown,
                 );
             }
 
