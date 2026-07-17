@@ -26,6 +26,15 @@ class StoryEditorController extends Controller
     {
         try {
             $stories = $this->repository->listStories();
+            $user = request()->user();
+            $access = app(\App\Services\ContributorStoryAccessService::class);
+
+            if ($user && ! $access->isFullAdmin($user)) {
+                $stories = array_values(array_filter(
+                    $stories,
+                    fn (array $story) => $access->canViewEditorStory($user, (string) $story['id']),
+                ));
+            }
 
             return AdminApiResponse::success($stories);
         } catch (\RuntimeException $e) {
@@ -98,6 +107,19 @@ class StoryEditorController extends Controller
             'story_id' => ['required', 'integer', 'exists:stories,id'],
         ]);
 
+        $user = $request->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($user) {
+            $story = \App\Models\Story::query()->find((int) $validated['story_id']);
+            if ($story && ! $access->canViewStory($user, $story)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'دسترسی به این داستان مجاز نیست.',
+                    'error' => 'FORBIDDEN',
+                ], 403);
+            }
+        }
+
         $slug = $this->importService->resolveStorySlugByDbStoryId((int) $validated['story_id']);
 
         return AdminApiResponse::success([
@@ -108,6 +130,16 @@ class StoryEditorController extends Controller
 
     public function package(string $storyId)
     {
+        $user = request()->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($user && ! $access->canAccessPackage($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی به بسته تولید فقط برای مدیران است.',
+                'error' => 'FORBIDDEN',
+            ], 403);
+        }
+
         try {
             return AdminApiResponse::success($this->importService->getPackageOverview($storyId));
         } catch (\Throwable $e) {
@@ -264,6 +296,11 @@ class StoryEditorController extends Controller
 
     public function episodes(string $storyId)
     {
+        $denied = $this->denyUnlessCanViewEditorStory($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
         $storyDir = $this->repository->findStoryDirectory($storyId);
         if ($storyDir === null) {
             return response()->json([
@@ -278,6 +315,11 @@ class StoryEditorController extends Controller
 
     public function show(string $storyId, string $episodeId)
     {
+        $denied = $this->denyUnlessCanViewEditorStory($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
         $data = $this->repository->getEpisode($storyId, $episodeId);
         if ($data === null) {
             return response()->json([
@@ -287,11 +329,30 @@ class StoryEditorController extends Controller
             ], 404);
         }
 
-        return AdminApiResponse::success($data);
+        $user = request()->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        $canEdit = $user ? $access->canEditEditorScript($user, $storyId) : false;
+
+        return AdminApiResponse::success(array_merge($data, [
+            'permissions' => [
+                'can_edit_script' => $canEdit,
+                'can_access_package' => $user ? $access->canAccessPackage($user) : false,
+            ],
+        ]));
     }
 
     public function update(Request $request, string $storyId, string $episodeId)
     {
+        $user = $request->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($user && ! $access->canEditEditorScript($user, $storyId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فقط نویسنده داستان می‌تواند اسکریپت را ویرایش کند.',
+                'error' => 'FORBIDDEN',
+            ], 403);
+        }
+
         if ($request->has('raw_markdown')) {
             $validated = $request->validate([
                 'raw_markdown' => ['required', 'string'],
@@ -395,5 +456,24 @@ class StoryEditorController extends Controller
                 'message' => 'خطا در ذخیره فایل قسمت.',
             ], 500);
         }
+    }
+
+    private function denyUnlessCanViewEditorStory(string $storySlug): ?\Illuminate\Http\JsonResponse
+    {
+        $user = request()->user();
+        if (! $user) {
+            return null;
+        }
+
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($access->canViewEditorStory($user, $storySlug)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'دسترسی به این داستان مجاز نیست.',
+            'error' => 'FORBIDDEN',
+        ], 403);
     }
 }

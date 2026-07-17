@@ -1068,6 +1068,15 @@ class StoryController extends Controller
 
     public function apiShow(Story $story)
     {
+        $user = request()->user();
+        if ($user && ! app(\App\Services\ContributorStoryAccessService::class)->canViewStory($user, $story)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی به این داستان مجاز نیست.',
+                'error' => 'FORBIDDEN',
+            ], 403);
+        }
+
         return AdminApiResponse::success($story->load([
             'category',
             'episodes' => fn ($query) => $query->orderBy('episode_number'),
@@ -1334,6 +1343,11 @@ class StoryController extends Controller
     private function buildStoryApiListQuery(Request $request)
     {
         $query = Story::query();
+
+        $user = $request->user();
+        if ($user) {
+            app(\App\Services\ContributorStoryAccessService::class)->scopeStoriesForUser($query, $user);
+        }
 
         $search = trim((string) $request->input('q', $request->input('search', '')));
         if ($search !== '') {

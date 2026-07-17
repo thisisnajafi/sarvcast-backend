@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
+use App\Services\ContributorStoryAccessService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,7 +20,7 @@ class ApiAdminPermissionMiddleware
         }
 
         $user = auth('sanctum')->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Authentication is required.',
@@ -27,6 +29,11 @@ class ApiAdminPermissionMiddleware
         }
 
         if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+            return $next($request);
+        }
+
+        // Non-admin contributors: object-level rules live in api.contributor.
+        if ($user instanceof User && ! app(ContributorStoryAccessService::class)->isFullAdmin($user)) {
             return $next($request);
         }
 
@@ -39,7 +46,7 @@ class ApiAdminPermissionMiddleware
         }
 
         $hasPermission = method_exists($user, 'hasPermission') && $user->hasPermission($permission);
-        if (!$hasPermission) {
+        if (! $hasPermission) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission for this operation.',
@@ -92,6 +99,7 @@ class ApiAdminPermissionMiddleware
             'timeline-management' => 'timeline.management',
             'audio-management' => 'audio.management',
             'file-upload' => 'files.upload',
+            'story-editor' => 'story_editor',
             default => str_replace('-', '.', $segment),
         };
 
@@ -99,7 +107,6 @@ class ApiAdminPermissionMiddleware
             return null;
         }
 
-        return $resource . '.' . $action;
+        return $resource.'.'.$action;
     }
 }
-

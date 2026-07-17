@@ -38,6 +38,9 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'team_members.create', 'display_name' => 'افزودن عضو تیم', 'group' => 'team_members'],
             ['name' => 'team_members.update', 'display_name' => 'ویرایش عضو تیم', 'group' => 'team_members'],
             ['name' => 'team_members.delete', 'display_name' => 'حذف عضو تیم', 'group' => 'team_members'],
+            ['name' => 'stories.read', 'display_name' => 'مشاهده داستان‌های اختصاصی', 'group' => 'stories'],
+            ['name' => 'story_editor.read', 'display_name' => 'مشاهده ویرایشگر داستان', 'group' => 'story_editor'],
+            ['name' => 'story_editor.update', 'display_name' => 'ویرایش اسکریپت داستان', 'group' => 'story_editor'],
         ];
 
         foreach ($permissions as $permission) {
@@ -57,15 +60,28 @@ class RolePermissionSeeder extends Seeder
             'description' => 'دسترسی به مدیریت محتوا و کاربران'
         ]);
         $adminRole->permissions()->sync(Permission::whereIn('group', [
-            'dashboard', 'coin_management', 'coupon_management', 
+            'dashboard', 'coin_management', 'coupon_management',
             'payment_management', 'partner_management', 'analytics',
-            'user_management', 'media_library', 'team_members',
+            'user_management', 'media_library', 'team_members', 'stories', 'story_editor',
         ])->pluck('id'));
 
         $auditView = Permission::where('name', 'audit.view')->first();
         if ($auditView) {
             $adminRole->permissions()->syncWithoutDetaching([$auditView->id]);
         }
+
+        $voiceActorRole = Role::firstOrCreate(['name' => 'voice_actor'], [
+            'display_name' => 'صداپیشه',
+            'description' => 'مشاهده داستان‌های اختصاص‌یافته؛ نویسندگان می‌توانند اسکریپت را ویرایش کنند',
+        ]);
+        $voiceActorRole->permissions()->sync(
+            Permission::whereIn('name', [
+                'dashboard.view',
+                'stories.read',
+                'story_editor.read',
+                'story_editor.update',
+            ])->pluck('id')
+        );
 
         // Assign Super Admin role to Abolfazl
         $abolfazl = User::where('phone_number', '09136708883')->first();

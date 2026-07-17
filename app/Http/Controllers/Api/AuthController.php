@@ -266,27 +266,13 @@ class AuthController extends Controller
 
         $phoneNumber = $request->phone_number;
 
-        // Check if admin or super admin user exists
-        $user = User::where('phone_number', $phoneNumber)
-                   ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
-                   ->first();
+        $user = User::where('phone_number', $phoneNumber)->first();
 
-        if (!$user) {
+        if (! $user || ! $this->adminMayLogin($user)) {
             return response()->json([
                 'success' => false,
-                'message' => 'شماره تلفن مدیر یافت نشد'
+                'message' => 'شماره تلفن مدیر یافت نشد',
             ], 404);
-        }
-
-        if (! $this->adminMayLogin($user)) {
-            $message = ! in_array($user->status, User::loginAllowedStatuses(), true)
-                ? 'حساب کاربری شما غیرفعال است'
-                : 'دسترسی پنل مدیریت برای این حساب مجاز نیست';
-
-            return response()->json([
-                'success' => false,
-                'message' => $message,
-            ], 403);
         }
 
         // Check rate limiting
@@ -337,12 +323,9 @@ class AuthController extends Controller
         $phoneNumber = $request->phone_number;
         $verificationCode = $request->verification_code;
 
-        // Find admin or super admin user by phone number
-        $user = User::where('phone_number', $phoneNumber)
-                   ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
-                   ->first();
+        $user = User::where('phone_number', $phoneNumber)->first();
 
-        if (!$user) {
+        if (! $user || ! $this->adminMayLogin($user)) {
             $this->activityLog->recordSecurityEvent(
                 'login_failed',
                 $request,
@@ -353,24 +336,8 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'شماره تلفن مدیر یافت نشد'
+                'message' => 'شماره تلفن مدیر یافت نشد',
             ], 404);
-        }
-
-        if (! $this->adminMayLogin($user)) {
-            $this->activityLog->recordSecurityEvent(
-                'login_failed',
-                $request,
-                ActivityLog::STATUS_FAILED,
-                'ورود ناموفق مدیر — حساب غیرفعال',
-                ['reason' => 'inactive_account', 'user_id' => $user->id],
-                $user->id,
-            );
-
-            return response()->json([
-                'success' => false,
-                'message' => 'حساب کاربری شما غیرفعال است'
-            ], 403);
         }
 
         // Verify OTP code
@@ -691,6 +658,15 @@ class AuthController extends Controller
             ->unique()
             ->values();
 
+        $accessService = app(\App\Services\ContributorStoryAccessService::class);
+        $access = $accessService->accessPayload($user);
+        if (! $access['is_full_admin']) {
+            $permissions = $permissions
+                ->merge($accessService->contributorPermissions($user))
+                ->unique()
+                ->values();
+        }
+
         $jsonResponse = response()->json([
             'success' => true,
             'data' => [
@@ -719,6 +695,7 @@ class AuthController extends Controller
                 'created_at' => $user->created_at,
                 'premium' => $premiumInfo,
                 'permissions' => $permissions,
+                'access' => $access,
             ]
         ]);
         // Disable caching for user profile - it needs to be retrieved immediately

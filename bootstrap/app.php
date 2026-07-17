@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'api.admin' => \App\Http\Middleware\ApiAdminMiddleware::class,
+            'api.contributor' => \App\Http\Middleware\ApiContributorGuardMiddleware::class,
             'api.audit' => \App\Http\Middleware\ApiAdminAuditMiddleware::class,
             'api.permission' => \App\Http\Middleware\ApiAdminPermissionMiddleware::class,
             'admin.origin' => \App\Http\Middleware\EnsureAllowedAdminOrigin::class,

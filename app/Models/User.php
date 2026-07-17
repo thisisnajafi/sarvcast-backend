@@ -64,14 +64,11 @@ class User extends Authenticatable
 
     /**
      * Admin panel login/API access (includes profile onboarding state).
+     * Full admins plus voice actors / assigned authors & cast members.
      */
     public function mayAccessAdminPanel(): bool
     {
-        if (! in_array($this->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN], true)) {
-            return false;
-        }
-
-        return in_array($this->status, self::loginAllowedStatuses(), true);
+        return app(\App\Services\ContributorStoryAccessService::class)->mayAccessAdminPanel($this);
     }
 
     /**

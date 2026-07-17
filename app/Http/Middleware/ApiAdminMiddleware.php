@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\ContributorStoryAccessService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -10,11 +11,12 @@ use Symfony\Component\HttpFoundation\Response;
 class ApiAdminMiddleware
 {
     /**
-     * Validate admin/super_admin access for Sanctum API routes.
+     * Validate admin panel access for Sanctum API routes
+     * (full admins and story contributors).
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth('sanctum')->check()) {
+        if (! auth('sanctum')->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Authentication is required.',
@@ -23,7 +25,7 @@ class ApiAdminMiddleware
         }
 
         $user = auth('sanctum')->user();
-        if (!$user || !in_array($user->role, ['admin', 'super_admin'], true)) {
+        if (! $user instanceof User || ! app(ContributorStoryAccessService::class)->mayAccessAdminPanel($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Forbidden.',
@@ -42,4 +44,3 @@ class ApiAdminMiddleware
         return $next($request);
     }
 }
-

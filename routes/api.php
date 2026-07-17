@@ -200,8 +200,8 @@ Route::prefix('admin/v1/auth')->middleware(['security', 'admin.origin'])->group(
         Route::post('login', [AuthController::class, 'adminLogin']);
     });
 
-    // Authenticated admin endpoints
-    Route::middleware(['auth:sanctum', 'role:admin,super_admin'])->group(function () {
+    // Authenticated admin endpoints (admins + story contributors)
+    Route::middleware(['auth:sanctum', 'api.admin'])->group(function () {
         Route::get('me', [AuthController::class, 'profile']);
         Route::middleware('api.audit')->group(function () {
             Route::put('profile', [AuthController::class, 'updateProfile']);
@@ -217,7 +217,7 @@ Route::prefix('admin/v1/auth')->middleware(['security', 'admin.origin'])->group(
 });
 
 Route::prefix('admin/v1/dashboard')
-    ->middleware(['security', 'admin.origin', 'auth:sanctum', 'role:admin,super_admin'])
+    ->middleware(['security', 'admin.origin', 'auth:sanctum', 'api.admin', 'role:admin,super_admin'])
     ->group(function () {
         Route::get('stats', [AdminDashboardController::class, 'stats']);
         Route::get('charts', [AdminDashboardController::class, 'charts']);
@@ -950,7 +950,7 @@ Route::prefix('admin/local-import')->middleware(['throttle:10,1'])->group(functi
 });
 
 // Admin API Routes
-Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission', 'throttle:120,1', 'api.audit'])->group(function () {
+Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributor', 'api.permission', 'throttle:120,1', 'api.audit'])->group(function () {
 
     Route::prefix('local-import')->group(function () {
         Route::get('/verify', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'verify']);
