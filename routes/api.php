@@ -1411,6 +1411,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::post('/stories/{storyId}/episodes', [\App\Http\Controllers\Admin\StoryEditorController::class, 'storeEpisode']);
             Route::post('/stories/{storyId}/episodes/{episodeId}/import', [\App\Http\Controllers\Admin\StoryEditorController::class, 'import']);
             Route::post('/stories/{storyId}/assets/{assetType}/{assetKey}/image', [\App\Http\Controllers\Admin\StoryEditorController::class, 'uploadAssetImage']);
+            Route::put('/stories/{storyId}/assets/{assetType}/{assetKey}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'updateAssetMetadata']);
             Route::get('/stories/{storyId}/episodes', [\App\Http\Controllers\Admin\StoryEditorController::class, 'episodes']);
             Route::get('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'show']);
             Route::put('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'update']);

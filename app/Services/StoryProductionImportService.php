@@ -327,6 +327,67 @@ class StoryProductionImportService
         ];
     }
 
+    /**
+     * Update character / object / setting metadata from the dashboard editor.
+     * Also rewrites characters_and_objects.json on disk when possible.
+     *
+     * @param  array<string, mixed>  $metadata
+     * @return array<string, mixed>
+     */
+    public function updateAssetMetadata(
+        string $storySlug,
+        string $assetType,
+        string $assetKey,
+        array $metadata,
+    ): array {
+        $allowed = [
+            StoryProductionAsset::TYPE_CHARACTER,
+            StoryProductionAsset::TYPE_OBJECT,
+            StoryProductionAsset::TYPE_SETTING,
+        ];
+
+        if (! in_array($assetType, $allowed, true)) {
+            throw new \InvalidArgumentException('فقط شخصیت، شیء و محیط قابل ویرایش هستند.');
+        }
+
+        $asset = StoryProductionAsset::where('story_slug', $storySlug)
+            ->whereNull('episode_slug')
+            ->where('asset_type', $assetType)
+            ->where('asset_key', $assetKey)
+            ->first();
+
+        if ($asset === null) {
+            throw new \RuntimeException('دارایی یافت نشد. ابتدا فایل JSON مربوطه را import کنید.');
+        }
+
+        $metadata = $this->normalizeAssetMetadata($assetType, $metadata);
+
+        $prompt = match ($assetType) {
+            StoryProductionAsset::TYPE_CHARACTER => $metadata['character_sheet_prompt'] ?? null,
+            StoryProductionAsset::TYPE_OBJECT => $metadata['object_prompt'] ?? null,
+            StoryProductionAsset::TYPE_SETTING => $metadata['setting_prompt_base'] ?? null,
+            default => null,
+        };
+
+        $asset->update([
+            'name_persian' => $metadata['name_persian'] ?? $assetKey,
+            'name_english' => $metadata['name_english'] ?? null,
+            'prompt' => is_string($prompt) ? $prompt : null,
+            'metadata' => $metadata,
+        ]);
+
+        $storyId = $asset->story_id ?? $this->resolveDbStoryId($storySlug, []);
+        if ($assetType === StoryProductionAsset::TYPE_CHARACTER && $storyId) {
+            $this->syncCharacterRecordAfterEdit($storyId, $storySlug, $assetKey, $metadata, $asset->character_id);
+        }
+
+        $this->rewriteCharactersAndObjectsJson($storySlug, $assetType, $assetKey, $metadata);
+
+        return [
+            'asset' => $asset->fresh(),
+        ];
+    }
+
   /**
      * @return array<string, mixed>
      */
@@ -744,6 +805,235 @@ class StoryProductionImportService
             ->where('asset_type', StoryProductionAsset::TYPE_CHARACTER)
             ->where('asset_key', $key)
             ->update(['character_id' => $record->id, 'story_id' => $storyId]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $character
+     */
+    private function syncCharacterRecordAfterEdit(
+        int $storyId,
+        string $storySlug,
+        string $key,
+        array $character,
+        ?int $characterId,
+    ): void {
+        $name = $character['name_persian'] ?? $key;
+        $description = $character['visual_description_persian']
+            ?? $character['arc_summary']
+            ?? null;
+
+        if ($characterId) {
+            Character::whereKey($characterId)->update([
+                'name' => $name,
+                'description' => $description,
+            ]);
+
+            return;
+        }
+
+        $this->syncCharacterRecord($storyId, $storySlug, $key, $character);
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     * @return array<string, mixed>
+     */
+    private function normalizeAssetMetadata(string $assetType, array $metadata): array
+    {
+        $stringFields = match ($assetType) {
+            StoryProductionAsset::TYPE_CHARACTER => [
+                'name_persian', 'name_english', 'role', 'age_appearance',
+                'arc_summary', 'visual_description_persian', 'character_sheet_prompt',
+            ],
+            StoryProductionAsset::TYPE_OBJECT => [
+                'name_persian', 'name_english', 'description_persian',
+                'narrative_role', 'object_prompt', 'visual_consistency_notes',
+            ],
+            StoryProductionAsset::TYPE_SETTING => [
+                'name_persian', 'name_english', 'description_persian', 'setting_prompt_base',
+            ],
+            default => [],
+        };
+
+        $normalized = [];
+        foreach ($stringFields as $field) {
+            if (! array_key_exists($field, $metadata)) {
+                continue;
+            }
+            $value = $metadata[$field];
+            if ($value === null) {
+                continue;
+            }
+            $normalized[$field] = is_string($value) ? trim($value) : $value;
+            if ($normalized[$field] === '') {
+                unset($normalized[$field]);
+            }
+        }
+
+        if (isset($metadata['appears_in_episodes']) && is_array($metadata['appears_in_episodes'])) {
+            $normalized['appears_in_episodes'] = array_values(array_map(
+                static fn ($n) => (int) $n,
+                array_filter($metadata['appears_in_episodes'], static fn ($n) => is_numeric($n))
+            ));
+        }
+
+        if ($assetType === StoryProductionAsset::TYPE_CHARACTER) {
+            if (isset($metadata['personality_traits']) && is_array($metadata['personality_traits'])) {
+                $normalized['personality_traits'] = array_values(array_filter(array_map(
+                    static fn ($t) => is_string($t) ? trim($t) : '',
+                    $metadata['personality_traits']
+                )));
+            }
+            if (isset($metadata['key_visual_anchors']) && is_array($metadata['key_visual_anchors'])) {
+                $normalized['key_visual_anchors'] = array_values(array_filter(array_map(
+                    static fn ($t) => is_string($t) ? trim($t) : '',
+                    $metadata['key_visual_anchors']
+                )));
+            }
+            if (isset($metadata['relationships']) && is_array($metadata['relationships'])) {
+                $rels = [];
+                foreach ($metadata['relationships'] as $k => $v) {
+                    if (is_string($k) && is_string($v) && trim($v) !== '') {
+                        $rels[$k] = trim($v);
+                    }
+                }
+                if ($rels !== []) {
+                    $normalized['relationships'] = $rels;
+                }
+            }
+            if (isset($metadata['emotion_expressions']) && is_array($metadata['emotion_expressions'])) {
+                $emotions = [];
+                foreach ($metadata['emotion_expressions'] as $k => $v) {
+                    if (is_string($k) && is_string($v) && trim($v) !== '') {
+                        $emotions[$k] = trim($v);
+                    }
+                }
+                if ($emotions !== []) {
+                    $normalized['emotion_expressions'] = $emotions;
+                }
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function rewriteCharactersAndObjectsJson(
+        string $storySlug,
+        string $assetType,
+        string $assetKey,
+        array $metadata,
+    ): void {
+        $section = match ($assetType) {
+            StoryProductionAsset::TYPE_CHARACTER => 'characters',
+            StoryProductionAsset::TYPE_OBJECT => 'objects',
+            StoryProductionAsset::TYPE_SETTING => 'settings',
+            default => null,
+        };
+        if ($section === null) {
+            return;
+        }
+
+        $document = $this->loadOrRebuildCharactersDocument($storySlug);
+        $document[$section][$assetKey] = $metadata;
+        $json = json_encode($document, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        if (! is_string($json)) {
+            return;
+        }
+
+        $fileRecord = StoryProductionFile::where('story_slug', $storySlug)
+            ->whereNull('episode_slug')
+            ->where('file_type', StoryProductionFile::TYPE_CHARACTERS)
+            ->first();
+
+        if ($fileRecord?->storage_path) {
+            Storage::disk('public')->put($fileRecord->storage_path, $json);
+            $fileRecord->update([
+                'content_hash' => hash('sha256', $json),
+                'imported_at' => now(),
+            ]);
+        }
+
+        $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
+        if ($storyDir) {
+            $path = rtrim($storyDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'characters_and_objects.json';
+            @file_put_contents($path, $json);
+            if ($fileRecord && ! $fileRecord->source_path) {
+                $fileRecord->update(['source_path' => $path]);
+            }
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loadOrRebuildCharactersDocument(string $storySlug): array
+    {
+        $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
+        if ($storyDir) {
+            $path = rtrim($storyDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'characters_and_objects.json';
+            if (is_file($path)) {
+                $decoded = json_decode((string) file_get_contents($path), true);
+                if (is_array($decoded)) {
+                    $decoded['characters'] = is_array($decoded['characters'] ?? null) ? $decoded['characters'] : [];
+                    $decoded['objects'] = is_array($decoded['objects'] ?? null) ? $decoded['objects'] : [];
+                    $decoded['settings'] = is_array($decoded['settings'] ?? null) ? $decoded['settings'] : [];
+
+                    return $decoded;
+                }
+            }
+        }
+
+        $fileRecord = StoryProductionFile::where('story_slug', $storySlug)
+            ->whereNull('episode_slug')
+            ->where('file_type', StoryProductionFile::TYPE_CHARACTERS)
+            ->first();
+
+        if ($fileRecord?->storage_path && Storage::disk('public')->exists($fileRecord->storage_path)) {
+            $decoded = json_decode((string) Storage::disk('public')->get($fileRecord->storage_path), true);
+            if (is_array($decoded)) {
+                $decoded['characters'] = is_array($decoded['characters'] ?? null) ? $decoded['characters'] : [];
+                $decoded['objects'] = is_array($decoded['objects'] ?? null) ? $decoded['objects'] : [];
+                $decoded['settings'] = is_array($decoded['settings'] ?? null) ? $decoded['settings'] : [];
+
+                return $decoded;
+            }
+        }
+
+        $document = [
+            'characters' => [],
+            'objects' => [],
+            'settings' => [],
+        ];
+
+        $assets = StoryProductionAsset::where('story_slug', $storySlug)
+            ->whereNull('episode_slug')
+            ->whereIn('asset_type', [
+                StoryProductionAsset::TYPE_CHARACTER,
+                StoryProductionAsset::TYPE_OBJECT,
+                StoryProductionAsset::TYPE_SETTING,
+            ])
+            ->get();
+
+        foreach ($assets as $asset) {
+            $section = match ($asset->asset_type) {
+                StoryProductionAsset::TYPE_CHARACTER => 'characters',
+                StoryProductionAsset::TYPE_OBJECT => 'objects',
+                StoryProductionAsset::TYPE_SETTING => 'settings',
+                default => null,
+            };
+            if ($section === null) {
+                continue;
+            }
+            $document[$section][$asset->asset_key] = is_array($asset->metadata) ? $asset->metadata : [
+                'name_persian' => $asset->name_persian,
+                'name_english' => $asset->name_english,
+            ];
+        }
+
+        return $document;
     }
 
     /**

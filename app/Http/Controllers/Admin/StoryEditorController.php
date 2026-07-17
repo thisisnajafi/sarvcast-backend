@@ -227,6 +227,41 @@ class StoryEditorController extends Controller
         }
     }
 
+    public function updateAssetMetadata(Request $request, string $storyId, string $assetType, string $assetKey)
+    {
+        $validated = $request->validate([
+            'metadata' => ['required', 'array'],
+        ]);
+
+        try {
+            $result = $this->importService->updateAssetMetadata(
+                $storyId,
+                $assetType,
+                $assetKey,
+                $validated['metadata'],
+            );
+
+            return AdminApiResponse::success($result, 'اطلاعات دارایی به‌روز شد.');
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error('Story editor asset metadata update failed', [
+                'story_id' => $storyId,
+                'asset_type' => $assetType,
+                'asset_key' => $assetKey,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], str_contains($e->getMessage(), 'یافت نشد') ? 404 : 500);
+        }
+    }
+
     public function episodes(string $storyId)
     {
         $storyDir = $this->repository->findStoryDirectory($storyId);
