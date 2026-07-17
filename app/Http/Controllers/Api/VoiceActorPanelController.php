@@ -9,6 +9,7 @@ use App\Models\Character;
 use App\Services\EpisodeScriptService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 
 class VoiceActorPanelController extends Controller
 {
@@ -135,6 +136,7 @@ class VoiceActorPanelController extends Controller
                 'duration' => $episode->duration,
                 'script_file_url' => $episode->script_file_url,
                 'script_content' => $script['script_content'] ?? null,
+                'audio_url' => $episode->audio_url,
                 'status' => $episode->status,
                 'is_premium' => $episode->is_premium,
             ];
@@ -243,5 +245,83 @@ class VoiceActorPanelController extends Controller
                 'script_content' => $script['script_content'],
             ]
         ]);
+    }
+
+    /**
+     * Upload / replace episode audio for the assigned voice actor or narrator.
+     * Preferred over /api/admin/episodes (blocked for non-admin contributors).
+     */
+    public function uploadEpisodeAudio(Request $request, Episode $episode): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'احراز هویت الزامی است'
+            ], 401);
+        }
+
+        $story = $episode->story;
+        if (!$story) {
+            return response()->json([
+                'success' => false,
+                'message' => 'داستان این قسمت یافت نشد.'
+            ], 404);
+        }
+
+        $isNarrator = $story->narrator_id === $user->id;
+        $isVoiceActor = $story->characters()->where('voice_actor_id', $user->id)->exists();
+
+        if (!$isNarrator && !$isVoiceActor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شما دسترسی به آپلود صوت این قسمت را ندارید.'
+            ], 403);
+        }
+
+        $request->validate([
+            'audio_file' => 'required|file|mimes:mp3,wav,m4a,aac,ogg|max:102400',
+        ], [
+            'audio_file.required' => 'فایل صوتی الزامی است',
+            'audio_file.mimes' => 'فرمت فایل صوتی باید mp3، wav، m4a، aac یا ogg باشد',
+            'audio_file.max' => 'حجم فایل صوتی نمی‌تواند بیشتر از ۱۰۰ مگابایت باشد',
+        ]);
+
+        try {
+            $rawAudio = $episode->getRawOriginal('audio_url');
+            if ($rawAudio) {
+                $oldPath = public_path($rawAudio);
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+
+            $audioFile = $request->file('audio_file');
+            $audioName = time() . '_' . Str::slug($episode->title) . '_' . uniqid() . '.' . $audioFile->getClientOriginalExtension();
+
+            $audioDir = public_path('audio/episodes');
+            if (!is_dir($audioDir)) {
+                mkdir($audioDir, 0755, true);
+            }
+
+            $audioFile->move($audioDir, $audioName);
+            $episode->audio_url = 'audio/episodes/' . $audioName;
+            $episode->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'فایل صوتی با موفقیت آپلود شد',
+                'data' => [
+                    'episode_id' => $episode->id,
+                    'audio_url' => $episode->audio_url,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در آپلود فایل صوتی',
+            ], 500);
+        }
     }
 }

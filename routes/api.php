@@ -335,6 +335,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('stories', [VoiceActorPanelController::class, 'getStories']);
         Route::get('stories/{story}', [VoiceActorPanelController::class, 'getStoryDetails']);
         Route::get('stories/{story}/episodes/{episode}/script', [VoiceActorPanelController::class, 'getEpisodeScript']);
+        Route::post('episodes/{episode}/audio', [VoiceActorPanelController::class, 'uploadEpisodeAudio']);
     });
 
     // Story routes
