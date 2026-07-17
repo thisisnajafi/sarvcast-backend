@@ -1426,8 +1426,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.permission
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\StoryController::class, 'apiStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryController::class, 'apiBulkAction']);
             Route::get('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiShow']);
-            Route::put('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdate']);
             Route::put('/{story}/sponsor', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdateSponsor']);
+            Route::put('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdate']);
             Route::delete('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiDestroy']);
             Route::post('/{story}/publish', [\App\Http\Controllers\Admin\StoryController::class, 'apiPublish']);
             Route::post('/{story}/duplicate', [\App\Http\Controllers\Admin\StoryController::class, 'apiDuplicate']);
