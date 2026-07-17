@@ -73,6 +73,26 @@ class StoryEditorRepository
     }
 
     /**
+     * @return array{name_persian: string, name_english: string, target_age: string|null, folder_name: string}|null
+     */
+    public function getStoryMetaForSlug(string $storySlug): ?array
+    {
+        $dir = $this->findStoryDirectory($storySlug);
+        if ($dir === null) {
+            return null;
+        }
+
+        $meta = $this->readStoryMeta($dir);
+
+        return [
+            'name_persian' => $meta['name_persian'],
+            'name_english' => $meta['name_english'],
+            'target_age' => $meta['target_age'],
+            'folder_name' => basename($dir),
+        ];
+    }
+
+    /**
      * @return array<int, array{
      *   id: string,
      *   episode_number: int,
@@ -328,13 +348,41 @@ class StoryEditorRepository
             return $fromProduction;
         }
 
+        $fromAsset = \App\Models\StoryProductionAsset::query()
+            ->where('story_id', $storyId)
+            ->whereNotNull('story_slug')
+            ->value('story_slug');
+
+        if (is_string($fromAsset) && $fromAsset !== '') {
+            return $fromAsset;
+        }
+
         $story = \App\Models\Story::query()->find($storyId);
         if ($story === null) {
             return null;
         }
 
+        $title = trim((string) $story->title);
+        if ($title === '') {
+            return null;
+        }
+
+        $access = app(ContributorStoryAccessService::class);
+
         foreach ($this->listStories() as $item) {
-            if ($item['name_persian'] === $story->title) {
+            $persian = trim((string) ($item['name_persian'] ?? ''));
+            if ($persian !== '' && $access->titlesMatch($persian, $title)) {
+                return $item['id'];
+            }
+
+            $folder = trim((string) ($item['folder_name'] ?? ''));
+            if ($folder !== '' && preg_match('/^\d+\s*[-–]\s*(.+)$/u', $folder, $m)) {
+                if ($access->titlesMatch(trim($m[1]), $title)) {
+                    return $item['id'];
+                }
+            }
+
+            if ($folder !== '' && $access->titlesMatch($folder, $title)) {
                 return $item['id'];
             }
         }

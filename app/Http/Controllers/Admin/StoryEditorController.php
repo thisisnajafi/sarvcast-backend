@@ -30,10 +30,7 @@ class StoryEditorController extends Controller
             $access = app(\App\Services\ContributorStoryAccessService::class);
 
             if ($user && ! $access->isFullAdmin($user)) {
-                $stories = array_values(array_filter(
-                    $stories,
-                    fn (array $story) => $access->canViewEditorStory($user, (string) $story['id']),
-                ));
+                $stories = $access->filterEditorStoriesForUser($stories, $user);
             }
 
             return AdminApiResponse::success($stories);

@@ -64,7 +64,7 @@ class User extends Authenticatable
 
     /**
      * Admin panel login/API access (includes profile onboarding state).
-     * Full admins plus voice actors / assigned authors & cast members.
+     * Only admin, super_admin, and voice_actor roles (not parent/child/basic).
      */
     public function mayAccessAdminPanel(): bool
     {

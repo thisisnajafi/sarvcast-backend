@@ -152,7 +152,8 @@ class AuthController extends Controller
     }
 
     /**
-     * Whether an admin user may request OTP / log in (includes profile onboarding state).
+     * Whether an admin user may request OTP / log in.
+     * Only super_admin, admin, and voice_actor (not parent/child/basic authors/cast).
      */
     private function adminMayLogin(User $user): bool
     {

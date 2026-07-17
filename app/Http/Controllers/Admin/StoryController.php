@@ -1069,7 +1069,8 @@ class StoryController extends Controller
     public function apiShow(Story $story)
     {
         $user = request()->user();
-        if ($user && ! app(\App\Services\ContributorStoryAccessService::class)->canViewStory($user, $story)) {
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($user && ! $access->canViewStory($user, $story)) {
             return response()->json([
                 'success' => false,
                 'message' => 'دسترسی به این داستان مجاز نیست.',
@@ -1077,7 +1078,7 @@ class StoryController extends Controller
             ], 403);
         }
 
-        return AdminApiResponse::success($story->load([
+        $story->load([
             'category',
             'episodes' => fn ($query) => $query->orderBy('episode_number'),
             'sponsor',
@@ -1085,7 +1086,18 @@ class StoryController extends Controller
             'narrator',
             'director',
             'characters',
-        ]));
+        ]);
+
+        $payload = $story->toArray();
+        $payload['story_editor_slug'] = app(\App\Services\StoryEditorRepository::class)
+            ->findStorySlugByDbStoryId((int) $story->id);
+        $payload['permissions'] = [
+            'can_edit_script' => $user ? $access->canEditScript($user, $story) : false,
+            'can_view_script' => $user ? $access->canViewStory($user, $story) : false,
+            'can_access_package' => $user ? $access->canAccessPackage($user) : false,
+        ];
+
+        return AdminApiResponse::success($payload);
     }
 
     public function apiUpdateSponsor(Request $request, Story $story)

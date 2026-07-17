@@ -23,10 +23,10 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
-        // If user is already authenticated as admin, redirect to stories page
+        // If user is already authenticated for admin panel, redirect to stories page
         if (Auth::guard('web')->check()) {
             $user = Auth::guard('web')->user();
-            if (in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])) {
+            if ($user->mayAccessAdminPanel()) {
                 return redirect()->route('admin.stories.index');
             }
         }
@@ -55,20 +55,12 @@ class AuthController extends Controller
 
         $phoneNumber = $request->phone_number;
 
-        // Check if admin or super admin user exists
-        $user = User::where('phone_number', $phoneNumber)
-                   ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
-                   ->first();
+        // Only admin / super_admin / voice_actor may request admin OTP (not parent/child/basic)
+        $user = User::where('phone_number', $phoneNumber)->first();
 
-        if (!$user) {
+        if (! $user || ! $user->mayAccessAdminPanel()) {
             return redirect()->back()
                 ->withErrors(['phone_number' => 'شماره تلفن مدیر یافت نشد'])
-                ->withInput($request->only('phone_number'));
-        }
-
-        if (! $user->mayAccessAdminPanel()) {
-            return redirect()->back()
-                ->withErrors(['phone_number' => 'حساب کاربری شما غیرفعال است'])
                 ->withInput($request->only('phone_number'));
         }
 
@@ -118,21 +110,11 @@ class AuthController extends Controller
         $phoneNumber = $request->phone_number;
         $verificationCode = $request->verification_code;
 
-        // Find admin or super admin user by phone number
-        $user = User::where('phone_number', $phoneNumber)
-                   ->whereIn('role', [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN])
-                   ->first();
+        $user = User::where('phone_number', $phoneNumber)->first();
 
-        if (!$user) {
+        if (! $user || ! $user->mayAccessAdminPanel()) {
             return redirect()->back()
                 ->withErrors(['phone_number' => 'شماره تلفن مدیر یافت نشد'])
-                ->withInput($request->only('phone_number'))
-                ->with('otp_sent', true);
-        }
-
-        if (! $user->mayAccessAdminPanel()) {
-            return redirect()->back()
-                ->withErrors(['phone_number' => 'حساب کاربری شما غیرفعال است'])
                 ->withInput($request->only('phone_number'))
                 ->with('otp_sent', true);
         }
