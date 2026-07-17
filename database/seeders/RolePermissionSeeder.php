@@ -7,11 +7,15 @@ use App\Models\Role;
 use App\Models\Permission;
 use App\Models\User;
 
+/**
+ * Idempotent roles/permissions seeder.
+ * Existing permission/role rows are skipped (firstOrCreate).
+ * Missing required permissions are attached without detaching extras.
+ */
 class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create basic permissions
         $permissions = [
             ['name' => 'dashboard.view', 'display_name' => 'مشاهده داشبورد', 'group' => 'dashboard'],
             ['name' => 'coins.view', 'display_name' => 'مشاهده مدیریت سکه', 'group' => 'coin_management'],
@@ -43,38 +47,50 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'story_editor.update', 'display_name' => 'ویرایش اسکریپت داستان', 'group' => 'story_editor'],
         ];
 
+        $createdPermissions = 0;
+        $skippedPermissions = 0;
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission['name']], $permission);
+            $model = Permission::firstOrCreate(
+                ['name' => $permission['name']],
+                $permission
+            );
+            if ($model->wasRecentlyCreated) {
+                $createdPermissions++;
+            } else {
+                $skippedPermissions++;
+            }
         }
 
-        // Create Super Admin role with all permissions
-        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin'], [
-            'display_name' => 'مدیر کل',
-            'description' => 'دسترسی کامل به تمام بخش‌های سیستم'
-        ]);
-        $superAdminRole->permissions()->sync(Permission::all()->pluck('id'));
+        $this->command?->info("Permissions: created={$createdPermissions}, skipped_existing={$skippedPermissions}");
 
-        // Create regular Admin role
-        $adminRole = Role::firstOrCreate(['name' => 'admin'], [
-            'display_name' => 'مدیر',
-            'description' => 'دسترسی به مدیریت محتوا و کاربران'
+        [$superAdminRole, $superCreated] = $this->firstOrCreateRole('super_admin', [
+            'display_name' => 'مدیر کل',
+            'description' => 'دسترسی کامل به تمام بخش‌های سیستم',
         ]);
-        $adminRole->permissions()->sync(Permission::whereIn('group', [
+        // Ensure super_admin has every permission (additive).
+        $superAdminRole->permissions()->syncWithoutDetaching(Permission::all()->pluck('id'));
+
+        [$adminRole, $adminCreated] = $this->firstOrCreateRole('admin', [
+            'display_name' => 'مدیر',
+            'description' => 'دسترسی به مدیریت محتوا و کاربران',
+        ]);
+        $adminPermissionIds = Permission::whereIn('group', [
             'dashboard', 'coin_management', 'coupon_management',
             'payment_management', 'partner_management', 'analytics',
             'user_management', 'media_library', 'team_members', 'stories', 'story_editor',
-        ])->pluck('id'));
+        ])->pluck('id');
+        $adminRole->permissions()->syncWithoutDetaching($adminPermissionIds);
 
         $auditView = Permission::where('name', 'audit.view')->first();
         if ($auditView) {
             $adminRole->permissions()->syncWithoutDetaching([$auditView->id]);
         }
 
-        $voiceActorRole = Role::firstOrCreate(['name' => 'voice_actor'], [
+        [$voiceActorRole, $voiceCreated] = $this->firstOrCreateRole('voice_actor', [
             'display_name' => 'صداپیشه',
             'description' => 'مشاهده داستان‌های اختصاص‌یافته؛ نویسندگان می‌توانند اسکریپت را ویرایش کنند',
         ]);
-        $voiceActorRole->permissions()->sync(
+        $voiceActorRole->permissions()->syncWithoutDetaching(
             Permission::whereIn('name', [
                 'dashboard.view',
                 'stories.read',
@@ -83,13 +99,34 @@ class RolePermissionSeeder extends Seeder
             ])->pluck('id')
         );
 
-        // Assign Super Admin role to Abolfazl
+        $this->command?->info(sprintf(
+            'Roles: super_admin=%s, admin=%s, voice_actor=%s',
+            $superCreated ? 'created' : 'exists(skipped)',
+            $adminCreated ? 'created' : 'exists(skipped)',
+            $voiceCreated ? 'created' : 'exists(skipped)'
+        ));
+
         $abolfazl = User::where('phone_number', '09136708883')->first();
         if ($abolfazl) {
-            $abolfazl->assignRole($superAdminRole);
-            $this->command->info('Super Admin role assigned to Abolfazl (09136708883)');
+            if (! $abolfazl->hasRole('super_admin')) {
+                $abolfazl->assignRole($superAdminRole);
+                $this->command?->info('Super Admin role assigned to Abolfazl (09136708883)');
+            } else {
+                $this->command?->info('Abolfazl already has Super Admin role (skipped)');
+            }
         } else {
-            $this->command->warn('User with phone number 09136708883 not found. Please create the user first.');
+            $this->command?->warn('User with phone number 09136708883 not found. Please create the user first.');
         }
+    }
+
+    /**
+     * @param  array{display_name: string, description: string}  $attributes
+     * @return array{0: Role, 1: bool}
+     */
+    private function firstOrCreateRole(string $name, array $attributes): array
+    {
+        $role = Role::firstOrCreate(['name' => $name], $attributes);
+
+        return [$role, $role->wasRecentlyCreated];
     }
 }

@@ -169,7 +169,7 @@ jobs:
               echo "run_env=false" >> "$GITHUB_OUTPUT"
             fi
 
-            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "$force_vendor" == "true" ]] || [[ "$force_env" == "true" ]]; then
+            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "$force_vendor" == "true" ]] || [[ "$force_env" == "true" ]] || [[ "${{ steps.changes.outputs.seeders }}" == "true" ]]; then
               echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
             else
               echo "run_config_clear=false" >> "$GITHUB_OUTPUT"
@@ -181,6 +181,8 @@ jobs:
               echo "run_migrate=false" >> "$GITHUB_OUTPUT"
             fi
 
+            # Always seed RolePermissionSeeder on full deploy; on lean when seeders change.
+            # Seeder is idempotent (skips existing roles/permissions).
             if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.seeders }}" == "true" ]]; then
               echo "run_seed=true" >> "$GITHUB_OUTPUT"
             else
@@ -362,9 +364,6 @@ jobs:
         if: steps.plan.outputs.run_migrate == 'true'
         run: |
           QUERY="only=migrate"
-          if [[ "${{ steps.plan.outputs.run_seed }}" == "true" ]]; then
-            QUERY="${QUERY}&seed=1"
-          fi
           if [[ "${{ steps.plan.outputs.run_composer }}" == "true" ]]; then
             QUERY="${QUERY}&force_vendor=1"
           fi
@@ -389,6 +388,31 @@ jobs:
             "${{ env.DEPLOY_TOKEN }}" \
             "${VERIFY_QUERY}" \
             "Verify migrate:status and schema after migrate" \
+            300
+
+      - name: Seed roles and permissions (idempotent)
+        if: steps.plan.outputs.run_seed == 'true'
+        run: |
+          QUERY="only=seed"
+          if [[ "${{ steps.plan.outputs.run_composer }}" == "true" ]]; then
+            QUERY="${QUERY}&force_vendor=1"
+          fi
+
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "${QUERY}" \
+            "php artisan db:seed --class=RolePermissionSeeder (idempotent)" \
+            300
+
+      - name: Clear config cache after seed
+        if: steps.plan.outputs.run_seed == 'true'
+        run: |
+          bash scripts/ci-call-deploy-helper.sh \
+            "${{ env.SITE_URL }}" \
+            "${{ env.DEPLOY_TOKEN }}" \
+            "only=config_clear" \
+            "php artisan config:clear after RolePermissionSeeder" \
             300
 
       - name: Rebuild Laravel caches on server

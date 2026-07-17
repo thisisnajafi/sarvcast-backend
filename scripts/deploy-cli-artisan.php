@@ -191,6 +191,9 @@ function deployRunOnlyModeViaCli(string $basePath, string $phpBinary, string $on
                 ['db:seed', ['class' => 'Database\\Seeders\\RolePermissionSeeder', 'force' => true]],
             ] : []
         ),
+        'seed' => [
+            ['db:seed', ['class' => 'Database\\Seeders\\RolePermissionSeeder', 'force' => true]],
+        ],
         'cache_rebuild' => [
             ['config:clear', []],
             ['clear-compiled', []],

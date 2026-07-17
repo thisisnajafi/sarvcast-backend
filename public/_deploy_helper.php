@@ -47,13 +47,13 @@ $basePath = dirname(__DIR__);
 $results = [];
 $only = isset($_GET['only']) ? trim((string) $_GET['only']) : '';
 $runSeed = isset($_GET['seed']) && $_GET['seed'] === '1';
-$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'migrate_verify', 'cache_rebuild', 'php_extensions', 'db_probe'];
+$allowedOnlyModes = ['config_clear', 'firebase_verify', 'migrate', 'migrate_verify', 'seed', 'cache_rebuild', 'php_extensions', 'db_probe'];
 
 if ($only !== '' && ! in_array($only, $allowedOnlyModes, true)) {
     http_response_code(400);
     die(json_encode([
         'status' => 'error',
-        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, migrate_verify, cache_rebuild, php_extensions, db_probe',
+        'message' => 'Unknown only mode. Allowed: config_clear, firebase_verify, migrate, migrate_verify, seed, cache_rebuild, php_extensions, db_probe',
         'only' => $only,
     ]));
 }
@@ -797,6 +797,9 @@ try {
                 'db:seed' => ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true],
             ] : []
         ),
+        'seed' => [
+            'db:seed' => ['--class' => 'Database\\Seeders\\RolePermissionSeeder', '--force' => true],
+        ],
         'cache_rebuild' => [
             'config:clear' => [],
             'clear-compiled' => [],
