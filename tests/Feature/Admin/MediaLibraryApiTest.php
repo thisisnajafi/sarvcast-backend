@@ -73,6 +73,55 @@ class MediaLibraryApiTest extends TestCase
             'title' => 'کاور تست',
             'media_type' => MediaAsset::TYPE_IMAGE,
             'uploaded_by' => $admin->id,
+            'extension' => 'webp',
+            'mime_type' => 'image/webp',
+        ]);
+
+        $asset = MediaAsset::query()->where('title', 'کاور تست')->first();
+        $this->assertNotNull($asset);
+        $this->assertStringEndsWith('.webp', (string) $asset->path);
+        Storage::disk('public')->assertExists($asset->path);
+    }
+
+    public function test_media_library_keeps_gif_without_webp_conversion(): void
+    {
+        $admin = User::factory()->create(['role' => 'super_admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        $file = UploadedFile::fake()->image('anim.gif', 120, 120);
+
+        $response = $this->postJson('/api/admin/media', [
+            'files' => [$file],
+            'folder' => 'general',
+            'title' => 'گیف تست',
+        ]);
+
+        $response->assertCreated()->assertJsonPath('success', true);
+        $this->assertDatabaseHas('media_assets', [
+            'title' => 'گیف تست',
+            'extension' => 'gif',
+        ]);
+    }
+
+    public function test_media_library_can_disable_webp_conversion(): void
+    {
+        config(['media_library.convert_to_webp' => false]);
+
+        $admin = User::factory()->create(['role' => 'super_admin', 'status' => 'active']);
+        Sanctum::actingAs($admin);
+
+        $file = UploadedFile::fake()->image('cover.png', 400, 300);
+
+        $response = $this->postJson('/api/admin/media', [
+            'files' => [$file],
+            'folder' => 'stories',
+            'title' => 'بدون تبدیل',
+        ]);
+
+        $response->assertCreated()->assertJsonPath('success', true);
+        $this->assertDatabaseHas('media_assets', [
+            'title' => 'بدون تبدیل',
+            'extension' => 'png',
         ]);
     }
 

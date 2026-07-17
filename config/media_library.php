@@ -18,7 +18,22 @@ return [
         'quality' => 80,
     ],
 
-    'convert_to_webp' => filter_var(env('MEDIA_LIBRARY_CONVERT_WEBP', false), FILTER_VALIDATE_BOOL),
+    /*
+    | Convert uploaded JPEG/PNG images to WebP before storing in the library.
+    | GIF is left unchanged (animation). Existing assets are never rewritten.
+    */
+    'convert_to_webp' => filter_var(env('MEDIA_LIBRARY_CONVERT_WEBP', true), FILTER_VALIDATE_BOOL),
+
+    /*
+    | WebP quality for originals (1–100). ~80–85 keeps visual quality while shrinking files.
+    */
+    'webp_quality' => (int) env('MEDIA_LIBRARY_WEBP_QUALITY', 82),
+
+    /*
+    | Optional max longest edge in pixels before encode (0 = no downscale).
+    | Large phone photos are scaled down first, then encoded as WebP.
+    */
+    'max_edge_px' => (int) env('MEDIA_LIBRARY_MAX_EDGE', 2560),
 
     'folders' => [
         'general',

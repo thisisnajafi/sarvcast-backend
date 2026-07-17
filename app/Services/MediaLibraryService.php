@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\ImageManager;
 
 class MediaLibraryService
 {
@@ -38,19 +39,27 @@ class MediaLibraryService
         $uuid = (string) Str::uuid();
         $extension = strtolower($file->getClientOriginalExtension() ?: ($mediaType === MediaAsset::TYPE_AUDIO ? 'mp3' : 'jpg'));
         $datePath = now()->format('Y/m');
-        $filename = $uuid . '.' . $extension;
         $relativeDir = "media/{$datePath}";
-        $path = "{$relativeDir}/{$filename}";
 
-        Storage::disk($disk)->putFileAs($relativeDir, $file, $filename);
-
+        $mimeType = $file->getMimeType() ?: ($mediaType === MediaAsset::TYPE_AUDIO ? 'audio/mpeg' : 'image/jpeg');
+        $sizeBytes = (int) $file->getSize();
         $width = null;
         $height = null;
         $thumbnail = ['path' => null, 'url' => null];
 
         if ($mediaType === MediaAsset::TYPE_IMAGE) {
-            [$width, $height] = $this->readDimensions($disk, $path);
-            $thumbnail = $this->generateThumbnail($disk, $path, $uuid, $relativeDir, $extension);
+            $processed = $this->storeImageAsOptimizedWebp($disk, $file, $uuid, $relativeDir, $extension, $mimeType);
+            $path = $processed['path'];
+            $extension = $processed['extension'];
+            $mimeType = $processed['mime_type'];
+            $sizeBytes = $processed['size_bytes'];
+            $width = $processed['width'];
+            $height = $processed['height'];
+            $thumbnail = $this->generateThumbnail($disk, $path, $uuid, $relativeDir);
+        } else {
+            $filename = $uuid.'.'.$extension;
+            $path = "{$relativeDir}/{$filename}";
+            Storage::disk($disk)->putFileAs($relativeDir, $file, $filename);
         }
 
         $url = Storage::disk($disk)->url($path);
@@ -63,10 +72,10 @@ class MediaLibraryService
             'thumbnail_path' => $thumbnail['path'] ?? null,
             'thumbnail_url' => $thumbnail['url'] ?? null,
             'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType() ?: ($mediaType === MediaAsset::TYPE_AUDIO ? 'audio/mpeg' : 'image/jpeg'),
+            'mime_type' => $mimeType,
             'extension' => $extension,
             'media_type' => $mediaType,
-            'size_bytes' => $file->getSize(),
+            'size_bytes' => $sizeBytes,
             'width' => $width,
             'height' => $height,
             'duration_seconds' => null,
@@ -168,6 +177,74 @@ class MediaLibraryService
             ->all();
     }
 
+    /**
+     * Store an image, converting JPEG/PNG to compressed WebP when enabled.
+     *
+     * @return array{path: string, extension: string, mime_type: string, size_bytes: int, width: ?int, height: ?int}
+     */
+    private function storeImageAsOptimizedWebp(
+        string $disk,
+        UploadedFile $file,
+        string $uuid,
+        string $relativeDir,
+        string $extension,
+        string $mimeType,
+    ): array {
+        $shouldConvert = (bool) config('media_library.convert_to_webp', true)
+            && in_array($extension, ['jpg', 'jpeg', 'png'], true);
+
+        if ($shouldConvert) {
+            try {
+                $manager = $this->imageManager();
+                $image = $manager->read($file->getRealPath() ?: $file->getPathname());
+
+                $maxEdge = (int) config('media_library.max_edge_px', 2560);
+                if ($maxEdge > 0) {
+                    $image->scaleDown(width: $maxEdge, height: $maxEdge);
+                }
+
+                $quality = max(1, min(100, (int) config('media_library.webp_quality', 82)));
+                $encoded = $image->toWebp(quality: $quality);
+                $binary = (string) $encoded;
+
+                $extension = 'webp';
+                $mimeType = 'image/webp';
+                $filename = $uuid.'.'.$extension;
+                $path = "{$relativeDir}/{$filename}";
+
+                Storage::disk($disk)->put($path, $binary);
+
+                return [
+                    'path' => $path,
+                    'extension' => $extension,
+                    'mime_type' => $mimeType,
+                    'size_bytes' => strlen($binary),
+                    'width' => $image->width(),
+                    'height' => $image->height(),
+                ];
+            } catch (\Throwable $e) {
+                Log::warning('Media WebP conversion failed; storing original', [
+                    'error' => $e->getMessage(),
+                    'original_name' => $file->getClientOriginalName(),
+                ]);
+            }
+        }
+
+        $filename = $uuid.'.'.$extension;
+        $path = "{$relativeDir}/{$filename}";
+        Storage::disk($disk)->putFileAs($relativeDir, $file, $filename);
+        [$width, $height] = $this->readDimensions($disk, $path);
+
+        return [
+            'path' => $path,
+            'extension' => $extension,
+            'mime_type' => $mimeType,
+            'size_bytes' => (int) $file->getSize(),
+            'width' => $width,
+            'height' => $height,
+        ];
+    }
+
     private function resolveMediaType(UploadedFile $file): string
     {
         $ext = strtolower($file->getClientOriginalExtension() ?: '');
@@ -239,30 +316,24 @@ class MediaLibraryService
     /**
      * @return array{path?: string, url?: string}
      */
-    private function generateThumbnail(string $disk, string $sourcePath, string $uuid, string $relativeDir, string $extension): array
+    private function generateThumbnail(string $disk, string $sourcePath, string $uuid, string $relativeDir): array
     {
         try {
-            if (! class_exists(\Intervention\Image\Facades\Image::class)) {
-                return [];
-            }
-
+            $manager = $this->imageManager();
             $fullPath = Storage::disk($disk)->path($sourcePath);
-            $thumbName = $uuid . '_thumb.webp';
+            $thumbName = $uuid.'_thumb.webp';
             $thumbPath = "{$relativeDir}/{$thumbName}";
-            $thumbFullPath = Storage::disk($disk)->path($thumbPath);
 
             $thumbConfig = config('media_library.thumbnail', ['width' => 300, 'height' => 300, 'quality' => 80]);
-            $image = \Intervention\Image\Facades\Image::make($fullPath);
-            $image->resize(
-                (int) ($thumbConfig['width'] ?? 300),
-                (int) ($thumbConfig['height'] ?? 300),
-                function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                }
+            $image = $manager->read($fullPath);
+            $image->scaleDown(
+                width: (int) ($thumbConfig['width'] ?? 300),
+                height: (int) ($thumbConfig['height'] ?? 300),
             );
-            $image->encode('webp', (int) ($thumbConfig['quality'] ?? 80));
-            $image->save($thumbFullPath);
+
+            $quality = max(1, min(100, (int) ($thumbConfig['quality'] ?? 80)));
+            $encoded = $image->toWebp(quality: $quality);
+            Storage::disk($disk)->put($thumbPath, (string) $encoded);
 
             return [
                 'path' => $thumbPath,
@@ -273,5 +344,18 @@ class MediaLibraryService
 
             return [];
         }
+    }
+
+    private function imageManager(): ImageManager
+    {
+        if (extension_loaded('imagick')) {
+            try {
+                return ImageManager::imagick();
+            } catch (\Throwable) {
+                /* fall through to GD */
+            }
+        }
+
+        return ImageManager::gd();
     }
 }
