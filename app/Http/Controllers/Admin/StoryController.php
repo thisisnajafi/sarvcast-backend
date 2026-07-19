@@ -1147,6 +1147,7 @@ class StoryController extends Controller
         unset($validated['sponsor_id']);
 
         $statusService = app(StoryEpisodeStatusService::class);
+        $wasPublished = $story->status === 'published';
 
         if (array_key_exists('status', $validated)) {
             $newStatus = $validated['status'];
@@ -1158,6 +1159,28 @@ class StoryController extends Controller
             $statusService->applyStoryStatus($story->fresh(), $newStatus);
         } else {
             $story->update($this->prepareApiStoryAttributes($validated, $story));
+        }
+
+        $story->refresh();
+        if (! $wasPublished && $story->status === 'published') {
+            $this->notificationService->sendToAllUsers(
+                'content',
+                'داستان جدید منتشر شد',
+                "داستان جدید \"{$story->title}\" منتشر شد. از شنیدن آن لذت ببرید.",
+                [
+                    'is_important' => true,
+                    'action_type' => 'button',
+                    'action_text' => 'شنیدن داستان',
+                    'action_url' => '/stories/latest',
+                    'story_id' => $story->id,
+                    'data' => [
+                        'type' => 'story',
+                        'story_title' => $story->title,
+                        'story_id' => $story->id,
+                    ],
+                ]
+            );
+            $this->notifyStoryPublished($story);
         }
 
         return AdminApiResponse::success(
@@ -1276,7 +1299,31 @@ class StoryController extends Controller
     public function apiPublish(Story $story)
     {
         try {
+            $wasPublished = $story->status === 'published';
             app(StoryEpisodeStatusService::class)->applyStoryStatus($story, 'published');
+            $story->refresh();
+
+            if (! $wasPublished) {
+                $this->notificationService->sendToAllUsers(
+                    'content',
+                    'داستان جدید منتشر شد',
+                    "داستان جدید \"{$story->title}\" منتشر شد. از شنیدن آن لذت ببرید.",
+                    [
+                        'is_important' => true,
+                        'action_type' => 'button',
+                        'action_text' => 'شنیدن داستان',
+                        'action_url' => '/stories/latest',
+                        'story_id' => $story->id,
+                        'data' => [
+                            'type' => 'story',
+                            'story_title' => $story->title,
+                            'story_id' => $story->id,
+                        ],
+                    ]
+                );
+
+                $this->notifyStoryPublished($story);
+            }
 
             return AdminApiResponse::success($story->fresh(['category']), 'Story published successfully');
         } catch (\Exception $e) {

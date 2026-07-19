@@ -196,6 +196,19 @@ class NotificationService
     public function sendEmailNotification(User $user, string $subject, string $template, array $data = []): bool
     {
         try {
+            if (! $user->email) {
+                return false;
+            }
+
+            if (! view()->exists($template)) {
+                Log::debug('Email notification skipped: missing template', [
+                    'template' => $template,
+                    'user_id' => $user->id,
+                ]);
+
+                return false;
+            }
+
             Mail::send($template, $data, function ($message) use ($user, $subject) {
                 $message->to($user->email, $user->first_name . ' ' . $user->last_name)
                         ->subject($subject)

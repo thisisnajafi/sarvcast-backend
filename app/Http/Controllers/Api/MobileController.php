@@ -639,7 +639,7 @@ class MobileController extends Controller
     {
         $validated = $request->validate([
             'device_id' => 'required|string|max:100',
-            'fcm_token' => 'required|string|max:2000',
+            'fcm_token' => 'required|string|max:4096',
         ]);
 
         $user = Auth::user();
@@ -648,7 +648,7 @@ class MobileController extends Controller
             ->where('user_id', $user->id)
             ->where('device_id', Str::limit((string) $validated['device_id'], 100, ''))
             ->update([
-                'fcm_token' => Str::limit((string) $validated['fcm_token'], 2000, ''),
+                'fcm_token' => Str::limit((string) $validated['fcm_token'], 4096, ''),
                 'updated_at' => now(),
             ]);
 

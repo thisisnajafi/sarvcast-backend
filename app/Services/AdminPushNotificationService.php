@@ -21,7 +21,7 @@ class AdminPushNotificationService
     {
         $admins = User::query()
             ->admins()
-            ->where('is_active', true)
+            ->whereIn('status', User::loginAllowedStatuses())
             ->get();
 
         if ($admins->isEmpty()) {

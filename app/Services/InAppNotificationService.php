@@ -545,7 +545,13 @@ class InAppNotificationService
      */
     public function sendToAllUsers(string $type, string $title, string $message, array $options = []): array
     {
-        $userIds = User::pluck('id')->toArray();
+        // App end-users only (skip admins / voice actors / inactive accounts).
+        $userIds = User::query()
+            ->whereIn('role', [User::ROLE_PARENT, User::ROLE_CHILD, User::ROLE_BASIC])
+            ->whereIn('status', User::loginAllowedStatuses())
+            ->pluck('id')
+            ->toArray();
+
         return $this->sendToMultipleUsers($userIds, $type, $title, $message, $options);
     }
 

@@ -1207,6 +1207,7 @@ class EpisodeController extends BaseController
         ]);
 
         $statusService = app(StoryEpisodeStatusService::class);
+        $wasPublished = $episode->status === 'published';
 
         if (array_key_exists('status', $validated)) {
             $newStatus = $validated['status'];
@@ -1218,6 +1219,12 @@ class EpisodeController extends BaseController
             $statusService->applyEpisodeStatus($episode->fresh()->loadMissing('story'), $newStatus);
         } else {
             $episode->update($this->prepareApiEpisodeAttributes($validated, $episode));
+        }
+
+        $episode->refresh()->loadMissing('story');
+        if (! $wasPublished && $episode->status === 'published') {
+            $this->notifyFavoritedUsersAboutEpisode($episode);
+            $this->notifyEpisodePublished($episode);
         }
 
         if (array_key_exists('audio_file_url', $validated)) {
@@ -1301,7 +1308,14 @@ class EpisodeController extends BaseController
     public function apiPublish(Episode $episode)
     {
         try {
+            $wasPublished = $episode->status === 'published';
             app(StoryEpisodeStatusService::class)->applyEpisodeStatus($episode->loadMissing('story'), 'published');
+            $episode->refresh()->loadMissing('story');
+
+            if (! $wasPublished) {
+                $this->notifyFavoritedUsersAboutEpisode($episode);
+                $this->notifyEpisodePublished($episode);
+            }
 
             return AdminApiResponse::success($episode->fresh(['story']), 'Episode published successfully');
         } catch (\Exception $e) {
@@ -1473,59 +1487,85 @@ class EpisodeController extends BaseController
     }
 
     /**
-     * Notify voice actors when episode is published
+     * Notify voice actors when episode is published.
+     * Uses story-level User assignments (reliable) plus Person→User name resolution for legacy episode VAs.
      */
     private function notifyEpisodePublished(Episode $episode): void
     {
         try {
-            $story = $episode->story;
+            $story = $episode->story ?? $episode->loadMissing('story')->story;
+            if (! $story) {
+                return;
+            }
 
-            // Notify episode narrator (if assigned and is a User)
-            if ($episode->narrator_id) {
-                // Note: narrator_id in episodes table references people table, not users
-                // We need to check if there's a corresponding user
-                $narratorPerson = Person::find($episode->narrator_id);
-                if ($narratorPerson && isset($narratorPerson->email)) {
-                    $narratorUser = User::where('email', $narratorPerson->email)->first();
-                    if ($narratorUser) {
-                        $this->pushNotificationService->sendContentPublishedNotification(
-                            $narratorUser,
-                            'episode',
-                            [
-                                'episode_id' => $episode->id,
-                                'episode_title' => $episode->title,
-                                'story_id' => $story->id,
-                                'story_title' => $story->title ?? 'داستان',
-                                'role' => 'narrator'
-                            ]
-                        );
-                    }
+            $notifiedUserIds = [];
+
+            // Story narrator (users table)
+            if ($story->narrator_id) {
+                $narrator = User::find($story->narrator_id);
+                if ($narrator) {
+                    $this->pushNotificationService->sendContentPublishedNotification(
+                        $narrator,
+                        'episode',
+                        [
+                            'episode_id' => $episode->id,
+                            'episode_title' => $episode->title,
+                            'story_id' => $story->id,
+                            'story_title' => $story->title ?? 'داستان',
+                            'role' => 'narrator',
+                        ]
+                    );
+                    $notifiedUserIds[$narrator->id] = true;
                 }
             }
 
-            // Notify episode voice actors
-            $voiceActors = $episode->voiceActors;
-            foreach ($voiceActors as $voiceActor) {
-                $person = $voiceActor->person;
-                if ($person && isset($person->email)) {
-                    $user = User::where('email', $person->email)->first();
-                    if ($user) {
-                        $this->pushNotificationService->sendContentPublishedNotification(
-                            $user,
-                            'episode',
-                            [
-                                'episode_id' => $episode->id,
-                                'episode_title' => $episode->title,
-                                'story_id' => $story->id,
-                                'story_title' => $story->title ?? 'داستان',
-                                'role' => 'voice_actor',
-                                'character_name' => $voiceActor->character_name,
-                                'start_time' => $voiceActor->start_time,
-                                'end_time' => $voiceActor->end_time
-                            ]
-                        );
-                    }
+            // Character voice actors on the story (users table)
+            $characters = $story->characters()->whereNotNull('voice_actor_id')->get();
+            foreach ($characters as $character) {
+                $voiceActor = User::find($character->voice_actor_id);
+                if (! $voiceActor || isset($notifiedUserIds[$voiceActor->id])) {
+                    continue;
                 }
+
+                $this->pushNotificationService->sendContentPublishedNotification(
+                    $voiceActor,
+                    'episode',
+                    [
+                        'episode_id' => $episode->id,
+                        'episode_title' => $episode->title,
+                        'story_id' => $story->id,
+                        'story_title' => $story->title ?? 'داستان',
+                        'character_id' => $character->id,
+                        'character_name' => $character->name,
+                        'role' => 'character_voice_actor',
+                    ]
+                );
+                $notifiedUserIds[$voiceActor->id] = true;
+            }
+
+            // Legacy episode_voice_actors (people table) → resolve User by name
+            $resolver = app(\App\Services\PersonUserResolver::class);
+            foreach ($episode->voiceActors as $voiceActor) {
+                $user = $resolver->resolve($voiceActor->person);
+                if (! $user || isset($notifiedUserIds[$user->id])) {
+                    continue;
+                }
+
+                $this->pushNotificationService->sendContentPublishedNotification(
+                    $user,
+                    'episode',
+                    [
+                        'episode_id' => $episode->id,
+                        'episode_title' => $episode->title,
+                        'story_id' => $story->id,
+                        'story_title' => $story->title ?? 'داستان',
+                        'role' => 'voice_actor',
+                        'character_name' => $voiceActor->character_name,
+                        'start_time' => $voiceActor->start_time,
+                        'end_time' => $voiceActor->end_time,
+                    ]
+                );
+                $notifiedUserIds[$user->id] = true;
             }
         } catch (\Exception $e) {
             Log::error('Failed to notify voice actors about episode published', [
@@ -1533,6 +1573,44 @@ class EpisodeController extends BaseController
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function notifyFavoritedUsersAboutEpisode(Episode $episode): void
+    {
+        $story = $episode->story ?? $episode->loadMissing('story')->story;
+        if (! $story) {
+            return;
+        }
+
+        $favoritedUserIds = \App\Models\Favorite::where('story_id', $story->id)
+            ->pluck('user_id')
+            ->toArray();
+
+        if ($favoritedUserIds === []) {
+            return;
+        }
+
+        $this->notificationService->sendToMultipleUsers(
+            $favoritedUserIds,
+            'content',
+            'قسمت جدید منتشر شد',
+            "قسمت جدید «{$episode->title}» از داستان «{$story->title}» منتشر شد.",
+            [
+                'is_important' => true,
+                'action_type' => 'button',
+                'action_text' => 'شنیدن قسمت',
+                'action_url' => "/stories/{$story->id}/episodes/{$episode->id}",
+                'episode_id' => $episode->id,
+                'story_id' => $story->id,
+                'data' => [
+                    'type' => 'episode',
+                    'episode_id' => $episode->id,
+                    'story_id' => $story->id,
+                    'episode_title' => $episode->title,
+                    'story_title' => $story->title,
+                ],
+            ]
+        );
     }
 
     /**
