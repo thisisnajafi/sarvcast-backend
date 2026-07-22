@@ -74,31 +74,40 @@ class UserController extends Controller
      */
     public function createProfile(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:100',
             'age' => 'required|integer|min:3|max:18',
             'avatar_url' => 'nullable|url',
             'interests' => 'nullable|array',
-            'parental_controls' => 'nullable|array'
+            'parental_controls' => 'nullable|array',
         ]);
 
         $user = Auth::user();
 
-        if (!$user->isParent()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only parents can create child profiles'
-            ], 403);
+        // Any authenticated account may manage child profiles under itself.
+        // Keep parent/shared account_type as soft preference only.
+        $preferences = $validated['parental_controls'] ?? null;
+        if (! empty($validated['interests'])) {
+            $preferences = array_merge(
+                is_array($preferences) ? $preferences : [],
+                ['interests' => $validated['interests']],
+            );
         }
 
-        $profile = $user->profiles()->create($request->all());
+        $profile = $user->profiles()->create([
+            'name' => $validated['name'],
+            'age' => $validated['age'],
+            'avatar_url' => $validated['avatar_url'] ?? null,
+            'preferences' => $preferences,
+            'is_active' => true,
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Child profile created successfully',
             'data' => [
-                'profile' => $profile
-            ]
+                'profile' => $profile,
+            ],
         ], 201);
     }
 
@@ -128,26 +137,52 @@ class UserController extends Controller
         if ($profile->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Access denied'
+                'message' => 'Access denied',
             ], 403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'sometimes|string|max:100',
             'age' => 'sometimes|integer|min:3|max:18',
             'avatar_url' => 'nullable|url',
+            'is_active' => 'sometimes|boolean',
             'interests' => 'nullable|array',
-            'parental_controls' => 'nullable|array'
+            'parental_controls' => 'nullable|array',
         ]);
 
-        $profile->update($request->all());
+        $payload = [];
+        if (array_key_exists('name', $validated)) {
+            $payload['name'] = $validated['name'];
+        }
+        if (array_key_exists('age', $validated)) {
+            $payload['age'] = $validated['age'];
+        }
+        if (array_key_exists('avatar_url', $validated)) {
+            $payload['avatar_url'] = $validated['avatar_url'];
+        }
+        if (array_key_exists('is_active', $validated)) {
+            $payload['is_active'] = $validated['is_active'];
+        }
+
+        $preferences = $profile->preferences ?? [];
+        if (array_key_exists('parental_controls', $validated)) {
+            $preferences = array_merge($preferences, ['parental_controls' => $validated['parental_controls']]);
+        }
+        if (array_key_exists('interests', $validated)) {
+            $preferences = array_merge($preferences, ['interests' => $validated['interests']]);
+        }
+        if ($preferences !== ($profile->preferences ?? [])) {
+            $payload['preferences'] = $preferences;
+        }
+
+        $profile->update($payload);
 
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
             'data' => [
-                'profile' => $profile
-            ]
+                'profile' => $profile->fresh(),
+            ],
         ]);
     }
 

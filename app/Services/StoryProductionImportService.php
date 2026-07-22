@@ -202,6 +202,9 @@ class StoryProductionImportService
      */
     public function getPackageOverview(string $storySlug): array
     {
+        // Keep DB characters.image_url in sync with package production assets.
+        $this->syncCharacterImagesFromProductionAssets($storySlug);
+
         $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
         if ($storyDir === null) {
             throw new \RuntimeException('داستان یافت نشد.');
@@ -317,8 +320,8 @@ class StoryProductionImportService
 
         $this->mediaLibrary->syncUsageFor($asset->fresh(), 'image_url', $imageUrl);
 
-        if ($assetType === StoryProductionAsset::TYPE_CHARACTER && $asset->character_id) {
-            Character::whereKey($asset->character_id)->update(['image_url' => $imageUrl]);
+        if ($assetType === StoryProductionAsset::TYPE_CHARACTER) {
+            $this->ensureCharacterLinkedAndPushImage($asset->fresh(), $imageUrl);
         }
 
         return [
@@ -452,6 +455,8 @@ class StoryProductionImportService
 
             Story::whereKey($storyId)->update($updates);
         }
+
+        $this->syncCharacterImagesFromProductionAssets($storySlug);
 
         return [
             'title' => $data['story_title'] ?? null,
@@ -805,6 +810,114 @@ class StoryProductionImportService
             ->where('asset_type', StoryProductionAsset::TYPE_CHARACTER)
             ->where('asset_key', $key)
             ->update(['character_id' => $record->id, 'story_id' => $storyId]);
+
+        $asset = StoryProductionAsset::where('story_slug', $storySlug)
+            ->whereNull('episode_slug')
+            ->where('asset_type', StoryProductionAsset::TYPE_CHARACTER)
+            ->where('asset_key', $key)
+            ->first();
+
+        $imageUrl = $asset?->getAttributes()['image_url'] ?? null;
+        if (is_string($imageUrl) && $imageUrl !== '') {
+            $record->update(['image_url' => $imageUrl]);
+        }
+    }
+
+    /**
+     * Push production-asset character images onto linked `characters` rows
+     * (what the dashboard panel and Flutter app read).
+     *
+     * @return array{synced: int, linked: int, skipped: int}
+     */
+    public function syncCharacterImagesFromProductionAssets(string $storySlug): array
+    {
+        $synced = 0;
+        $linked = 0;
+        $skipped = 0;
+
+        $assets = StoryProductionAsset::where('story_slug', $storySlug)
+            ->whereNull('episode_slug')
+            ->where('asset_type', StoryProductionAsset::TYPE_CHARACTER)
+            ->get();
+
+        foreach ($assets as $asset) {
+            $rawImage = $asset->getAttributes()['image_url'] ?? null;
+            if (! is_string($rawImage) || trim($rawImage) === '') {
+                $skipped++;
+
+                continue;
+            }
+
+            $beforeId = $asset->character_id;
+            $this->ensureCharacterLinkedAndPushImage($asset, $rawImage);
+            $asset->refresh();
+
+            if ($beforeId === null && $asset->character_id) {
+                $linked++;
+            }
+            if ($asset->character_id) {
+                $synced++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        return [
+            'synced' => $synced,
+            'linked' => $linked,
+            'skipped' => $skipped,
+        ];
+    }
+
+    /**
+     * Sync character images for a DB story id (dashboard / Flutter consumers).
+     *
+     * @return array{synced: int, linked: int, skipped: int}|null
+     */
+    public function syncCharacterImagesForDbStory(int $storyId): ?array
+    {
+        $slug = $this->resolveStorySlugByDbStoryId($storyId);
+        if ($slug === null) {
+            // Fallback: assets already linked by story_id
+            $slug = StoryProductionAsset::where('story_id', $storyId)
+                ->where('asset_type', StoryProductionAsset::TYPE_CHARACTER)
+                ->value('story_slug');
+        }
+
+        if (! is_string($slug) || $slug === '') {
+            return null;
+        }
+
+        return $this->syncCharacterImagesFromProductionAssets($slug);
+    }
+
+    /**
+     * Ensure the production character asset is linked to a Character row and
+     * that Character.image_url matches the production image.
+     */
+    private function ensureCharacterLinkedAndPushImage(StoryProductionAsset $asset, string $imageUrl): void
+    {
+        $storyId = $asset->story_id ?? $this->resolveDbStoryId($asset->story_slug, []);
+
+        if (! $storyId) {
+            return;
+        }
+
+        if (! $asset->character_id) {
+            $meta = is_array($asset->metadata) ? $asset->metadata : [];
+            $this->syncCharacterRecord($storyId, $asset->story_slug, $asset->asset_key, [
+                'name_persian' => $asset->name_persian ?: ($meta['name_persian'] ?? $asset->asset_key),
+                'visual_description_persian' => $meta['visual_description_persian'] ?? null,
+                'arc_summary' => $meta['arc_summary'] ?? null,
+            ]);
+            $asset->refresh();
+        } else {
+            StoryProductionAsset::whereKey($asset->id)->update(['story_id' => $storyId]);
+        }
+
+        if ($asset->character_id) {
+            Character::whereKey($asset->character_id)->update(['image_url' => $imageUrl]);
+        }
     }
 
     /**
@@ -827,6 +940,16 @@ class StoryProductionImportService
                 'name' => $name,
                 'description' => $description,
             ]);
+
+            $asset = StoryProductionAsset::where('story_slug', $storySlug)
+                ->whereNull('episode_slug')
+                ->where('asset_type', StoryProductionAsset::TYPE_CHARACTER)
+                ->where('asset_key', $key)
+                ->first();
+            $imageUrl = $asset?->getAttributes()['image_url'] ?? null;
+            if (is_string($imageUrl) && $imageUrl !== '') {
+                Character::whereKey($characterId)->update(['image_url' => $imageUrl]);
+            }
 
             return;
         }

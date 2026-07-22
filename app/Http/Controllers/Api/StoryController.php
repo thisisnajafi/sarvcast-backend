@@ -124,6 +124,17 @@ class StoryController extends Controller
         // Recalculate play_count from episodes
         $story->recalculatePlayCount();
 
+        // Keep Character.image_url aligned with story-editor production assets.
+        try {
+            app(\App\Services\StoryProductionImportService::class)
+                ->syncCharacterImagesForDbStory($story->id);
+        } catch (\Throwable $e) {
+            \Log::warning('Story character image sync failed', [
+                'story_id' => $story->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         // For admins, super admins, and voice actors, load all episodes (including draft)
         // For regular users, only load published episodes
         // Only load episodes that have at least one timeline

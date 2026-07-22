@@ -556,7 +556,7 @@ class MobileController extends Controller
     {
         $validated = $request->validate([
             'device_id' => 'required|string',
-            'device_type' => 'required|string|in:android,ios',
+            'device_type' => 'required|string|in:android,ios,web',
             'device_model' => 'nullable|string',
             'os_version' => 'nullable|string',
             'app_version' => 'nullable|string|max:64',

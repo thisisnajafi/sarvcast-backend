@@ -9,14 +9,18 @@ class UserProfile extends Model
 {
     protected $fillable = [
         'user_id',
+        'name',
+        'age',
+        'avatar_url',
         'favorite_category_id',
         'preferences',
-        'settings',
+        'is_active',
     ];
 
     protected $casts = [
         'preferences' => 'array',
-        'settings' => 'array',
+        'is_active' => 'boolean',
+        'age' => 'integer',
     ];
 
     /**

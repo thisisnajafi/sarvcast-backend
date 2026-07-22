@@ -374,11 +374,17 @@ class User extends Authenticatable
 
 
     /**
-     * Check if user is parent.
+     * Check if user is parent (role or account_type from onboarding).
      */
     public function isParent()
     {
-        return $this->role === 'parent';
+        if ($this->role === 'parent') {
+            return true;
+        }
+
+        $accountType = $this->account_type ?? null;
+
+        return $accountType === 'parent' || $accountType === 'shared';
     }
 
     /**
@@ -386,7 +392,11 @@ class User extends Authenticatable
      */
     public function isChild()
     {
-        return $this->role === 'child';
+        if ($this->role === 'child') {
+            return true;
+        }
+
+        return ($this->account_type ?? null) === 'child';
     }
 
     /**

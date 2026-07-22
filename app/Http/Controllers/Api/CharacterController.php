@@ -25,6 +25,17 @@ class CharacterController extends Controller
     {
         $story = Story::findOrFail($storyId);
 
+        // Backfill Character.image_url from story-editor production assets when present.
+        try {
+            app(\App\Services\StoryProductionImportService::class)
+                ->syncCharacterImagesForDbStory($storyId);
+        } catch (\Throwable $e) {
+            \Log::warning('Character image sync from production assets failed', [
+                'story_id' => $storyId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $characters = Character::where('story_id', $storyId)
             ->with('voiceActor')
             ->get();

@@ -111,6 +111,20 @@ class NotificationService
                                 ],
                             ],
                         ],
+                        'webpush' => [
+                            'headers' => [
+                                'Urgency' => 'high',
+                            ],
+                            'notification' => [
+                                'title' => $title,
+                                'body' => $body,
+                                'icon' => '/assets/logo/logo_icon.svg',
+                                'badge' => '/assets/icons/notification.svg',
+                            ],
+                            'fcm_options' => [
+                                'link' => config('app.frontend_url', config('app.url')),
+                            ],
+                        ],
                     ],
                 ];
 
