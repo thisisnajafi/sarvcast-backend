@@ -1,6 +1,6 @@
 # Local → Server Story & Episode Import
 
-This document describes what is already built for uploading and managing stories/episodes from a local `manji-stories` folder to production, and what remains to finish the pipeline.
+This document describes what is already built for uploading and managing stories/episodes from a local `manji-stories` folder to production, what an **AI agent** should run, and what remains to finish the pipeline.
 
 ## Architecture (current)
 
@@ -25,6 +25,46 @@ manji-laravel/.env                    same .env uploaded by CI/FTP
 Admin dashboard (`admin.manjiapp.ir`) then manages package images, audio, timelines, and publish status.
 
 Flutter / public API read **database** rows (`stories`, `episodes`, `characters`), not the raw writer folders.
+
+---
+
+## Tell an AI agent to post stories (recommended)
+
+1. Open a new agent chat in this repo.
+2. Paste the full prompt from:
+   - [`docs/AGENT_STORY_UPLOAD_PROMPT.md`](AGENT_STORY_UPLOAD_PROMPT.md)
+3. Then say which stories to upload, for example:
+   - `Upload stories 21 and 22 to the server`
+   - `Upload "22 - tiddalik the thirsty frog"`
+
+The agent should run (from `manji-laravel/`):
+
+```powershell
+.\scripts\agent-upload-stories.ps1 -Stories "21","22" -JsonSummary
+```
+
+That single command:
+
+1. Finds folders under `../manji-stories`
+2. Preflights required files
+3. Builds staging packages (`prepare-story-package.ps1`)
+4. Posts them with `php artisan stories:import-old --remote --create-db --force`
+
+### Agent script reference
+
+| Script | Who uses it | Purpose |
+|--------|-------------|---------|
+| `scripts/agent-upload-stories.ps1` | **AI agents / batch ops** | Resolve stories → preflight → prepare → remote upload; exit codes + optional JSON summary |
+| `scripts/prepare-story-package.ps1` | Agent / human | Build `staging/<folder>/import_manifest.json` |
+| `scripts/upload-story-to-server.ps1` | Human (single story) | Same pipeline for one `-StoryFolder` / `-StagingFolder` |
+
+### Exit codes (`agent-upload-stories.ps1`)
+
+| Code | Meaning |
+|------|---------|
+| `0` | All requested stories succeeded |
+| `1` | Config / usage / fatal error |
+| `2` | One or more stories failed (others may have uploaded) |
 
 ---
 
@@ -57,8 +97,9 @@ Flutter / public API read **database** rows (`stories`, `episodes`, `characters`
 ### 5. Local helper scripts (this repo)
 | Script | Purpose |
 |--------|---------|
+| `scripts/agent-upload-stories.ps1` | Agent-friendly multi-story uploader (preflight + prepare + remote) |
 | `scripts/prepare-story-package.ps1` | Turn a raw writer folder into a staging package + `import_manifest.json` |
-| `scripts/upload-story-to-server.ps1` | Prepare (optional) + remote import with `--create-db` |
+| `scripts/upload-story-to-server.ps1` | Prepare (optional) + remote import for one story |
 
 ### 6. Production `.env` keys (deployed with backend)
 - `STORY_EDITOR_STORIES_PATH`
@@ -66,29 +107,26 @@ Flutter / public API read **database** rows (`stories`, `episodes`, `characters`
 - `LOCAL_IMPORT_API_BASE_URL`
 - `LOCAL_IMPORT_API_TOKEN`
 
+### 7. Agent documentation
+- [`AGENT_STORY_UPLOAD_PROMPT.md`](AGENT_STORY_UPLOAD_PROMPT.md) — copy/paste instructions for Cursor/other AI agents
+
 ---
 
-## How to upload one story (operator recipe)
+## How to upload one story (human recipe)
 
 From `manji-laravel/` on your PC (with network access to `my.manjiapp.ir`):
 
 ```powershell
-# 1) Prepare + upload (creates DB draft story/episodes + imports JSON/MD)
+# Preferred (same path agents use):
+.\scripts\agent-upload-stories.ps1 -Stories "21" -JsonSummary
+
+# Or single-folder helper:
 .\scripts\upload-story-to-server.ps1 `
   -StoryFolder "..\manji-stories\21 - gulliver in lilliput" `
   -ForcePrepare
 
-# Dry run first (optional):
-.\scripts\upload-story-to-server.ps1 `
-  -StoryFolder "..\manji-stories\21 - gulliver in lilliput" `
-  -ForcePrepare -DryRun
-```
-
-Or manually:
-
-```powershell
-.\scripts\prepare-story-package.ps1 -StoryFolder "..\manji-stories\86 - happiness toolbox" -Force
-php artisan stories:import-old --remote --create-db --force --only="86 - happiness toolbox"
+# Dry run:
+.\scripts\agent-upload-stories.ps1 -Stories "21" -DryRun -JsonSummary
 ```
 
 Then in the dashboard:
@@ -115,7 +153,7 @@ These gaps are not fully automated yet:
 - [ ] One-command “full publish prep” (images + audio + timelines)
 
 ### C. Writer folder completeness checks
-- [ ] Preflight script that fails if `characters_and_objects.json`, script `.md`, or prompts JSON are missing
+- [x] Preflight in `agent-upload-stories.ps1` (characters JSON, episode `.md`, prompts JSON)
 - [ ] Validate speaker IDs in `.md` against character keys in JSON
 
 ### D. Auth / ops hardening
@@ -146,12 +184,15 @@ These gaps are not fully automated yet:
 | Production import | `app/Services/StoryProductionImportService.php` |
 | API routes | `routes/api.php` (`admin/local-import`, `story-editor`) |
 | Artisan | `stories:import-old`, `admin:create-local-import-token`, `stories:sync-production-character-images` |
-| Scripts | `scripts/prepare-story-package.ps1`, `scripts/upload-story-to-server.ps1` |
+| Scripts | `scripts/agent-upload-stories.ps1`, `scripts/prepare-story-package.ps1`, `scripts/upload-story-to-server.ps1` |
+| Agent prompt | `docs/AGENT_STORY_UPLOAD_PROMPT.md` |
 
 ---
 
 ## فارسی (خلاصه)
 
-**انجام‌شده:** نوشتن در `manji-stories`، ساخت پکیج staging، آپلود ریموت با توکن به سرور، import اسکریپت/JSON شخصیت‌ها و پرامپت صحنه، همگام‌سازی تصویر شخصیت با دیتابیس، مدیریت در داشبورد.
+**برای سپردن به ایجنت AI:** محتوای `docs/AGENT_STORY_UPLOAD_PROMPT.md` را در چت ایجنت پیست کنید و بگویید کدام داستان‌ها آپلود شوند. ایجنت باید `.\scripts\agent-upload-stories.ps1 -Stories "…" -JsonSummary` را از پوشه `manji-laravel` اجرا کند.
 
-**باقی‌مانده:** آپلود دسته‌ای تصویر صحنه و صوت، ساخت خودکار تایم‌لاین، چک کامل بودن فایل‌های نویسنده، چرخش امن توکن، و چک‌لیست انتشار کامل تا اپ Flutter.
+**انجام‌شده:** نوشتن در `manji-stories`، اسکریپت ایجنت/آپلود، پکیج staging، آپلود ریموت، import اسکریپت/JSON شخصیت‌ها و پرامپت صحنه، همگام‌سازی تصویر شخصیت.
+
+**باقی‌مانده:** آپلود دسته‌ای تصویر صحنه و صوت، ساخت خودکار تایم‌لاین، اعتبارسنجی گوینده‌ها، چرخش امن توکن، و چک‌لیست انتشار کامل تا اپ Flutter.
