@@ -114,6 +114,8 @@ That single command:
 
 ## How to upload one story (human recipe)
 
+Full operator guide: [`HOW_TO_USE_STORY_UPLOAD.md`](HOW_TO_USE_STORY_UPLOAD.md).
+
 From `manji-laravel/` on your PC (with network access to `my.manjiapp.ir`):
 
 ```powershell
@@ -127,6 +129,9 @@ From `manji-laravel/` on your PC (with network access to `my.manjiapp.ir`):
 
 # Dry run:
 .\scripts\agent-upload-stories.ps1 -Stories "21" -DryRun -JsonSummary
+
+# Verify on server after upload:
+.\scripts\verify-story-on-server.ps1 -Stories "21" -JsonSummary
 ```
 
 Then in the dashboard:
@@ -143,8 +148,9 @@ Then in the dashboard:
 These gaps are not fully automated yet:
 
 ### A. Richer DB scaffolding from local
-- [ ] Map category / age group / tags from JSON reliably on `--create-db`
-- [ ] Set `story_editor_slug` / production workflow status consistently after remote import
+- [x] Map age group from JSON / manifest on `--create-db`
+- [x] Advance workflow (`written` → `characters_made`) and link production files via `story_id` (editor slug = folder-derived slug)
+- [ ] Map category / tags from JSON reliably
 - [ ] Create empty timeline slots from scene prompts automatically (today: prompts import assets; timelines/audio still manual)
 
 ### B. Media pipeline
@@ -154,7 +160,8 @@ These gaps are not fully automated yet:
 
 ### C. Writer folder completeness checks
 - [x] Preflight in `agent-upload-stories.ps1` (characters JSON, episode `.md`, prompts JSON)
-- [ ] Validate speaker IDs in `.md` against character keys in JSON
+- [x] Validate speaker IDs in `.md` against character keys/names in JSON (`stories:preflight-package` + PHP service)
+- [x] PHP prepare command: `stories:prepare-package`
 
 ### D. Auth / ops hardening
 - [ ] Token rotation runbook (bootstrap secret → new Sanctum token → update `.env` → redeploy)
@@ -166,8 +173,8 @@ These gaps are not fully automated yet:
 - [ ] Clear badge when production assets have images but `characters.image_url` was empty (sync now auto-heals on package/characters/story show)
 
 ### F. End-to-end acceptance checklist (per story)
-- [ ] Staging package prepared
-- [ ] Remote import success (filesystem + production tables)
+- [x] Staging package prepared (`stories:prepare-package` / PS1)
+- [x] Remote import success (filesystem + production tables) — covered by Feature tests + verify script
 - [ ] Characters visible in dashboard with images
 - [ ] Episodes have script scenes in story-editor
 - [ ] Audio + image timelines attached
@@ -181,18 +188,23 @@ These gaps are not fully automated yet:
 |------|------|
 | Remote client | `app/Services/OldStoriesRemoteImportClient.php` |
 | Import service | `app/Services/OldStoriesImportService.php` |
+| Package prepare / preflight | `app/Services/StoryPackagePrepareService.php`, `StoryPackagePreflightService.php` |
 | Production import | `app/Services/StoryProductionImportService.php` |
 | API routes | `routes/api.php` (`admin/local-import`, `story-editor`) |
-| Artisan | `stories:import-old`, `admin:create-local-import-token`, `stories:sync-production-character-images` |
-| Scripts | `scripts/agent-upload-stories.ps1`, `scripts/prepare-story-package.ps1`, `scripts/upload-story-to-server.ps1` |
+| Artisan | `stories:import-old`, `stories:prepare-package`, `stories:preflight-package`, `admin:create-local-import-token`, `stories:sync-production-character-images` |
+| Scripts | `scripts/agent-upload-stories.ps1`, `prepare-story-package.ps1`, `upload-story-to-server.ps1`, `verify-story-on-server.ps1` |
+| How-to | `docs/HOW_TO_USE_STORY_UPLOAD.md` |
 | Agent prompt | `docs/AGENT_STORY_UPLOAD_PROMPT.md` |
+| Tests | `tests/Unit/Services/StoryPackagePrepareAndPreflightTest.php`, `tests/Unit/Services/OldStoriesImportCreateDbTest.php`, `tests/Feature/Admin/LocalImportOldStoriesApiTest.php` |
 
 ---
 
 ## فارسی (خلاصه)
 
+**راهنمای کامل استفاده:** [`HOW_TO_USE_STORY_UPLOAD.md`](HOW_TO_USE_STORY_UPLOAD.md)
+
 **برای سپردن به ایجنت AI:** محتوای `docs/AGENT_STORY_UPLOAD_PROMPT.md` را در چت ایجنت پیست کنید و بگویید کدام داستان‌ها آپلود شوند. ایجنت باید `.\scripts\agent-upload-stories.ps1 -Stories "…" -JsonSummary` را از پوشه `manji-laravel` اجرا کند.
 
-**انجام‌شده:** نوشتن در `manji-stories`، اسکریپت ایجنت/آپلود، پکیج staging، آپلود ریموت، import اسکریپت/JSON شخصیت‌ها و پرامپت صحنه، همگام‌سازی تصویر شخصیت.
+**انجام‌شده:** نوشتن در `manji-stories`، اسکریپت ایجنت/آپلود، پکیج staging، آپلود ریموت، import اسکریپت/JSON شخصیت‌ها و پرامپت صحنه، همگام‌سازی تصویر شخصیت، preflight گوینده‌ها، دستورات PHP prepare/preflight، اسکریپت verify، تست‌ها.
 
-**باقی‌مانده:** آپلود دسته‌ای تصویر صحنه و صوت، ساخت خودکار تایم‌لاین، اعتبارسنجی گوینده‌ها، چرخش امن توکن، و چک‌لیست انتشار کامل تا اپ Flutter.
+**باقی‌مانده:** آپلود دسته‌ای تصویر صحنه و صوت، ساخت خودکار تایم‌لاین، چرخش امن توکن، و چک‌لیست انتشار کامل تا اپ Flutter.

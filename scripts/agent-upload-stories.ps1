@@ -93,6 +93,25 @@ function Resolve-StoryFolder([string]$query) {
 }
 
 function Invoke-Preflight([string]$storyPath) {
+    # Prefer PHP preflight (files + speaker IDs vs characters JSON).
+    $jsonOut = & php artisan stories:preflight-package $storyPath --json 2>&1
+    if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 1) {
+        try {
+            $parsed = $jsonOut | Out-String | ConvertFrom-Json
+            $issues = @()
+            if ($parsed.issues) { $issues += @($parsed.issues) }
+            if ($parsed.warnings) {
+                foreach ($w in @($parsed.warnings)) {
+                    Write-Host "  warning: $w" -ForegroundColor DarkYellow
+                }
+            }
+            return $issues
+        }
+        catch {
+            # fall through to local file checks
+        }
+    }
+
     $issues = @()
     $chars = Join-Path $storyPath "characters_and_objects.json"
     if (-not (Test-Path -LiteralPath $chars)) {

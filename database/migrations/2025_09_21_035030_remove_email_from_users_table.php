@@ -11,10 +11,54 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            // Drop email-related columns and indexes
-            $table->dropIndex(['email']);
-            $table->dropColumn(['email', 'email_verified_at']);
+        if (! Schema::hasTable('users')) {
+            return;
+        }
+
+        $hasEmail = Schema::hasColumn('users', 'email');
+        $hasVerified = Schema::hasColumn('users', 'email_verified_at');
+        if (! $hasEmail && ! $hasVerified) {
+            return;
+        }
+
+        // SQLite rebuilds the table on dropColumn; leftover unique/index names on
+        // email break when both unique(email) and index(email) were created.
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            \Illuminate\Support\Facades\DB::statement('DROP INDEX IF EXISTS users_email_unique');
+            \Illuminate\Support\Facades\DB::statement('DROP INDEX IF EXISTS users_email_index');
+
+            Schema::table('users', function (Blueprint $table) use ($hasEmail, $hasVerified) {
+                $columns = array_values(array_filter([
+                    $hasEmail ? 'email' : null,
+                    $hasVerified ? 'email_verified_at' : null,
+                ]));
+                $table->dropColumn($columns);
+            });
+
+            return;
+        }
+
+        Schema::table('users', function (Blueprint $table) use ($hasEmail, $hasVerified) {
+            if ($hasEmail) {
+                try {
+                    $table->dropUnique(['email']);
+                } catch (\Throwable) {
+                    // Index may already be absent on some environments.
+                }
+                try {
+                    $table->dropIndex(['email']);
+                } catch (\Throwable) {
+                    // Index may already be absent on some environments.
+                }
+            }
+
+            $columns = array_values(array_filter([
+                $hasEmail ? 'email' : null,
+                $hasVerified ? 'email_verified_at' : null,
+            ]));
+            if ($columns !== []) {
+                $table->dropColumn($columns);
+            }
         });
     }
 
@@ -24,9 +68,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Re-add email columns
-            $table->string('email')->nullable()->after('id');
-            $table->timestamp('email_verified_at')->nullable()->after('phone_verified_at');
+            if (! Schema::hasColumn('users', 'email')) {
+                $table->string('email')->nullable()->after('id');
+            }
+            if (! Schema::hasColumn('users', 'email_verified_at')) {
+                $table->timestamp('email_verified_at')->nullable()->after('phone_verified_at');
+            }
             $table->index('email');
         });
     }

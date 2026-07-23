@@ -19,12 +19,25 @@ return new class extends Migration
             });
         }
 
-        DB::statement('
-            UPDATE image_timelines
-            INNER JOIN episodes ON episodes.id = image_timelines.episode_id
-            SET image_timelines.story_id = episodes.story_id
-            WHERE image_timelines.story_id IS NULL
-        ');
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            DB::statement('
+                UPDATE image_timelines
+                SET story_id = (
+                    SELECT episodes.story_id
+                    FROM episodes
+                    WHERE episodes.id = image_timelines.episode_id
+                )
+                WHERE story_id IS NULL
+                  AND episode_id IS NOT NULL
+            ');
+        } else {
+            DB::statement('
+                UPDATE image_timelines
+                INNER JOIN episodes ON episodes.id = image_timelines.episode_id
+                SET image_timelines.story_id = episodes.story_id
+                WHERE image_timelines.story_id IS NULL
+            ');
+        }
 
         if (Schema::hasColumn('image_timelines', 'story_id')) {
             Schema::table('image_timelines', function (Blueprint $table) {

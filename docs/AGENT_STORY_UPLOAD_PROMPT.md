@@ -12,7 +12,8 @@ You are an automation agent for the Manji project. Your job is to **prepare and 
 
 - Backend / scripts: `manji-laravel/`
 - Stories: `manji-stories/`
-- Doc: `manji-laravel/docs/LOCAL_TO_SERVER_STORY_IMPORT.md`
+- Doc: `manji-laravel/docs/HOW_TO_USE_STORY_UPLOAD.md`
+- Architecture: `manji-laravel/docs/LOCAL_TO_SERVER_STORY_IMPORT.md`
 
 ## Mandatory steps (in order)
 
@@ -40,9 +41,15 @@ You are an automation agent for the Manji project. Your job is to **prepare and 
 5. Report results from the JSON summary / console:
    - `uploaded` / `dry_run_ok` / `failed`
    - preflight errors (missing `characters_and_objects.json`, `.md`, or `*_image_prompts.json`)
+   - speaker warnings (unknown speakers vs characters JSON)
    - artisan errors
 
-6. Tell the user the **manual dashboard follow-up** still required:
+6. Verify on server:
+   ```powershell
+   .\scripts\verify-story-on-server.ps1 -Stories "22","21" -JsonSummary
+   ```
+
+7. Tell the user the **manual dashboard follow-up** still required:
    - Story editor → package → assign character/scene images (if not already)
    - Stories admin → cover, audio, timelines, publish
 

@@ -183,6 +183,15 @@ class OldStoriesImportService
                 );
                 $result['imports'][] = ['type' => 'characters_and_objects', 'summary' => $import['summary'] ?? []];
                 $storyId = $storyId ?? ($import['summary']['story_id'] ?? null);
+
+                if ($storyId) {
+                    Story::whereKey($storyId)->where(function ($q) {
+                        $q->whereNull('workflow_status')
+                            ->orWhere('workflow_status', Story::WORKFLOW_WRITTEN);
+                    })->update([
+                        'workflow_status' => Story::WORKFLOW_CHARACTERS_MADE,
+                    ]);
+                }
             }
         } catch (\Throwable $e) {
             $result['errors'][] = 'characters: ' . $e->getMessage();
@@ -300,6 +309,18 @@ class OldStoriesImportService
 
         $existing = Story::where('title', $storyDirTitle)->first();
         if ($existing) {
+            $updates = [];
+            if (empty($existing->age_group)) {
+                $updates['age_group'] = $this->resolveAgeGroup($json, $manifest);
+            }
+            $episodeCount = (int) ($manifest['total_episodes'] ?? 0);
+            if ($episodeCount > 0 && (int) $existing->total_episodes < $episodeCount) {
+                $updates['total_episodes'] = $episodeCount;
+            }
+            if ($updates !== []) {
+                $existing->update($updates);
+            }
+
             return $existing->id;
         }
 
@@ -309,6 +330,9 @@ class OldStoriesImportService
         }
 
         $summary = $manifest['story_summary'] ?? null;
+        if ((! is_string($summary) || $summary === '') && is_array($json)) {
+            $summary = $json['story_summary'] ?? $json['summary'] ?? null;
+        }
         $subtitle = is_string($summary) && $summary !== '' ? Str::limit($summary, 300, '…') : null;
         $description = Str::limit(is_string($summary) && $summary !== '' ? $summary : $storyDirTitle, 5000, '…');
 
