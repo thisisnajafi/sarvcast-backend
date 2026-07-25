@@ -56,13 +56,14 @@ class StoryPackagePreflightService
                 continue;
             }
             $path = $storyFolder . DIRECTORY_SEPARATOR . $entry;
-            if (is_dir($path) && preg_match('/^episode\s+\d+\b/u', $entry)) {
+            // Writer: "episode 1 - …"  OR already-normalized: "episode_1_slug"
+            if (is_dir($path) && preg_match('/^episode[\s_]\d+/u', $entry)) {
                 $episodeDirs[] = $path;
             }
         }
 
         if ($episodeDirs === []) {
-            $issues[] = "no episode folders (expected 'episode N - …')";
+            $issues[] = "no episode folders (expected 'episode N - …' or 'episode_N_slug')";
         }
 
         $allowedSpeakers = array_values(array_unique(array_filter(array_merge(

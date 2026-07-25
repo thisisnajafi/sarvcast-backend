@@ -175,12 +175,12 @@ foreach ($query in $queries) {
             title       = $match.title
             episode_count = $match.episode_count
         }
-        Write-Host "OK: $query → $($match.id) ($($match.folder_name))" -ForegroundColor Green
+        Write-Host "OK: $query -> $($match.id) ($($match.folder_name))" -ForegroundColor Green
     }
     catch {
         $failures++
         $entry.error = "$_"
-        Write-Host "MISSING: $query — $_" -ForegroundColor Red
+        Write-Host "MISSING: $query - $_" -ForegroundColor Red
     }
 
     $results += [pscustomobject]$entry

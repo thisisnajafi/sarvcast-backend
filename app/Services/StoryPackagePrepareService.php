@@ -53,17 +53,33 @@ class StoryPackagePrepareService
                 continue;
             }
             $from = $storyFolder . DIRECTORY_SEPARATOR . $entry;
-            if (! is_dir($from) || ! preg_match('/^episode\s+(\d+)\b/u', $entry, $em)) {
+            if (! is_dir($from)) {
                 continue;
             }
 
-            $num = (int) $em[1];
-            $persianTitle = $entry;
-            if (preg_match('/^episode\s+\d+\s*-\s*(.+)$/u', $entry, $tm)) {
-                $persianTitle = trim($tm[1]);
+            $num = null;
+            $titleHint = $entry;
+            $alreadyNormalized = false;
+
+            if (preg_match('/^episode_(\d+)_(.+)$/u', $entry, $em)) {
+                $num = (int) $em[1];
+                $titleHint = str_replace('_', ' ', $em[2]);
+                $alreadyNormalized = true;
+            } elseif (preg_match('/^episode\s+(\d+)\b/u', $entry, $em)) {
+                $num = (int) $em[1];
+                if (preg_match('/^episode\s+\d+\s*-\s*(.+)$/u', $entry, $tm)) {
+                    $titleHint = trim($tm[1]);
+                }
+            } else {
+                continue;
             }
 
-            $targetFolder = sprintf('episode_%d_%s', $num, $storySlugBase);
+            $episodeSlug = $alreadyNormalized
+                ? $this->slug((string) preg_replace('/^episode_\d+_/', '', $entry))
+                : $storySlugBase;
+            $targetFolder = $alreadyNormalized
+                ? $entry
+                : sprintf('episode_%d_%s', $num, $storySlugBase);
             $targetPath = $destination . DIRECTORY_SEPARATOR . $targetFolder;
             mkdir($targetPath, 0755, true);
 
@@ -83,13 +99,13 @@ class StoryPackagePrepareService
 
             $episodes[] = [
                 'episode_number' => $num,
-                'episode_slug' => $storySlugBase,
+                'episode_slug' => $episodeSlug,
                 'source_folder' => $entry,
                 'target_folder' => $targetFolder,
                 'has_script' => $hasScript,
                 'has_prompts' => $hasPrompts,
                 'needs_script' => ! $hasScript,
-                'title_hint' => $persianTitle,
+                'title_hint' => $titleHint,
             ];
         }
 

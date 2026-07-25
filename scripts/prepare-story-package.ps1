@@ -77,18 +77,31 @@ $storySlugBase = Get-Slug $englishHint
 
 $episodes = @()
 $episodeDirs = Get-ChildItem -LiteralPath $StoryFolder -Directory |
-    Where-Object { $_.Name -match '^episode\s+(\d+)\b' }
+    Where-Object { $_.Name -match '^episode[\s_]\d+' }
 
 foreach ($epDir in $episodeDirs) {
-    if ($epDir.Name -notmatch '^episode\s+(\d+)\b') { continue }
-    $num = [int]$Matches[1]
+    $num = $null
+    $titleHint = $epDir.Name
+    $alreadyNormalized = $false
+    $episodeSlug = $storySlugBase
 
-    $persianTitle = $epDir.Name
-    if ($epDir.Name -match '^episode\s+\d+\s*-\s*(.+)$') {
-        $persianTitle = $Matches[1].Trim()
+    if ($epDir.Name -match '^episode_(\d+)_(.+)$') {
+        $num = [int]$Matches[1]
+        $titleHint = ($Matches[2] -replace '_', ' ')
+        $alreadyNormalized = $true
+        $episodeSlug = Get-Slug $Matches[2]
+    }
+    elseif ($epDir.Name -match '^episode\s+(\d+)\b') {
+        $num = [int]$Matches[1]
+        if ($epDir.Name -match '^episode\s+\d+\s*-\s*(.+)$') {
+            $titleHint = $Matches[1].Trim()
+        }
+    }
+    else {
+        continue
     }
 
-    $targetFolder = "episode_{0}_{1}" -f $num, $storySlugBase
+    $targetFolder = if ($alreadyNormalized) { $epDir.Name } else { "episode_{0}_{1}" -f $num, $storySlugBase }
     $targetPath = Join-Path $dest $targetFolder
     New-Item -ItemType Directory -Force -Path $targetPath | Out-Null
 
@@ -103,18 +116,18 @@ foreach ($epDir in $episodeDirs) {
 
     $episodes += [ordered]@{
         episode_number = $num
-        episode_slug   = $storySlugBase
+        episode_slug   = $episodeSlug
         source_folder  = $epDir.Name
         target_folder  = $targetFolder
         has_script     = [bool]$hasScript
         has_prompts    = [bool]$hasPrompts
         needs_script   = -not $hasScript
-        title_hint     = $persianTitle
+        title_hint     = $titleHint
     }
 }
 
 if ($episodes.Count -eq 0) {
-    Write-Warning "No episode folders matching 'episode N - …' found under $StoryFolder"
+    Write-Warning "No episode folders matching 'episode N - …' or 'episode_N_slug' found under $StoryFolder"
 }
 
 $manifest = [ordered]@{

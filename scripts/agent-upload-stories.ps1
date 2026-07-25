@@ -39,6 +39,8 @@ param(
 
     [switch]$SkipPreflight,
 
+    [switch]$IncludeConflicts,
+
     [switch]$JsonSummary
 )
 
@@ -119,9 +121,9 @@ function Invoke-Preflight([string]$storyPath) {
     }
 
     $episodeDirs = Get-ChildItem -LiteralPath $storyPath -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '^episode\s+\d+' }
+        Where-Object { $_.Name -match '^episode[\s_]\d+' }
     if ($episodeDirs.Count -eq 0) {
-        $issues += "no episode folders (expected 'episode N - …')"
+        $issues += "no episode folders (expected 'episode N - …' or 'episode_N_slug')"
     }
 
     foreach ($ep in $episodeDirs) {
@@ -192,11 +194,18 @@ foreach ($storyQuery in $Stories) {
         if (-not $NoCreateDb) { $artisanArgs += "--create-db" }
         if ($DryRun) { $artisanArgs += "--dry-run" }
         if ($DeployOnly) { $artisanArgs += "--deploy-only" }
+        if ($IncludeConflicts -or ($entry.folder -match '^[1-7]\s*-')) {
+            $artisanArgs += "--include-conflicts"
+        }
 
         Write-Host "  php artisan $($artisanArgs -join ' ')"
-        & php artisan @artisanArgs
+        $artisanOut = & php artisan @artisanArgs 2>&1 | Out-String
+        Write-Host $artisanOut
         if ($LASTEXITCODE -ne 0) {
             throw "artisan exit code $LASTEXITCODE"
+        }
+        if ($artisanOut -match 'status:\s*skipped_conflict') {
+            throw "skipped_conflict on server (use -IncludeConflicts / --include-conflicts)"
         }
 
         $entry.status = if ($DryRun) { "dry_run_ok" } else { "uploaded" }
