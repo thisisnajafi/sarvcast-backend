@@ -15,13 +15,16 @@ class AdminPushNotificationService
     ) {}
 
     /**
-     * Send a push + in-app alert to all active admins.
+     * Send one in-app admin alert (visible once in the admin notifications list)
+     * and push to every active admin device.
      */
     public function notifyAdmins(string $title, string $message, array $options = []): int
     {
         $admins = User::query()
             ->admins()
             ->whereIn('status', User::loginAllowedStatuses())
+            ->orderByRaw("CASE WHEN role = 'super_admin' THEN 0 ELSE 1 END")
+            ->orderBy('id')
             ->get();
 
         if ($admins->isEmpty()) {
@@ -29,27 +32,45 @@ class AdminPushNotificationService
             return 0;
         }
 
-        $sent = 0;
+        $pushData = array_merge(
+            ['type' => 'admin_alert', 'admin_alert' => true],
+            $options['data'] ?? []
+        );
 
-        foreach ($admins as $admin) {
+        $primary = $admins->first();
+        $created = false;
+
+        try {
+            $createOptions = array_merge([
+                'category' => 'system',
+                'priority' => $options['priority'] ?? 'high',
+                'is_important' => true,
+                'send_push' => true,
+            ], $options);
+            $createOptions['data'] = $pushData;
+
+            $this->inAppNotificationService->createNotification(
+                $primary->id,
+                $options['type'] ?? 'system',
+                $title,
+                $message,
+                $createOptions
+            );
+            $created = true;
+        } catch (\Exception $e) {
+            Log::error('Failed to create admin in-app notification', [
+                'admin_id' => $primary->id,
+                'title' => $title,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Push to remaining admins without creating duplicate in-app rows
+        // (admin notifications index lists all recipients, so one row is enough).
+        $notificationService = app(NotificationService::class);
+        foreach ($admins->skip(1) as $admin) {
             try {
-                $this->inAppNotificationService->createNotification(
-                    $admin->id,
-                    $options['type'] ?? 'system',
-                    $title,
-                    $message,
-                    array_merge([
-                        'category' => 'system',
-                        'priority' => $options['priority'] ?? 'high',
-                        'is_important' => true,
-                        'send_push' => true,
-                        'data' => array_merge(
-                            ['type' => 'admin_alert', 'admin_alert' => true],
-                            $options['data'] ?? []
-                        ),
-                    ], $options)
-                );
-                $sent++;
+                $notificationService->sendPushNotification($admin, $title, $message, $pushData);
             } catch (\Exception $e) {
                 Log::error('Failed to send admin push notification', [
                     'admin_id' => $admin->id,
@@ -59,7 +80,7 @@ class AdminPushNotificationService
             }
         }
 
-        return $sent;
+        return $created ? 1 : 0;
     }
 
     public function sendSalesNotification(Payment $payment, ?Subscription $subscription = null): int
