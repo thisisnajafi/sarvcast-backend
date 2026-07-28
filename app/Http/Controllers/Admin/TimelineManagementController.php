@@ -7,6 +7,7 @@ use App\Http\Support\AdminCsvExport;
 use App\Models\Episode;
 use App\Models\ImageTimeline;
 use App\Services\MediaLibraryService;
+use App\Services\SyncTimelineFromScenesService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,7 @@ class TimelineManagementController extends Controller
 {
     public function __construct(
         private readonly MediaLibraryService $mediaLibrary,
+        private readonly SyncTimelineFromScenesService $syncFromScenes,
     ) {}
 
     private function validateTimelinePayload(Request $request, ?ImageTimeline $current = null): array
@@ -47,7 +49,12 @@ class TimelineManagementController extends Controller
             $episode = Episode::find($episodeId);
             if ($episode && (int) $episode->duration > 0) {
                 // Episode duration is stored in minutes; timeline uses seconds.
+                // Allow client-measured audio length when longer than stored minutes.
                 $maxSeconds = (int) $episode->duration * 60;
+                $audioSeconds = (int) $request->input('duration_seconds', 0);
+                if ($audioSeconds > $maxSeconds) {
+                    $maxSeconds = $audioSeconds;
+                }
                 if ($end > $maxSeconds) {
                     throw ValidationException::withMessages([
                         'end_time' => ["زمان پایان نباید از مدت اپیزود ({$maxSeconds} ثانیه) بیشتر باشد."],
@@ -202,11 +209,16 @@ class TimelineManagementController extends Controller
     // API Methods
     public function apiIndex(Request $request)
     {
-        $query = ImageTimeline::with(['episode.story'])->orderBy('created_at', 'desc');
+        $query = ImageTimeline::with(['episode.story']);
 
         if ($request->filled('episode_id')) {
-            $query->where('episode_id', $request->episode_id);
+            $query->where('episode_id', $request->episode_id)
+                ->orderBy('start_time')
+                ->orderBy('image_order');
+        } else {
+            $query->orderBy('created_at', 'desc');
         }
+
 
         if ($request->filled('story_id')) {
             $query->whereHas('episode', function ($q) use ($request) {
@@ -246,6 +258,58 @@ class TimelineManagementController extends Controller
             'success' => true,
             'message' => 'تایم‌لاین با موفقیت ایجاد شد.',
             'data' => $timeline->load(['episode.story']),
+        ]);
+    }
+
+    /**
+     * Sync timeline frames from uploaded scene production images (even split by audio duration).
+     */
+    public function apiSyncFromScenes(Request $request)
+    {
+        $validated = $request->validate([
+            'episode_id' => 'required|integer|exists:episodes,id',
+            'duration_seconds' => 'nullable|integer|min:1',
+            'replace' => 'sometimes|boolean',
+        ]);
+
+        $episode = Episode::findOrFail((int) $validated['episode_id']);
+        $durationSeconds = (int) ($validated['duration_seconds'] ?? 0);
+        if ($durationSeconds < 1) {
+            $durationSeconds = max(1, (int) $episode->duration * 60);
+        }
+        $replace = array_key_exists('replace', $validated)
+            ? (bool) $validated['replace']
+            : true;
+
+        try {
+            $result = $this->syncFromScenes->sync($episode, $durationSeconds, $replace);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('Timeline sync from scenes failed', [
+                'episode_id' => $episode->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'همگام‌سازی تایم‌لاین از صحنه‌ها ناموفق بود.',
+            ], 500);
+        }
+
+        foreach ($result['frames'] as $frame) {
+            $this->mediaLibrary->syncUsageFor($frame, 'image_url', $frame->image_url);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'فریم‌های تایم‌لاین از تصاویر صحنه همگام شدند.',
+            'data' => [
+                'frames' => $result['frames'],
+                'duration_seconds' => $result['duration_seconds'],
+                'scene_count' => $result['scene_count'],
+                'replaced' => $result['replaced'],
+            ],
         ]);
     }
 

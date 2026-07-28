@@ -1330,6 +1330,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiStatistics']);
             Route::post('/upload-image', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiUploadImage']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiBulkAction']);
+            Route::post('/sync-from-scenes', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiSyncFromScenes']);
             Route::get('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiShow']);
             Route::put('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiUpdate']);
             Route::delete('/{timeline}', [\App\Http\Controllers\Admin\TimelineManagementController::class, 'apiDestroy']);
