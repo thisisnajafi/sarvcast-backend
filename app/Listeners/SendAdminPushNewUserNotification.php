@@ -21,24 +21,24 @@ class SendAdminPushNewUserNotification implements ShouldQueue
     {
         try {
             $user = $event->user;
-            $lockKey = "admin_push_new_user_{$user->id}";
-            $lock = Cache::lock($lockKey, 10);
+            // Hold a long-lived marker so a second dispatch for the same user
+            // cannot send again (do not release after send).
+            $dedupeKey = "admin_push_new_user_{$user->id}";
+            if (! Cache::add($dedupeKey, true, now()->addMinutes(10))) {
+                Log::info('Skipping duplicate admin push new user notification', [
+                    'user_id' => $user->id,
+                ]);
 
-            if (!$lock->get()) {
                 return;
             }
 
-            try {
-                $sent = $this->adminPushService->sendNewUserNotification($user);
+            $sent = $this->adminPushService->sendNewUserNotification($user);
 
-                if ($sent > 0) {
-                    Log::info('Admin push new user notification sent', [
-                        'user_id' => $user->id,
-                        'admin_count' => $sent,
-                    ]);
-                }
-            } finally {
-                $lock->release();
+            if ($sent > 0) {
+                Log::info('Admin push new user notification sent', [
+                    'user_id' => $user->id,
+                    'admin_count' => $sent,
+                ]);
             }
         } catch (\Exception $e) {
             Log::error('Failed to send admin push new user notification: ' . $e->getMessage(), [

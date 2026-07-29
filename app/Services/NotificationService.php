@@ -585,9 +585,11 @@ class NotificationService
                 ->whereNotNull('fcm_token')
                 ->where('fcm_token', '!=', '')
                 ->pluck('fcm_token')
+                ->unique()
+                ->values()
                 ->toArray();
 
-            return array_filter($tokens); // Remove any empty values
+            return array_values(array_filter($tokens)); // Remove any empty values
         } catch (\Exception $e) {
             Log::error('Failed to get user FCM tokens: ' . $e->getMessage());
             return [];

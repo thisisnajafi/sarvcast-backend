@@ -7,7 +7,6 @@ use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\SmsService;
-use App\Events\NewUserRegistrationEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -124,7 +123,8 @@ class AuthController extends Controller
             ], 409);
         }
 
-        // Create user — must complete onboarding before full app access
+        // Create user — must complete onboarding before full app access.
+        // NewUserRegistrationEvent is fired once from User::created (do not dispatch again here).
         $user = User::create([
             'phone_number' => $phoneNumber,
             'first_name' => $request->first_name,
@@ -135,9 +135,6 @@ class AuthController extends Controller
             'onboarding_completed' => false,
             'phone_verified_at' => now(),
         ]);
-
-        // Dispatch new user registration event for Telegram notification
-        event(new NewUserRegistrationEvent($user));
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
