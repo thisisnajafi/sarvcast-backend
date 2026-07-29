@@ -149,10 +149,45 @@ class UpdateStoryEpisodeRequest extends FormRequest
     {
         return [
             'metadata.title_persian.required' => 'عنوان فارسی قسمت الزامی است.',
+            'metadata.episode_number.required' => 'شماره قسمت الزامی است.',
+            'metadata.total_episodes.required' => 'تعداد کل قسمت‌ها الزامی است.',
+            'metadata.age_range.required' => 'رده سنی الزامی است.',
+            'metadata.duration_estimate.required' => 'تخمین مدت الزامی است.',
+            'metadata.main_message.required' => 'پیام اصلی الزامی است.',
+            'characters.required' => 'حداقل یک شخصیت الزامی است.',
+            'characters.*.name_persian.required' => 'نام فارسی هر شخصیت الزامی است.',
+            'characters.*.character_id.required' => 'شناسه هر شخصیت الزامی است.',
             'scenes.required' => 'حداقل یک صحنه الزامی است.',
             'scenes.min' => 'حداقل یک صحنه الزامی است.',
             'scenes.*.title.required' => 'عنوان هر صحنه الزامی است.',
-            'scenes.*.dialogue_lines.min' => 'هر صحنه باید حداقل یک خط گفتگو با متن داشته باشد.',
+            'scenes.*.dialogue_lines.required' => 'هر صحنه باید حداقل یک خط گفتگو با گوینده و متن داشته باشد.',
+            'scenes.*.dialogue_lines.min' => 'هر صحنه باید حداقل یک خط گفتگو با گوینده و متن داشته باشد.',
+            'scenes.*.dialogue_lines.*.speaker.required' => 'گوینده هر خط گفتگو الزامی است.',
+            'scenes.*.dialogue_lines.*.text.required' => 'متن هر خط گفتگو الزامی است.',
+            'closing.episode_summary.required' => 'خلاصه قسمت الزامی است.',
+            'closing.educational_message.required' => 'پیام آموزشی الزامی است.',
+            'closing.is_final_episode.required' => 'وضعیت قسمت پایانی الزامی است.',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'metadata.title_persian' => 'عنوان فارسی',
+            'metadata.episode_number' => 'شماره قسمت',
+            'metadata.total_episodes' => 'تعداد کل قسمت‌ها',
+            'metadata.age_range' => 'رده سنی',
+            'metadata.duration_estimate' => 'تخمین مدت',
+            'metadata.main_message' => 'پیام اصلی',
+            'scenes' => 'صحنه‌ها',
+            'scenes.*.title' => 'عنوان صحنه',
+            'scenes.*.dialogue_lines' => 'خطوط گفتگو',
+            'scenes.*.dialogue_lines.*.speaker' => 'گوینده',
+            'scenes.*.dialogue_lines.*.text' => 'متن گفتگو',
+            'characters.*.name_persian' => 'نام شخصیت',
+            'characters.*.character_id' => 'شناسه شخصیت',
+            'closing.episode_summary' => 'خلاصه قسمت',
+            'closing.educational_message' => 'پیام آموزشی',
         ];
     }
 
