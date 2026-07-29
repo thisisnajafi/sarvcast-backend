@@ -6,6 +6,7 @@ use App\Models\Episode;
 use App\Models\ImageTimeline;
 use App\Models\StoryProductionAsset;
 use App\Models\StoryProductionFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -81,6 +82,9 @@ class SyncTimelineFromScenesService
                 $episode->forceFill(['use_image_timeline' => true])->save();
             }
         });
+
+        Cache::forget("episode_timeline_{$episode->id}");
+        Cache::forget("episode_timeline_{$episode->id}_with_voice_actors");
 
         return [
             'frames' => $created,

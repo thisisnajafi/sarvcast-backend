@@ -567,21 +567,33 @@ class StoryProductionImportService
             $query->where('asset_type', $assetType);
         }
 
-        return $query->orderBy('asset_type')->orderBy('asset_key')->get()->map(function (StoryProductionAsset $asset) {
-            return [
-                'id' => $asset->id,
-                'asset_type' => $asset->asset_type,
-                'asset_key' => $asset->asset_key,
-                'name_persian' => $asset->name_persian,
-                'name_english' => $asset->name_english,
-                'prompt' => $asset->prompt,
-                'image_url' => $asset->image_url ? $asset->getImageUrlFromPath($asset->image_url) : null,
-                'has_image' => ! empty($asset->image_url),
-                'episode_slug' => $asset->episode_slug,
-                'character_id' => $asset->character_id,
-                'metadata' => $asset->metadata,
-            ];
-        })->all();
+        // asset_key values like ep3_s1 / ep3_s10 must use natural order (1,2…10,11),
+        // not lexicographic SQL order (1,10,11,2…).
+        return $query->orderBy('asset_type')->get()
+            ->sort(function (StoryProductionAsset $a, StoryProductionAsset $b) {
+                $typeCmp = strcasecmp((string) $a->asset_type, (string) $b->asset_type);
+                if ($typeCmp !== 0) {
+                    return $typeCmp;
+                }
+
+                return strnatcasecmp((string) $a->asset_key, (string) $b->asset_key);
+            })
+            ->values()
+            ->map(function (StoryProductionAsset $asset) {
+                return [
+                    'id' => $asset->id,
+                    'asset_type' => $asset->asset_type,
+                    'asset_key' => $asset->asset_key,
+                    'name_persian' => $asset->name_persian,
+                    'name_english' => $asset->name_english,
+                    'prompt' => $asset->prompt,
+                    'image_url' => $asset->image_url ? $asset->getImageUrlFromPath($asset->image_url) : null,
+                    'has_image' => ! empty($asset->image_url),
+                    'episode_slug' => $asset->episode_slug,
+                    'character_id' => $asset->character_id,
+                    'metadata' => $asset->metadata,
+                ];
+            })->all();
     }
 
     private function storeFile(
