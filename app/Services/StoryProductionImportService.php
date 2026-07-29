@@ -1053,6 +1053,112 @@ class StoryProductionImportService
     }
 
     /**
+     * Remove production character assets linked to a DB character, and drop them
+     * from characters_and_objects.json so re-import / image sync won't recreate it.
+     *
+     * @return array{removed_assets: int, removed_keys: list<string>}
+     */
+    public function deleteCharacterProductionArtifacts(\App\Models\Character $character): array
+    {
+        $storyId = (int) $character->story_id;
+        $name = trim((string) $character->name);
+
+        $assets = StoryProductionAsset::query()
+            ->where('asset_type', StoryProductionAsset::TYPE_CHARACTER)
+            ->where(function ($query) use ($character, $storyId, $name) {
+                $query->where('character_id', $character->id);
+
+                // Also catch unlinked production assets that match this character by name.
+                if ($storyId > 0 && $name !== '') {
+                    $query->orWhere(function ($inner) use ($storyId, $name) {
+                        $inner
+                            ->where('story_id', $storyId)
+                            ->where(function ($nameQuery) use ($name) {
+                                $nameQuery
+                                    ->where('name_persian', $name)
+                                    ->orWhere('asset_key', $name);
+                            });
+                    });
+                }
+            })
+            ->get();
+
+        $removedKeys = [];
+        foreach ($assets as $asset) {
+            $slug = (string) $asset->story_slug;
+            $key = (string) $asset->asset_key;
+            if ($slug !== '' && $key !== '') {
+                $this->removeCharactersAndObjectsJsonEntry(
+                    $slug,
+                    StoryProductionAsset::TYPE_CHARACTER,
+                    $key,
+                );
+                $removedKeys[] = $key;
+            }
+
+            if ($asset->storage_path && Storage::disk('public')->exists($asset->storage_path)) {
+                Storage::disk('public')->delete($asset->storage_path);
+            }
+
+            $asset->delete();
+        }
+
+        return [
+            'removed_assets' => $assets->count(),
+            'removed_keys' => array_values(array_unique($removedKeys)),
+        ];
+    }
+
+    private function removeCharactersAndObjectsJsonEntry(
+        string $storySlug,
+        string $assetType,
+        string $assetKey,
+    ): void {
+        $section = match ($assetType) {
+            StoryProductionAsset::TYPE_CHARACTER => 'characters',
+            StoryProductionAsset::TYPE_OBJECT => 'objects',
+            StoryProductionAsset::TYPE_SETTING => 'settings',
+            default => null,
+        };
+        if ($section === null) {
+            return;
+        }
+
+        $document = $this->loadOrRebuildCharactersDocument($storySlug);
+        if (! isset($document[$section]) || ! is_array($document[$section])) {
+            return;
+        }
+        if (! array_key_exists($assetKey, $document[$section])) {
+            return;
+        }
+
+        unset($document[$section][$assetKey]);
+        $json = json_encode($document, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        if (! is_string($json)) {
+            return;
+        }
+
+        $fileRecord = StoryProductionFile::where('story_slug', $storySlug)
+            ->whereNull('episode_slug')
+            ->where('file_type', StoryProductionFile::TYPE_CHARACTERS)
+            ->first();
+
+        if ($fileRecord?->storage_path) {
+            Storage::disk('public')->put($fileRecord->storage_path, $json);
+            $fileRecord->update([
+                'content_hash' => hash('sha256', $json),
+                'imported_at' => now(),
+            ]);
+        }
+
+        $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
+        if ($storyDir) {
+            $path = rtrim($storyDir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'characters_and_objects.json';
+            @file_put_contents($path, $json);
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $metadata
      */
     private function rewriteCharactersAndObjectsJson(

@@ -202,7 +202,7 @@ class CharacterController extends Controller
     }
 
     /**
-     * Delete a character
+     * Delete a character (and linked production character assets / JSON entry).
      *
      * @param int $characterId
      * @return JsonResponse
@@ -210,11 +210,44 @@ class CharacterController extends Controller
     public function destroy(int $characterId): JsonResponse
     {
         $character = Character::findOrFail($characterId);
+        $characterName = $character->name;
+        $storyId = (int) $character->story_id;
+
+        if ($character->image_url && ! filter_var($character->image_url, FILTER_VALIDATE_URL)) {
+            $imagePath = public_path('images/' . ltrim((string) $character->image_url, '/'));
+            if (is_file($imagePath)) {
+                @unlink($imagePath);
+            }
+        }
+
+        $cleanup = [
+            'removed_assets' => 0,
+            'removed_keys' => [],
+        ];
+
+        try {
+            $cleanup = app(\App\Services\StoryProductionImportService::class)
+                ->deleteCharacterProductionArtifacts($character);
+        } catch (\Throwable $e) {
+            \Log::warning('Character production cleanup failed during delete', [
+                'character_id' => $characterId,
+                'story_id' => $storyId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $character->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'شخصیت با موفقیت حذف شد.'
+            'message' => 'شخصیت با موفقیت حذف شد.',
+            'data' => [
+                'id' => $characterId,
+                'name' => $characterName,
+                'story_id' => $storyId,
+                'removed_production_assets' => $cleanup['removed_assets'],
+                'removed_production_keys' => $cleanup['removed_keys'],
+            ],
         ]);
     }
 
