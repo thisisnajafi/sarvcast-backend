@@ -272,15 +272,18 @@ class StoryEditorRepository
         $basePath = $this->resolveStoriesPath();
         $existingSlug = $dbStoryId !== null ? $this->findStorySlugByDbStoryId($dbStoryId) : null;
 
+        // Only reuse a slug when the story-editor folder actually exists on disk.
+        // Stale story_production_* rows can point at a missing folder and must not block recreate.
         if ($existingSlug !== null) {
             $dir = $this->findStoryDirectory($existingSlug);
-
-            return [
-                'id' => $existingSlug,
-                'folder_name' => $dir !== null ? basename($dir) : $existingSlug,
-                'path' => $dir,
-                'created' => false,
-            ];
+            if ($dir !== null) {
+                return [
+                    'id' => $existingSlug,
+                    'folder_name' => basename($dir),
+                    'path' => $dir,
+                    'created' => false,
+                ];
+            }
         }
 
         $folderName = $this->buildStoryFolderName($title);
@@ -339,22 +342,28 @@ class StoryEditorRepository
 
     public function findStorySlugByDbStoryId(int $storyId): ?string
     {
-        $fromProduction = \App\Models\StoryProductionFile::query()
+        $productionSlugs = \App\Models\StoryProductionFile::query()
             ->where('story_id', $storyId)
             ->whereNotNull('story_slug')
-            ->value('story_slug');
+            ->distinct()
+            ->pluck('story_slug');
 
-        if (is_string($fromProduction) && $fromProduction !== '') {
-            return $fromProduction;
+        foreach ($productionSlugs as $slug) {
+            if (is_string($slug) && $slug !== '' && $this->findStoryDirectory($slug) !== null) {
+                return $slug;
+            }
         }
 
-        $fromAsset = \App\Models\StoryProductionAsset::query()
+        $assetSlugs = \App\Models\StoryProductionAsset::query()
             ->where('story_id', $storyId)
             ->whereNotNull('story_slug')
-            ->value('story_slug');
+            ->distinct()
+            ->pluck('story_slug');
 
-        if (is_string($fromAsset) && $fromAsset !== '') {
-            return $fromAsset;
+        foreach ($assetSlugs as $slug) {
+            if (is_string($slug) && $slug !== '' && $this->findStoryDirectory($slug) !== null) {
+                return $slug;
+            }
         }
 
         $story = \App\Models\Story::query()->find($storyId);
