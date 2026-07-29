@@ -9,6 +9,8 @@ use App\Models\ImageTimeline;
 use App\Services\MediaLibraryService;
 use App\Services\SyncTimelineFromScenesService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -346,6 +348,158 @@ class TimelineManagementController extends Controller
                 'message' => 'آپلود تصویر تایم‌لاین ناموفق بود.',
             ], 500);
         }
+    }
+
+    /**
+     * Apply many frame range updates in one transaction, validating the final
+     * episode timeline as a whole (avoids false overlaps from one-by-one PUT).
+     */
+    public function apiBatchUpdate(Request $request)
+    {
+        $validated = $request->validate([
+            'episode_id' => 'required|integer|exists:episodes,id',
+            'duration_seconds' => 'nullable|integer|min:1',
+            'frames' => 'required|array|min:1',
+            'frames.*.id' => 'required|integer|exists:image_timelines,id',
+            'frames.*.start_time' => 'required|integer|min:0',
+            'frames.*.end_time' => 'required|integer|min:0',
+            'frames.*.image_url' => 'nullable|string|max:500',
+            'frames.*.image_order' => 'nullable|integer|min:1',
+            'frames.*.scene_description' => 'nullable|string|max:1000',
+            'frames.*.transition_type' => 'nullable|in:fade,cut,dissolve,slide',
+            'frames.*.is_key_frame' => 'nullable|boolean',
+        ]);
+
+        $episodeId = (int) $validated['episode_id'];
+        $episode = Episode::findOrFail($episodeId);
+        $incoming = collect($validated['frames']);
+        $ids = $incoming->pluck('id')->map(fn ($id) => (int) $id)->unique()->values();
+
+        if ($ids->count() !== $incoming->count()) {
+            throw ValidationException::withMessages([
+                'frames' => ['شناسه فریم‌ها نباید تکراری باشد.'],
+            ]);
+        }
+
+        $existing = ImageTimeline::query()
+            ->where('episode_id', $episodeId)
+            ->whereIn('id', $ids->all())
+            ->get()
+            ->keyBy('id');
+
+        if ($existing->count() !== $ids->count()) {
+            throw ValidationException::withMessages([
+                'frames' => ['برخی فریم‌ها متعلق به این اپیزود نیستند یا پیدا نشدند.'],
+            ]);
+        }
+
+        $maxSeconds = max(1, (int) $episode->duration * 60);
+        $audioSeconds = (int) ($validated['duration_seconds'] ?? 0);
+        if ($audioSeconds > $maxSeconds) {
+            $maxSeconds = $audioSeconds;
+        }
+
+        $allRows = ImageTimeline::query()
+            ->where('episode_id', $episodeId)
+            ->get()
+            ->keyBy('id');
+
+        $proposed = [];
+        foreach ($allRows as $id => $row) {
+            $proposed[$id] = [
+                'id' => (int) $id,
+                'start' => (int) $row->start_time,
+                'end' => (int) $row->end_time,
+                'label' => trim((string) ($row->scene_description ?: '')) ?: "#{$id}",
+            ];
+        }
+
+        foreach ($incoming as $frame) {
+            $id = (int) $frame['id'];
+            $start = (int) $frame['start_time'];
+            $end = (int) $frame['end_time'];
+            $label = trim((string) ($frame['scene_description'] ?? $proposed[$id]['label'] ?? '')) ?: "#{$id}";
+
+            if ($end <= $start) {
+                throw ValidationException::withMessages([
+                    'frames' => ["فریم «{$label}» (#{$id}): پایان باید بزرگ‌تر از شروع باشد."],
+                ]);
+            }
+            if ($end > $maxSeconds) {
+                throw ValidationException::withMessages([
+                    'frames' => ["فریم «{$label}» (#{$id}): پایان از مدت صوت ({$maxSeconds}ث) بیشتر است."],
+                ]);
+            }
+
+            $proposed[$id]['start'] = $start;
+            $proposed[$id]['end'] = $end;
+            $proposed[$id]['label'] = $label;
+        }
+
+        $sorted = collect($proposed)->sortBy([['start', 'asc'], ['end', 'asc']])->values();
+        for ($i = 0; $i < $sorted->count(); $i++) {
+            for ($j = $i + 1; $j < $sorted->count(); $j++) {
+                $a = $sorted[$i];
+                $b = $sorted[$j];
+                if ($b['start'] >= $a['end']) {
+                    break;
+                }
+                if ($a['start'] < $b['end'] && $a['end'] > $b['start']) {
+                    throw ValidationException::withMessages([
+                        'frames' => [
+                            "همپوشانی بین «{$a['label']}» (#{$a['id']}) و «{$b['label']}» (#{$b['id']}).",
+                        ],
+                    ]);
+                }
+            }
+        }
+
+        DB::transaction(function () use ($incoming, $existing) {
+            foreach ($incoming as $frame) {
+                $id = (int) $frame['id'];
+                /** @var ImageTimeline $row */
+                $row = $existing[$id];
+                $payload = [
+                    'start_time' => (int) $frame['start_time'],
+                    'end_time' => (int) $frame['end_time'],
+                ];
+                if (array_key_exists('image_url', $frame) && $frame['image_url'] !== null && $frame['image_url'] !== '') {
+                    $payload['image_url'] = $frame['image_url'];
+                }
+                if (array_key_exists('image_order', $frame) && $frame['image_order'] !== null) {
+                    $payload['image_order'] = (int) $frame['image_order'];
+                }
+                if (array_key_exists('scene_description', $frame)) {
+                    $payload['scene_description'] = $frame['scene_description'];
+                }
+                if (array_key_exists('transition_type', $frame) && $frame['transition_type']) {
+                    $payload['transition_type'] = $frame['transition_type'];
+                }
+                if (array_key_exists('is_key_frame', $frame)) {
+                    $payload['is_key_frame'] = (bool) $frame['is_key_frame'];
+                }
+                $row->update($payload);
+            }
+        });
+
+        Cache::forget("episode_timeline_{$episodeId}");
+        Cache::forget("episode_timeline_{$episodeId}_with_voice_actors");
+
+        $updated = ImageTimeline::query()
+            ->where('episode_id', $episodeId)
+            ->whereIn('id', $ids->all())
+            ->orderBy('start_time')
+            ->orderBy('image_order')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'بازه‌های تایم‌لاین با موفقیت به‌صورت دسته‌ای ذخیره شدند.',
+            'data' => [
+                'updated_count' => $updated->count(),
+                'frames' => $updated,
+            ],
+        ]);
     }
 
     public function apiShow(ImageTimeline $timeline)
