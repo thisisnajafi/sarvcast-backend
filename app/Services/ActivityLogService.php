@@ -347,6 +347,93 @@ class ActivityLogService
         ));
     }
 
+    /**
+     * @param  array<string, mixed>  $beforeEpisode
+     * @param  array<string, mixed>  $afterEpisode
+     */
+    public function recordStoryEditorEpisodeRestoredFromBackup(
+        Request $request,
+        string $storySlug,
+        string $episodeSlug,
+        array $beforeEpisode,
+        array $afterEpisode,
+        string $backupId,
+        ?string $backupPath = null,
+    ): void {
+        if (! $this->shouldRecordModelAudit()) {
+            return;
+        }
+
+        $before = $this->storyEditorEpisodeSummary($beforeEpisode);
+        $after = $this->storyEditorEpisodeSummary($afterEpisode);
+        [$oldValues, $newValues] = $this->diff($before, $after);
+
+        $user = auth('sanctum')->user();
+
+        $this->record(new ActivityLogEntry(
+            channel: ActivityLog::CHANNEL_ADMIN,
+            actorUserId: $user?->id,
+            actorType: $user ? 'admin' : 'system',
+            action: 'story_editor.episode_restored_from_backup',
+            subjectType: 'story_editor_episode',
+            subjectId: $episodeSlug,
+            subjectLabel: (string) ($after['title'] ?? $episodeSlug),
+            description: "بازیابی قسمت «{$after['title']}» از نسخه پشتیبان",
+            properties: array_filter([
+                'story_slug' => $storySlug,
+                'backup_id' => $backupId,
+                'backup_path' => $backupPath,
+                'changed_fields' => array_keys($newValues),
+                'source' => 'story_editor',
+            ]),
+            oldValues: $oldValues !== [] ? $oldValues : null,
+            newValues: $newValues !== [] ? $newValues : null,
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent(),
+            requestId: $this->resolveRequestId($request),
+            status: ActivityLog::STATUS_SUCCESS,
+        ));
+    }
+
+    /**
+     * @param  array<int, string>  $backupIds
+     */
+    public function recordStoryEditorEpisodeBackupDeleted(
+        Request $request,
+        string $storySlug,
+        string $episodeSlug,
+        array $backupIds,
+    ): void {
+        if (! $this->shouldRecordModelAudit()) {
+            return;
+        }
+
+        $user = auth('sanctum')->user();
+        $count = count($backupIds);
+
+        $this->record(new ActivityLogEntry(
+            channel: ActivityLog::CHANNEL_ADMIN,
+            actorUserId: $user?->id,
+            actorType: $user ? 'admin' : 'system',
+            action: 'story_editor.episode_backup_deleted',
+            subjectType: 'story_editor_episode',
+            subjectId: $episodeSlug,
+            subjectLabel: $episodeSlug,
+            description: $count === 1
+                ? 'حذف یک نسخه پشتیبان قسمت در ویرایشگر داستان'
+                : "حذف {$count} نسخه پشتیبان قسمت در ویرایشگر داستان",
+            properties: array_filter([
+                'story_slug' => $storySlug,
+                'backup_ids' => $backupIds,
+                'source' => 'story_editor',
+            ]),
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent(),
+            requestId: $this->resolveRequestId($request),
+            status: ActivityLog::STATUS_SUCCESS,
+        ));
+    }
+
     public function recordStoryEditorImport(
         Request $request,
         string $storySlug,
@@ -492,12 +579,26 @@ class ActivityLogService
      */
     private function storyEditorEpisodeSummary(array $episode): array
     {
+        $dialogueCount = 0;
+        foreach ($episode['scenes'] ?? [] as $scene) {
+            if (! is_array($scene)) {
+                continue;
+            }
+            $dialogueCount += count($scene['dialogue_lines'] ?? []);
+        }
+
+        $title = $episode['metadata']['title_persian']
+            ?? $episode['title']
+            ?? null;
+
         return [
-            'title' => $episode['title'] ?? null,
-            'summary' => $episode['summary'] ?? null,
+            'title' => $title,
+            'summary' => $episode['closing']['episode_summary'] ?? $episode['summary'] ?? null,
             'scene_count' => count($episode['scenes'] ?? []),
             'character_count' => count($episode['characters'] ?? []),
-            'dialogue_count' => count($episode['dialogues'] ?? []),
+            'dialogue_count' => $dialogueCount > 0
+                ? $dialogueCount
+                : count($episode['dialogues'] ?? []),
         ];
     }
 

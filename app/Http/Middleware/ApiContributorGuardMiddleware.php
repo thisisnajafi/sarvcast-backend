@@ -76,6 +76,24 @@ class ApiContributorGuardMiddleware
             return $this->forbidden('ایجاد داستان/قسمت در ویرایشگر فقط برای مدیران است.');
         }
 
+        // Restore from backup: authors of the story may restore
+        if ($method === 'POST' && preg_match('#story-editor/stories/([^/]+)/episodes/([^/]+)/backups/([^/]+)/restore$#', $path, $m)) {
+            $storySlug = urldecode($m[1]);
+            if (! $this->access->canEditEditorScript($user, $storySlug)) {
+                return $this->forbidden('فقط نویسنده داستان می‌تواند اسکریپت را بازیابی کند.');
+            }
+
+            return $next($request);
+        }
+
+        // Backup delete is admin-only (single or bulk)
+        if (
+            ($method === 'DELETE' && preg_match('#story-editor/stories/[^/]+/episodes/[^/]+/backups/[^/]+$#', $path))
+            || ($method === 'POST' && preg_match('#story-editor/stories/[^/]+/episodes/[^/]+/backups/delete$#', $path))
+        ) {
+            return $this->forbidden('حذف نسخه پشتیبان فقط برای مدیران مجاز است.');
+        }
+
         if ($method === 'PUT' || $method === 'PATCH') {
             // Script update: /api/admin/story-editor/stories/{slug}/episodes/{episode}
             if (! preg_match('#story-editor/stories/([^/]+)/episodes/([^/]+)$#', $path, $m)) {

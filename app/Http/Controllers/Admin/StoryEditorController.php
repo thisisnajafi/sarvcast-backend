@@ -334,8 +334,249 @@ class StoryEditorController extends Controller
             'permissions' => [
                 'can_edit_script' => $canEdit,
                 'can_access_package' => $user ? $access->canAccessPackage($user) : false,
+                'can_delete_backups' => $user ? $access->isFullAdmin($user) : false,
             ],
         ]));
+    }
+
+    public function listBackups(string $storyId, string $episodeId)
+    {
+        $denied = $this->denyUnlessCanEditEditorScript($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
+        $backups = $this->repository->listEpisodeBackups($storyId, $episodeId);
+        if ($backups === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'قسمت یافت نشد.',
+                'error' => 'NOT_FOUND',
+            ], 404);
+        }
+
+        return AdminApiResponse::success(['backups' => $backups]);
+    }
+
+    public function showBackup(string $storyId, string $episodeId, string $backupId)
+    {
+        $denied = $this->denyUnlessCanEditEditorScript($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
+        if ($this->repository->sanitizeBackupId($backupId) === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شناسه نسخه پشتیبان نامعتبر است.',
+                'error' => 'INVALID_BACKUP_ID',
+            ], 422);
+        }
+
+        $backup = $this->repository->getEpisodeBackup($storyId, $episodeId, $backupId);
+        if ($backup === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نسخه پشتیبان یافت نشد.',
+                'error' => 'NOT_FOUND',
+            ], 404);
+        }
+
+        return AdminApiResponse::success($backup);
+    }
+
+    public function restoreBackup(Request $request, string $storyId, string $episodeId, string $backupId)
+    {
+        $denied = $this->denyUnlessCanEditEditorScript($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
+        if ($this->repository->sanitizeBackupId($backupId) === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شناسه نسخه پشتیبان نامعتبر است.',
+                'error' => 'INVALID_BACKUP_ID',
+            ], 422);
+        }
+
+        try {
+            $before = $this->repository->getEpisode($storyId, $episodeId);
+            $result = $this->repository->restoreEpisodeBackup($storyId, $episodeId, $backupId);
+
+            if ($result === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'نسخه پشتیبان یا قسمت یافت نشد.',
+                    'error' => 'NOT_FOUND',
+                ], 404);
+            }
+
+            if ($before !== null) {
+                $this->activityLog->recordStoryEditorEpisodeRestoredFromBackup(
+                    $request,
+                    $storyId,
+                    $episodeId,
+                    $before['episode'] ?? [],
+                    $result['episode'] ?? [],
+                    (string) ($result['restored_from'] ?? $backupId),
+                    $result['backup_path'] ?? null,
+                );
+            }
+
+            $serializedMarkdown = file_get_contents($result['file_path'] ?? '');
+            if (is_string($serializedMarkdown) && $serializedMarkdown !== '') {
+                $this->episodeScriptService->syncFromStoryEditor(
+                    $storyId,
+                    $episodeId,
+                    $serializedMarkdown,
+                );
+            }
+
+            $user = $request->user();
+            $access = app(\App\Services\ContributorStoryAccessService::class);
+
+            return AdminApiResponse::success(array_merge($result, [
+                'permissions' => [
+                    'can_edit_script' => $user ? $access->canEditEditorScript($user, $storyId) : false,
+                    'can_access_package' => $user ? $access->canAccessPackage($user) : false,
+                    'can_delete_backups' => $user ? $access->isFullAdmin($user) : false,
+                ],
+            ]), 'نسخه پشتیبان با موفقیت بازیابی شد.');
+        } catch (\Throwable $e) {
+            Log::error('Story editor restore backup failed', [
+                'story_id' => $storyId,
+                'episode_id' => $episodeId,
+                'backup_id' => $backupId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در بازیابی نسخه پشتیبان.',
+            ], 500);
+        }
+    }
+
+    public function destroyBackup(Request $request, string $storyId, string $episodeId, string $backupId)
+    {
+        $denied = $this->denyUnlessCanDeleteBackups($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
+        if ($this->repository->sanitizeBackupId($backupId) === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شناسه نسخه پشتیبان نامعتبر است.',
+                'error' => 'INVALID_BACKUP_ID',
+            ], 422);
+        }
+
+        $deleted = $this->repository->deleteEpisodeBackup($storyId, $episodeId, $backupId);
+        if (! $deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'نسخه پشتیبان یافت نشد.',
+                'error' => 'NOT_FOUND',
+            ], 404);
+        }
+
+        $this->activityLog->recordStoryEditorEpisodeBackupDeleted(
+            $request,
+            $storyId,
+            $episodeId,
+            [$backupId],
+        );
+
+        return AdminApiResponse::success([
+            'deleted' => [$backupId],
+        ], 'نسخه پشتیبان حذف شد.');
+    }
+
+    public function destroyBackups(Request $request, string $storyId, string $episodeId)
+    {
+        $denied = $this->denyUnlessCanDeleteBackups($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
+        $validated = $request->validate([
+            'backup_ids' => ['required', 'array', 'min:1'],
+            'backup_ids.*' => ['required', 'string', 'max:255'],
+        ]);
+
+        $ids = [];
+        foreach ($validated['backup_ids'] as $id) {
+            if ($this->repository->sanitizeBackupId($id) === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'شناسه نسخه پشتیبان نامعتبر است.',
+                    'error' => 'INVALID_BACKUP_ID',
+                ], 422);
+            }
+            $ids[] = $id;
+        }
+
+        $result = $this->repository->deleteEpisodeBackups($storyId, $episodeId, $ids);
+
+        if ($result['deleted'] !== []) {
+            $this->activityLog->recordStoryEditorEpisodeBackupDeleted(
+                $request,
+                $storyId,
+                $episodeId,
+                $result['deleted'],
+            );
+        }
+
+        if ($result['deleted'] === [] && $result['missing'] !== []) {
+            return response()->json([
+                'success' => false,
+                'message' => 'هیچ نسخه پشتیبانی حذف نشد.',
+                'error' => 'NOT_FOUND',
+                'data' => $result,
+            ], 404);
+        }
+
+        return AdminApiResponse::success($result, 'نسخه‌های پشتیبان انتخاب‌شده حذف شدند.');
+    }
+
+    private function denyUnlessCanEditEditorScript(string $storySlug): ?\Illuminate\Http\JsonResponse
+    {
+        $user = request()->user();
+        if (! $user) {
+            return null;
+        }
+
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($access->canEditEditorScript($user, $storySlug)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'فقط نویسنده داستان می‌تواند نسخه‌های پشتیبان را مدیریت کند.',
+            'error' => 'FORBIDDEN',
+        ], 403);
+    }
+
+    private function denyUnlessCanDeleteBackups(string $storySlug): ?\Illuminate\Http\JsonResponse
+    {
+        $user = request()->user();
+        if (! $user) {
+            return null;
+        }
+
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($access->isFullAdmin($user)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'حذف نسخه پشتیبان فقط برای مدیران مجاز است.',
+            'error' => 'FORBIDDEN',
+        ], 403);
     }
 
     public function update(Request $request, string $storyId, string $episodeId)

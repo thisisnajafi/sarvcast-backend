@@ -79,6 +79,84 @@ class StoryMarkdownServiceTest extends TestCase
         $this->assertStringContainsString('### صحنه ' . $this->persian(count($reordered['scenes'])) . ': ' . $reordered['scenes'][count($reordered['scenes']) - 1]['title'], $serialized);
     }
 
+    public function test_parses_multiline_quoted_dialogue(): void
+    {
+        $markdown = <<<'MD'
+# تست چندخطی
+## قسمت ۱ از ۱
+
+## اطلاعات داستان
+- **رده سنی**: ۸–۱۲
+- **مدت زمان تخمینی**: ۵ دقیقه
+- **دسته‌بندی**: test
+- **پیام اصلی**: پیام
+- **شخصیت‌های این قسمت**: راوی
+
+---
+
+## شخصیت‌های حاضر در این قسمت
+
+- **راوی** (narrator): راوی
+
+---
+
+## متن داستان
+
+### صحنه ۱: یادآوری
+*آبادی نور*
+
+**راوی**: «آبادی نور بنا شده بود و مردم کنار هم زندگی می کردند . حالا در خانه پادشاه جوانی بزرگ شده بود که همه او را دوست داشتند: سیامک 
+
+پسر بد مر او را یکی خوب‌روی
+
+هنرمند و همچون پدر نامجوی
+
+سیامک بُدش نام و فرخنده بود
+
+کیومرث را دل بدو زنده بود»
+
+---
+
+### صحنه ۲: سیامک در میدان
+*میدان*
+
+**راوی**: «زن جنگاور که زنی جنگجو و شجاع بود مربی رزم و خرد سیامک شده بود و از تلاش سیامک برای یادگیری لذت می برد»
+
+---
+
+## خلاصه قسمت (Episode Summary)
+خلاصه
+
+## پیام آموزشی (Educational Message)
+پیام
+
+## هوک پایانی (Soft Hook)
+**راوی** (آهسته و کنجکاوانه): «ادامه»
+
+---
+MD;
+
+        $parsed = $this->service->parse($markdown);
+
+        $this->assertCount(2, $parsed['scenes']);
+        $this->assertCount(1, $parsed['scenes'][0]['dialogue_lines']);
+        $this->assertSame('راوی', $parsed['scenes'][0]['dialogue_lines'][0]['speaker']);
+        $this->assertStringContainsString("پسر بد مر او را یکی خوب‌روی", $parsed['scenes'][0]['dialogue_lines'][0]['text']);
+        $this->assertStringContainsString("کیومرث را دل بدو زنده بود", $parsed['scenes'][0]['dialogue_lines'][0]['text']);
+        $this->assertArrayNotHasKey('raw_unparsed', $parsed['scenes'][0]);
+
+        $this->assertCount(1, $parsed['scenes'][1]['dialogue_lines']);
+        $this->assertStringContainsString('زن جنگاور', $parsed['scenes'][1]['dialogue_lines'][0]['text']);
+
+        $serialized = $this->service->serialize($parsed);
+        $reparsed = $this->service->parse($serialized);
+
+        $this->assertSame(
+            $parsed['scenes'][0]['dialogue_lines'][0]['text'],
+            $reparsed['scenes'][0]['dialogue_lines'][0]['text']
+        );
+    }
+
     private function persian(int $n): string
     {
         return strtr((string) $n, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);

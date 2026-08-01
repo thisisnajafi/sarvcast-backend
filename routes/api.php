@@ -1416,6 +1416,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
             Route::post('/stories/{storyId}/assets/{assetType}/{assetKey}/image', [\App\Http\Controllers\Admin\StoryEditorController::class, 'uploadAssetImage']);
             Route::put('/stories/{storyId}/assets/{assetType}/{assetKey}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'updateAssetMetadata']);
             Route::get('/stories/{storyId}/episodes', [\App\Http\Controllers\Admin\StoryEditorController::class, 'episodes']);
+            Route::get('/stories/{storyId}/episodes/{episodeId}/backups', [\App\Http\Controllers\Admin\StoryEditorController::class, 'listBackups']);
+            Route::post('/stories/{storyId}/episodes/{episodeId}/backups/delete', [\App\Http\Controllers\Admin\StoryEditorController::class, 'destroyBackups']);
+            Route::get('/stories/{storyId}/episodes/{episodeId}/backups/{backupId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'showBackup'])->where('backupId', '.*\.bak');
+            Route::post('/stories/{storyId}/episodes/{episodeId}/backups/{backupId}/restore', [\App\Http\Controllers\Admin\StoryEditorController::class, 'restoreBackup'])->where('backupId', '.*\.bak');
+            Route::delete('/stories/{storyId}/episodes/{episodeId}/backups/{backupId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'destroyBackup'])->where('backupId', '.*\.bak');
             Route::get('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'show']);
             Route::put('/stories/{storyId}/episodes/{episodeId}', [\App\Http\Controllers\Admin\StoryEditorController::class, 'update']);
         });

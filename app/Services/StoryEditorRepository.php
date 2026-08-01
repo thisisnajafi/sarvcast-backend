@@ -569,6 +569,278 @@ class StoryEditorRepository
         return null;
     }
 
+    /**
+     * @return array<int, array{
+     *   id: string,
+     *   filename: string,
+     *   created_at: string,
+     *   size_bytes: int,
+     *   summary: array{title_persian: string|null, scene_count: int, dialogue_line_count: int}
+     * }>
+     */
+    public function listEpisodeBackups(string $storyId, string $episodeId): ?array
+    {
+        $paths = $this->resolveEpisodeBackupPaths($storyId, $episodeId);
+        if ($paths === null) {
+            return null;
+        }
+
+        $backupDir = $paths['backup_dir'];
+        if (! is_dir($backupDir)) {
+            return [];
+        }
+
+        $items = [];
+        foreach (glob($backupDir . '/*.bak') ?: [] as $file) {
+            $id = basename($file);
+            if ($this->sanitizeBackupId($id) === null) {
+                continue;
+            }
+
+            $items[] = $this->buildBackupListItem($file, $id);
+        }
+
+        usort($items, static fn (array $a, array $b) => strcmp($b['id'], $a['id']));
+
+        return $items;
+    }
+
+    /**
+     * @return array{
+     *   id: string,
+     *   filename: string,
+     *   created_at: string,
+     *   size_bytes: int,
+     *   summary: array{title_persian: string|null, scene_count: int, dialogue_line_count: int},
+     *   episode: array,
+     *   raw_markdown: string
+     * }|null
+     */
+    public function getEpisodeBackup(string $storyId, string $episodeId, string $backupId): ?array
+    {
+        $file = $this->resolveBackupFile($storyId, $episodeId, $backupId);
+        if ($file === null) {
+            return null;
+        }
+
+        $raw = file_get_contents($file);
+        if (! is_string($raw)) {
+            return null;
+        }
+
+        $parsed = $this->markdownService->parse($raw);
+        $id = basename($file);
+        $item = $this->buildBackupListItem($file, $id, $parsed);
+
+        return array_merge($item, [
+            'episode' => $parsed,
+            'raw_markdown' => $raw,
+        ]);
+    }
+
+    /**
+     * Restore a backup onto the live episode markdown (creates a backup of current live first).
+     *
+     * @return array{episode: array, backup_path: string, master_characters: array, invalid_character_ids: array, file_path: string, last_modified: string, restored_from: string}|null
+     */
+    public function restoreEpisodeBackup(string $storyId, string $episodeId, string $backupId): ?array
+    {
+        $paths = $this->resolveEpisodeBackupPaths($storyId, $episodeId);
+        if ($paths === null) {
+            return null;
+        }
+
+        $backupFile = $this->resolveBackupFile($storyId, $episodeId, $backupId);
+        if ($backupFile === null) {
+            return null;
+        }
+
+        $raw = file_get_contents($backupFile);
+        if (! is_string($raw)) {
+            throw new \RuntimeException('Failed to read backup file.');
+        }
+
+        $livePath = $paths['file_path'];
+        $preRestoreBackup = $this->createBackup($livePath);
+
+        if (file_put_contents($livePath, $raw) === false) {
+            throw new \RuntimeException('Failed to restore episode markdown file.');
+        }
+
+        $reparsed = $this->markdownService->parse($raw);
+        $masterCharacters = $this->readMasterCharacters($paths['story_dir']);
+
+        return [
+            'episode' => $reparsed,
+            'master_characters' => $masterCharacters,
+            'invalid_character_ids' => $this->findInvalidCharacterIds($reparsed['characters'] ?? [], $masterCharacters),
+            'file_path' => $livePath,
+            'last_modified' => date('c', filemtime($livePath)),
+            'backup_path' => $preRestoreBackup,
+            'restored_from' => basename($backupFile),
+        ];
+    }
+
+    public function deleteEpisodeBackup(string $storyId, string $episodeId, string $backupId): bool
+    {
+        $file = $this->resolveBackupFile($storyId, $episodeId, $backupId);
+        if ($file === null) {
+            return false;
+        }
+
+        return unlink($file);
+    }
+
+    /**
+     * @param  array<int, string>  $backupIds
+     * @return array{deleted: array<int, string>, missing: array<int, string>}
+     */
+    public function deleteEpisodeBackups(string $storyId, string $episodeId, array $backupIds): array
+    {
+        $deleted = [];
+        $missing = [];
+
+        foreach ($backupIds as $backupId) {
+            if (! is_string($backupId) || $backupId === '') {
+                continue;
+            }
+
+            if ($this->deleteEpisodeBackup($storyId, $episodeId, $backupId)) {
+                $deleted[] = $this->sanitizeBackupId($backupId) ?? $backupId;
+            } else {
+                $missing[] = $backupId;
+            }
+        }
+
+        return [
+            'deleted' => $deleted,
+            'missing' => $missing,
+        ];
+    }
+
+    public function sanitizeBackupId(string $backupId): ?string
+    {
+        if ($backupId === '' || $backupId !== basename($backupId)) {
+            return null;
+        }
+
+        if (str_contains($backupId, '..') || str_contains($backupId, '/') || str_contains($backupId, '\\')) {
+            return null;
+        }
+
+        if (! preg_match('/^[A-Za-z0-9._-]+\.bak$/', $backupId)) {
+            return null;
+        }
+
+        return $backupId;
+    }
+
+    /**
+     * @return array{story_dir: string, file_path: string, backup_dir: string}|null
+     */
+    private function resolveEpisodeBackupPaths(string $storyId, string $episodeId): ?array
+    {
+        $storyDir = $this->findStoryDirectory($storyId);
+        if ($storyDir === null) {
+            return null;
+        }
+
+        $episode = $this->findEpisode($storyDir, $episodeId);
+        if ($episode === null) {
+            return null;
+        }
+
+        return [
+            'story_dir' => $storyDir,
+            'file_path' => $episode['file_path'],
+            'backup_dir' => dirname($episode['file_path']) . DIRECTORY_SEPARATOR . '_backups',
+        ];
+    }
+
+    private function resolveBackupFile(string $storyId, string $episodeId, string $backupId): ?string
+    {
+        $safeId = $this->sanitizeBackupId($backupId);
+        if ($safeId === null) {
+            return null;
+        }
+
+        $paths = $this->resolveEpisodeBackupPaths($storyId, $episodeId);
+        if ($paths === null) {
+            return null;
+        }
+
+        $file = $paths['backup_dir'] . DIRECTORY_SEPARATOR . $safeId;
+        $realBackupDir = realpath($paths['backup_dir']);
+        $realFile = realpath($file);
+
+        if ($realBackupDir === false || $realFile === false) {
+            return null;
+        }
+
+        $normalizedDir = rtrim(str_replace('\\', '/', $realBackupDir), '/');
+        $normalizedFile = str_replace('\\', '/', $realFile);
+        if (! str_starts_with($normalizedFile, $normalizedDir . '/')) {
+            return null;
+        }
+
+        if (! is_file($realFile)) {
+            return null;
+        }
+
+        return $realFile;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $parsed
+     * @return array{
+     *   id: string,
+     *   filename: string,
+     *   created_at: string,
+     *   size_bytes: int,
+     *   summary: array{title_persian: string|null, scene_count: int, dialogue_line_count: int}
+     * }
+     */
+    private function buildBackupListItem(string $file, string $id, ?array $parsed = null): array
+    {
+        if ($parsed === null) {
+            $raw = file_get_contents($file);
+            $parsed = is_string($raw) ? $this->markdownService->parse($raw) : [];
+        }
+
+        $mtime = filemtime($file) ?: time();
+
+        return [
+            'id' => $id,
+            'filename' => $id,
+            'created_at' => date('c', $mtime),
+            'size_bytes' => (int) filesize($file),
+            'summary' => $this->summarizeParsedEpisode(is_array($parsed) ? $parsed : []),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     * @return array{title_persian: string|null, scene_count: int, dialogue_line_count: int}
+     */
+    private function summarizeParsedEpisode(array $parsed): array
+    {
+        $dialogueCount = 0;
+        foreach ($parsed['scenes'] ?? [] as $scene) {
+            if (! is_array($scene)) {
+                continue;
+            }
+            $dialogueCount += count($scene['dialogue_lines'] ?? []);
+        }
+
+        return [
+            'title_persian' => isset($parsed['metadata']['title_persian'])
+                ? (string) $parsed['metadata']['title_persian']
+                : null,
+            'scene_count' => count($parsed['scenes'] ?? []),
+            'dialogue_line_count' => $dialogueCount,
+        ];
+    }
+
     private function createBackup(string $filePath): string
     {
         $dir = dirname($filePath);

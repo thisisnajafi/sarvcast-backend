@@ -311,22 +311,7 @@ class StoryMarkdownService
 
         $dialogueBody = trim(preg_replace('/^---+$/m', '', $dialogueBody) ?? $dialogueBody);
 
-        $dialogueLines = [];
-        $rawDialogue = [];
-
-        foreach (preg_split('/\n+/', $dialogueBody) as $line) {
-            $line = trim($line);
-            if ($line === '' || $line === '---') {
-                continue;
-            }
-
-            $parsedLine = $this->parseDialogueLine($line);
-            if ($parsedLine !== null) {
-                $dialogueLines[] = $parsedLine;
-            } else {
-                $rawDialogue[] = $line;
-            }
-        }
+        [$dialogueLines, $rawDialogue] = $this->extractDialogueLines($dialogueBody);
 
         $scene = [
             'scene_number' => $sceneNumber,
@@ -336,47 +321,97 @@ class StoryMarkdownService
         ];
 
         if ($rawDialogue !== []) {
-            $scene['raw_unparsed'] = implode("\n", $rawDialogue);
+            $scene['raw_unparsed'] = implode("\n\n", $rawDialogue);
         }
 
         return $scene;
     }
 
+    /**
+     * Extract dialogue lines, including multiline quoted text.
+     *
+     * @return array{0: array<int, array{speaker: string, emotion_tag: string|null, text: string}>, 1: array<int, string>}
+     */
+    private function extractDialogueLines(string $dialogueBody): array
+    {
+        $dialogueLines = [];
+        $rawDialogue = [];
+
+        if (trim($dialogueBody) === '') {
+            return [$dialogueLines, $rawDialogue];
+        }
+
+        // Split on lines that begin a new **Speaker** marker so multiline quotes stay intact.
+        $blocks = preg_split('/(?=^\*\*)/mu', $dialogueBody, -1, PREG_SPLIT_NO_EMPTY);
+        if ($blocks === false) {
+            $blocks = [$dialogueBody];
+        }
+
+        foreach ($blocks as $block) {
+            $block = trim($block);
+            if ($block === '' || $block === '---') {
+                continue;
+            }
+
+            $block = trim(preg_replace('/^---+$/m', '', $block) ?? $block);
+            if ($block === '') {
+                continue;
+            }
+
+            $parsedLine = $this->parseDialogueLine($block);
+            if ($parsedLine !== null) {
+                $dialogueLines[] = $parsedLine;
+            } else {
+                $rawDialogue[] = $block;
+            }
+        }
+
+        return [$dialogueLines, $rawDialogue];
+    }
+
     private function parseDialogueLine(string $line): ?array
     {
-        if (preg_match('/^\*\*' . preg_quote(self::NARRATOR, '/') . '\*\*\s*\(([^)]+)\)\s*:\s*[«"](.+)[»"]\s*$/u', $line, $matches)) {
+        // /s lets quoted dialogue span multiple lines (poetry, long narration).
+        if (preg_match('/^\*\*' . preg_quote(self::NARRATOR, '/') . '\*\*\s*\(([^)]+)\)\s*:\s*[«"](.+)[»"]\s*$/su', $line, $matches)) {
             return [
                 'speaker' => self::NARRATOR,
                 'emotion_tag' => trim($matches[1]),
-                'text' => trim($matches[2]),
+                'text' => $this->normalizeDialogueText($matches[2]),
             ];
         }
 
-        if (preg_match('/^\*\*' . preg_quote(self::NARRATOR, '/') . '\*\*\s*:\s*[«"](.+)[»"]\s*$/u', $line, $matches)) {
+        if (preg_match('/^\*\*' . preg_quote(self::NARRATOR, '/') . '\*\*\s*:\s*[«"](.+)[»"]\s*$/su', $line, $matches)) {
             return [
                 'speaker' => self::NARRATOR,
                 'emotion_tag' => null,
-                'text' => trim($matches[1]),
+                'text' => $this->normalizeDialogueText($matches[1]),
             ];
         }
 
-        if (preg_match('/^\*\*(.+?)\*\*\s*\(([^)]+)\)\s*:\s*[«"](.+)[»"]\s*$/u', $line, $matches)) {
+        if (preg_match('/^\*\*(.+?)\*\*\s*\(([^)]+)\)\s*:\s*[«"](.+)[»"]\s*$/su', $line, $matches)) {
             return [
                 'speaker' => trim($matches[1]),
                 'emotion_tag' => trim($matches[2]),
-                'text' => trim($matches[3]),
+                'text' => $this->normalizeDialogueText($matches[3]),
             ];
         }
 
-        if (preg_match('/^\*\*(.+?)\*\*\s*:\s*[«"](.+)[»"]\s*$/u', $line, $matches)) {
+        if (preg_match('/^\*\*(.+?)\*\*\s*:\s*[«"](.+)[»"]\s*$/su', $line, $matches)) {
             return [
                 'speaker' => trim($matches[1]),
                 'emotion_tag' => null,
-                'text' => trim($matches[2]),
+                'text' => $this->normalizeDialogueText($matches[2]),
             ];
         }
 
         return null;
+    }
+
+    private function normalizeDialogueText(string $text): string
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+
+        return trim($text);
     }
 
     private function parseClosingSection(string $content, array &$result): void
