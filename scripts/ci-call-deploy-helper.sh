@@ -8,14 +8,12 @@ QUERY="${3:?query string required}"
 LABEL="${4:?label required}"
 MAX_TIME="${5:-300}"
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CURL_SITE="${ROOT}/scripts/curl-site.sh"
-
 URL="${SITE_URL}/_deploy_helper.php?token=${DEPLOY_TOKEN}&${QUERY}"
 
 echo "::group::${LABEL}"
 set +e
-RESPONSE=$("${CURL_SITE}" -sS -w "\n%{http_code}" "${URL}" --max-time "${MAX_TIME}")
+# Hosting presents a self-signed cert; skip verify for deploy helper HTTPS.
+RESPONSE=$(curl -k -sS -w "\n%{http_code}" "${URL}" --max-time "${MAX_TIME}" --connect-timeout 30)
 CURL_EXIT=$?
 set -e
 
