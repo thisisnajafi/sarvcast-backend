@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Upload deploy bundle via FTPS.
-# Uploads each file in its own lftp session with resume + retries so a flaky
-# connection does not restart the entire bundle from scratch.
+# Upload deploy bundle via FTPS (lftp primary, curl FTPS fallback).
+# Each file is uploaded in its own short session with resume + limited retries.
 FTP_SERVER="${FTP_SERVER:?}"
 FTP_USERNAME="${FTP_USERNAME:?}"
 FTP_PASSWORD="${FTP_PASSWORD:?}"
 SERVER_DIR="${FTP_SERVER_DIR:-/}"
 UPLOAD_VENDOR="${UPLOAD_VENDOR:-false}"
-PER_FILE_ATTEMPTS="${FTP_PER_FILE_ATTEMPTS:-6}"
+PER_FILE_ATTEMPTS="${FTP_PER_FILE_ATTEMPTS:-3}"
 OPEN_URL="${FTP_OPEN_URL:-ftps://${FTP_SERVER}}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -47,26 +46,22 @@ fi
 echo "  extract-deploy.php=$(human_size "${PUBLIC_DIR}/extract-deploy.php")"
 echo "  _deploy_helper.php=$(human_size "${PUBLIC_DIR}/_deploy_helper.php")"
 
+# Keep settings compatible with Ubuntu/GitHub Actions lftp builds.
+# Do not use unsupported vars like net:idle-timeout (breaks the whole session).
 lftp_settings() {
   cat <<'EOF'
 set ftp:passive-mode true;
 set ftp:ssl-allow true;
 set ftp:ssl-force true;
 set ftp:ssl-protect-data true;
-set ftp:ssl-protect-list true;
 set ftp:prefer-epsv false;
-set ftp:use-feat true;
 set ssl:verify-certificate no;
 set ssl:check-hostname no;
-set net:timeout 300;
-set net:idle-timeout 300;
-set net:max-retries 8;
-set net:persist-retries 8;
+set net:timeout 180;
+set net:max-retries 3;
 set net:reconnect-interval-base 5;
-set net:reconnect-interval-multiplier 1.5;
-set net:reconnect-interval-max 60;
+set net:reconnect-interval-multiplier 1;
 set xfer:clobber on;
-set xfer:auto-rename no;
 set cmd:fail-exit yes;
 EOF
 }
@@ -79,8 +74,9 @@ upload_with_lftp() {
   lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${OPEN_URL}" -e "$(
     lftp_settings
     echo "cd ${SERVER_DIR};"
-    echo "cd ${remote_dir};"
-    # -c resumes an interrupted transfer when the server supports REST.
+    if [[ "${remote_dir}" != "." ]]; then
+      echo "cd ${remote_dir};"
+    fi
     echo "put -c \"${local_file}\" -o \"${remote_name}\";"
     echo "bye;"
   )"
@@ -98,13 +94,15 @@ upload_with_curl() {
     remote_path="${remote_dir%/}/${remote_name}"
   fi
 
+  # Hosting FTPS often uses a self-signed cert — skip verify for deploy uploads.
   curl --silent --show-error --fail \
+    --insecure \
     --ssl-reqd \
     --ftp-pasv \
     --connect-timeout 60 \
     --max-time 1800 \
-    --retry 5 \
-    --retry-delay 10 \
+    --retry 2 \
+    --retry-delay 5 \
     --retry-all-errors \
     --user "${FTP_USERNAME}:${FTP_PASSWORD}" \
     --upload-file "${local_file}" \
@@ -121,7 +119,7 @@ upload_one() {
   echo "Uploading ${remote_name} ($(human_size "${local_file}")) → ${remote_dir%/}/${remote_name}"
 
   for attempt in $(seq 1 "${PER_FILE_ATTEMPTS}"); do
-    echo "  attempt ${attempt}/${PER_FILE_ATTEMPTS} (lftp resume)"
+    echo "  attempt ${attempt}/${PER_FILE_ATTEMPTS} (lftp)"
     if upload_with_lftp "${local_file}" "${remote_dir}" "${remote_name}"; then
       echo "  OK: ${remote_name} via lftp"
       return 0
@@ -138,7 +136,7 @@ upload_one() {
       return 1
     fi
 
-    sleep_s=$(( attempt * 20 ))
+    sleep_s=$(( attempt * 10 ))
     echo "  retrying ${remote_name} in ${sleep_s}s..."
     sleep "${sleep_s}"
   done
@@ -157,14 +155,12 @@ if [[ -f "${PUBLIC_DIR}/htaccess.deploy" ]]; then
   upload_one "${PUBLIC_DIR}/htaccess.deploy" "public" "htaccess.deploy"
 fi
 
-# Application bundle next.
 upload_one "${UPLOAD_DIR}/deploy.zip" "." "deploy.zip"
 
 if [[ -f "${UPLOAD_DIR}/htaccess.deploy" ]]; then
   upload_one "${UPLOAD_DIR}/htaccess.deploy" "." "htaccess.deploy"
 fi
 
-# Vendor last (largest optional payload).
 if [[ "${UPLOAD_VENDOR}" == "true" ]]; then
   require_file "${UPLOAD_DIR}/vendor.zip"
   upload_one "${UPLOAD_DIR}/vendor.zip" "." "vendor.zip"

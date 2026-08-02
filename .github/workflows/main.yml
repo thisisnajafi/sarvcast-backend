@@ -217,13 +217,13 @@ jobs:
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
           SITE_URL: ${{ env.SITE_URL }}
           UPLOAD_VENDOR: ${{ steps.plan.outputs.run_composer }}
-          FTP_PER_FILE_ATTEMPTS: "6"
+          FTP_PER_FILE_ATTEMPTS: "3"
         run: |
           set -euo pipefail
           bash scripts/ftp-upload-deploy.sh
 
           echo "Extracting deploy.zip on server..."
-          EXTRACT_OUT=$(curl -fsS --max-time 900 \
+          EXTRACT_OUT=$(bash scripts/curl-site.sh -fsS --max-time 900 \
             "${SITE_URL}/extract-deploy.php?token=${DEPLOY_EXTRACT_TOKEN}")
           echo "${EXTRACT_OUT}"
 
@@ -299,7 +299,7 @@ jobs:
         if: steps.plan.outputs.run_env == 'true' || steps.plan.outputs.run_migrate == 'true'
         run: |
           set -euo pipefail
-          DB_JSON=$(curl -sS --max-time 60 \
+          DB_JSON=$(bash scripts/curl-site.sh -sS --max-time 60 \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=db_probe")
           echo "$DB_JSON" | jq '.' || true
           if ! echo "$DB_JSON" | jq -e '.db_connect == "ok"' >/dev/null 2>&1; then
@@ -385,7 +385,7 @@ jobs:
           set -euo pipefail
 
           echo "Checking web PHP extensions..."
-          EXT_JSON=$(curl -sS --max-time 60 \
+          EXT_JSON=$(bash scripts/curl-site.sh -sS --max-time 60 \
             "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=php_extensions")
           echo "$EXT_JSON" | jq -r '.checks | to_entries[] | "  \(.key): \(.value)"' || true
 
@@ -393,7 +393,7 @@ jobs:
             echo "::warning::Web PHP still missing PDO — ensure .htaccess uses application/x-httpd-alt-php82 handler"
             echo "Waiting 90s for PHP config reload..."
             sleep 90
-            EXT_JSON=$(curl -sS --max-time 60 \
+            EXT_JSON=$(bash scripts/curl-site.sh -sS --max-time 60 \
               "${{ env.SITE_URL }}/_deploy_helper.php?token=${{ env.DEPLOY_TOKEN }}&only=php_extensions")
             echo "$EXT_JSON" | jq -r '.checks | to_entries[] | "  \(.key): \(.value)"' || true
           fi
@@ -402,7 +402,7 @@ jobs:
             echo "Smoke check attempt ${attempt}/3"
             failed=0
             for path in "/" "/api/v1/health"; do
-              code=$(curl -sS -o /tmp/manji-body.txt -w "%{http_code}" \
+              code=$(bash scripts/curl-site.sh -sS -o /tmp/manji-body.txt -w "%{http_code}" \
                 "${{ env.SITE_URL }}${path}" --max-time 60)
               echo "${{ env.SITE_URL }}${path} → HTTP ${code}"
               if [[ "${path}" == "/" && "${code}" == "403" ]]; then
