@@ -22,10 +22,10 @@ name: Deploy Laravel Backend via FTP
 # Deploy is additive only: migrate --force (never fresh/wipe), storage and .env are
 # excluded from deploy.zip and protected during server-side extract.
 
-# Prevent overlapping deploys; a new push cancels a slow in-progress upload.
+# Queue deploys instead of canceling mid-FTP upload (large zips + retries).
 concurrency:
   group: manji-backend-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 
 env:
@@ -95,7 +95,7 @@ jobs:
     name: Deploy
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - name: Checkout code
@@ -268,12 +268,13 @@ jobs:
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
           SITE_URL: ${{ env.SITE_URL }}
           UPLOAD_VENDOR: ${{ steps.plan.outputs.run_composer }}
+          FTP_PER_FILE_ATTEMPTS: "6"
         run: |
           set -euo pipefail
           bash scripts/ftp-upload-deploy.sh
 
           echo "Extracting deploy.zip on server..."
-          EXTRACT_OUT=$(curl -fsS --max-time 600 \
+          EXTRACT_OUT=$(curl -fsS --max-time 900 \
             "${SITE_URL}/extract-deploy.php?token=${DEPLOY_EXTRACT_TOKEN}")
           echo "${EXTRACT_OUT}"
 
