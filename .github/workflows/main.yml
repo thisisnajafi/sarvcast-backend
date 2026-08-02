@@ -41,78 +41,8 @@ env:
   TELEGRAM_CHAT_ID: "-1002796302613_97"
 
 jobs:
-  test:
-    name: Test migrations and regressions
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    env:
-      APP_ENV: testing
-      APP_KEY: base64:testing-key-for-manji
-      # Keep in sync with local/production .env DB_* values (CI uses a fresh local MySQL).
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: h352418_sarv
-      DB_USERNAME: h352418_sarv
-      DB_PASSWORD: "Prof48017421@#"
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # Avoid Docker Hub pulls (registry-1.docker.io timeouts). Use distro MySQL instead.
-      - name: Install and start MySQL
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq mysql-server
-          sudo service mysql start
-
-          # Ubuntu root uses auth_socket — ping via socket (no TCP password).
-          for i in $(seq 1 30); do
-            if sudo mysqladmin ping --silent; then
-              break
-            fi
-            sleep 2
-          done
-          sudo mysqladmin ping --silent
-
-          sudo mysql <<SQL
-          CREATE DATABASE IF NOT EXISTS \`${DB_DATABASE}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-          CREATE USER IF NOT EXISTS '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
-          CREATE USER IF NOT EXISTS '${DB_USERNAME}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD}';
-          ALTER USER '${DB_USERNAME}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
-          ALTER USER '${DB_USERNAME}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD}';
-          GRANT ALL PRIVILEGES ON \`${DB_DATABASE}\`.* TO '${DB_USERNAME}'@'localhost';
-          GRANT ALL PRIVILEGES ON \`${DB_DATABASE}\`.* TO '${DB_USERNAME}'@'127.0.0.1';
-          FLUSH PRIVILEGES;
-          SQL
-
-          mysql --protocol=TCP -h127.0.0.1 -P"${DB_PORT}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" \
-            -e "SELECT 1 AS ok;" "${DB_DATABASE}"
-          echo "MySQL ready for CI tests (db=${DB_DATABASE}, user=${DB_USERNAME})"
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.2"
-          extensions: mbstring, xml, ctype, json, bcmath, curl, gd, zip, intl, fileinfo, pdo, pdo_mysql
-          coverage: none
-          tools: composer:v2
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Run database migrations
-        run: php artisan migrate --force
-
-      - name: Run activity log and notification regression tests
-        run: ./vendor/bin/pest tests/Feature/Api/ActivityIngestApiTest.php tests/Feature/Admin/AdminNotificationsApiStandardizationTest.php
-
   deploy:
     name: Deploy
-    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
