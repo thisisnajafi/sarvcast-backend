@@ -22,6 +22,8 @@ class SmsAudienceBuilder
 
     public const TYPE_MANUAL_PHONES = 'manual_phones';
 
+    public const TYPE_PROFILE_INCOMPLETE = 'profile_incomplete';
+
     /** @var array<int, string> */
     public const VALID_TYPES = [
         self::TYPE_ALL,
@@ -31,6 +33,7 @@ class SmsAudienceBuilder
         self::TYPE_RBAC_ROLE,
         self::TYPE_SPECIFIC_USERS,
         self::TYPE_MANUAL_PHONES,
+        self::TYPE_PROFILE_INCOMPLETE,
     ];
 
     /**
@@ -63,9 +66,17 @@ class SmsAudienceBuilder
                     $roleIds = $filters['role_ids'] ?? $filters['rbac_role_ids'] ?? [];
                     $q->whereIn('roles.id', (array) $roleIds);
                 }),
-            self::TYPE_SPECIFIC_USERS => User::active()
+            self::TYPE_SPECIFIC_USERS => User::query()
                 ->whereNotNull('phone_number')
-                ->whereIn('id', (array) ($filters['user_ids'] ?? [])),
+                ->whereIn('id', (array) ($filters['user_ids'] ?? []))
+                ->whereIn('status', User::loginAllowedStatuses()),
+            self::TYPE_PROFILE_INCOMPLETE => User::query()
+                ->whereNotNull('phone_number')
+                ->where(function ($q) {
+                    $q->where('status', User::STATUS_PROFILE_COMPLETION_NEEDED)
+                        ->orWhere('onboarding_completed', false)
+                        ->orWhereNull('onboarding_completed');
+                }),
             default => throw new InvalidSmsAudienceException("Unsupported audience type: {$audienceType}"),
         };
 

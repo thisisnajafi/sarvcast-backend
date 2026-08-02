@@ -303,6 +303,49 @@ class AdminSmsTemplatesApiTest extends TestCase
         $this->assertNotContains($premiumUser->id, $freeIds);
     }
 
+    public function test_audience_builder_filters_profile_incomplete_users(): void
+    {
+        $incompleteByStatus = User::create([
+            'phone_number' => '09120000011',
+            'first_name' => 'Incomplete',
+            'last_name' => 'Status',
+            'role' => 'parent',
+            'status' => User::STATUS_PROFILE_COMPLETION_NEEDED,
+            'onboarding_completed' => false,
+            'password' => bcrypt('password'),
+        ]);
+
+        $incompleteByOnboarding = User::create([
+            'phone_number' => '09120000012',
+            'first_name' => 'Incomplete',
+            'last_name' => 'Onboarding',
+            'role' => 'parent',
+            'status' => 'active',
+            'onboarding_completed' => false,
+            'password' => bcrypt('password'),
+        ]);
+
+        $completeUser = User::create([
+            'phone_number' => '09120000013',
+            'first_name' => 'Complete',
+            'last_name' => 'User',
+            'role' => 'parent',
+            'status' => 'active',
+            'onboarding_completed' => true,
+            'password' => bcrypt('password'),
+        ]);
+
+        $builder = app(SmsAudienceBuilder::class);
+
+        $ids = $builder->buildQuery(SmsAudienceBuilder::TYPE_PROFILE_INCOMPLETE, ['exclude_admins' => false])
+            ->pluck('id')
+            ->all();
+
+        $this->assertContains($incompleteByStatus->id, $ids);
+        $this->assertContains($incompleteByOnboarding->id, $ids);
+        $this->assertNotContains($completeUser->id, $ids);
+    }
+
     public function test_template_service_validates_parameter_indices(): void
     {
         $this->expectException(\Illuminate\Validation\ValidationException::class);
