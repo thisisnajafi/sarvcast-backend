@@ -42,6 +42,7 @@ class StoryMarkdownService
         $this->parseCharactersSection($content, $result);
         $this->parseScenesSection($content, $result);
         $this->parseClosingSection($content, $result);
+        $this->recoverUnparsedSceneDialogue($result);
 
         return $result;
     }
@@ -367,6 +368,56 @@ class StoryMarkdownService
         }
 
         return [$dialogueLines, $rawDialogue];
+    }
+
+    /**
+     * Promote leftover scene raw_unparsed text into editable dialogue lines when possible.
+     * Prevents empty dialogue_lines (which fail validation) and missing poetry blocks in the editor.
+     */
+    private function recoverUnparsedSceneDialogue(array &$result): void
+    {
+        foreach ($result['scenes'] as $index => $scene) {
+            if (! is_array($scene)) {
+                continue;
+            }
+
+            $lines = $scene['dialogue_lines'] ?? [];
+            if (is_array($lines) && $lines !== []) {
+                continue;
+            }
+
+            $raw = trim((string) ($scene['raw_unparsed'] ?? ''));
+            if ($raw === '') {
+                continue;
+            }
+
+            [$recovered, $stillRaw] = $this->extractDialogueLines($raw);
+            if ($recovered !== []) {
+                $result['scenes'][$index]['dialogue_lines'] = $recovered;
+                if ($stillRaw === []) {
+                    unset($result['scenes'][$index]['raw_unparsed']);
+                } else {
+                    $result['scenes'][$index]['raw_unparsed'] = implode("\n\n", $stillRaw);
+                }
+                continue;
+            }
+
+            $text = $raw;
+            if (preg_match('/^\*\*[^*]+\*\*\s*(?:\([^)]*\))?\s*:\s*[«"]?([\s\S]*?)[»"]?\s*$/u', $raw, $matches)) {
+                $text = $this->normalizeDialogueText($matches[1]);
+            }
+
+            if ($text === '') {
+                continue;
+            }
+
+            $result['scenes'][$index]['dialogue_lines'] = [[
+                'speaker' => self::NARRATOR,
+                'emotion_tag' => null,
+                'text' => $text,
+            ]];
+            unset($result['scenes'][$index]['raw_unparsed']);
+        }
     }
 
     private function parseDialogueLine(string $line): ?array

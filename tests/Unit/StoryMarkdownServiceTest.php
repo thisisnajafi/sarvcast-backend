@@ -157,6 +157,30 @@ MD;
         );
     }
 
+    public function test_recovers_raw_unparsed_multiline_into_dialogue_lines(): void
+    {
+        // Simulate legacy parse leftover: empty dialogue_lines + raw_unparsed poetry block.
+        $service = new StoryMarkdownService();
+        $ref = new \ReflectionClass($service);
+        $method = $ref->getMethod('recoverUnparsedSceneDialogue');
+        $method->setAccessible(true);
+
+        $episode = [
+            'scenes' => [[
+                'title' => 'یادآوری',
+                'environment_description' => 'آبادی',
+                'dialogue_lines' => [],
+                'raw_unparsed' => "**راوی**: «خط اول\n\nپسر بد مر او را یکی خوب‌روی\n\nکیومرث را دل بدو زنده بود»",
+            ]],
+        ];
+
+        $method->invokeArgs($service, [&$episode]);
+
+        $this->assertCount(1, $episode['scenes'][0]['dialogue_lines']);
+        $this->assertStringContainsString('پسر بد مر', $episode['scenes'][0]['dialogue_lines'][0]['text']);
+        $this->assertArrayNotHasKey('raw_unparsed', $episode['scenes'][0]);
+    }
+
     private function persian(int $n): string
     {
         return strtr((string) $n, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
