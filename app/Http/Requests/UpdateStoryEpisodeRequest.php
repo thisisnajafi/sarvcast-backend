@@ -193,10 +193,19 @@ class UpdateStoryEpisodeRequest extends FormRequest
 
     protected function failedValidation(Validator $validator): void
     {
+        $bag = $validator->errors();
+        $messages = $bag->all();
+
+        $summary = match (true) {
+            $messages === [] => 'لطفاً خطاهای فرم را برطرف کنید.',
+            count($messages) === 1 => $messages[0],
+            default => 'لطفاً این موارد را اصلاح کنید: '.implode(' · ', array_slice($messages, 0, 8)),
+        };
+
         throw new HttpResponseException(response()->json([
             'success' => false,
-            'message' => 'اطلاعات وارد شده معتبر نیست.',
-            'errors' => $validator->errors(),
+            'message' => $summary,
+            'errors' => $bag->toArray(),
         ], 422));
     }
 }
