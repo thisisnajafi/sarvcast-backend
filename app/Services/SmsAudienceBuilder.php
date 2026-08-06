@@ -10,6 +10,8 @@ class SmsAudienceBuilder
 {
     public const TYPE_ALL = 'all';
 
+    public const TYPE_INACTIVE = 'inactive';
+
     public const TYPE_PREMIUM = 'premium';
 
     public const TYPE_NON_PREMIUM = 'non_premium';
@@ -27,6 +29,7 @@ class SmsAudienceBuilder
     /** @var array<int, string> */
     public const VALID_TYPES = [
         self::TYPE_ALL,
+        self::TYPE_INACTIVE,
         self::TYPE_PREMIUM,
         self::TYPE_NON_PREMIUM,
         self::TYPE_ROLE_COLUMN,
@@ -51,6 +54,9 @@ class SmsAudienceBuilder
 
         $query = match ($audienceType) {
             self::TYPE_ALL => User::active()->whereNotNull('phone_number'),
+            self::TYPE_INACTIVE => User::query()
+                ->where('status', User::STATUS_INACTIVE)
+                ->whereNotNull('phone_number'),
             self::TYPE_PREMIUM => User::active()
                 ->whereNotNull('phone_number')
                 ->whereHas('subscriptions', fn ($q) => $q->active()),

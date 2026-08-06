@@ -530,8 +530,10 @@ Follow existing `AdminApiResponse::success()` pattern used across admin controll
 | Type | Label (FA) | Query logic |
 |------|------------|-------------|
 | `all` | همه کاربران فعال | `User::active()->whereNotNull('phone_number')` |
+| `inactive` | کاربران غیرفعال | `status = inactive` and phone present |
 | `premium` | فقط اعضای پریمیوم | Active subscription (`status=active`, `end_date > now()`) |
 | `non_premium` | بدون اشتراک فعال | Inverse of premium |
+| `profile_incomplete` | پروفایل ناقص | `profile_completion_needed` or incomplete onboarding |
 | `role_column` | نقش کاربری (ستون) | `users.role IN (...)` — parent, child, basic, voice_actor, etc. |
 | `rbac_role` | نقش پنل مدیریت | `whereHas('roles', ...)` pivot |
 | `specific_users` | کاربران انتخابی | `whereIn('id', user_ids)` |

@@ -303,6 +303,36 @@ class AdminSmsTemplatesApiTest extends TestCase
         $this->assertNotContains($premiumUser->id, $freeIds);
     }
 
+    public function test_audience_builder_filters_inactive_users(): void
+    {
+        $inactiveUser = User::create([
+            'phone_number' => '09120000021',
+            'first_name' => 'Inactive',
+            'last_name' => 'User',
+            'role' => 'parent',
+            'status' => User::STATUS_INACTIVE,
+            'password' => bcrypt('password'),
+        ]);
+
+        $activeUser = User::create([
+            'phone_number' => '09120000022',
+            'first_name' => 'Active',
+            'last_name' => 'User',
+            'role' => 'parent',
+            'status' => User::STATUS_ACTIVE,
+            'password' => bcrypt('password'),
+        ]);
+
+        $builder = app(SmsAudienceBuilder::class);
+
+        $ids = $builder->buildQuery(SmsAudienceBuilder::TYPE_INACTIVE, ['exclude_admins' => false])
+            ->pluck('id')
+            ->all();
+
+        $this->assertContains($inactiveUser->id, $ids);
+        $this->assertNotContains($activeUser->id, $ids);
+    }
+
     public function test_audience_builder_filters_profile_incomplete_users(): void
     {
         $incompleteByStatus = User::create([
