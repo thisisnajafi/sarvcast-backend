@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Upload deploy bundle via FTPS.
+# Upload deploy bundle via plain FTP (no TLS).
 # Strategy: small helper PHP files first, then zips with resume (lftp put -c),
-# curl FTPS fallback per file. Avoids one giant brittle session.
+# curl FTP fallback per file.
 FTP_SERVER="${FTP_SERVER:?}"
 FTP_USERNAME="${FTP_USERNAME:?}"
 FTP_PASSWORD="${FTP_PASSWORD:?}"
 SERVER_DIR="${FTP_SERVER_DIR:-/}"
 UPLOAD_VENDOR="${UPLOAD_VENDOR:-false}"
 PER_FILE_ATTEMPTS="${FTP_PER_FILE_ATTEMPTS:-4}"
-OPEN_URL="${FTP_OPEN_URL:-ftps://${FTP_SERVER}}"
+OPEN_URL="${FTP_OPEN_URL:-ftp://${FTP_SERVER}}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 UPLOAD_DIR="${ROOT}/deploy-upload"
@@ -47,16 +47,13 @@ fi
 echo "  extract-deploy.php=$(human_size "${PUBLIC_DIR}/extract-deploy.php")"
 echo "  _deploy_helper.php=$(human_size "${PUBLIC_DIR}/_deploy_helper.php")"
 
-# Compatible with Ubuntu Actions lftp (no net:idle-timeout).
+# Plain FTP — disable SSL negotiation (host FTPS was flaky / cert issues).
 lftp_settings() {
   cat <<'EOF'
 set ftp:passive-mode true;
-set ftp:ssl-allow true;
-set ftp:ssl-force true;
-set ftp:ssl-protect-data true;
+set ftp:ssl-allow false;
+set ftp:ssl-force false;
 set ftp:prefer-epsv false;
-set ssl:verify-certificate no;
-set ssl:check-hostname no;
 set net:timeout 300;
 set net:max-retries 5;
 set net:reconnect-interval-base 5;
@@ -96,8 +93,6 @@ upload_with_curl() {
   fi
 
   curl --silent --show-error --fail \
-    --insecure \
-    --ssl-reqd \
     --ftp-pasv \
     --continue-at - \
     --connect-timeout 60 \
@@ -120,13 +115,13 @@ upload_one() {
   echo "Uploading ${remote_name} ($(human_size "${local_file}")) → ${remote_dir%/}/${remote_name}"
 
   for attempt in $(seq 1 "${PER_FILE_ATTEMPTS}"); do
-    echo "  attempt ${attempt}/${PER_FILE_ATTEMPTS} (lftp resume)"
+    echo "  attempt ${attempt}/${PER_FILE_ATTEMPTS} (lftp FTP resume)"
     if upload_with_lftp "${local_file}" "${remote_dir}" "${remote_name}"; then
       echo "  OK: ${remote_name} via lftp"
       return 0
     fi
 
-    echo "  lftp failed; trying curl FTPS resume fallback..."
+    echo "  lftp failed; trying curl FTP resume fallback..."
     if upload_with_curl "${local_file}" "${remote_dir}" "${remote_name}"; then
       echo "  OK: ${remote_name} via curl"
       return 0
@@ -145,7 +140,7 @@ upload_one() {
   return 1
 }
 
-echo "Connecting to ${OPEN_URL} as ${FTP_USERNAME}"
+echo "Connecting to ${OPEN_URL} as ${FTP_USERNAME} (plain FTP)"
 echo "Upload vendor.zip: ${UPLOAD_VENDOR}"
 
 # Helpers first so extract works even if a later zip upload is flaky.

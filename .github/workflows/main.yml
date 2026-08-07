@@ -260,7 +260,7 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
-      - name: Deploy via FTPS (lftp)
+      - name: Deploy via FTP (lftp)
         env:
           FTP_SERVER: ${{ env.FTP_SERVER }}
           FTP_USERNAME: ${{ env.FTP_USERNAME }}
@@ -270,6 +270,7 @@ jobs:
           SITE_URL: ${{ env.SITE_URL }}
           UPLOAD_VENDOR: ${{ steps.plan.outputs.run_composer }}
           FTP_PER_FILE_ATTEMPTS: "4"
+          FTP_OPEN_URL: ftp://${{ env.FTP_SERVER }}
         run: |
           set -euo pipefail
           bash scripts/ftp-upload-deploy.sh
@@ -323,12 +324,10 @@ jobs:
         if: steps.plan.outputs.run_env == 'true'
         run: |
           set -euo pipefail
-          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "${{ env.FTP_SERVER }}" -e "
+          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "ftp://${{ env.FTP_SERVER }}" -e "
             set ftp:passive-mode true;
-            set ftp:ssl-allow true;
-            set ftp:ssl-force true;
-            set ssl:verify-certificate no;
-            set ssl:check-hostname no;
+            set ftp:ssl-allow false;
+            set ftp:ssl-force false;
             set cmd:fail-exit yes;
             lcd deploy-upload;
             cd /;
