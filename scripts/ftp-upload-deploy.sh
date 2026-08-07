@@ -2,8 +2,7 @@
 set -euo pipefail
 
 # Upload deploy bundle via plain FTP (no TLS).
-# Strategy: small helper PHP files first, then zips with resume (lftp put -c),
-# curl FTP fallback per file.
+# Prefer curl (reliable on this host). lftp is secondary with correct lcd/put paths.
 FTP_SERVER="${FTP_SERVER:?}"
 FTP_USERNAME="${FTP_USERNAME:?}"
 FTP_PASSWORD="${FTP_PASSWORD:?}"
@@ -47,37 +46,44 @@ fi
 echo "  extract-deploy.php=$(human_size "${PUBLIC_DIR}/extract-deploy.php")"
 echo "  _deploy_helper.php=$(human_size "${PUBLIC_DIR}/_deploy_helper.php")"
 
-# Plain FTP — disable SSL negotiation (host FTPS was flaky / cert issues).
-lftp_settings() {
-  cat <<'EOF'
+remote_path_for() {
+  local remote_dir="$1"
+  local remote_name="$2"
+  local base="${SERVER_DIR%/}"
+  [[ -z "${base}" || "${base}" == "/" ]] && base=""
+
+  if [[ "${remote_dir}" == "." ]]; then
+    echo "${base}/${remote_name}"
+  else
+    echo "${base}/${remote_dir%/}/${remote_name}"
+  fi | sed 's#//*#/#g; s#^/##'
+}
+
+# Delete remote file if present (clears corrupt partial uploads that cause FTP 451).
+delete_remote() {
+  local remote_dir="$1"
+  local remote_name="$2"
+  local remote_path
+  remote_path="$(remote_path_for "${remote_dir}" "${remote_name}")"
+
+  curl --silent --show-error \
+    --ftp-pasv \
+    --connect-timeout 30 \
+    --max-time 60 \
+    --user "${FTP_USERNAME}:${FTP_PASSWORD}" \
+    -Q "DELE ${remote_path}" \
+    "ftp://${FTP_SERVER}/" >/dev/null 2>&1 || true
+
+  lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${OPEN_URL}" <<EOF >/dev/null 2>&1 || true
 set ftp:passive-mode true;
 set ftp:ssl-allow false;
 set ftp:ssl-force false;
-set ftp:prefer-epsv false;
-set net:timeout 300;
-set net:max-retries 5;
-set net:reconnect-interval-base 5;
-set net:reconnect-interval-multiplier 1;
-set xfer:clobber on;
-set cmd:fail-exit yes;
+set cmd:fail-exit no;
+cd ${SERVER_DIR};
+$( [[ "${remote_dir}" != "." ]] && echo "cd ${remote_dir};" )
+rm -f ${remote_name};
+bye
 EOF
-}
-
-upload_with_lftp() {
-  local local_file="$1"
-  local remote_dir="$2"
-  local remote_name="$3"
-
-  lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${OPEN_URL}" -e "$(
-    lftp_settings
-    echo "cd ${SERVER_DIR};"
-    if [[ "${remote_dir}" != "." ]]; then
-      echo "cd ${remote_dir};"
-    fi
-    # -c resumes partial uploads after dropped connections.
-    echo "put -c \"${local_file}\" -o \"${remote_name}\";"
-    echo "bye;"
-  )"
 }
 
 upload_with_curl() {
@@ -85,24 +91,47 @@ upload_with_curl() {
   local remote_dir="$2"
   local remote_name="$3"
   local remote_path
+  remote_path="$(remote_path_for "${remote_dir}" "${remote_name}")"
 
-  if [[ "${remote_dir}" == "." ]]; then
-    remote_path="${remote_name}"
-  else
-    remote_path="${remote_dir%/}/${remote_name}"
-  fi
-
+  # Fresh full upload (no --continue-at). Partial resumes were causing 451 on this host.
   curl --silent --show-error --fail \
     --ftp-pasv \
-    --continue-at - \
     --connect-timeout 60 \
     --max-time 2400 \
-    --retry 3 \
-    --retry-delay 8 \
+    --retry 2 \
+    --retry-delay 5 \
     --retry-all-errors \
     --user "${FTP_USERNAME}:${FTP_PASSWORD}" \
     --upload-file "${local_file}" \
     "ftp://${FTP_SERVER}/${remote_path}"
+}
+
+upload_with_lftp() {
+  local local_file="$1"
+  local remote_dir="$2"
+  local remote_name="$3"
+  local local_dir local_base
+
+  local_dir="$(dirname "${local_file}")"
+  local_base="$(basename "${local_file}")"
+
+  # Heredoc + lcd avoids the broken quoted absolute-path put from -e "$(...)".
+  lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${OPEN_URL}" <<EOF
+set ftp:passive-mode true;
+set ftp:ssl-allow false;
+set ftp:ssl-force false;
+set ftp:prefer-epsv false;
+set net:timeout 300;
+set net:max-retries 3;
+set net:reconnect-interval-base 5;
+set xfer:clobber on;
+set cmd:fail-exit yes;
+cd ${SERVER_DIR};
+$( [[ "${remote_dir}" != "." ]] && echo "cd ${remote_dir};" )
+lcd ${local_dir};
+put -c ${local_base} -o ${remote_name};
+bye
+EOF
 }
 
 upload_one() {
@@ -112,18 +141,23 @@ upload_one() {
   local attempt
   local sleep_s
 
-  echo "Uploading ${remote_name} ($(human_size "${local_file}")) → ${remote_dir%/}/${remote_name}"
+  echo "Uploading ${remote_name} ($(human_size "${local_file}")) → $(remote_path_for "${remote_dir}" "${remote_name}")"
 
   for attempt in $(seq 1 "${PER_FILE_ATTEMPTS}"); do
-    echo "  attempt ${attempt}/${PER_FILE_ATTEMPTS} (lftp FTP resume)"
-    if upload_with_lftp "${local_file}" "${remote_dir}" "${remote_name}"; then
-      echo "  OK: ${remote_name} via lftp"
+    echo "  attempt ${attempt}/${PER_FILE_ATTEMPTS}"
+
+    # Clear leftover/partial remote file before each try (especially vendor.zip).
+    delete_remote "${remote_dir}" "${remote_name}"
+
+    echo "  curl FTP..."
+    if upload_with_curl "${local_file}" "${remote_dir}" "${remote_name}"; then
+      echo "  OK: ${remote_name} via curl"
       return 0
     fi
 
-    echo "  lftp failed; trying curl FTP resume fallback..."
-    if upload_with_curl "${local_file}" "${remote_dir}" "${remote_name}"; then
-      echo "  OK: ${remote_name} via curl"
+    echo "  curl failed; trying lftp..."
+    if upload_with_lftp "${local_file}" "${remote_dir}" "${remote_name}"; then
+      echo "  OK: ${remote_name} via lftp"
       return 0
     fi
 
@@ -143,7 +177,6 @@ upload_one() {
 echo "Connecting to ${OPEN_URL} as ${FTP_USERNAME} (plain FTP)"
 echo "Upload vendor.zip: ${UPLOAD_VENDOR}"
 
-# Helpers first so extract works even if a later zip upload is flaky.
 upload_one "${PUBLIC_DIR}/extract-deploy.php" "public" "extract-deploy.php"
 upload_one "${PUBLIC_DIR}/_deploy_helper.php" "public" "_deploy_helper.php"
 
