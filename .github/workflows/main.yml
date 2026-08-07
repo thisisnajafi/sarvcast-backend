@@ -269,6 +269,7 @@ jobs:
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
           SITE_URL: ${{ env.SITE_URL }}
           UPLOAD_VENDOR: ${{ steps.plan.outputs.run_composer }}
+          FTP_PER_FILE_ATTEMPTS: "4"
         run: |
           set -euo pipefail
           bash scripts/ftp-upload-deploy.sh

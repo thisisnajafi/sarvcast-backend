@@ -5,18 +5,27 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STAGING="$ROOT/deploy-staging"
 UPLOAD="$ROOT/deploy-upload"
 TOKEN="${DEPLOY_EXTRACT_TOKEN:-manji-ftp-deploy-x7k9m2}"
+# Soft/hard limits keep FTPS uploads reliable on shared hosting.
+MAX_DEPLOY_ZIP_MB="${MAX_DEPLOY_ZIP_MB:-60}"
 
 rm -rf "$STAGING" "$UPLOAD"
 mkdir -p "$STAGING" "$UPLOAD"
 
-echo "prepare-ftp-deploy: staging application files..."
+echo "prepare-ftp-deploy: staging application files (code-only; media stays on server)..."
 
+# Intentionally exclude large media and local-only artifacts. extract-deploy.php
+# does not delete missing public/audio|images, so production media is preserved.
 rsync -a \
   --exclude='.git/' \
   --exclude='.github/' \
+  --exclude='.cursor/' \
+  --exclude='.dart_tool/' \
+  --exclude='.idea/' \
+  --exclude='.vscode/' \
   --exclude='vendor/' \
   --exclude='node_modules/' \
   --exclude='tests/' \
+  --exclude='docs/' \
   --exclude='deploy-staging/' \
   --exclude='deploy-upload/' \
   --exclude='storage/' \
@@ -26,10 +35,32 @@ rsync -a \
   --exclude='vendor.zip' \
   --exclude='deploy.tar.gz' \
   --exclude='deploy.zip' \
-  --exclude='docs/' \
+  --exclude='*.zip' \
+  --exclude='sarvca_st' \
+  --exclude='error_log' \
+  --exclude='cgi-bin/' \
   --exclude='database/*.sqlite' \
   --exclude='database/*.sqlite-journal' \
+  --exclude='public/audio/' \
+  --exclude='public/images/' \
+  --exclude='public/storage/' \
+  --exclude='resources/views/admin.zip' \
+  --exclude='*.mp3' \
+  --exclude='*.mp4' \
+  --exclude='*.wav' \
+  --exclude='*.webm' \
+  --exclude='pubspec.yaml' \
+  --exclude='pubspec.lock' \
+  --exclude='analysis_options.yaml' \
+  --exclude='manji.iml' \
+  --exclude='.flutter-plugins-dependencies' \
+  --exclude='.ftp-deploy-sync-state.json' \
   "$ROOT/" "$STAGING/"
+
+# Drop root markdown/guides from the FTP bundle (not needed at runtime).
+find "$STAGING" -maxdepth 1 -type f \( -name '*.md' -o -name '*.txt' -o -name '*.ps1' -o -name '*.bat' \) -delete
+find "$STAGING" -type f -name 'test-*.php' -delete
+find "$STAGING" -type f -name '*_TEST_RESULTS.md' -delete 2>/dev/null || true
 
 FIREBASE_DEST="$STAGING/storage/app/firebase-service-account.json"
 BUNDLE_FIREBASE="${BUNDLE_FIREBASE:-false}"
@@ -121,4 +152,12 @@ if [ -f "$UPLOAD/vendor.zip" ]; then
 else
   echo "prepare-ftp-deploy: vendor.zip not included in upload bundle"
 fi
+
+if [ "$ZIP_MB" -gt "$MAX_DEPLOY_ZIP_MB" ]; then
+  echo "::error::deploy.zip is ${ZIP_MB}MB (limit ${MAX_DEPLOY_ZIP_MB}MB). Refusing oversized FTPS upload."
+  echo "Top paths in staging by size:"
+  du -h -d 2 "$STAGING" 2>/dev/null | sort -hr | head -n 30 || true
+  exit 1
+fi
+
 echo "prepare-ftp-deploy: ready in deploy-upload/"
