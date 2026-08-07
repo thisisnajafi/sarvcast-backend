@@ -75,7 +75,10 @@ class SmsAudienceBuilder
             self::TYPE_SPECIFIC_USERS => User::query()
                 ->whereNotNull('phone_number')
                 ->whereIn('id', (array) ($filters['user_ids'] ?? []))
-                ->whereIn('status', User::loginAllowedStatuses()),
+                ->whereIn('status', [
+                    ...User::loginAllowedStatuses(),
+                    User::STATUS_INACTIVE,
+                ]),
             self::TYPE_PROFILE_INCOMPLETE => User::query()
                 ->whereNotNull('phone_number')
                 ->where(function ($q) {
