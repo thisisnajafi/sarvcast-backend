@@ -101,6 +101,7 @@
                         <option value="inactive" {{ old('status', $user->status) == 'inactive' ? 'selected' : '' }}>غیرفعال</option>
                         <option value="suspended" {{ old('status', $user->status) == 'suspended' ? 'selected' : '' }}>معلق</option>
                         <option value="pending" {{ old('status', $user->status) == 'pending' ? 'selected' : '' }}>در انتظار</option>
+                        <option value="profile_completion_needed" {{ old('status', $user->status) == 'profile_completion_needed' ? 'selected' : '' }}>نیاز به تکمیل پروفایل</option>
                     </select>
                     @error('status')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
