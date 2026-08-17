@@ -19,14 +19,7 @@ class PublicVoiceActorController extends Controller
         $perPage = min(50, max(1, (int) $request->input('per_page', 12) ?: 12));
         $search = trim((string) $request->input('q', $request->input('search', '')));
 
-        $query = $this->resumes->talentDirectoryQuery()
-            ->orderByDesc(
-                \App\Models\UserResume::query()
-                    ->select('updated_at')
-                    ->whereColumn('user_resumes.user_id', 'users.id')
-                    ->limit(1)
-            )
-            ->orderBy('id');
+        $query = $this->resumes->talentDirectoryQuery()->inRandomOrder();
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -56,13 +49,7 @@ class PublicVoiceActorController extends Controller
     public function show(int $user): JsonResponse
     {
         $model = User::query()->with('resume')->find($user);
-        if (
-            ! $model
-            || $model->status !== User::STATUS_ACTIVE
-            || ! $this->resumes->canOwnResume($model)
-            || ! $model->resume
-            || ! $model->resume->is_public
-        ) {
+        if (! $model || ! $this->resumes->appearsInTalentDirectory($model)) {
             return response()->json([
                 'success' => false,
                 'message' => 'رزومه عمومی یافت نشد.',
@@ -71,12 +58,13 @@ class PublicVoiceActorController extends Controller
         }
 
         $works = $this->resumes->publishedWorksPayload($model);
+        $includeResume = (bool) ($model->resume?->is_public);
 
         return response()->json([
             'success' => true,
             'data' => array_merge(
                 [
-                    'user' => $this->resumes->publicUserFields($model, true),
+                    'user' => $this->resumes->publicUserFields($model, $includeResume),
                 ],
                 $works
             ),

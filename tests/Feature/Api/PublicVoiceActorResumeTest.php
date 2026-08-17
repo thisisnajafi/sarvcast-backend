@@ -15,13 +15,15 @@ class PublicVoiceActorResumeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_public_listing_omits_unpublished_and_non_directory_users(): void
+    public function test_public_listing_includes_voice_actors_without_published_resume(): void
     {
         $publicVa = User::factory()->voiceActor()->create(['first_name' => 'آوا']);
         UserResume::factory()->public()->create(['user_id' => $publicVa->id]);
 
         $draftVa = User::factory()->voiceActor()->create(['first_name' => 'پیش‌نویس']);
         UserResume::factory()->create(['user_id' => $draftVa->id, 'is_public' => false]);
+
+        $bareVa = User::factory()->voiceActor()->create(['first_name' => 'بدون‌رزومه']);
 
         $head = User::factory()->headWriter()->create(['first_name' => 'سرپرست']);
         UserResume::factory()->public()->create([
@@ -43,12 +45,17 @@ class PublicVoiceActorResumeTest extends TestCase
 
         $response = $this->getJson('/api/v1/public/voice-actors')->assertOk()->assertJsonPath('success', true);
         $ids = collect($response->json('data'))->pluck('id');
+        $draftCard = collect($response->json('data'))->firstWhere('id', $draftVa->id);
 
         $this->assertTrue($ids->contains($publicVa->id));
+        $this->assertTrue($ids->contains($draftVa->id));
+        $this->assertTrue($ids->contains($bareVa->id));
         $this->assertTrue($ids->contains($headListed->id));
-        $this->assertFalse($ids->contains($draftVa->id));
         $this->assertFalse($ids->contains($head->id));
         $this->assertFalse($ids->contains($inactive->id));
+        $this->assertNotNull($draftCard);
+        $this->assertNull($draftCard['headline']);
+        $this->assertSame([], $draftCard['specialties']);
         $this->assertStringNotContainsString('phone', strtolower(json_encode($response->json('data'))));
     }
 
@@ -74,12 +81,24 @@ class PublicVoiceActorResumeTest extends TestCase
         $this->assertArrayNotHasKey('phone_number', $response->json('data.user'));
     }
 
-    public function test_public_show_404_when_resume_not_public(): void
+    public function test_public_show_voice_actor_without_public_resume_hides_resume_body(): void
     {
-        $va = User::factory()->voiceActor()->create();
-        UserResume::factory()->create(['user_id' => $va->id, 'is_public' => false]);
+        $va = User::factory()->voiceActor()->create(['first_name' => 'صدا']);
+        UserResume::factory()->create([
+            'user_id' => $va->id,
+            'is_public' => false,
+            'headline' => 'مخفی',
+            'about' => 'نباید دیده شود',
+        ]);
 
-        $this->getJson('/api/v1/public/voice-actors/'.$va->id)->assertNotFound();
+        $response = $this->getJson('/api/v1/public/voice-actors/'.$va->id)
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.first_name', 'صدا')
+            ->assertJsonPath('data.user.resume', null)
+            ->assertJsonPath('data.user.headline', null);
+
+        $this->assertStringNotContainsString('نباید دیده شود', (string) json_encode($response->json()));
     }
 
     public function test_guest_cannot_put_me_resume(): void

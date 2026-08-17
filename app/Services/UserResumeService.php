@@ -41,17 +41,18 @@ class UserResumeService
             return false;
         }
 
-        $resume = $user->resume;
-        if (! $resume || ! $resume->is_public) {
-            return false;
-        }
-
         if ($user->role === User::ROLE_VOICE_ACTOR) {
             return true;
         }
 
-        if (in_array($user->role, [User::ROLE_HEAD_WRITER, User::ROLE_SUPER_ADMIN], true)) {
-            return (bool) $resume->show_in_talent_directory;
+        $resume = $user->resume;
+        if (
+            in_array($user->role, [User::ROLE_HEAD_WRITER, User::ROLE_SUPER_ADMIN], true)
+            && $resume
+            && $resume->is_public
+            && $resume->show_in_talent_directory
+        ) {
+            return true;
         }
 
         return false;
@@ -198,8 +199,13 @@ class UserResumeService
      */
     public function publicUserFields(User $user, bool $includeResume): array
     {
-        $headline = $user->resume?->headline;
-        $years = $user->resume?->years_of_experience;
+        $headline = null;
+        $years = null;
+        $publicResume = $user->resume && $user->resume->is_public ? $user->resume : null;
+        if ($includeResume && $publicResume) {
+            $headline = $publicResume->headline;
+            $years = $publicResume->years_of_experience;
+        }
 
         $payload = [
             'id' => $user->id,
@@ -210,15 +216,13 @@ class UserResumeService
             'bio' => $user->bio,
             'role' => $user->role,
             'role_label' => self::ROLE_LABELS[$user->role] ?? 'عضو تیم مانجی',
-            'headline' => $includeResume ? $headline : null,
-            'years_of_experience' => $includeResume ? $years : null,
+            'headline' => $headline,
+            'years_of_experience' => $years,
         ];
 
-        if ($includeResume && $user->resume) {
-            $payload['resume'] = $this->toPublicArray($user->resume);
-        } else {
-            $payload['resume'] = null;
-        }
+        $payload['resume'] = ($includeResume && $publicResume)
+            ? $this->toPublicArray($publicResume)
+            : null;
 
         return $payload;
     }
@@ -228,7 +232,7 @@ class UserResumeService
      */
     public function listingItem(User $user): array
     {
-        $resume = $user->resume;
+        $resume = $user->resume && $user->resume->is_public ? $user->resume : null;
         $specialties = array_slice($resume?->specialties ?? [], 0, 3);
         $bio = $user->bio ? mb_substr(trim($user->bio), 0, 160) : null;
 
@@ -299,14 +303,14 @@ class UserResumeService
     {
         return User::query()
             ->where('status', User::STATUS_ACTIVE)
-            ->whereHas('resume', function ($q) {
-                $q->where('is_public', true);
-            })
             ->where(function ($q) {
                 $q->where('role', User::ROLE_VOICE_ACTOR)
                     ->orWhere(function ($q2) {
                         $q2->whereIn('role', [User::ROLE_HEAD_WRITER, User::ROLE_SUPER_ADMIN])
-                            ->whereHas('resume', fn ($r) => $r->where('show_in_talent_directory', true));
+                            ->whereHas('resume', function ($r) {
+                                $r->where('is_public', true)
+                                    ->where('show_in_talent_directory', true);
+                            });
                     });
             })
             ->with('resume');
