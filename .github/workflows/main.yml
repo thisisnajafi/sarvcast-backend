@@ -31,8 +31,9 @@ concurrency:
 
 env:
   # true  = skip vendor.zip / .env / migrate unless related files changed (fast code-only deploys)
-  # false = always rebuild + upload vendor.zip and run env/migrate/cache (can take 40+ minutes on FTP)
-  # Keep true: uploading vendor.zip on every push exhausted the 45-minute job budget and cancelled migrate verify.
+  # false = always rebuild + upload vendor.zip and run env/migrate (can take 40+ minutes on FTP)
+  # Keep true: uploading vendor.zip on every push exhausted the job budget and cancelled migrate.
+  # Config/route/view cache is always rebuilt after FTP, including lean deploys.
   LEAN_DEPLOY: "true"
   FTP_SERVER: "ftp.manjiapp.ir"
   FTP_USERNAME: "my@manjiapp.ir"
@@ -149,15 +150,13 @@ jobs:
           lean_deploy="${{ env.LEAN_DEPLOY }}"
 
           if [[ "$lean_deploy" == "false" ]]; then
-            echo "LEAN_DEPLOY=false — full deploy: vendor, env, cache clear, migrate, cache rebuild"
+            echo "LEAN_DEPLOY=false — full deploy: vendor, env, migrate, seed"
             echo "run_composer=true" >> "$GITHUB_OUTPUT"
             echo "run_env=true" >> "$GITHUB_OUTPUT"
-            echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
             echo "run_migrate=true" >> "$GITHUB_OUTPUT"
             echo "run_seed=true" >> "$GITHUB_OUTPUT"
-            echo "run_cache_rebuild=true" >> "$GITHUB_OUTPUT"
           else
-            echo "LEAN_DEPLOY=true — post-deploy steps depend on changed paths"
+            echo "LEAN_DEPLOY=true — vendor/env/migrate/seed depend on changed paths"
             force_full="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_full_deploy == 'true' }}"
 
             if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "$force_vendor" == "true" ]]; then
@@ -170,12 +169,6 @@ jobs:
               echo "run_env=true" >> "$GITHUB_OUTPUT"
             else
               echo "run_env=false" >> "$GITHUB_OUTPUT"
-            fi
-
-            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]] || [[ "${{ steps.changes.outputs.env }}" == "true" ]] || [[ "$force_vendor" == "true" ]] || [[ "$force_env" == "true" ]] || [[ "${{ steps.changes.outputs.seeders }}" == "true" ]]; then
-              echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "run_config_clear=false" >> "$GITHUB_OUTPUT"
             fi
 
             if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]]; then
@@ -191,13 +184,13 @@ jobs:
             else
               echo "run_seed=false" >> "$GITHUB_OUTPUT"
             fi
-
-            if [[ "$force_full" == "true" ]] || [[ "${{ steps.changes.outputs.config }}" == "true" ]] || [[ "${{ steps.changes.outputs.routes }}" == "true" ]] || [[ "${{ steps.changes.outputs.views }}" == "true" ]] || [[ "${{ steps.changes.outputs.migrations }}" == "true" ]] || [[ "${{ steps.changes.outputs.composer }}" == "true" ]]; then
-              echo "run_cache_rebuild=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "run_cache_rebuild=false" >> "$GITHUB_OUTPUT"
-            fi
           fi
+
+          # Always after FTP: drop stale bootstrap cache, then recache config + routes + views.
+          # Lean mode used to skip this unless config/routes/views changed, so new controllers
+          # (e.g. public/voice-actors) stayed hidden behind a previous route:cache.
+          echo "run_config_clear=true" >> "$GITHUB_OUTPUT"
+          echo "run_cache_rebuild=true" >> "$GITHUB_OUTPUT"
 
           echo "Deploy plan:"
           echo "  composer/vendor: $(grep run_composer= "$GITHUB_OUTPUT" | cut -d= -f2)"
