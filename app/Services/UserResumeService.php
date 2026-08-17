@@ -317,6 +317,17 @@ class UserResumeService
     }
 
     /**
+     * Public listing cards that have a stored profile photo (not a placeholder).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<User>  $query
+     */
+    public function constrainToProfilePhoto($query): void
+    {
+        $query->whereNotNull('profile_image_url')
+            ->where('profile_image_url', '!=', '');
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function emptySocialLinks(): array

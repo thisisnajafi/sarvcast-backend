@@ -59,6 +59,33 @@ class PublicVoiceActorResumeTest extends TestCase
         $this->assertStringNotContainsString('phone', strtolower(json_encode($response->json('data'))));
     }
 
+    public function test_public_listing_can_require_profile_photo(): void
+    {
+        $withPhoto = User::factory()->voiceActor()->create([
+            'first_name' => 'باعکس',
+            'profile_image_url' => 'voice-actors/ava.jpg',
+        ]);
+        $withoutPhoto = User::factory()->voiceActor()->create([
+            'first_name' => 'بی‌عکس',
+            'profile_image_url' => null,
+        ]);
+        $emptyPhoto = User::factory()->voiceActor()->create([
+            'first_name' => 'خالی',
+            'profile_image_url' => '',
+        ]);
+
+        $ids = collect(
+            $this->getJson('/api/v1/public/voice-actors?has_photo=1')
+                ->assertOk()
+                ->assertJsonPath('success', true)
+                ->json('data')
+        )->pluck('id');
+
+        $this->assertTrue($ids->contains($withPhoto->id));
+        $this->assertFalse($ids->contains($withoutPhoto->id));
+        $this->assertFalse($ids->contains($emptyPhoto->id));
+    }
+
     public function test_public_show_never_contains_phone_number(): void
     {
         $va = User::factory()->voiceActor()->create([

@@ -21,6 +21,10 @@ class PublicVoiceActorController extends Controller
 
         $query = $this->resumes->talentDirectoryQuery()->inRandomOrder();
 
+        if ($request->boolean('has_photo')) {
+            $this->resumes->constrainToProfilePhoto($query);
+        }
+
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', '%'.$search.'%')
