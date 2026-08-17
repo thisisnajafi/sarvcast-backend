@@ -890,6 +890,13 @@ class UserController extends Controller
             $payload['story_contributions'] = app(UserStoryContributionService::class)->summarizeForUser($user);
         }
 
+        if (app(\App\Services\UserResumeService::class)->canOwnResume($user)) {
+            $user->loadMissing('resume');
+            $payload['resume'] = $user->resume
+                ? app(\App\Services\UserResumeService::class)->toAdminArray($user->resume)
+                : null;
+        }
+
         return AdminApiResponse::success($payload);
     }
 
@@ -1338,7 +1345,7 @@ class UserController extends Controller
 
     private function userHasCreativeContributions(User $user): bool
     {
-        if ($user->role === User::ROLE_VOICE_ACTOR) {
+        if ($user->role === User::ROLE_VOICE_ACTOR || $user->isHeadWriter()) {
             return true;
         }
 

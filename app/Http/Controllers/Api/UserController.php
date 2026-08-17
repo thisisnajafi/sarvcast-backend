@@ -10,6 +10,7 @@ use App\Models\Story;
 use App\Models\User;
 use App\Models\TeamMember;
 use App\Models\ProfileView;
+use App\Services\UserResumeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -293,56 +294,19 @@ class UserController extends Controller
      */
     public function getUserStories(Request $request, int $userId)
     {
-        $user = User::findOrFail($userId);
-
-        // Get published stories as author
-        $storiesAsAuthor = Story::whereAuthor($userId)
-            ->published()
-            ->with(['category', 'characters.voiceActor'])
-            ->get();
-
-        // Get published stories as narrator
-        $storiesAsNarrator = Story::whereNarrator($userId)
-            ->published()
-            ->with(['category', 'author', 'characters.voiceActor'])
-            ->get();
-
-        // Get published stories as voice actor (through characters)
-        $storiesAsVoiceActor = Story::whereVoiceActor($userId)
-            ->published()
-            ->with(['category', 'author', 'narrator', 'characters.voiceActor'])
-            ->get();
-
-        // Calculate statistics
-        $authorCount = $storiesAsAuthor->count();
-        $narratorCount = $storiesAsNarrator->count();
-        $voiceActorCount = $storiesAsVoiceActor->count();
-
-        // Get profile view count
-        $viewCount = ProfileView::where('viewed_user_id', $userId)->count();
+        $user = User::query()->with('resume')->findOrFail($userId);
+        $resumes = app(UserResumeService::class);
+        $includeResume = (bool) ($user->resume?->is_public);
+        $works = $resumes->publishedWorksPayload($user);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name,
-                    'profile_image_url' => $user->profile_image_url,
-                    'background_photo_url' => $user->background_photo_url,
-                    'bio' => $user->bio,
-                    'role' => $user->role,
+            'data' => array_merge(
+                [
+                    'user' => $resumes->publicUserFields($user, $includeResume),
                 ],
-                'statistics' => [
-                    'author_count' => $authorCount,
-                    'narrator_count' => $narratorCount,
-                    'voice_actor_count' => $voiceActorCount,
-                    'view_count' => $viewCount,
-                ],
-                'stories_as_author' => $storiesAsAuthor,
-                'stories_as_narrator' => $storiesAsNarrator,
-                'stories_as_voice_actor' => $storiesAsVoiceActor,
-            ]
+                $works
+            ),
         ]);
     }
 
@@ -456,7 +420,7 @@ class UserController extends Controller
                 ]);
             }
 
-            $userColumns = ['id', 'first_name', 'last_name', 'phone_number', 'profile_image_url'];
+            $userColumns = ['id', 'first_name', 'last_name', 'profile_image_url'];
             if (Schema::hasColumn('users', 'bio')) {
                 $userColumns[] = 'bio';
             }

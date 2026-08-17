@@ -69,4 +69,13 @@ class UserFactory extends Factory
             'onboarding_completed' => true,
         ]);
     }
+
+    public function voiceActor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => User::ROLE_VOICE_ACTOR,
+            'status' => User::STATUS_ACTIVE,
+            'onboarding_completed' => true,
+        ]);
+    }
 }

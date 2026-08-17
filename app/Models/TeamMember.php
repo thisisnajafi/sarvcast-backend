@@ -53,7 +53,6 @@ class TeamMember extends Model
             'id' => $user->id,
             'first_name' => $user->first_name ?? '',
             'last_name' => $user->last_name ?? '',
-            'phone_number' => $user->phone_number,
             'profile_image_url' => $user->profile_image_url,
             'bio' => $user->bio,
             'role' => $this->display_title,

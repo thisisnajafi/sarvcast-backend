@@ -458,6 +458,7 @@ class VoiceActorController extends Controller
 
         $perPage = min(100, max(1, (int) $request->input('per_page', 20)));
         $voiceActors = $query
+            ->with('resume')
             ->withCount([
                 'characters as total_characters',
                 'storiesAsNarrator as total_stories_narrated',
@@ -513,6 +514,7 @@ class VoiceActorController extends Controller
             'characters.story:id,title,status',
             'storiesAsNarrator:id,title,status',
             'storiesAsAuthor:id,title,status',
+            'resume',
         ]);
 
         $contributions = app(UserStoryContributionService::class)->summarizeForUser($voiceActor);
@@ -732,6 +734,11 @@ class VoiceActorController extends Controller
             'total_stories_narrated' => $user->total_stories_narrated ?? null,
             'total_stories_authored' => $user->total_stories_authored ?? null,
             'profile_image_url' => $user->profile_image_url ?? null,
+            'background_photo_url' => $user->background_photo_url ?? null,
+            'bio' => $user->bio,
+            'resume' => $user->resume
+                ? app(\App\Services\UserResumeService::class)->toAdminArray($user->resume)
+                : null,
             'created_at' => $user->created_at?->toIso8601String(),
         ];
     }

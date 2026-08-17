@@ -29,6 +29,15 @@ class ApiContributorGuardMiddleware
         }
 
         $segment = (string) $request->segment(3); // /api/admin/{segment}
+
+        if ($segment === 'resumes') {
+            $method = strtoupper($request->method());
+            if (! in_array($method, ['GET', 'HEAD', 'PUT', 'PATCH'], true)) {
+                return $this->forbidden('این عملیات برای حساب شما مجاز نیست.');
+            }
+
+            return $next($request);
+        }
         $path = trim($request->path(), '/');
         $method = strtoupper($request->method());
 

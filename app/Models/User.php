@@ -374,6 +374,16 @@ class User extends Authenticatable
         return $this->hasMany(Story::class, 'author_id');
     }
 
+    public function resume()
+    {
+        return $this->hasOne(UserResume::class);
+    }
+
+    public function canOwnResume(): bool
+    {
+        return app(\App\Services\UserResumeService::class)->canOwnResume($this);
+    }
+
 
     /**
      * Check if user is parent (role or account_type from onboarding).

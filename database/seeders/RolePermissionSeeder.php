@@ -49,6 +49,11 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'writers.view', 'display_name' => 'مشاهده نویسندگان', 'group' => 'writers'],
             ['name' => 'writers.assign', 'display_name' => 'اختصاص نویسنده', 'group' => 'writers'],
             ['name' => 'writers.revoke', 'display_name' => 'لغو نویسنده', 'group' => 'writers'],
+            ['name' => 'resumes.view_own', 'display_name' => 'مشاهده رزومه خود', 'group' => 'resumes'],
+            ['name' => 'resumes.update_own', 'display_name' => 'ویرایش رزومه خود', 'group' => 'resumes'],
+            ['name' => 'resumes.view_any', 'display_name' => 'مشاهده همه رزومه‌ها', 'group' => 'resumes'],
+            ['name' => 'resumes.update_any', 'display_name' => 'ویرایش همه رزومه‌ها', 'group' => 'resumes'],
+            ['name' => 'resumes.update', 'display_name' => 'به‌روزرسانی رزومه', 'group' => 'resumes'],
         ];
 
         $createdPermissions = 0;
@@ -81,7 +86,7 @@ class RolePermissionSeeder extends Seeder
         $adminPermissionIds = Permission::whereIn('group', [
             'dashboard', 'coin_management', 'coupon_management',
             'payment_management', 'partner_management', 'analytics',
-            'user_management', 'media_library', 'team_members', 'stories', 'story_editor', 'writers',
+            'user_management', 'media_library', 'team_members', 'stories', 'story_editor', 'writers', 'resumes',
         ])->pluck('id');
         $adminRole->permissions()->syncWithoutDetaching($adminPermissionIds);
 
@@ -100,6 +105,8 @@ class RolePermissionSeeder extends Seeder
                 'stories.read',
                 'story_editor.read',
                 'story_editor.update',
+                'resumes.view_own',
+                'resumes.update_own',
             ])->pluck('id')
         );
 
@@ -130,6 +137,8 @@ class RolePermissionSeeder extends Seeder
                 'writers.view',
                 'writers.assign',
                 'writers.revoke',
+                'resumes.view_own',
+                'resumes.update_own',
             ])->pluck('id')
         );
 

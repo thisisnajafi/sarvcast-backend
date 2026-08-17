@@ -92,7 +92,9 @@ class WriterController extends Controller
     {
         $this->assertCanViewWriters(request()->user());
 
-        if ($user->role !== User::ROLE_WRITER && Story::query()->where('author_id', $user->id)->doesntExist()) {
+        if ($user->role !== User::ROLE_WRITER
+            && $user->role !== User::ROLE_HEAD_WRITER
+            && Story::query()->where('author_id', $user->id)->doesntExist()) {
             return response()->json([
                 'success' => false,
                 'message' => 'این کاربر نویسنده نیست.',
@@ -100,8 +102,14 @@ class WriterController extends Controller
             ], 404);
         }
 
+        $user->load('resume');
         $payload = $this->formatWriter($user);
         $payload['story_contributions'] = app(UserStoryContributionService::class)->summarizeForUser($user);
+        if (app(\App\Services\UserResumeService::class)->canOwnResume($user)) {
+            $payload['resume'] = $user->resume
+                ? app(\App\Services\UserResumeService::class)->toAdminArray($user->resume)
+                : null;
+        }
 
         return AdminApiResponse::success($payload);
     }

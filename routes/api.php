@@ -57,6 +57,8 @@ Route::prefix('v1')->middleware('security')->group(function () {
     // Public routes (no auth required)
     Route::prefix('public')->group(function () {
         Route::get('team-members', [UserController::class, 'getTeamMembers']);
+        Route::get('voice-actors', [\App\Http\Controllers\Api\PublicVoiceActorController::class, 'index']);
+        Route::get('voice-actors/{user}', [\App\Http\Controllers\Api\PublicVoiceActorController::class, 'show']);
         Route::post('contact', [ContactController::class, 'submit']);
     });
 
@@ -316,6 +318,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('profile/photo', [\App\Http\Controllers\Api\AuthController::class, 'uploadProfilePhoto']);
         Route::post('profile/background-photo', [\App\Http\Controllers\Api\AuthController::class, 'uploadBackgroundPhoto']);
         Route::put('notification-preferences', [UserController::class, 'updateNotificationPreferences']);
+    });
+
+    Route::prefix('me')->group(function () {
+        Route::get('resume', [\App\Http\Controllers\Api\MeResumeController::class, 'show']);
+        Route::put('resume', [\App\Http\Controllers\Api\MeResumeController::class, 'update']);
     });
 
     // Favorites routes (outside mobile group for easier access)
@@ -1396,6 +1403,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         Route::get('/statistics/data', [\App\Http\Controllers\Admin\WriterController::class, 'apiStats']);
         Route::get('/candidates', [\App\Http\Controllers\Admin\WriterController::class, 'apiCandidates']);
         Route::get('/{user}', [\App\Http\Controllers\Admin\WriterController::class, 'apiShow']);
+    });
+
+    Route::prefix('resumes')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ResumeController::class, 'apiIndex']);
+        Route::get('/me', [\App\Http\Controllers\Admin\ResumeController::class, 'apiShowMe']);
+        Route::put('/me', [\App\Http\Controllers\Admin\ResumeController::class, 'apiUpdateMe']);
+        Route::get('/{user}', [\App\Http\Controllers\Admin\ResumeController::class, 'apiShow']);
+        Route::put('/{user}', [\App\Http\Controllers\Admin\ResumeController::class, 'apiUpdate']);
+        Route::patch('/{user}', [\App\Http\Controllers\Admin\ResumeController::class, 'apiUpdate']);
     });
 
     // Specialized Dashboards API
