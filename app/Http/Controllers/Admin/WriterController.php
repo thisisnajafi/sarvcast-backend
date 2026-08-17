@@ -20,7 +20,7 @@ class WriterController extends Controller
     {
         $this->assertCanViewWriters($request->user());
 
-        $query = User::query()->where('role', User::ROLE_WRITER);
+        $query = User::query()->whereIn('role', [User::ROLE_WRITER, User::ROLE_HEAD_WRITER]);
 
         $search = trim((string) $request->input('q', $request->input('search', '')));
         if ($search !== '') {

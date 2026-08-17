@@ -871,10 +871,21 @@ class UserController extends Controller
         $data = $request->except(['password_confirmation']);
         $data['password'] = Hash::make($request->password);
 
+        $actor = $request->user() ?? auth('sanctum')->user();
+        $block = $this->resolveAppRoleAssignmentBlock($actor instanceof User ? $actor : null, null, $data['role'] ?? User::ROLE_BASIC);
+        if ($block !== null) {
+            return response()->json([
+                'success' => false,
+                'message' => $block,
+                'error' => 'FORBIDDEN',
+            ], 422);
+        }
+
         $user = User::create($data);
+        $user->applyLegacyRoleChange($user->role);
 
         return AdminApiResponse::success(
-            $user->load(['profiles', 'activeSubscription']),
+            $user->load(['profiles', 'activeSubscription', 'roles']),
             'کاربر با موفقیت ایجاد شد.',
             201
         );
@@ -932,6 +943,22 @@ class UserController extends Controller
         $newRole = $data['role'] ?? $previousRole;
         unset($data['role']);
 
+        $actor = $request->user() ?? auth('sanctum')->user();
+        if ($newRole !== $previousRole) {
+            $block = $this->resolveAppRoleAssignmentBlock(
+                $actor instanceof User ? $actor : null,
+                $user,
+                $newRole
+            );
+            if ($block !== null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $block,
+                    'error' => 'FORBIDDEN',
+                ], 422);
+            }
+        }
+
         $user->update($data);
 
         if ($newRole !== $previousRole) {
@@ -939,7 +966,7 @@ class UserController extends Controller
         }
 
         if ($request->has('role_ids')) {
-            $user->syncRoles($request->input('role_ids', []));
+            $user->syncRoles($user->mergeStaffRoleIdsForLegacyRole($request->input('role_ids', [])));
             $user->update2FARequirement();
         }
 
@@ -1291,8 +1318,9 @@ class UserController extends Controller
         }
 
         if ($action === 'change_role' && $newRole !== null) {
-            if (in_array($newRole, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true) && ! $actor->isSuperAdmin()) {
-                return 'فقط مدیر کل می‌تواند نقش مدیر یا مدیر کل اختصاص دهد.';
+            $roleBlock = $this->resolveAppRoleAssignmentBlock($actor, $target, $newRole);
+            if ($roleBlock !== null) {
+                return $roleBlock;
             }
         }
 
@@ -1302,6 +1330,35 @@ class UserController extends Controller
 
         if ($target->isAdmin() && in_array($action, ['delete', 'suspend', 'change_role'], true) && ! $actor->isSuperAdmin()) {
             return 'فقط مدیر کل می‌تواند نقش یا وضعیت کاربران مدیر را تغییر دهد.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Rules for assigning users.role (enum + matching RBAC staff role).
+     * Head Writer must not promote anyone to head_writer; children are never staff.
+     */
+    private function resolveAppRoleAssignmentBlock(?User $actor, ?User $target, string $newRole): ?string
+    {
+        if ($actor === null) {
+            return 'کاربر احراز هویت نشده است.';
+        }
+
+        if ($target && $newRole === $target->role) {
+            return null;
+        }
+
+        if ($target && $target->role === User::ROLE_CHILD && in_array($newRole, User::staffRbacRoleNames(), true)) {
+            return 'نمی‌توان نقش کودک را به نقش کارکنان تغییر داد.';
+        }
+
+        if (in_array($newRole, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true) && ! $actor->isSuperAdmin()) {
+            return 'فقط مدیر کل می‌تواند نقش مدیر یا مدیر کل اختصاص دهد.';
+        }
+
+        if ($newRole === User::ROLE_HEAD_WRITER && ! $actor->isAdmin()) {
+            return 'فقط مدیر می‌تواند نقش سرپرست نویسندگان را اختصاص دهد.';
         }
 
         return null;

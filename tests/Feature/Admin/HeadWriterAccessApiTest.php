@@ -174,6 +174,81 @@ class HeadWriterAccessApiTest extends TestCase
             ->assertJsonPath('success', true);
     }
 
+    public function test_super_admin_can_assign_head_writer_role_and_rbac_pivot(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $target = User::factory()->writer()->create();
+        $headRole = \App\Models\Role::query()->create([
+            'name' => User::ROLE_HEAD_WRITER,
+            'display_name' => 'سرپرست نویسندگان',
+            'is_active' => true,
+        ]);
+        \App\Models\Role::query()->create([
+            'name' => User::ROLE_WRITER,
+            'display_name' => 'نویسنده',
+            'is_active' => true,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->putJson('/api/admin/users/'.$target->id, [
+            'first_name' => $target->first_name,
+            'last_name' => $target->last_name,
+            'phone_number' => $target->phone_number,
+            'role' => User::ROLE_HEAD_WRITER,
+            'status' => User::STATUS_ACTIVE,
+            'role_ids' => [],
+        ])->assertOk()->assertJsonPath('success', true);
+
+        $target->refresh();
+        $this->assertSame(User::ROLE_HEAD_WRITER, $target->role);
+        $this->assertTrue($target->roles()->where('roles.id', $headRole->id)->exists());
+
+        $ids = collect($this->getJson('/api/admin/writers')->json('data'))->pluck('id');
+        $this->assertTrue($ids->contains($target->id));
+    }
+
+    public function test_cannot_promote_child_to_head_writer(): void
+    {
+        $admin = User::factory()->superAdmin()->create();
+        $child = User::factory()->create(['role' => User::ROLE_CHILD]);
+
+        Sanctum::actingAs($admin);
+
+        $this->putJson('/api/admin/users/'.$child->id, [
+            'first_name' => $child->first_name,
+            'last_name' => $child->last_name,
+            'phone_number' => $child->phone_number,
+            'role' => User::ROLE_HEAD_WRITER,
+            'status' => User::STATUS_ACTIVE,
+        ])->assertStatus(422);
+
+        $this->postJson('/api/admin/users/bulk-action', [
+            'action' => 'change_role',
+            'user_ids' => [$child->id],
+            'role' => User::ROLE_HEAD_WRITER,
+        ])->assertOk();
+
+        $child->refresh();
+        $this->assertSame(User::ROLE_CHILD, $child->role);
+    }
+
+    public function test_head_writer_cannot_assign_head_writer_role(): void
+    {
+        $head = User::factory()->headWriter()->create();
+        $writer = User::factory()->writer()->create();
+
+        Sanctum::actingAs($head);
+
+        $this->putJson('/api/admin/users/'.$writer->id, [
+            'first_name' => $writer->first_name,
+            'last_name' => $writer->last_name,
+            'phone_number' => $writer->phone_number,
+            'role' => User::ROLE_HEAD_WRITER,
+            'status' => User::STATUS_ACTIVE,
+        ])->assertForbidden();
+    }
+
     public function test_candidates_exclude_children_and_include_promotable_parent(): void
     {
         $head = User::factory()->headWriter()->create();

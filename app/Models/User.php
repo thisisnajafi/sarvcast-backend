@@ -784,19 +784,61 @@ class User extends Authenticatable
     }
 
     /**
-     * Update the legacy role column and keep RBAC admin roles in sync.
+     * Staff names that exist both on users.role and in the RBAC roles table.
+     *
+     * @return list<string>
      */
-    public function applyLegacyRoleChange(string $newRole): void
+    public static function staffRbacRoleNames(): array
     {
-        $this->update(['role' => $newRole]);
-
-        $staffRbacNames = [
+        return [
             self::ROLE_ADMIN,
             self::ROLE_SUPER_ADMIN,
             self::ROLE_VOICE_ACTOR,
             self::ROLE_WRITER,
             self::ROLE_HEAD_WRITER,
         ];
+    }
+
+    /**
+     * Keep the RBAC pivot aligned with users.role when the edit form also posts role_ids.
+     *
+     * @param  list<int|string>  $roleIds
+     * @return list<int>
+     */
+    public function mergeStaffRoleIdsForLegacyRole(array $roleIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $roleIds)));
+        $staffRoles = Role::query()
+            ->whereIn('name', self::staffRbacRoleNames())
+            ->get()
+            ->keyBy('name');
+
+        $otherStaffIds = $staffRoles
+            ->except($this->role)
+            ->pluck('id')
+            ->all();
+
+        $ids = array_values(array_filter(
+            $ids,
+            fn (int $id) => ! in_array($id, $otherStaffIds, true)
+        ));
+
+        $current = $staffRoles->get($this->role);
+        if ($current && ! in_array((int) $current->id, $ids, true)) {
+            $ids[] = (int) $current->id;
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Update the legacy role column and keep RBAC admin roles in sync.
+     */
+    public function applyLegacyRoleChange(string $newRole): void
+    {
+        $this->update(['role' => $newRole]);
+
+        $staffRbacNames = self::staffRbacRoleNames();
 
         $staffRbacRoleIds = Role::query()
             ->whereIn('name', $staffRbacNames)
