@@ -515,6 +515,7 @@ class EpisodeController extends Controller
             }
 
             $episode = Episode::create($validated);
+            app(\App\Services\EpisodeEditorSyncService::class)->ensureEpisodeScaffold($episode);
 
             return response()->json([
                 'success' => true,
@@ -601,7 +602,10 @@ class EpisodeController extends Controller
                 $validated['cover_image_url'] = 'episodes/' . $coverImageName;
             }
 
+            $oldNumber = (int) $episode->episode_number;
+            $oldTitle = (string) $episode->title;
             $episode->update($validated);
+            app(\App\Services\EpisodeEditorSyncService::class)->syncNumberOrTitle($episode->fresh(), $oldNumber, $oldTitle);
 
             return response()->json([
                 'success' => true,

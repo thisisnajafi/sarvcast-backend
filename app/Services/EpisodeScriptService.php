@@ -139,17 +139,41 @@ class EpisodeScriptService
 
     public function resolveCanonicalMarkdownPath(Episode $episode): ?string
     {
+        $linkedPath = StoryProductionFile::query()
+            ->where('episode_id', $episode->id)
+            ->where('file_type', StoryProductionFile::TYPE_STORY_SCRIPT)
+            ->whereNotNull('source_path')
+            ->value('source_path');
+
+        if (is_string($linkedPath) && $linkedPath !== '' && is_file($linkedPath)) {
+            return $linkedPath;
+        }
+
         $storySlug = StoryProductionFile::query()
             ->where('story_id', $episode->story_id)
             ->whereNotNull('story_slug')
             ->value('story_slug');
 
         if (! is_string($storySlug) || $storySlug === '') {
-            $storySlug = $this->editorRepository->findStorySlugByDbStoryId($episode->story_id);
+            $storySlug = $this->editorRepository->findLinkedStorySlug($episode->story_id)
+                ?? $this->editorRepository->findStorySlugByDbStoryId($episode->story_id);
         }
 
         if (! is_string($storySlug) || $storySlug === '') {
             return null;
+        }
+
+        $linkedSlug = StoryProductionFile::query()
+            ->where('episode_id', $episode->id)
+            ->where('file_type', StoryProductionFile::TYPE_STORY_SCRIPT)
+            ->whereNotNull('episode_slug')
+            ->value('episode_slug');
+
+        if (is_string($linkedSlug) && $linkedSlug !== '') {
+            $data = $this->editorRepository->getEpisode($storySlug, $linkedSlug);
+            if (is_array($data) && ! empty($data['file_path'])) {
+                return $data['file_path'];
+            }
         }
 
         $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
@@ -333,29 +357,7 @@ class EpisodeScriptService
 
     private function isSafeLocalFilesystemPath(string $path): bool
     {
-        if ($path === '' || str_contains($path, '://')) {
-            return false;
-        }
-
-        if (! $this->isAbsoluteFilesystemPath($path)) {
-            return false;
-        }
-
-        $normalized = str_replace('\\', '/', $path);
-        $roots = [
-            str_replace('\\', '/', storage_path()),
-            str_replace('\\', '/', public_path()),
-            str_replace('\\', '/', base_path()),
-        ];
-
-        foreach ($roots as $root) {
-            $root = rtrim($root, '/');
-            if ($normalized === $root || str_starts_with($normalized, $root . '/')) {
-                return true;
-            }
-        }
-
-        return false;
+        return \App\Support\StoryEditorPaths::isInsideAllowedRoot($path);
     }
 
     private function isAbsoluteFilesystemPath(string $path): bool

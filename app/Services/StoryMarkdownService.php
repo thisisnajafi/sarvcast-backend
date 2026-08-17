@@ -47,6 +47,34 @@ class StoryMarkdownService
         return $result;
     }
 
+    public function rewriteEpisodeHeading(string $rawMarkdown, int $episodeNumber, ?string $title = null, ?int $totalEpisodes = null): string
+    {
+        $content = str_replace(["\r\n", "\r"], "\n", $rawMarkdown);
+
+        if (is_string($title) && trim($title) !== '') {
+            $replaced = preg_replace('/^#\s+.+$/m', '# '.trim($title), $content, 1);
+            if (is_string($replaced)) {
+                $content = $replaced;
+            }
+        }
+
+        $total = $totalEpisodes ?? $episodeNumber;
+        $heading = '## قسمت '.PersianNumerals::toPersian($episodeNumber).' از '.PersianNumerals::toPersian($total);
+        if (preg_match('/##\s*قسمت\s+[۰-۹٠-٩\d]+\s+از\s+[۰-۹٠-٩\d]+/u', $content)) {
+            $replaced = preg_replace(
+                '/##\s*قسمت\s+[۰-۹٠-٩\d]+\s+از\s+[۰-۹٠-٩\d]+/u',
+                $heading,
+                $content,
+                1,
+            );
+            if (is_string($replaced)) {
+                $content = $replaced;
+            }
+        }
+
+        return $content;
+    }
+
     public function serialize(array $structuredEpisode): string
     {
         $metadata = $structuredEpisode['metadata'] ?? [];

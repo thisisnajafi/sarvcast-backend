@@ -17,6 +17,7 @@ class EpisodeObserver
      */
     public function deleting(Episode $episode): void
     {
+        app(\App\Services\EpisodeEditorSyncService::class)->deleteEditorEpisode($episode);
         $this->assetCleanup->cleanupEpisodeAssets($episode);
     }
     /**

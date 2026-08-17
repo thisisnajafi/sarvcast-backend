@@ -387,6 +387,7 @@ class EpisodeController extends BaseController
             }
 
             $episode = Episode::create($data);
+            app(\App\Services\EpisodeEditorSyncService::class)->ensureEpisodeScaffold($episode);
 
             // Update story statistics after creating episode
             if ($story) {
@@ -1080,15 +1081,10 @@ class EpisodeController extends BaseController
         ]);
 
         try {
-            DB::beginTransaction();
-
-            foreach ($request->episodes as $episodeData) {
-                Episode::where('id', $episodeData['id'])
-                      ->where('story_id', $story->id)
-                      ->update(['episode_number' => $episodeData['episode_number']]);
-            }
-
-            DB::commit();
+            app(\App\Services\EpisodeEditorSyncService::class)->reorder(
+                (int) $story->id,
+                $request->episodes,
+            );
 
             return response()->json([
                 'success' => true,
@@ -1096,7 +1092,6 @@ class EpisodeController extends BaseController
             ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Failed to reorder episodes', [
                 'story_id' => $story->id,
                 'error' => $e->getMessage()
@@ -1182,6 +1177,8 @@ class EpisodeController extends BaseController
             app(MediaLibraryService::class)->syncUsageFor($episode, 'audio_url', $validated['audio_file_url']);
         }
 
+        app(\App\Services\EpisodeEditorSyncService::class)->ensureEpisodeScaffold($episode);
+
         return AdminApiResponse::success($this->formatApiEpisode($episode->load('story')), 'Episode created successfully', 201);
     }
 
@@ -1208,6 +1205,8 @@ class EpisodeController extends BaseController
 
         $statusService = app(StoryEpisodeStatusService::class);
         $wasPublished = $episode->status === 'published';
+        $oldNumber = (int) $episode->episode_number;
+        $oldTitle = (string) $episode->title;
 
         if (array_key_exists('status', $validated)) {
             $newStatus = $validated['status'];
@@ -1222,6 +1221,7 @@ class EpisodeController extends BaseController
         }
 
         $episode->refresh()->loadMissing('story');
+        app(\App\Services\EpisodeEditorSyncService::class)->syncNumberOrTitle($episode, $oldNumber, $oldTitle);
         if (! $wasPublished && $episode->status === 'published') {
             $this->notifyFavoritedUsersAboutEpisode($episode);
             $this->notifyEpisodePublished($episode);
@@ -1339,8 +1339,11 @@ class EpisodeController extends BaseController
             $newEpisode->title = $episode->title . ' (کپی)';
             $newEpisode->status = 'draft';
             $newEpisode->release_date = null;
-            $newEpisode->episode_number = (int) $episode->episode_number + 1;
+            $newEpisode->script_file_url = null;
+            $maxNumber = (int) Episode::query()->where('story_id', $episode->story_id)->max('episode_number');
+            $newEpisode->episode_number = $maxNumber + 1;
             $newEpisode->save();
+            app(\App\Services\EpisodeEditorSyncService::class)->duplicateEditorEpisode($episode, $newEpisode);
 
             return AdminApiResponse::success($newEpisode->load(['story']), 'Episode duplicated successfully', 201);
         } catch (\Exception $e) {
@@ -1367,17 +1370,13 @@ class EpisodeController extends BaseController
         ]);
 
         try {
-            DB::beginTransaction();
-            foreach ($request->episodes as $episodeData) {
-                Episode::where('id', $episodeData['id'])
-                    ->where('story_id', $request->story_id)
-                    ->update(['episode_number' => $episodeData['episode_number']]);
-            }
-            DB::commit();
+            app(\App\Services\EpisodeEditorSyncService::class)->reorder(
+                (int) $request->story_id,
+                $request->episodes,
+            );
 
             return AdminApiResponse::okMessage('Episodes reordered successfully');
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Failed to reorder episodes via API', [
                 'story_id' => $request->story_id,
                 'error' => $e->getMessage(),

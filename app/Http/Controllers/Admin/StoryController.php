@@ -1273,6 +1273,7 @@ class StoryController extends Controller
 
     public function apiDestroy(Story $story)
     {
+        $story->episodes()->get()->each->delete();
         $story->delete();
 
         return AdminApiResponse::okMessage('Story deleted successfully');

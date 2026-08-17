@@ -316,6 +316,8 @@ class StoryEditorRepository
                 && (int) $matches[1] === $episodeNumber) {
                 $folderName = basename($episodeDir);
 
+                $this->ensureStubMarkdown($episodeDir, $episodeNumber, $title);
+
                 return [
                     'id' => $this->episodeIdFromFolder($folderName),
                     'folder_name' => $folderName,
@@ -332,11 +334,210 @@ class StoryEditorRepository
             throw new \RuntimeException('امکان ایجاد پوشه قسمت وجود ندارد.');
         }
 
+        $this->ensureStubMarkdown($path, $episodeNumber, $title);
+
         return [
             'id' => $this->episodeIdFromFolder($folderName),
             'folder_name' => $folderName,
             'path' => $path,
             'created' => true,
+        ];
+    }
+
+    /**
+     * Linked editor slug from production tables only (never title substring match).
+     */
+    public function findLinkedStorySlug(int $storyId): ?string
+    {
+        $productionSlugs = \App\Models\StoryProductionFile::query()
+            ->where('story_id', $storyId)
+            ->whereNotNull('story_slug')
+            ->distinct()
+            ->pluck('story_slug');
+
+        foreach ($productionSlugs as $slug) {
+            if (is_string($slug) && $slug !== '' && $this->findStoryDirectory($slug) !== null) {
+                return $slug;
+            }
+        }
+
+        $assetSlugs = \App\Models\StoryProductionAsset::query()
+            ->where('story_id', $storyId)
+            ->whereNotNull('story_slug')
+            ->distinct()
+            ->pluck('story_slug');
+
+        foreach ($assetSlugs as $slug) {
+            if (is_string($slug) && $slug !== '' && $this->findStoryDirectory($slug) !== null) {
+                return $slug;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{id: string, folder_name: string, path: string, file_path: string|null, episode_number: int}|null
+     */
+    public function findEpisodeDirBySlug(string $storySlug, string $episodeSlug): ?array
+    {
+        $storyDir = $this->findStoryDirectory($storySlug);
+        if ($storyDir === null) {
+            return null;
+        }
+
+        foreach ($this->listEpisodeDirectories($storyDir) as $item) {
+            if ($item['id'] === $episodeSlug) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{id: string, folder_name: string, path: string, file_path: string|null, episode_number: int}|null
+     */
+    public function findEpisodeDirByNumber(string $storySlug, int $episodeNumber): ?array
+    {
+        $storyDir = $this->findStoryDirectory($storySlug);
+        if ($storyDir === null) {
+            return null;
+        }
+
+        foreach ($this->listEpisodeDirectories($storyDir) as $item) {
+            if ($item['episode_number'] === $episodeNumber) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{id: string, folder_name: string, path: string}
+     */
+    public function renameEpisodeDirectory(string $storySlug, string $currentFolderName, int $newNumber, ?string $nameTemplate = null): array
+    {
+        $storyDir = $this->findStoryDirectory($storySlug);
+        if ($storyDir === null) {
+            throw new \RuntimeException('داستان یافت نشد.');
+        }
+
+        $from = $storyDir.DIRECTORY_SEPARATOR.$currentFolderName;
+        if (! is_dir($from)) {
+            throw new \RuntimeException('پوشه قسمت یافت نشد.');
+        }
+
+        $newFolderName = $this->folderNameWithNumber($nameTemplate ?? $currentFolderName, $newNumber);
+        $to = $storyDir.DIRECTORY_SEPARATOR.$newFolderName;
+        if (is_dir($to) && realpath($to) !== realpath($from)) {
+            $newFolderName = $this->folderNameWithNumber($currentFolderName, $newNumber).'_n'.$newNumber;
+            $to = $storyDir.DIRECTORY_SEPARATOR.$newFolderName;
+        }
+
+        if (! @rename($from, $to)) {
+            throw new \RuntimeException('امکان تغییر نام پوشه قسمت وجود ندارد.');
+        }
+
+        $md = $this->findEpisodeMarkdownFile($to);
+        if ($md !== null) {
+            $raw = file_get_contents($md);
+            if (is_string($raw)) {
+                file_put_contents($md, $this->markdownService->rewriteEpisodeHeading($raw, $newNumber));
+            }
+        }
+
+        return [
+            'id' => $this->episodeIdFromFolder($newFolderName),
+            'folder_name' => $newFolderName,
+            'path' => $to,
+        ];
+    }
+
+    public function moveEpisodeDirectoryToTemp(string $storySlug, string $folderName, string $tempPrefix): string
+    {
+        $storyDir = $this->findStoryDirectory($storySlug);
+        if ($storyDir === null) {
+            throw new \RuntimeException('داستان یافت نشد.');
+        }
+
+        $from = $storyDir.DIRECTORY_SEPARATOR.$folderName;
+        if (! is_dir($from)) {
+            throw new \RuntimeException('پوشه قسمت یافت نشد.');
+        }
+
+        $tempName = $tempPrefix.$folderName;
+        $to = $storyDir.DIRECTORY_SEPARATOR.$tempName;
+        if (! @rename($from, $to)) {
+            throw new \RuntimeException('امکان جابه‌جایی موقت پوشه قسمت وجود ندارد.');
+        }
+
+        return $tempName;
+    }
+
+    public function deleteEpisodeDirectory(string $storySlug, string $folderName): bool
+    {
+        $storyDir = $this->findStoryDirectory($storySlug);
+        if ($storyDir === null) {
+            return false;
+        }
+
+        $path = $storyDir.DIRECTORY_SEPARATOR.$folderName;
+        $storyReal = realpath($storyDir);
+        $pathReal = realpath($path);
+        if ($storyReal === false || $pathReal === false) {
+            return false;
+        }
+
+        $storyNorm = rtrim(str_replace('\\', '/', $storyReal), '/');
+        $pathNorm = str_replace('\\', '/', $pathReal);
+        if ($pathNorm === $storyNorm || ! str_starts_with($pathNorm, $storyNorm.'/')) {
+            return false;
+        }
+
+        $this->deleteDirectoryRecursive($pathReal);
+
+        return true;
+    }
+
+    /**
+     * @return array{id: string, folder_name: string, path: string}
+     */
+    public function copyEpisodeDirectory(string $storySlug, string $sourceFolderName, int $newNumber, string $title): array
+    {
+        $storyDir = $this->findStoryDirectory($storySlug);
+        if ($storyDir === null) {
+            throw new \RuntimeException('داستان یافت نشد.');
+        }
+
+        $from = $storyDir.DIRECTORY_SEPARATOR.$sourceFolderName;
+        if (! is_dir($from)) {
+            throw new \RuntimeException('پوشه قسمت مبدأ یافت نشد.');
+        }
+
+        $folderName = $this->buildEpisodeFolderName($newNumber, $title);
+        $to = $storyDir.DIRECTORY_SEPARATOR.$folderName;
+        if (is_dir($to)) {
+            $folderName = $this->buildEpisodeFolderName($newNumber, $title.'_copy');
+            $to = $storyDir.DIRECTORY_SEPARATOR.$folderName;
+        }
+
+        $this->copyDirectoryRecursive($from, $to);
+        $md = $this->findEpisodeMarkdownFile($to);
+        if ($md !== null) {
+            $raw = file_get_contents($md);
+            if (is_string($raw)) {
+                file_put_contents($md, $this->markdownService->rewriteEpisodeHeading($raw, $newNumber, $title));
+            }
+        } else {
+            $this->ensureStubMarkdown($to, $newNumber, $title);
+        }
+
+        return [
+            'id' => $this->episodeIdFromFolder($folderName),
+            'folder_name' => $folderName,
+            'path' => $to,
         ];
     }
 
@@ -891,5 +1092,108 @@ class StoryEditorRepository
         $name = $this->guessPersianNameFromFolder($folderName);
 
         return Str::headline($name);
+    }
+
+    /**
+     * @return list<array{id: string, folder_name: string, path: string, file_path: string|null, episode_number: int}>
+     */
+    private function listEpisodeDirectories(string $storyDir): array
+    {
+        $items = [];
+
+        foreach (glob($storyDir.'/episode*', GLOB_ONLYDIR) ?: [] as $episodeDir) {
+            $folderName = basename($episodeDir);
+            $episodeNumber = 0;
+            if (preg_match('/episode[_\s-]*(\d+)/i', $folderName, $matches)) {
+                $episodeNumber = (int) $matches[1];
+            }
+
+            $items[] = [
+                'id' => $this->episodeIdFromFolder($folderName),
+                'folder_name' => $folderName,
+                'path' => $episodeDir,
+                'file_path' => $this->findEpisodeMarkdownFile($episodeDir),
+                'episode_number' => $episodeNumber,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function folderNameWithNumber(string $folderName, int $number): string
+    {
+        $updated = preg_replace('/(episode[_\s-]*)(\d+)/i', '${1}'.$number, $folderName, 1);
+
+        return is_string($updated) && $updated !== '' ? $updated : 'episode_'.$number;
+    }
+
+    private function ensureStubMarkdown(string $episodeDir, int $episodeNumber, string $title): void
+    {
+        if ($this->findEpisodeMarkdownFile($episodeDir) !== null) {
+            return;
+        }
+
+        $stem = Str::slug($title, '_');
+        if ($stem === '') {
+            $stem = 'episode';
+        }
+
+        $path = $episodeDir.DIRECTORY_SEPARATOR.$stem.'_story.md';
+        file_put_contents($path, $this->markdownService->serialize([
+            'metadata' => [
+                'title_persian' => $title,
+                'episode_number' => $episodeNumber,
+                'total_episodes' => $episodeNumber,
+            ],
+            'characters' => [],
+            'scenes' => [],
+            'closing' => [],
+        ]));
+    }
+
+    private function deleteDirectoryRecursive(string $directory): void
+    {
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST,
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isDir()) {
+                @rmdir($file->getPathname());
+            } else {
+                @unlink($file->getPathname());
+            }
+        }
+
+        @rmdir($directory);
+    }
+
+    private function copyDirectoryRecursive(string $from, string $to): void
+    {
+        if (! is_dir($to) && ! mkdir($to, 0755, true) && ! is_dir($to)) {
+            throw new \RuntimeException('امکان کپی پوشه قسمت وجود ندارد.');
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($from, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST,
+        );
+
+        foreach ($iterator as $file) {
+            $sub = ltrim(str_replace('\\', '/', substr($file->getPathname(), strlen($from))), '/');
+            $target = $to.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $sub);
+            if ($file->isDir()) {
+                if (! is_dir($target)) {
+                    mkdir($target, 0755, true);
+                }
+            } else {
+                $dir = dirname($target);
+                if (! is_dir($dir)) {
+                    mkdir($dir, 0755, true);
+                }
+                copy($file->getPathname(), $target);
+            }
+        }
     }
 }

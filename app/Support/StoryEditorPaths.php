@@ -69,6 +69,60 @@ class StoryEditorPaths
         return base_path($path);
     }
 
+    /**
+     * Roots that may be read/written for story-editor files (includes sibling manji-stories).
+     *
+     * @return list<string>
+     */
+    public static function allowedFilesystemRoots(): array
+    {
+        $roots = [
+            storage_path(),
+            public_path(),
+            base_path(),
+        ];
+
+        try {
+            $stories = self::resolve();
+            if (is_string($stories) && $stories !== '') {
+                $roots[] = $stories;
+            }
+        } catch (\Throwable) {
+            // Stories directory may not exist yet in some test/deploy setups.
+        }
+
+        return array_values(array_unique(array_filter($roots)));
+    }
+
+    public static function isInsideAllowedRoot(string $path): bool
+    {
+        if ($path === '' || str_contains($path, '://')) {
+            return false;
+        }
+
+        $normalized = str_replace('\\', '/', $path);
+        if (preg_match('/^[A-Za-z]:[\\\\\\/]/', $normalized) !== 1
+            && ! str_starts_with($normalized, '/')
+            && ! str_starts_with($normalized, '\\')) {
+            return false;
+        }
+
+        $real = realpath($path);
+        if (is_string($real) && $real !== '') {
+            $normalized = str_replace('\\', '/', $real);
+        }
+
+        foreach (self::allowedFilesystemRoots() as $root) {
+            $rootReal = realpath($root) ?: $root;
+            $rootNorm = rtrim(str_replace('\\', '/', $rootReal), '/');
+            if ($normalized === $rootNorm || str_starts_with($normalized, $rootNorm.'/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static function isAbsolutePath(string $path): bool
     {
         if ($path === '') {

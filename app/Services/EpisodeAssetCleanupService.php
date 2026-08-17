@@ -134,7 +134,7 @@ class EpisodeAssetCleanupService
             $this->deleteStoredPath($file->storage_path);
         }
 
-        if ($file->source_path) {
+        if ($file->source_path && ! \App\Support\StoryEditorPaths::isInsideAllowedRoot((string) $file->source_path)) {
             $this->safeUnlink($file->source_path);
         }
 
@@ -299,29 +299,7 @@ class EpisodeAssetCleanupService
      */
     private function isSafeLocalFilesystemPath(string $path): bool
     {
-        if ($path === '' || str_contains($path, '://')) {
-            return false;
-        }
-
-        if (! $this->isAbsoluteFilesystemPath($path)) {
-            return false;
-        }
-
-        $normalized = str_replace('\\', '/', $path);
-        $roots = [
-            str_replace('\\', '/', storage_path()),
-            str_replace('\\', '/', public_path()),
-            str_replace('\\', '/', base_path()),
-        ];
-
-        foreach ($roots as $root) {
-            $root = rtrim($root, '/');
-            if ($normalized === $root || str_starts_with($normalized, $root . '/')) {
-                return true;
-            }
-        }
-
-        return false;
+        return \App\Support\StoryEditorPaths::isInsideAllowedRoot($path);
     }
 
     private function isAbsoluteFilesystemPath(string $path): bool
