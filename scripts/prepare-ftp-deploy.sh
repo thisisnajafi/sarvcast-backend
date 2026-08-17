@@ -130,7 +130,7 @@ fi
 echo "prepare-ftp-deploy: creating deploy.zip..."
 (
   cd "$STAGING"
-  zip -r -q -9 "$UPLOAD/deploy.zip" .
+  zip -r -q -1 "$UPLOAD/deploy.zip" .
 )
 
 TEMPLATE="$ROOT/scripts/extract-deploy.php"

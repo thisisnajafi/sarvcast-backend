@@ -146,8 +146,12 @@ upload_one() {
   for attempt in $(seq 1 "${PER_FILE_ATTEMPTS}"); do
     echo "  attempt ${attempt}/${PER_FILE_ATTEMPTS}"
 
-    # Clear leftover/partial remote file before each try (especially vendor.zip).
-    delete_remote "${remote_dir}" "${remote_name}"
+    # Only delete after a failed attempt. Clearing vendor.zip before every try
+    # forced a full re-upload (no resume) and could burn 40+ minutes on retries.
+    if [[ "${attempt}" -gt 1 ]]; then
+      echo "  clearing remote ${remote_name} before retry..."
+      delete_remote "${remote_dir}" "${remote_name}"
+    fi
 
     echo "  curl FTP..."
     if upload_with_curl "${local_file}" "${remote_dir}" "${remote_name}"; then
@@ -193,6 +197,9 @@ fi
 if [[ "${UPLOAD_VENDOR}" == "true" ]]; then
   require_file "${UPLOAD_DIR}/vendor.zip"
   upload_one "${UPLOAD_DIR}/vendor.zip" "." "vendor.zip"
+else
+  echo "Skipping vendor.zip upload; removing leftover remote vendor.zip if present"
+  delete_remote "." "vendor.zip"
 fi
 
 echo "FTP upload completed"

@@ -199,6 +199,13 @@ function extractVendorZip(string $root): void
 
     $error = deployExtractVendorZipToDirectory($zipPath, $vendorDir);
     if ($error !== null) {
+        @unlink($zipPath);
+        if (is_file($vendorDir . '/autoload.php')) {
+            echo "vendor extract WARN: {$error} — keeping existing vendor/\n";
+
+            return;
+        }
+
         http_response_code(500);
         echo "vendor extract FAILED: {$error}\n";
         exit;

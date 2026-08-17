@@ -30,9 +30,10 @@ concurrency:
 
 
 env:
-  # true  = skip post-deploy steps unless related files changed (faster code-only deploys)
-  # false = always run .env, config:clear, migrate, and cache rebuild after FTP
-  LEAN_DEPLOY: "false"
+  # true  = skip vendor.zip / .env / migrate unless related files changed (fast code-only deploys)
+  # false = always rebuild + upload vendor.zip and run env/migrate/cache (can take 40+ minutes on FTP)
+  # Keep true: uploading vendor.zip on every push exhausted the 45-minute job budget and cancelled migrate verify.
+  LEAN_DEPLOY: "true"
   FTP_SERVER: "ftp.manjiapp.ir"
   FTP_USERNAME: "my@manjiapp.ir"
   FTP_PASSWORD: "Prof48017421@#"
@@ -90,13 +91,14 @@ jobs:
         run: php artisan migrate --force
 
       - name: Run activity log and notification regression tests
-        run: ./vendor/bin/pest tests/Feature/Api/ActivityIngestApiTest.php tests/Feature/Admin/AdminNotificationsApiStandardizationTest.php
+        run: ./vendor/bin/pest tests/Feature/Api/ActivityIngestApiTest.php tests/Feature/Admin/AdminNotificationsApiStandardizationTest.php tests/Feature/Api/PublicVoiceActorResumeTest.php
 
   deploy:
     name: Deploy
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Vendor.zip FTP can still take ~40 minutes when composer.lock changes; leave room for migrate/verify.
+    timeout-minutes: 90
 
     steps:
       - name: Checkout code
@@ -246,7 +248,7 @@ jobs:
         run: |
           echo "Vendor size before packaging:"
           du -sh vendor
-          (cd vendor && zip -r -9 -q ../vendor.zip .)
+          (cd vendor && zip -r -1 -q ../vendor.zip .)
           ls -lh vendor.zip
 
       - name: Prepare FTP deploy bundle
@@ -269,7 +271,7 @@ jobs:
           DEPLOY_EXTRACT_TOKEN: ${{ env.DEPLOY_TOKEN }}
           SITE_URL: ${{ env.SITE_URL }}
           UPLOAD_VENDOR: ${{ steps.plan.outputs.run_composer }}
-          FTP_PER_FILE_ATTEMPTS: "4"
+          FTP_PER_FILE_ATTEMPTS: "3"
           FTP_OPEN_URL: ftp://${{ env.FTP_SERVER }}
         run: |
           set -euo pipefail
@@ -381,7 +383,7 @@ jobs:
         run: |
           VERIFY_QUERY="only=migrate_verify"
           if [[ "${{ steps.changes.outputs.migrations }}" == "true" ]]; then
-            VERIFY_QUERY="${VERIFY_QUERY}&verify_columns=notifications.sender_id"
+            VERIFY_QUERY="${VERIFY_QUERY}&verify_columns=notifications.sender_id,user_resumes.user_id"
           fi
 
           bash scripts/ci-call-deploy-helper.sh \
