@@ -15,6 +15,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         // Modify the role enum to include 'super_admin' and 'voice_actor'
         // Keep all existing values: 'parent', 'child', 'admin', 'basic'
         DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('parent', 'child', 'admin', 'basic', 'super_admin', 'voice_actor') DEFAULT 'basic'");

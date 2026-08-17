@@ -96,6 +96,8 @@ class SmsAudienceBuilder
                 User::ROLE_SUPER_ADMIN,
                 User::ROLE_ADMIN,
                 User::ROLE_VOICE_ACTOR,
+                User::ROLE_WRITER,
+                User::ROLE_HEAD_WRITER,
             ]);
         }
 

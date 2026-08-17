@@ -19,13 +19,43 @@ class ContributorStoryAccessService
             || $user->isSuperAdmin();
     }
 
-    public function isContributor(?User $user): bool
+    public function isHeadWriter(?User $user): bool
     {
         if (! $user || $this->isFullAdmin($user)) {
             return false;
         }
 
-        return $this->hasAnyAssignableStoryAccess($user);
+        return $user->isHeadWriter();
+    }
+
+    public function isWriterStaff(?User $user): bool
+    {
+        if (! $user || $this->isFullAdmin($user) || $this->isHeadWriter($user)) {
+            return false;
+        }
+
+        return $user->isWriter();
+    }
+
+    public function canViewAllStories(?User $user): bool
+    {
+        return $this->isFullAdmin($user) || $this->isHeadWriter($user);
+    }
+
+    public function canAssignStoryWriter(?User $user): bool
+    {
+        return $this->isFullAdmin($user) || $this->isHeadWriter($user);
+    }
+
+    public function isContributor(?User $user): bool
+    {
+        if (! $user || $this->isFullAdmin($user) || $this->isHeadWriter($user)) {
+            return false;
+        }
+
+        return $this->isWriterStaff($user)
+            || $user->isVoiceActor()
+            || $this->hasAnyAssignableStoryAccess($user);
     }
 
     public function mayAccessAdminPanel(User $user): bool
@@ -34,8 +64,10 @@ class ContributorStoryAccessService
             return false;
         }
 
-        // Admin OTP / panel login: only these roles (not parent/child/basic/etc.).
+        // Admin OTP / panel login: staff roles only (not parent/child/basic).
         return $this->isFullAdmin($user)
+            || $this->isHeadWriter($user)
+            || $this->isWriterStaff($user)
             || $user->role === User::ROLE_VOICE_ACTOR
             || $user->isVoiceActor();
     }
@@ -62,12 +94,16 @@ class ContributorStoryAccessService
 
     public function canViewStory(User $user, Story $story): bool
     {
-        if ($this->isFullAdmin($user)) {
+        if ($this->canViewAllStories($user)) {
             return true;
         }
 
         if ((int) $story->author_id === (int) $user->id) {
             return true;
+        }
+
+        if ($this->isWriterStaff($user) && ! $user->isVoiceActor()) {
+            return false;
         }
 
         if ((int) $story->narrator_id === (int) $user->id) {
@@ -79,7 +115,7 @@ class ContributorStoryAccessService
 
     public function canEditScript(User $user, Story $story): bool
     {
-        if ($this->isFullAdmin($user)) {
+        if ($this->canViewAllStories($user)) {
             return true;
         }
 
@@ -132,16 +168,14 @@ class ContributorStoryAccessService
      */
     public function accessibleStoryIds(User $user): array
     {
-        if ($this->isFullAdmin($user)) {
+        if ($this->canViewAllStories($user)) {
             return Story::query()->pluck('id')->map(fn ($id) => (int) $id)->all();
         }
 
-        return Story::query()
-            ->where(function (Builder $q) use ($user) {
-                $q->where('author_id', $user->id)
-                    ->orWhere('narrator_id', $user->id)
-                    ->orWhereHas('characters', fn (Builder $c) => $c->where('voice_actor_id', $user->id));
-            })
+        $query = Story::query();
+        $this->scopeStoriesForUser($query, $user);
+
+        return $query
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->unique()
@@ -151,8 +185,12 @@ class ContributorStoryAccessService
 
     public function scopeStoriesForUser(Builder $query, User $user): Builder
     {
-        if ($this->isFullAdmin($user)) {
+        if ($this->canViewAllStories($user)) {
             return $query;
+        }
+
+        if ($this->isWriterStaff($user) && ! $user->isVoiceActor()) {
+            return $query->where('author_id', $user->id);
         }
 
         return $query->where(function (Builder $q) use ($user) {
@@ -230,7 +268,7 @@ class ContributorStoryAccessService
      */
     public function filterEditorStoriesForUser(array $stories, User $user): array
     {
-        if ($this->isFullAdmin($user)) {
+        if ($this->canViewAllStories($user)) {
             return $stories;
         }
 
@@ -319,7 +357,7 @@ class ContributorStoryAccessService
 
     public function canViewEditorStory(User $user, string $storySlug): bool
     {
-        if ($this->isFullAdmin($user)) {
+        if ($this->canViewAllStories($user)) {
             return true;
         }
 
@@ -335,7 +373,7 @@ class ContributorStoryAccessService
 
     public function canEditEditorScript(User $user, string $storySlug): bool
     {
-        if ($this->isFullAdmin($user)) {
+        if ($this->canViewAllStories($user)) {
             return true;
         }
 
@@ -355,6 +393,8 @@ class ContributorStoryAccessService
     public function accessPayload(User $user): array
     {
         $fullAdmin = $this->isFullAdmin($user);
+        $headWriter = $this->isHeadWriter($user);
+        $writerStaff = $this->isWriterStaff($user);
         $authored = Story::query()->where('author_id', $user->id)->exists();
         $cast = Story::query()
             ->where(function (Builder $q) use ($user) {
@@ -362,12 +402,18 @@ class ContributorStoryAccessService
                     ->orWhereHas('characters', fn (Builder $c) => $c->where('voice_actor_id', $user->id));
             })
             ->exists();
+        $voiceActor = $user->isVoiceActor();
 
         return [
             'is_full_admin' => $fullAdmin,
-            'is_contributor' => ! $fullAdmin && ($authored || $cast || $user->role === User::ROLE_VOICE_ACTOR),
-            'can_view_assigned_stories' => $fullAdmin || $authored || $cast || $user->role === User::ROLE_VOICE_ACTOR,
-            'can_edit_authored_scripts' => $fullAdmin || $authored,
+            'is_contributor' => ! $fullAdmin && ! $headWriter && ($writerStaff || $authored || $cast || $voiceActor),
+            'is_head_writer' => $headWriter,
+            'is_writer' => $writerStaff,
+            'can_view_assigned_stories' => $fullAdmin || $headWriter || $writerStaff || $authored || $cast || $voiceActor,
+            'can_view_all_stories' => $fullAdmin || $headWriter,
+            'can_edit_authored_scripts' => $fullAdmin || $headWriter || $authored,
+            'can_edit_all_scripts' => $fullAdmin || $headWriter,
+            'can_assign_story_writers' => $fullAdmin || $headWriter,
             'can_access_story_package' => $fullAdmin,
         ];
     }
@@ -381,6 +427,19 @@ class ContributorStoryAccessService
     {
         if ($this->isFullAdmin($user)) {
             return [];
+        }
+
+        if ($this->isHeadWriter($user)) {
+            return [
+                'dashboard.view',
+                'stories.read',
+                'stories.assign_writer',
+                'story_editor.read',
+                'story_editor.update',
+                'writers.view',
+                'writers.assign',
+                'writers.revoke',
+            ];
         }
 
         $perms = ['stories.read', 'story_editor.read', 'dashboard.view'];

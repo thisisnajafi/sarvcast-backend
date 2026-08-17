@@ -244,7 +244,7 @@ class UserController extends Controller
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:parent,child,admin,basic',
+            'role' => 'required|in:'.implode(',', User::appRoleValues()),
             'parent_id' => 'nullable|exists:users,id',
             'status' => 'required|in:active,inactive,suspended,pending,profile_completion_needed',
             'language' => 'nullable|string|max:10',
@@ -299,7 +299,7 @@ class UserController extends Controller
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
             'password' => 'nullable|string|min:8|confirmed',
-            'role' => 'required|in:parent,child,admin',
+            'role' => 'required|in:'.implode(',', User::appRoleValues()),
             'parent_id' => 'nullable|exists:users,id',
             'status' => 'required|in:active,inactive,suspended,pending,profile_completion_needed',
             'language' => 'nullable|string|max:10',
@@ -379,14 +379,7 @@ class UserController extends Controller
     public function changeRole(Request $request, User $user)
     {
         $validated = $request->validate([
-            'role' => 'required|in:' . implode(',', [
-                User::ROLE_BASIC,
-                User::ROLE_PARENT,
-                User::ROLE_CHILD,
-                User::ROLE_VOICE_ACTOR,
-                User::ROLE_ADMIN,
-                User::ROLE_SUPER_ADMIN
-            ]),
+            'role' => 'required|in:' . implode(',', User::appRoleValues()),
         ]);
 
         $oldRole = $user->role;
@@ -409,7 +402,7 @@ class UserController extends Controller
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'integer|exists:users,id',
             'status' => 'required_if:action,change_status|string|in:active,inactive,suspended,pending,profile_completion_needed',
-            'role' => 'required_if:action,change_role|string|in:parent,child,admin,basic,voice_actor,super_admin',
+            'role' => 'required_if:action,change_role|string|in:'.implode(',', User::appRoleValues()),
             'notification_title' => 'required_if:action,send_notification|string|max:255',
             'notification_message' => 'required_if:action,send_notification|string|max:1000',
             'notification_type' => 'required_if:action,send_notification|string|in:info,success,warning,error',
@@ -861,7 +854,7 @@ class UserController extends Controller
 
     public function apiStore(Request $request)
     {
-        $roleValues = ['parent', 'child', 'admin', 'basic', 'super_admin', 'voice_actor'];
+        $roleValues = User::appRoleValues();
 
         $request->validate([
             'phone_number' => 'nullable|string|unique:users',
@@ -902,7 +895,7 @@ class UserController extends Controller
 
     public function apiUpdate(Request $request, User $user)
     {
-        $roleValues = ['parent', 'child', 'admin', 'basic', 'super_admin', 'voice_actor'];
+        $roleValues = User::appRoleValues();
 
         $request->validate([
             'phone_number' => 'nullable|string|unique:users,phone_number,' . $user->id,
@@ -1008,7 +1001,7 @@ class UserController extends Controller
             'selected_items' => 'nullable|array',
             'selected_items.*' => 'integer|exists:users,id',
             'status' => 'required_if:action,change_status|string|in:active,inactive,suspended,pending,profile_completion_needed',
-            'role' => 'required_if:action,change_role|string|in:parent,child,admin,basic,voice_actor,super_admin',
+            'role' => 'required_if:action,change_role|string|in:'.implode(',', User::appRoleValues()),
             'notification_title' => 'required_if:action,send_notification|string|max:255',
             'notification_message' => 'required_if:action,send_notification|string|max:1000',
             'notification_type' => 'required_if:action,send_notification|string|in:info,success,warning,error',

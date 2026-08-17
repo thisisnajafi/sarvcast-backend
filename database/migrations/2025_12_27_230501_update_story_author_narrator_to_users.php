@@ -15,6 +15,28 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            Schema::disableForeignKeyConstraints();
+            try {
+                Schema::table('stories', function (Blueprint $table) {
+                    try {
+                        $table->dropForeign(['author_id']);
+                    } catch (\Throwable $e) {
+                    }
+                    try {
+                        $table->dropForeign(['narrator_id']);
+                    } catch (\Throwable $e) {
+                    }
+                    $table->foreign('author_id')->references('id')->on('users')->onDelete('set null');
+                    $table->foreign('narrator_id')->references('id')->on('users')->onDelete('set null');
+                });
+            } finally {
+                Schema::enableForeignKeyConstraints();
+            }
+
+            return;
+        }
+
         // Get the actual foreign key constraint names
         $foreignKeys = DB::select("
             SELECT CONSTRAINT_NAME, COLUMN_NAME

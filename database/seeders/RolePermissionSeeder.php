@@ -43,8 +43,12 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'team_members.update', 'display_name' => 'ویرایش عضو تیم', 'group' => 'team_members'],
             ['name' => 'team_members.delete', 'display_name' => 'حذف عضو تیم', 'group' => 'team_members'],
             ['name' => 'stories.read', 'display_name' => 'مشاهده داستان‌های اختصاصی', 'group' => 'stories'],
+            ['name' => 'stories.assign_writer', 'display_name' => 'واگذاری نویسنده داستان', 'group' => 'stories'],
             ['name' => 'story_editor.read', 'display_name' => 'مشاهده ویرایشگر داستان', 'group' => 'story_editor'],
             ['name' => 'story_editor.update', 'display_name' => 'ویرایش اسکریپت داستان', 'group' => 'story_editor'],
+            ['name' => 'writers.view', 'display_name' => 'مشاهده نویسندگان', 'group' => 'writers'],
+            ['name' => 'writers.assign', 'display_name' => 'اختصاص نویسنده', 'group' => 'writers'],
+            ['name' => 'writers.revoke', 'display_name' => 'لغو نویسنده', 'group' => 'writers'],
         ];
 
         $createdPermissions = 0;
@@ -77,7 +81,7 @@ class RolePermissionSeeder extends Seeder
         $adminPermissionIds = Permission::whereIn('group', [
             'dashboard', 'coin_management', 'coupon_management',
             'payment_management', 'partner_management', 'analytics',
-            'user_management', 'media_library', 'team_members', 'stories', 'story_editor',
+            'user_management', 'media_library', 'team_members', 'stories', 'story_editor', 'writers',
         ])->pluck('id');
         $adminRole->permissions()->syncWithoutDetaching($adminPermissionIds);
 
@@ -99,11 +103,43 @@ class RolePermissionSeeder extends Seeder
             ])->pluck('id')
         );
 
+        [$writerRole, $writerCreated] = $this->firstOrCreateRole('writer', [
+            'display_name' => 'نویسنده',
+            'description' => 'مشاهده و ویرایش اسکریپت داستان‌های اختصاص‌یافته',
+        ]);
+        $writerRole->permissions()->syncWithoutDetaching(
+            Permission::whereIn('name', [
+                'dashboard.view',
+                'stories.read',
+                'story_editor.read',
+                'story_editor.update',
+            ])->pluck('id')
+        );
+
+        [$headWriterRole, $headCreated] = $this->firstOrCreateRole('head_writer', [
+            'display_name' => 'سرپرست نویسندگان',
+            'description' => 'دسترسی به همه داستان‌ها و اسکریپت‌ها و واگذاری نویسنده',
+        ]);
+        $headWriterRole->permissions()->syncWithoutDetaching(
+            Permission::whereIn('name', [
+                'dashboard.view',
+                'stories.read',
+                'stories.assign_writer',
+                'story_editor.read',
+                'story_editor.update',
+                'writers.view',
+                'writers.assign',
+                'writers.revoke',
+            ])->pluck('id')
+        );
+
         $this->command?->info(sprintf(
-            'Roles: super_admin=%s, admin=%s, voice_actor=%s',
+            'Roles: super_admin=%s, admin=%s, voice_actor=%s, writer=%s, head_writer=%s',
             $superCreated ? 'created' : 'exists(skipped)',
             $adminCreated ? 'created' : 'exists(skipped)',
-            $voiceCreated ? 'created' : 'exists(skipped)'
+            $voiceCreated ? 'created' : 'exists(skipped)',
+            $writerCreated ? 'created' : 'exists(skipped)',
+            $headCreated ? 'created' : 'exists(skipped)'
         ));
 
         $abolfazl = User::where('phone_number', '09136708883')->first();

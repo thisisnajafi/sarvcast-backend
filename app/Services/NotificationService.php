@@ -686,7 +686,12 @@ class NotificationService
                 'title' => 'اختصاص راوی قسمت',
                 'message' => "شما به عنوان راوی قسمت «{$episodeTitle}» از داستان «{$storyTitle}» انتخاب شده‌اید.",
                 'type' => 'info'
-            ]
+            ],
+            'story_writer' => [
+                'title' => 'اختصاص نویسنده داستان',
+                'message' => "شما به‌عنوان نویسنده داستان «{$storyTitle}» انتخاب شده‌اید.",
+                'type' => 'info'
+            ],
         ];
 
         if (!isset($notifications[$assignmentType])) {
@@ -754,7 +759,12 @@ class NotificationService
                 'title' => 'حذف از نقش صداپیشه',
                 'message' => "شما از نقش صداپیشه در قسمت «{$episodeTitle}» از داستان «{$storyTitle}» حذف شده‌اید.",
                 'type' => 'warning'
-            ]
+            ],
+            'story_writer' => [
+                'title' => 'برداشتن دسترسی نویسنده',
+                'message' => "دسترسی نویسندگی داستان «{$storyTitle}» برداشته شد.",
+                'type' => 'warning'
+            ],
         ];
 
         if (!isset($notifications[$assignmentType])) {

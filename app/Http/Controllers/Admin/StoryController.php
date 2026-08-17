@@ -177,6 +177,8 @@ class StoryController extends Controller
         // Get users who can be authors/narrators (voice_actor, admin, super_admin)
         $eligibleUsers = User::whereIn('role', [
             User::ROLE_VOICE_ACTOR,
+            User::ROLE_WRITER,
+            User::ROLE_HEAD_WRITER,
             User::ROLE_ADMIN,
             User::ROLE_SUPER_ADMIN
         ])->where('status', 'active')
@@ -216,10 +218,12 @@ class StoryController extends Controller
                         $user = User::find($value);
                         if ($user && !in_array($user->role, [
                             User::ROLE_VOICE_ACTOR,
+                            User::ROLE_WRITER,
+                            User::ROLE_HEAD_WRITER,
                             User::ROLE_ADMIN,
                             User::ROLE_SUPER_ADMIN
                         ])) {
-                            $fail('مؤلف باید نقش صداپیشه، ادمین یا ادمین کل داشته باشد.');
+                            $fail('مؤلف باید نقش نویسنده، صداپیشه، ادمین یا ادمین کل داشته باشد.');
                         }
                     }
                 },
@@ -1003,7 +1007,7 @@ class StoryController extends Controller
 
         $perPage = $this->resolveStoryListPerPage($request);
         $page = max(1, (int) $request->input('page', 1));
-        $paginator = $query->with(['category', 'episodes'])
+        $paginator = $query->with(['category', 'episodes', 'author'])
             ->paginate($perPage, ['*'], 'page', $page);
 
         return AdminApiResponse::paginated($paginator);
@@ -1095,9 +1099,37 @@ class StoryController extends Controller
             'can_edit_script' => $user ? $access->canEditScript($user, $story) : false,
             'can_view_script' => $user ? $access->canViewStory($user, $story) : false,
             'can_access_package' => $user ? $access->canAccessPackage($user) : false,
+            'can_assign_writer' => $user ? $access->canAssignStoryWriter($user) : false,
         ];
 
         return AdminApiResponse::success($payload);
+    }
+
+    public function apiAssignAuthor(Request $request, Story $story)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'promote_to_writer' => 'sometimes|boolean',
+        ]);
+
+        $story = app(\App\Services\StoryWriterAssignmentService::class)->assign(
+            $request->user(),
+            $story,
+            (int) $validated['user_id'],
+            $request->boolean('promote_to_writer'),
+        );
+
+        return AdminApiResponse::success($story, 'نویسنده با موفقیت به داستان اختصاص داده شد.');
+    }
+
+    public function apiRevokeAuthor(Request $request, Story $story)
+    {
+        $story = app(\App\Services\StoryWriterAssignmentService::class)->revoke(
+            $request->user(),
+            $story,
+        );
+
+        return AdminApiResponse::success($story, 'نویسنده داستان برداشته شد.');
     }
 
     public function apiUpdateSponsor(Request $request, Story $story)
@@ -1427,6 +1459,15 @@ class StoryController extends Controller
         if ($request->filled('is_premium')) {
             $val = $request->input('is_premium');
             $query->where('is_premium', filter_var($val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? (bool) $val);
+        }
+
+        if ($request->filled('has_writer')) {
+            $hasWriter = filter_var($request->input('has_writer'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($hasWriter === true) {
+                $query->whereNotNull('author_id');
+            } elseif ($hasWriter === false) {
+                $query->whereNull('author_id');
+            }
         }
 
         if ($request->filled('dateFrom')) {

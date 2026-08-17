@@ -55,7 +55,7 @@ class AuthController extends Controller
 
         $phoneNumber = $request->phone_number;
 
-        // Only admin / super_admin / voice_actor may request admin OTP (not parent/child/basic)
+        // Staff roles only (admin / super_admin / voice_actor / writer / head_writer) — not parent/child/basic
         $user = User::where('phone_number', $phoneNumber)->first();
 
         if (! $user || ! $user->mayAccessAdminPanel()) {

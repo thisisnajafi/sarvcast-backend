@@ -28,7 +28,7 @@ class UserSearchController extends Controller
             'limit' => 'sometimes|integer|min:1|max:50',
             'exclude_teachers' => 'sometimes|boolean',
             'roles' => 'sometimes|array',
-            'roles.*' => 'sometimes|string|in:super_admin,admin,voice_actor,parent,child,basic',
+            'roles.*' => 'sometimes|string|in:super_admin,admin,voice_actor,writer,head_writer,parent,child,basic',
         ]);
 
         if ($validator->fails()) {

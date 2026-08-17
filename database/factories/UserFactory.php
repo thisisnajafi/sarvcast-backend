@@ -51,4 +51,22 @@ class UserFactory extends Factory
             'onboarding_completed' => true,
         ]);
     }
+
+    public function writer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => User::ROLE_WRITER,
+            'status' => User::STATUS_ACTIVE,
+            'onboarding_completed' => true,
+        ]);
+    }
+
+    public function headWriter(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => User::ROLE_HEAD_WRITER,
+            'status' => User::STATUS_ACTIVE,
+            'onboarding_completed' => true,
+        ]);
+    }
 }

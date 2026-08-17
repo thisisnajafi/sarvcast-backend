@@ -150,7 +150,7 @@ class AuthController extends Controller
 
     /**
      * Whether an admin user may request OTP / log in.
-     * Only super_admin, admin, and voice_actor (not parent/child/basic authors/cast).
+     * Only super_admin, admin, voice_actor, writer, and head_writer (not parent/child/basic).
      */
     private function adminMayLogin(User $user): bool
     {

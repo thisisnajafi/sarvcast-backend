@@ -26,6 +26,8 @@ class User extends Authenticatable
     const ROLE_SUPER_ADMIN = 'super_admin';
     const ROLE_ADMIN = 'admin';
     const ROLE_VOICE_ACTOR = 'voice_actor';
+    const ROLE_WRITER = 'writer';
+    const ROLE_HEAD_WRITER = 'head_writer';
     const ROLE_PARENT = 'parent';
     const ROLE_CHILD = 'child';
     const ROLE_BASIC = 'basic';
@@ -64,7 +66,7 @@ class User extends Authenticatable
 
     /**
      * Admin panel login/API access (includes profile onboarding state).
-     * Only admin, super_admin, and voice_actor roles (not parent/child/basic).
+     * Staff: admin, super_admin, voice_actor, writer, head_writer (not parent/child/basic).
      */
     public function mayAccessAdminPanel(): bool
     {
@@ -704,6 +706,59 @@ class User extends Authenticatable
         return $this->role === self::ROLE_VOICE_ACTOR || $this->hasRole('voice_actor');
     }
 
+    public function isWriter(): bool
+    {
+        return $this->role === self::ROLE_WRITER || $this->hasRole(self::ROLE_WRITER);
+    }
+
+    public function isHeadWriter(): bool
+    {
+        return $this->role === self::ROLE_HEAD_WRITER || $this->hasRole(self::ROLE_HEAD_WRITER);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function appRoleValues(): array
+    {
+        return [
+            self::ROLE_PARENT,
+            self::ROLE_CHILD,
+            self::ROLE_ADMIN,
+            self::ROLE_BASIC,
+            self::ROLE_SUPER_ADMIN,
+            self::ROLE_VOICE_ACTOR,
+            self::ROLE_WRITER,
+            self::ROLE_HEAD_WRITER,
+        ];
+    }
+
+    /**
+     * Roles that may be set as story author without changing users.role.
+     *
+     * @return list<string>
+     */
+    public static function writerAssignableRolesWithoutPromote(): array
+    {
+        return [
+            self::ROLE_WRITER,
+            self::ROLE_VOICE_ACTOR,
+            self::ROLE_HEAD_WRITER,
+            self::ROLE_ADMIN,
+            self::ROLE_SUPER_ADMIN,
+        ];
+    }
+
+    /**
+     * Consumer roles that may be promoted to writer with explicit confirm.
+     *
+     * @return list<string>
+     */
+    public static function writerPromotableRoles(): array
+    {
+        return [self::ROLE_PARENT, self::ROLE_BASIC];
+    }
+
     /**
      * Update 2FA requirement based on current roles
      */
@@ -725,15 +780,23 @@ class User extends Authenticatable
     {
         $this->update(['role' => $newRole]);
 
-        $adminRbacRoleIds = Role::query()
-            ->whereIn('name', [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN])
+        $staffRbacNames = [
+            self::ROLE_ADMIN,
+            self::ROLE_SUPER_ADMIN,
+            self::ROLE_VOICE_ACTOR,
+            self::ROLE_WRITER,
+            self::ROLE_HEAD_WRITER,
+        ];
+
+        $staffRbacRoleIds = Role::query()
+            ->whereIn('name', $staffRbacNames)
             ->pluck('id');
 
-        if ($adminRbacRoleIds->isNotEmpty()) {
-            $this->roles()->detach($adminRbacRoleIds);
+        if ($staffRbacRoleIds->isNotEmpty()) {
+            $this->roles()->detach($staffRbacRoleIds);
         }
 
-        if (in_array($newRole, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN], true)) {
+        if (in_array($newRole, $staffRbacNames, true)) {
             $rbacRole = Role::query()->where('name', $newRole)->first();
             if ($rbacRole) {
                 $this->roles()->syncWithoutDetaching([$rbacRole->id]);

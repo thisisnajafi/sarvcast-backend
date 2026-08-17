@@ -16,6 +16,14 @@ return new class extends Migration
             return;
         }
 
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            Schema::table('user_devices', function (Blueprint $table) {
+                $table->text('fcm_token')->nullable()->change();
+            });
+
+            return;
+        }
+
         // The original table indexed fcm_token (varchar 500). MySQL cannot widen an
         // indexed utf8mb4 varchar beyond ~768 chars, so drop the index first.
         $indexes = collect(DB::select('SHOW INDEX FROM user_devices WHERE Column_name = ?', ['fcm_token']));

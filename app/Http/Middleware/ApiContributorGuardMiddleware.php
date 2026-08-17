@@ -32,6 +32,10 @@ class ApiContributorGuardMiddleware
         $path = trim($request->path(), '/');
         $method = strtoupper($request->method());
 
+        if ($this->access->isHeadWriter($user)) {
+            return $this->guardHeadWriter($request, $next, $user, $method, $path, $segment);
+        }
+
         if (! in_array($segment, ['stories', 'story-editor'], true)) {
             return $this->forbidden('دسترسی به این بخش فقط برای مدیران است.');
         }
@@ -41,6 +45,34 @@ class ApiContributorGuardMiddleware
         }
 
         return $this->guardStoryEditor($request, $next, $user, $method, $path);
+    }
+
+    private function guardHeadWriter(Request $request, Closure $next, User $user, string $method, string $path, string $segment): Response
+    {
+        if ($segment === 'writers') {
+            if (! in_array($method, ['GET', 'HEAD'], true)) {
+                return $this->forbidden('این عملیات برای حساب شما مجاز نیست.');
+            }
+
+            return $next($request);
+        }
+
+        if ($segment === 'stories') {
+            if (
+                ($method === 'POST' || $method === 'DELETE')
+                && preg_match('#/stories/[^/]+/author$#', $path)
+            ) {
+                return $next($request);
+            }
+
+            return $this->guardStories($request, $next, $method, $path);
+        }
+
+        if ($segment === 'story-editor') {
+            return $this->guardStoryEditor($request, $next, $user, $method, $path);
+        }
+
+        return $this->forbidden('دسترسی به این بخش فقط برای مدیران است.');
     }
 
     private function guardStories(Request $request, Closure $next, string $method, string $path): Response

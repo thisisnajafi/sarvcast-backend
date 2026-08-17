@@ -19,6 +19,10 @@ return new class extends Migration
             return;
         }
 
+        if (Schema::getConnection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         if ($this->foreignKeyExists('stories', self::FK_NAME)) {
             return;
         }

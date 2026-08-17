@@ -82,4 +82,43 @@ class StoryEditorApiTest extends TestCase
             ],
         ]);
     }
+
+    public function test_head_writer_can_list_and_reach_editor_script_update(): void
+    {
+        $head = User::factory()->headWriter()->create();
+        Sanctum::actingAs($head);
+
+        $stories = $this->getJson('/api/admin/story-editor/stories')
+            ->assertOk()
+            ->json('data');
+        $this->assertNotEmpty($stories);
+
+        $storyId = $stories[0]['id'];
+        $episodes = $this->getJson("/api/admin/story-editor/stories/{$storyId}/episodes")->json('data');
+        $episodeId = $episodes[0]['id'];
+
+        // Guard must allow Head Writer through; empty body fails validation instead of 403.
+        $this->putJson("/api/admin/story-editor/stories/{$storyId}/episodes/{$episodeId}", [])
+            ->assertStatus(422);
+    }
+
+    public function test_writer_cannot_put_unauthored_editor_script(): void
+    {
+        $writer = User::factory()->writer()->create();
+        Sanctum::actingAs($writer);
+
+        $stories = $this->getJson('/api/admin/story-editor/stories')->assertOk()->json('data');
+        if ($stories === []) {
+            $this->putJson('/api/admin/story-editor/stories/unauthored-slug/episodes/ep01', [
+                'raw_markdown' => "# test\n",
+            ])->assertForbidden();
+
+            return;
+        }
+
+        $storyId = $stories[0]['id'];
+        $this->putJson("/api/admin/story-editor/stories/{$storyId}/episodes/ep01", [
+            'raw_markdown' => "# test\n",
+        ])->assertForbidden();
+    }
 }

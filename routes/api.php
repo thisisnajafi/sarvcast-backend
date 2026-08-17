@@ -1390,6 +1390,14 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         Route::delete('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiDestroy']);
     });
 
+    Route::prefix('writers')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\WriterController::class, 'apiIndex']);
+        Route::get('/stats', [\App\Http\Controllers\Admin\WriterController::class, 'apiStats']);
+        Route::get('/statistics/data', [\App\Http\Controllers\Admin\WriterController::class, 'apiStats']);
+        Route::get('/candidates', [\App\Http\Controllers\Admin\WriterController::class, 'apiCandidates']);
+        Route::get('/{user}', [\App\Http\Controllers\Admin\WriterController::class, 'apiShow']);
+    });
+
     // Specialized Dashboards API
     Route::prefix('specialized-dashboards')->group(function () {
         Route::get('/stories/export', [\App\Http\Controllers\Admin\StoriesDashboardController::class, 'apiExport']);
@@ -1436,6 +1444,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryController::class, 'apiBulkAction']);
             Route::get('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiShow']);
             Route::put('/{story}/sponsor', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdateSponsor']);
+            Route::post('/{story}/author', [\App\Http\Controllers\Admin\StoryController::class, 'apiAssignAuthor']);
+            Route::delete('/{story}/author', [\App\Http\Controllers\Admin\StoryController::class, 'apiRevokeAuthor']);
             Route::put('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdate']);
             Route::delete('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiDestroy']);
             Route::post('/{story}/publish', [\App\Http\Controllers\Admin\StoryController::class, 'apiPublish']);
