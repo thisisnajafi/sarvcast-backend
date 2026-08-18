@@ -1010,6 +1010,14 @@ class StoryController extends Controller
         $paginator = $query->with(['category', 'episodes', 'author'])
             ->paginate($perPage, ['*'], 'page', $page);
 
+        $paginator->getCollection()->transform(function (Story $story) {
+            $row = $story->toArray();
+            $row['author_name'] = $story->authorDisplayName();
+            $row['author'] = $story->authorSummary();
+
+            return $row;
+        });
+
         return AdminApiResponse::paginated($paginator);
     }
 
@@ -1026,14 +1034,17 @@ class StoryController extends Controller
                 return;
             }
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-            fputcsv($handle, ['id', 'title', 'category_id', 'status', 'is_premium', 'age_rating', 'created_at']);
+            fputcsv($handle, ['id', 'title', 'author_name', 'category_id', 'status', 'is_premium', 'age_rating', 'created_at']);
 
-            $query->clone()->select(['id', 'title', 'category_id', 'status', 'is_premium', 'age_rating', 'created_at'])
+            $query->clone()
+                ->with('author')
+                ->select(['id', 'title', 'author_id', 'category_id', 'status', 'is_premium', 'age_rating', 'created_at'])
                 ->chunk(500, function ($rows) use ($handle) {
                     foreach ($rows as $row) {
                         fputcsv($handle, [
                             $row->id,
                             $row->title,
+                            $row->authorDisplayName() ?? '',
                             $row->category_id,
                             $row->status,
                             $row->is_premium ? '1' : '0',
@@ -1093,6 +1104,8 @@ class StoryController extends Controller
         ]);
 
         $payload = $story->toArray();
+        $payload['author_name'] = $story->authorDisplayName();
+        $payload['author'] = $story->authorSummary();
         $payload['story_editor_slug'] = app(\App\Services\StoryEditorRepository::class)
             ->findStorySlugByDbStoryId((int) $story->id);
         $payload['permissions'] = [

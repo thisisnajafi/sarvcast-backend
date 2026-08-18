@@ -122,4 +122,43 @@ class AdminStoriesApiStandardizationTest extends TestCase
             'age_group' => 'all',
         ]);
     }
+
+    public function test_stories_index_includes_author_name(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $writer = User::factory()->writer()->create([
+            'first_name' => 'مریم',
+            'last_name' => 'کاظمی',
+        ]);
+
+        $categoryId = DB::table('categories')->insertGetId([
+            'name' => 'Author Column',
+            'slug' => 'author-column-'.uniqid(),
+            'is_active' => true,
+            'sort_order' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $story = \App\Models\Story::query()->create([
+            'title' => 'قصه نویسنده',
+            'description' => 'توضیحات داستان برای ستون نویسنده',
+            'image_url' => 'https://example.com/cover.webp',
+            'category_id' => $categoryId,
+            'age_group' => '7+',
+            'language' => 'fa',
+            'duration' => 10,
+            'status' => 'draft',
+            'author_id' => $writer->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $row = collect($this->getJson('/api/admin/stories')->assertOk()->json('data'))
+            ->firstWhere('id', $story->id);
+
+        $this->assertIsArray($row);
+        $this->assertSame('مریم کاظمی', $row['author_name']);
+        $this->assertSame('مریم کاظمی', $row['author']['name'] ?? null);
+    }
 }

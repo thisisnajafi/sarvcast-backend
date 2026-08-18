@@ -257,6 +257,51 @@ class Story extends Model
         return $this->belongsTo(User::class, 'author_id');
     }
 
+    public function authorDisplayName(): ?string
+    {
+        return self::displayNameForUser($this->author);
+    }
+
+    /**
+     * Compact author payload for admin list/detail (no phone or credentials).
+     *
+     * @return array<string, mixed>|null
+     */
+    public function authorSummary(): ?array
+    {
+        $author = $this->author;
+        if (! $author) {
+            return null;
+        }
+
+        $name = self::displayNameForUser($author);
+
+        return [
+            'id' => $author->id,
+            'first_name' => $author->first_name,
+            'last_name' => $author->last_name,
+            'name' => $name,
+            'role' => $author->role,
+            'profile_image_url' => $author->profile_image_url,
+        ];
+    }
+
+    public static function displayNameForUser(?User $user): ?string
+    {
+        if (! $user) {
+            return null;
+        }
+
+        $full = trim((string) $user->first_name.' '.(string) $user->last_name);
+        if ($full !== '') {
+            return $full;
+        }
+
+        $name = trim((string) ($user->name ?? ''));
+
+        return $name !== '' ? $name : null;
+    }
+
     /**
      * Get the narrator of the story (user).
      */
