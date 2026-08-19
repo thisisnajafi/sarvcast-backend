@@ -74,7 +74,8 @@ delete_remote() {
     -Q "DELE ${remote_path}" \
     "ftp://${FTP_SERVER}/" >/dev/null 2>&1 || true
 
-  lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${OPEN_URL}" <<EOF >/dev/null 2>&1 || true
+  if command -v lftp >/dev/null 2>&1; then
+    lftp -u "${FTP_USERNAME},${FTP_PASSWORD}" "${OPEN_URL}" <<EOF >/dev/null 2>&1 || true
 set ftp:passive-mode true;
 set ftp:ssl-allow false;
 set ftp:ssl-force false;
@@ -84,6 +85,7 @@ $( [[ "${remote_dir}" != "." ]] && echo "cd ${remote_dir};" )
 rm -f ${remote_name};
 bye
 EOF
+  fi
 }
 
 upload_with_curl() {
@@ -111,6 +113,10 @@ upload_with_lftp() {
   local remote_dir="$2"
   local remote_name="$3"
   local local_dir local_base
+
+  if ! command -v lftp >/dev/null 2>&1; then
+    return 1
+  fi
 
   local_dir="$(dirname "${local_file}")"
   local_base="$(basename "${local_file}")"

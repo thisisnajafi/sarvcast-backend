@@ -252,10 +252,7 @@ jobs:
           SKIP_VENDOR_BUNDLE: ${{ steps.plan.outputs.run_composer == 'true' && 'false' || 'true' }}
         run: bash scripts/prepare-ftp-deploy.sh
 
-      - name: Install lftp
-        run: sudo apt-get update -qq && sudo apt-get install -y lftp
-
-      - name: Deploy via FTP (lftp)
+      - name: Deploy via FTP
         env:
           FTP_SERVER: ${{ env.FTP_SERVER }}
           FTP_USERNAME: ${{ env.FTP_USERNAME }}
@@ -317,18 +314,22 @@ jobs:
 
       - name: Upload production .env to server
         if: steps.plan.outputs.run_env == 'true'
+        env:
+          FTP_SERVER: ${{ env.FTP_SERVER }}
+          FTP_USERNAME: ${{ env.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ env.FTP_PASSWORD }}
         run: |
           set -euo pipefail
-          lftp -u "${{ env.FTP_USERNAME }},${{ env.FTP_PASSWORD }}" "ftp://${{ env.FTP_SERVER }}" -e "
-            set ftp:passive-mode true;
-            set ftp:ssl-allow false;
-            set ftp:ssl-force false;
-            set cmd:fail-exit yes;
-            lcd deploy-upload;
-            cd /;
-            put -O . .env;
-            bye;
-          "
+          test -f deploy-upload/.env
+          curl --fail --show-error --silent \
+            --ftp-pasv \
+            --connect-timeout 60 \
+            --max-time 120 \
+            --retry 2 \
+            --retry-delay 3 \
+            --user "${FTP_USERNAME}:${FTP_PASSWORD}" \
+            --upload-file deploy-upload/.env \
+            "ftp://${FTP_SERVER}/.env"
           echo "Uploaded production .env ($(wc -c < deploy-upload/.env) bytes)"
 
       - name: Clear server cache after .env upload
