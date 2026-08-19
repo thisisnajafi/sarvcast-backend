@@ -296,7 +296,12 @@ class UserController extends Controller
     {
         $user = User::query()->with('resume')->findOrFail($userId);
         $resumes = app(UserResumeService::class);
-        $includeResume = (bool) ($user->resume?->is_public);
+        $viewer = $request->user();
+        $canSeeDraft = $viewer instanceof User && (
+            (int) $viewer->id === (int) $user->id
+            || in_array($viewer->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true)
+        );
+        $includeResume = (bool) ($user->resume?->is_public) || $canSeeDraft;
         $works = $resumes->publishedWorksPayload($user);
 
         return response()->json([

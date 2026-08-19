@@ -26,6 +26,23 @@ class UserResumeService
         return [
             User::ROLE_VOICE_ACTOR,
             User::ROLE_HEAD_WRITER,
+            User::ROLE_WRITER,
+            User::ROLE_ADMIN,
+            User::ROLE_SUPER_ADMIN,
+        ];
+    }
+
+    /**
+     * Staff who appear in the public directory only when an admin pins them.
+     *
+     * @return list<string>
+     */
+    public static function directoryOptInRoles(): array
+    {
+        return [
+            User::ROLE_HEAD_WRITER,
+            User::ROLE_WRITER,
+            User::ROLE_ADMIN,
             User::ROLE_SUPER_ADMIN,
         ];
     }
@@ -47,7 +64,7 @@ class UserResumeService
 
         $resume = $user->resume;
         if (
-            in_array($user->role, [User::ROLE_HEAD_WRITER, User::ROLE_SUPER_ADMIN], true)
+            in_array($user->role, self::directoryOptInRoles(), true)
             && $resume
             && $resume->is_public
             && $resume->show_in_talent_directory
@@ -145,6 +162,15 @@ class UserResumeService
         $resume->fill($normalized);
         $resume->save();
 
+        if (array_key_exists('about', $normalized)) {
+            $owner = $resume->user ?? User::query()->find($resume->user_id);
+            if ($owner) {
+                $about = $normalized['about'];
+                $owner->bio = $about === null ? null : mb_substr($about, 0, 500);
+                $owner->save();
+            }
+        }
+
         return $resume->fresh() ?? $resume;
     }
 
@@ -201,10 +227,10 @@ class UserResumeService
     {
         $headline = null;
         $years = null;
-        $publicResume = $user->resume && $user->resume->is_public ? $user->resume : null;
-        if ($includeResume && $publicResume) {
-            $headline = $publicResume->headline;
-            $years = $publicResume->years_of_experience;
+        $visibleResume = $includeResume ? $user->resume : null;
+        if ($visibleResume) {
+            $headline = $visibleResume->headline;
+            $years = $visibleResume->years_of_experience;
         }
 
         $payload = [
@@ -220,8 +246,8 @@ class UserResumeService
             'years_of_experience' => $years,
         ];
 
-        $payload['resume'] = ($includeResume && $publicResume)
-            ? $this->toPublicArray($publicResume)
+        $payload['resume'] = $visibleResume
+            ? $this->toPublicArray($visibleResume)
             : null;
 
         return $payload;
@@ -306,7 +332,7 @@ class UserResumeService
             ->where(function ($q) {
                 $q->where('role', User::ROLE_VOICE_ACTOR)
                     ->orWhere(function ($q2) {
-                        $q2->whereIn('role', [User::ROLE_HEAD_WRITER, User::ROLE_SUPER_ADMIN])
+                        $q2->whereIn('role', self::directoryOptInRoles())
                             ->whereHas('resume', function ($r) {
                                 $r->where('is_public', true)
                                     ->where('show_in_talent_directory', true);

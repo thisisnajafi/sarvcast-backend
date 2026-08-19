@@ -52,6 +52,7 @@ class MeResumeController extends Controller
         $user->load('resume');
         $resume = $this->resumes->firstOrCreateDraft($user, $user->id);
         $resume = $this->resumes->applyUpdate($resume, $normalized, $user->id);
+        $user->refresh();
         $user->setRelation('resume', $resume);
 
         return response()->json([

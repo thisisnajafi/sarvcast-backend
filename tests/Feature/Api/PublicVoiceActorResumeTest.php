@@ -162,6 +162,26 @@ class PublicVoiceActorResumeTest extends TestCase
             'is_public' => true,
             'show_in_talent_directory' => false,
         ]);
+        $this->assertSame('متن درباره', $va->fresh()->bio);
+    }
+
+    public function test_writer_and_admin_can_save_own_resume(): void
+    {
+        foreach ([User::factory()->writer(), User::factory()->admin()] as $factory) {
+            $user = $factory->create();
+            Sanctum::actingAs($user);
+
+            $this->putJson('/api/v1/me/resume', [
+                'headline' => 'رزومه تیم',
+                'about' => 'یک درباره کامل برای کارت و صفحه رزومه',
+                'is_public' => false,
+            ])->assertOk()->assertJsonPath('data.resume.headline', 'رزومه تیم');
+
+            $this->assertSame(
+                'یک درباره کامل برای کارت و صفحه رزومه',
+                $user->fresh()->bio
+            );
+        }
     }
 
     public function test_voice_actor_cannot_edit_another_resume_via_admin(): void
@@ -236,6 +256,26 @@ class PublicVoiceActorResumeTest extends TestCase
         $this->assertTrue($ids->contains($published->id));
         $this->assertCount(1, $ids);
         $this->assertNotNull($data['user']['resume']);
+    }
+
+    public function test_owner_can_see_unpublished_resume_on_profile(): void
+    {
+        $va = User::factory()->voiceActor()->create();
+        UserResume::factory()->create([
+            'user_id' => $va->id,
+            'headline' => 'پیش‌نویس خصوصی',
+            'about' => 'متن کامل رزومه پیش‌نویس',
+            'is_public' => false,
+        ]);
+
+        $guest = $this->getJson('/api/v1/users/'.$va->id.'/stories')->assertOk()->json('data.user');
+        $this->assertNull($guest['resume']);
+        $this->assertNull($guest['headline']);
+
+        Sanctum::actingAs($va);
+        $owner = $this->getJson('/api/v1/users/'.$va->id.'/stories')->assertOk()->json('data.user');
+        $this->assertSame('پیش‌نویس خصوصی', $owner['headline']);
+        $this->assertSame('متن کامل رزومه پیش‌نویس', $owner['resume']['about']);
     }
 
     public function test_get_user_stories_still_works_for_parent_without_resume(): void

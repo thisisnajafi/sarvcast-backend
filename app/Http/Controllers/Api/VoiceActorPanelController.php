@@ -61,18 +61,7 @@ class VoiceActorPanelController extends Controller
                 'category' => $story->category,
                 'author' => $story->author,
                 'narrator' => $story->narrator,
-                'characters' => $story->characters->map(function ($character) {
-                    return [
-                        'id' => $character->id,
-                        'name' => $character->name,
-                        'image_url' => $character->image_url,
-                        'voice_actor' => $character->voiceActor ? [
-                            'id' => $character->voiceActor->id,
-                            'name' => $character->voiceActor->first_name . ' ' . $character->voiceActor->last_name,
-                            'profile_image_url' => $character->voiceActor->profile_image_url,
-                        ] : null,
-                    ];
-                }),
+                'characters' => $this->mapUniqueCharacters($story->characters),
                 'user_role' => $story->narrator_id === $user->id ? 'narrator' : 'voice_actor',
                 'total_episodes' => $story->episodes()->count(),
             ];
@@ -142,20 +131,8 @@ class VoiceActorPanelController extends Controller
             ];
         });
 
-        // Get characters
-        $characters = $story->characters->map(function ($character) {
-            return [
-                'id' => $character->id,
-                'name' => $character->name,
-                'image_url' => $character->image_url,
-                'description' => $character->description,
-                'voice_actor' => $character->voiceActor ? [
-                    'id' => $character->voiceActor->id,
-                    'name' => $character->voiceActor->first_name . ' ' . $character->voiceActor->last_name,
-                    'profile_image_url' => $character->voiceActor->profile_image_url,
-                ] : null,
-            ];
-        });
+        // Get unique characters (one card / image per character, not per episode)
+        $characters = $this->mapUniqueCharacters($story->characters);
 
         return response()->json([
             'success' => true,
@@ -323,5 +300,41 @@ class VoiceActorPanelController extends Controller
                 'message' => 'خطا در آپلود فایل صوتی',
             ], 500);
         }
+    }
+
+    /**
+     * One entry per character (id, then name + image) so the VA panel does not
+     * repeat the same person under every episode.
+     *
+     * @param  \Illuminate\Support\Collection<int, Character>|iterable<Character>  $characters
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function mapUniqueCharacters($characters)
+    {
+        return collect($characters)
+            ->filter(function ($character) {
+                return (int) ($character->voice_actor_id ?? 0) > 0 && $character->voiceActor;
+            })
+            ->unique('id')
+            ->unique(function ($character) {
+                $name = mb_strtolower(trim((string) $character->name));
+                $image = (string) ($character->getAttributes()['image_url'] ?? '');
+
+                return $name.'|'.$image;
+            })
+            ->values()
+            ->map(function ($character) {
+                return [
+                    'id' => $character->id,
+                    'name' => $character->name,
+                    'image_url' => $character->image_url,
+                    'description' => $character->description,
+                    'voice_actor' => $character->voiceActor ? [
+                        'id' => $character->voiceActor->id,
+                        'name' => $character->voiceActor->first_name.' '.$character->voiceActor->last_name,
+                        'profile_image_url' => $character->voiceActor->profile_image_url,
+                    ] : null,
+                ];
+            });
     }
 }
