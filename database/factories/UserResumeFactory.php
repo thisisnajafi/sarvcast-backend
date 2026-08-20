@@ -28,7 +28,7 @@ class UserResumeFactory extends Factory
             'demo_url' => null,
             'social_links' => ['instagram' => null, 'website' => null, 'aparat' => null],
             'is_public' => false,
-            'show_in_talent_directory' => false,
+            'show_in_talent_directory' => true,
             'published_at' => null,
         ];
     }

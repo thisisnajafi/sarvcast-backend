@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\User;
 use App\Models\Person;
 use App\Models\Character;
 use App\Models\Episode;
 use App\Models\EpisodeVoiceActor;
+use App\Services\UserResumeService;
 use App\Services\UserStoryContributionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -456,6 +458,22 @@ class VoiceActorController extends Controller
             }
         }
 
+        if ($request->boolean('has_photo')) {
+            $query->whereNotNull('profile_image_url')
+                ->where('profile_image_url', '!=', '');
+        }
+
+        if ($request->has('listed') && $request->input('listed') !== '' && $request->input('listed') !== null) {
+            if ($request->boolean('listed')) {
+                $query->where(function ($listed) {
+                    $listed->whereDoesntHave('resume')
+                        ->orWhereHas('resume', fn ($r) => $r->where('show_in_talent_directory', true));
+                });
+            } else {
+                $query->whereHas('resume', fn ($r) => $r->where('show_in_talent_directory', false));
+            }
+        }
+
         $perPage = min(100, max(1, (int) $request->input('per_page', 20)));
         $voiceActors = $query
             ->with('resume')
@@ -499,11 +517,65 @@ class VoiceActorController extends Controller
             'status' => $validated['status'] ?? 'active',
         ]);
 
+        app(UserResumeService::class)->firstOrCreateDraft($user, $request->user()?->id);
+
         return response()->json([
             'success' => true,
             'message' => 'صداپیشه با موفقیت ایجاد شد.',
-            'data' => $this->formatVoiceActorUserForApi($user),
+            'data' => $this->formatVoiceActorUserForApi($user->fresh('resume')),
         ], 201);
+    }
+
+    public function apiListingSettings()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'require_photo' => AppSetting::getBool(AppSetting::PUBLIC_VOICE_ACTORS_REQUIRE_PHOTO, false),
+            ],
+        ]);
+    }
+
+    public function apiUpdateListingSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'require_photo' => 'required|boolean',
+        ]);
+
+        AppSetting::setBool(
+            AppSetting::PUBLIC_VOICE_ACTORS_REQUIRE_PHOTO,
+            (bool) $validated['require_photo']
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تنظیمات فهرست عمومی ذخیره شد.',
+            'data' => [
+                'require_photo' => AppSetting::getBool(AppSetting::PUBLIC_VOICE_ACTORS_REQUIRE_PHOTO, false),
+            ],
+        ]);
+    }
+
+    public function apiToggleListing(Request $request, User $voiceActor)
+    {
+        $this->ensureEligibleVoiceActorUser($voiceActor);
+
+        $validated = $request->validate([
+            'show_in_talent_directory' => 'required|boolean',
+        ]);
+
+        $resume = app(UserResumeService::class)->firstOrCreateDraft($voiceActor, $request->user()?->id);
+        $resume->show_in_talent_directory = (bool) $validated['show_in_talent_directory'];
+        $resume->updated_by_user_id = $request->user()?->id;
+        $resume->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $resume->show_in_talent_directory
+                ? 'صداپیشه در فهرست عمومی نمایش داده می‌شود.'
+                : 'صداپیشه از فهرست عمومی مخفی شد.',
+            'data' => $this->formatVoiceActorUserForApi($voiceActor->fresh('resume')),
+        ]);
     }
 
     public function apiShow(User $voiceActor)

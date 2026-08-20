@@ -59,7 +59,9 @@ class UserResumeService
         }
 
         if ($user->role === User::ROLE_VOICE_ACTOR) {
-            return true;
+            $resume = $user->resume;
+            // No resume yet → listed by default; explicit false hides from public listing.
+            return ! $resume || (bool) $resume->show_in_talent_directory;
         }
 
         $resume = $user->resume;
@@ -91,7 +93,7 @@ class UserResumeService
             'languages' => [],
             'social_links' => $this->emptySocialLinks(),
             'is_public' => false,
-            'show_in_talent_directory' => false,
+            'show_in_talent_directory' => $user->role === User::ROLE_VOICE_ACTOR,
             'updated_by_user_id' => $editorId ?? $user->id,
         ]);
     }
@@ -330,14 +332,21 @@ class UserResumeService
         return User::query()
             ->where('status', User::STATUS_ACTIVE)
             ->where(function ($q) {
-                $q->where('role', User::ROLE_VOICE_ACTOR)
-                    ->orWhere(function ($q2) {
-                        $q2->whereIn('role', self::directoryOptInRoles())
-                            ->whereHas('resume', function ($r) {
-                                $r->where('is_public', true)
-                                    ->where('show_in_talent_directory', true);
-                            });
-                    });
+                $q->where(function ($va) {
+                    $va->where('role', User::ROLE_VOICE_ACTOR)
+                        ->where(function ($listed) {
+                            $listed->whereDoesntHave('resume')
+                                ->orWhereHas('resume', function ($r) {
+                                    $r->where('show_in_talent_directory', true);
+                                });
+                        });
+                })->orWhere(function ($q2) {
+                    $q2->whereIn('role', self::directoryOptInRoles())
+                        ->whereHas('resume', function ($r) {
+                            $r->where('is_public', true)
+                                ->where('show_in_talent_directory', true);
+                        });
+                });
             })
             ->with('resume');
     }

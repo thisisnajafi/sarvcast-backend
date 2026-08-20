@@ -18,10 +18,24 @@ class PublicVoiceActorResumeTest extends TestCase
     public function test_public_listing_includes_voice_actors_without_published_resume(): void
     {
         $publicVa = User::factory()->voiceActor()->create(['first_name' => 'آوا']);
-        UserResume::factory()->public()->create(['user_id' => $publicVa->id]);
+        UserResume::factory()->public()->create([
+            'user_id' => $publicVa->id,
+            'show_in_talent_directory' => true,
+        ]);
 
         $draftVa = User::factory()->voiceActor()->create(['first_name' => 'پیش‌نویس']);
-        UserResume::factory()->create(['user_id' => $draftVa->id, 'is_public' => false]);
+        UserResume::factory()->create([
+            'user_id' => $draftVa->id,
+            'is_public' => false,
+            'show_in_talent_directory' => true,
+        ]);
+
+        $hiddenVa = User::factory()->voiceActor()->create(['first_name' => 'مخفی']);
+        UserResume::factory()->create([
+            'user_id' => $hiddenVa->id,
+            'is_public' => true,
+            'show_in_talent_directory' => false,
+        ]);
 
         $bareVa = User::factory()->voiceActor()->create(['first_name' => 'بدون‌رزومه']);
 
@@ -41,7 +55,10 @@ class PublicVoiceActorResumeTest extends TestCase
             'first_name' => 'غیرفعال',
             'status' => User::STATUS_INACTIVE,
         ]);
-        UserResume::factory()->public()->create(['user_id' => $inactive->id]);
+        UserResume::factory()->public()->create([
+            'user_id' => $inactive->id,
+            'show_in_talent_directory' => true,
+        ]);
 
         $response = $this->getJson('/api/v1/public/voice-actors')->assertOk()->assertJsonPath('success', true);
         $ids = collect($response->json('data'))->pluck('id');
@@ -51,6 +68,7 @@ class PublicVoiceActorResumeTest extends TestCase
         $this->assertTrue($ids->contains($draftVa->id));
         $this->assertTrue($ids->contains($bareVa->id));
         $this->assertTrue($ids->contains($headListed->id));
+        $this->assertFalse($ids->contains($hiddenVa->id));
         $this->assertFalse($ids->contains($head->id));
         $this->assertFalse($ids->contains($inactive->id));
         $this->assertNotNull($draftCard);
@@ -84,6 +102,38 @@ class PublicVoiceActorResumeTest extends TestCase
         $this->assertTrue($ids->contains($withPhoto->id));
         $this->assertFalse($ids->contains($withoutPhoto->id));
         $this->assertFalse($ids->contains($emptyPhoto->id));
+    }
+
+    public function test_public_listing_respects_require_photo_setting(): void
+    {
+        \App\Models\AppSetting::setBool(\App\Models\AppSetting::PUBLIC_VOICE_ACTORS_REQUIRE_PHOTO, true);
+
+        $withPhoto = User::factory()->voiceActor()->create([
+            'first_name' => 'باعکس',
+            'profile_image_url' => 'voice-actors/ava.jpg',
+        ]);
+        $withoutPhoto = User::factory()->voiceActor()->create([
+            'first_name' => 'بی‌عکس',
+            'profile_image_url' => null,
+        ]);
+
+        $ids = collect(
+            $this->getJson('/api/v1/public/voice-actors')
+                ->assertOk()
+                ->assertJsonPath('meta.require_photo', true)
+                ->json('data')
+        )->pluck('id');
+
+        $this->assertTrue($ids->contains($withPhoto->id));
+        $this->assertFalse($ids->contains($withoutPhoto->id));
+
+        // Explicit has_photo=0 overrides the global setting.
+        $idsAll = collect(
+            $this->getJson('/api/v1/public/voice-actors?has_photo=0')
+                ->assertOk()
+                ->json('data')
+        )->pluck('id');
+        $this->assertTrue($idsAll->contains($withoutPhoto->id));
     }
 
     public function test_public_show_never_contains_phone_number(): void
@@ -160,9 +210,20 @@ class PublicVoiceActorResumeTest extends TestCase
             'user_id' => $va->id,
             'headline' => 'صداپیشه کودک',
             'is_public' => true,
-            'show_in_talent_directory' => false,
+            // Self-update cannot change directory flag; VA drafts default to listed.
+            'show_in_talent_directory' => true,
         ]);
         $this->assertSame('متن درباره', $va->fresh()->bio);
+
+        $this->putJson('/api/v1/me/resume', [
+            'headline' => 'صداپیشه کودک',
+            'show_in_talent_directory' => false,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('user_resumes', [
+            'user_id' => $va->id,
+            'show_in_talent_directory' => true,
+        ]);
     }
 
     public function test_writer_and_admin_can_save_own_resume(): void

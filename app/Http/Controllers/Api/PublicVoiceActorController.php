@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\User;
 use App\Services\UserResumeService;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,11 @@ class PublicVoiceActorController extends Controller
 
         $query = $this->resumes->talentDirectoryQuery()->inRandomOrder();
 
-        if ($request->boolean('has_photo')) {
+        $requirePhoto = $request->has('has_photo')
+            ? $request->boolean('has_photo')
+            : AppSetting::getBool(AppSetting::PUBLIC_VOICE_ACTORS_REQUIRE_PHOTO, false);
+
+        if ($requirePhoto) {
             $this->resumes->constrainToProfilePhoto($query);
         }
 
@@ -46,6 +51,7 @@ class PublicVoiceActorController extends Controller
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'last_page' => $paginator->lastPage(),
+                'require_photo' => AppSetting::getBool(AppSetting::PUBLIC_VOICE_ACTORS_REQUIRE_PHOTO, false),
             ],
         ]);
     }

@@ -1391,7 +1391,10 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         Route::post('/', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiStore']);
         Route::get('/export', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiExport']);
         Route::get('/statistics/data', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiStatistics']);
+        Route::get('/listing-settings', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiListingSettings']);
+        Route::put('/listing-settings', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiUpdateListingSettings']);
         Route::post('/bulk-action', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiBulkAction']);
+        Route::patch('/{voiceActor}/listing', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiToggleListing']);
         Route::get('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiShow']);
         Route::put('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiUpdate']);
         Route::delete('/{voiceActor}', [\App\Http\Controllers\Admin\VoiceActorController::class, 'apiDestroy']);
