@@ -12,6 +12,7 @@ use App\Models\Episode;
 use App\Services\InAppNotificationService;
 use App\Services\NotificationService;
 use App\Services\StoryEpisodeStatusService;
+use App\Services\StoryDeletionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -468,21 +469,12 @@ class StoryController extends Controller
     public function destroy(Story $story)
     {
         try {
-            DB::beginTransaction();
-
-            // Delete associated episodes
-            $story->episodes()->delete();
-
-            // Delete the story
-            $story->delete();
-
-            DB::commit();
+            app(StoryDeletionService::class)->delete($story);
 
             return redirect()->route('admin.stories.index')
                 ->with('success', 'داستان با موفقیت حذف شد.');
 
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Failed to delete story', [
                 'story_id' => $story->id,
                 'error' => $e->getMessage()
@@ -545,8 +537,7 @@ class StoryController extends Controller
                             break;
 
                         case 'delete':
-                            $story->episodes()->delete();
-                            $story->delete();
+                            app(StoryDeletionService::class)->delete($story);
                             break;
 
                         case 'change_status':
@@ -1286,8 +1277,7 @@ class StoryController extends Controller
 
     public function apiDestroy(Story $story)
     {
-        $story->episodes()->get()->each->delete();
-        $story->delete();
+        app(StoryDeletionService::class)->delete($story);
 
         return AdminApiResponse::okMessage('Story deleted successfully');
     }
@@ -1317,7 +1307,7 @@ class StoryController extends Controller
 
         switch ($validated['action']) {
             case 'delete':
-                Story::whereIn('id', $ids)->delete();
+                app(StoryDeletionService::class)->deleteMany($ids);
                 $message = 'Stories deleted successfully';
                 break;
             case 'publish':

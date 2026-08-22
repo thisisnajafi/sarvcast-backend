@@ -121,11 +121,46 @@ class EpisodeAssetCleanupService
             ->where('episode_id', $episode->id)
             ->get()
             ->each(function (StoryProductionAsset $asset) {
-                $this->deleteStoredPath($asset->storage_path);
-                $this->deleteStoredPath($asset->getAttributes()['image_url'] ?? null);
-                $this->deleteMediaAssetByUrl($asset->getAttributes()['image_url'] ?? null, $asset->id, StoryProductionAsset::class);
-                $asset->delete();
+                $this->deleteProductionAssetRecord($asset);
             });
+    }
+
+    public function cleanupStoryMedia(\App\Models\Story $story): void
+    {
+        $attributes = $story->getAttributes();
+
+        $this->deleteScriptFile($attributes['script_file_url'] ?? null);
+        $this->deleteCoverImage($attributes['image_url'] ?? null);
+        $this->deleteCoverImage($attributes['cover_image_url'] ?? null);
+    }
+
+    public function cleanupCharacterMedia(\App\Models\Character $character): void
+    {
+        $this->deleteCoverImage($character->getAttributes()['image_url'] ?? null);
+    }
+
+    /**
+     * Remove story-scoped production rows (episode rows are cleaned during episode delete).
+     */
+    public function cleanupStoryProductionRecords(int $storyId): void
+    {
+        StoryProductionFile::query()
+            ->where('story_id', $storyId)
+            ->get()
+            ->each(fn (StoryProductionFile $file) => $this->deleteProductionFileRecord($file));
+
+        StoryProductionAsset::query()
+            ->where('story_id', $storyId)
+            ->get()
+            ->each(fn (StoryProductionAsset $asset) => $this->deleteProductionAssetRecord($asset));
+    }
+
+    private function deleteProductionAssetRecord(StoryProductionAsset $asset): void
+    {
+        $this->deleteStoredPath($asset->storage_path);
+        $this->deleteStoredPath($asset->getAttributes()['image_url'] ?? null);
+        $this->deleteMediaAssetByUrl($asset->getAttributes()['image_url'] ?? null, $asset->id, StoryProductionAsset::class);
+        $asset->delete();
     }
 
     private function deleteProductionFileRecord(StoryProductionFile $file): void

@@ -502,6 +502,68 @@ class StoryEditorRepository
     }
 
     /**
+     * Delete the entire story-editor directory (all episode MD folders and story metadata).
+     */
+    public function deleteStoryDirectory(string $storySlugOrFolderName): bool
+    {
+        $storyDir = $this->findStoryDirectory($storySlugOrFolderName);
+
+        if ($storyDir === null) {
+            $basePath = $this->resolveStoriesPath();
+            $candidate = $basePath.DIRECTORY_SEPARATOR.$storySlugOrFolderName;
+            if (is_dir($candidate)) {
+                $storyDir = realpath($candidate) ?: $candidate;
+            }
+        }
+
+        if ($storyDir === null) {
+            return false;
+        }
+
+        $this->deleteDirectoryRecursive($storyDir);
+
+        return true;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function resolveStoryEditorSlugs(int $storyId): array
+    {
+        $slugs = [];
+
+        $fromDb = \App\Models\StoryProductionFile::query()
+            ->where('story_id', $storyId)
+            ->whereNotNull('story_slug')
+            ->distinct()
+            ->pluck('story_slug')
+            ->merge(
+                \App\Models\StoryProductionAsset::query()
+                    ->where('story_id', $storyId)
+                    ->whereNotNull('story_slug')
+                    ->distinct()
+                    ->pluck('story_slug')
+            );
+
+        foreach ($fromDb as $slug) {
+            if (is_string($slug) && $slug !== '' && ! in_array($slug, $slugs, true)) {
+                $slugs[] = $slug;
+            }
+        }
+
+        foreach ([
+            $this->findLinkedStorySlug($storyId),
+            $this->findStorySlugByDbStoryId($storyId),
+        ] as $slug) {
+            if (is_string($slug) && $slug !== '' && ! in_array($slug, $slugs, true)) {
+                $slugs[] = $slug;
+            }
+        }
+
+        return $slugs;
+    }
+
+    /**
      * @return array{id: string, folder_name: string, path: string}
      */
     public function copyEpisodeDirectory(string $storySlug, string $sourceFolderName, int $newNumber, string $title): array
