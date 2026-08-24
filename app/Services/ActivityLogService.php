@@ -18,13 +18,21 @@ class ActivityLogService
     {
         $payload = $this->sanitizeEntry($entry);
 
-        if (config('activity_log.dispatch_sync', true)) {
-            LogActivityJob::dispatchSync($payload);
+        try {
+            if (config('activity_log.dispatch_sync', true)) {
+                LogActivityJob::dispatchSync($payload);
 
-            return;
+                return;
+            }
+
+            LogActivityJob::dispatch($payload);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to persist activity log entry', [
+                'action' => $payload['action'] ?? null,
+                'channel' => $payload['channel'] ?? null,
+                'error' => $e->getMessage(),
+            ]);
         }
-
-        LogActivityJob::dispatch($payload);
     }
 
     public function recordSecurityEvent(

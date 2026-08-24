@@ -25,7 +25,10 @@ class EpisodeObserver
      */
     public function created(Episode $episode): void
     {
-        $this->updateStoryStatistics($episode->story);
+        $story = $episode->story;
+        if ($story) {
+            $this->updateStoryStatistics($story);
+        }
     }
 
     /**
@@ -35,7 +38,10 @@ class EpisodeObserver
     {
         // Check if status or duration changed
         if ($episode->isDirty(['status', 'duration', 'is_premium'])) {
-            $this->updateStoryStatistics($episode->story);
+            $story = $episode->story;
+            if ($story) {
+                $this->updateStoryStatistics($story);
+            }
         }
     }
 
@@ -44,7 +50,10 @@ class EpisodeObserver
      */
     public function deleted(Episode $episode): void
     {
-        $this->updateStoryStatistics($episode->story);
+        $story = $episode->story;
+        if ($story) {
+            $this->updateStoryStatistics($story);
+        }
     }
 
     /**
@@ -52,7 +61,10 @@ class EpisodeObserver
      */
     public function restored(Episode $episode): void
     {
-        $this->updateStoryStatistics($episode->story);
+        $story = $episode->story;
+        if ($story) {
+            $this->updateStoryStatistics($story);
+        }
     }
 
     /**
@@ -60,7 +72,11 @@ class EpisodeObserver
      */
     public function forceDeleted(Episode $episode): void
     {
-        $this->updateStoryStatistics($episode->story);
+        $storyId = $episode->story_id;
+        $story = $storyId ? Story::query()->find($storyId) : null;
+        if ($story) {
+            $this->updateStoryStatistics($story);
+        }
     }
 
     /**

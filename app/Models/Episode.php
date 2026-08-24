@@ -32,6 +32,11 @@ class Episode extends Model
         'has_multiple_voice_actors',
         'voice_actor_count',
         'script_file_url',
+        'age_rating',
+        'moderation_status',
+        'moderation_notes',
+        'moderation_rating',
+        'content_warnings',
     ];
 
     /**

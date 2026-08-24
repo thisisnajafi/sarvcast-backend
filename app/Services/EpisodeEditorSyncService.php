@@ -146,14 +146,22 @@ class EpisodeEditorSyncService
             return;
         }
 
-        $md = $this->editor->findEpisodeDirBySlug($storySlug, $scaffold['id']);
-        $this->updateProductionSlug(
-            $episode,
-            $storySlug,
-            $scaffold['id'],
-            $md['file_path'] ?? $scaffold['path'],
-            (int) $episode->episode_number,
-        );
+        try {
+            $md = $this->editor->findEpisodeDirBySlug($storySlug, $scaffold['id']);
+            $this->updateProductionSlug(
+                $episode,
+                $storySlug,
+                $scaffold['id'],
+                $md['file_path'] ?? $scaffold['path'],
+                (int) $episode->episode_number,
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Could not link story-editor production file after scaffold', [
+                'episode_id' => $episode->id,
+                'story_slug' => $storySlug,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function syncNumberOrTitle(Episode $episode, int $oldNumber, string $oldTitle): void
@@ -280,10 +288,15 @@ class EpisodeEditorSyncService
             }
         }
 
+        $relativeSource = $this->relativizeEditorPath($mdPath);
+
         $existing = StoryProductionFile::query()
             ->where('episode_id', $episode->id)
             ->where('file_type', StoryProductionFile::TYPE_STORY_SCRIPT)
             ->first();
+
+        $storagePath = $existing?->storage_path
+            ?: ($relativeSource ?: 'stories/production/_pending.md');
 
         $payload = [
             'story_slug' => $storySlug,
@@ -292,9 +305,9 @@ class EpisodeEditorSyncService
             'story_id' => $episode->story_id,
             'episode_id' => $episode->id,
             'episode_number' => $episodeNumber,
-            'source_path' => $mdPath,
+            'source_path' => $relativeSource,
             'original_filename' => $mdPath ? basename($mdPath) : 'episode.md',
-            'storage_path' => $existing?->storage_path ?: ($mdPath ?: 'stories/production/_pending.md'),
+            'storage_path' => \Illuminate\Support\Str::limit((string) $storagePath, 500, ''),
         ];
 
         if ($existing) {
@@ -311,5 +324,26 @@ class EpisodeEditorSyncService
             ],
             $payload,
         );
+    }
+
+    private function relativizeEditorPath(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        try {
+            $root = \App\Support\StoryEditorPaths::resolve();
+            $normalizedPath = str_replace('\\', '/', realpath($path) ?: $path);
+            $normalizedRoot = rtrim(str_replace('\\', '/', realpath($root) ?: $root), '/');
+
+            if (str_starts_with($normalizedPath, $normalizedRoot.'/')) {
+                return substr($normalizedPath, strlen($normalizedRoot) + 1);
+            }
+        } catch (\Throwable $e) {
+            // Fall through to truncated absolute path.
+        }
+
+        return \Illuminate\Support\Str::limit(str_replace('\\', '/', $path), 500, '');
     }
 }

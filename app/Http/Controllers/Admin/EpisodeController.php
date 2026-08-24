@@ -1161,7 +1161,14 @@ class EpisodeController extends BaseController
             'story_id' => 'required|exists:stories,id',
             'title' => 'required|string|max:200',
             'description' => 'nullable|string|max:2000',
-            'episode_number' => 'required|integer|min:1',
+            'episode_number' => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::unique('episodes', 'episode_number')->where(
+                    fn ($query) => $query->where('story_id', $request->input('story_id'))
+                ),
+            ],
             'duration' => 'required|integer|min:1',
             'audio_file_url' => 'nullable|string|max:500',
             'status' => 'required|in:draft,published,archived',
@@ -1169,15 +1176,56 @@ class EpisodeController extends BaseController
             'age_rating' => 'required|in:all,3+,7+,12+,16+,18+',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
+        ], [
+            'episode_number.unique' => 'این شماره اپیزود قبلاً برای این داستان ثبت شده است.',
         ]);
 
-        $episode = Episode::create($this->prepareApiEpisodeAttributes($validated));
+        try {
+            $episode = Episode::create($this->prepareApiEpisodeAttributes($validated));
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::error('Failed to create episode', [
+                'payload' => $validated,
+                'error' => $e->getMessage(),
+            ]);
 
-        if (! empty($validated['audio_file_url'])) {
-            app(MediaLibraryService::class)->syncUsageFor($episode, 'audio_url', $validated['audio_file_url']);
+            if ($this->isDuplicateEpisodeNumberException($e)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'این شماره اپیزود قبلاً برای این داستان ثبت شده است.',
+                    'error' => 'VALIDATION_ERROR',
+                ], 422);
+            }
+
+            if ($this->isInvalidEpisodeStatusException($e)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'وضعیت اپیزود نامعتبر است. لطفاً draft یا published انتخاب کنید.',
+                    'error' => 'VALIDATION_ERROR',
+                ], 422);
+            }
+
+            throw $e;
         }
 
-        app(\App\Services\EpisodeEditorSyncService::class)->ensureEpisodeScaffold($episode);
+        if (! empty($validated['audio_file_url'])) {
+            try {
+                app(MediaLibraryService::class)->syncUsageFor($episode, 'audio_url', $validated['audio_file_url']);
+            } catch (\Throwable $e) {
+                Log::warning('Episode media usage sync failed after create', [
+                    'episode_id' => $episode->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        try {
+            app(\App\Services\EpisodeEditorSyncService::class)->ensureEpisodeScaffold($episode);
+        } catch (\Throwable $e) {
+            Log::warning('Episode editor scaffold failed after create', [
+                'episode_id' => $episode->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return AdminApiResponse::success($this->formatApiEpisode($episode->load('story')), 'Episode created successfully', 201);
     }
@@ -1193,7 +1241,18 @@ class EpisodeController extends BaseController
             'story_id' => 'sometimes|required|exists:stories,id',
             'title' => 'sometimes|required|string|max:200',
             'description' => 'nullable|string|max:2000',
-            'episode_number' => 'sometimes|required|integer|min:1',
+            'episode_number' => [
+                'sometimes',
+                'required',
+                'integer',
+                'min:1',
+                Rule::unique('episodes', 'episode_number')
+                    ->where(fn ($query) => $query->where(
+                        'story_id',
+                        $request->input('story_id', $episode->story_id)
+                    ))
+                    ->ignore($episode->id),
+            ],
             'duration' => 'sometimes|required|integer|min:1',
             'audio_file_url' => 'nullable|string|max:500',
             'status' => 'sometimes|required|in:draft,published,archived',
@@ -1201,6 +1260,8 @@ class EpisodeController extends BaseController
             'age_rating' => 'sometimes|required|in:all,3+,7+,12+,16+,18+',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
+        ], [
+            'episode_number.unique' => 'این شماره اپیزود قبلاً برای این داستان ثبت شده است.',
         ]);
 
         $statusService = app(StoryEpisodeStatusService::class);
@@ -1622,10 +1683,37 @@ class EpisodeController extends BaseController
         unset($attributes['audio_file_url']);
 
         if (array_key_exists('audio_file_url', $validated)) {
-            $attributes['audio_url'] = $validated['audio_file_url'] ?: ($existing?->getRawOriginal('audio_url') ?? '');
+            $audio = is_string($validated['audio_file_url']) ? trim($validated['audio_file_url']) : '';
+            if ($audio !== '') {
+                $attributes['audio_url'] = $audio;
+            } elseif ($existing !== null) {
+                // Keep existing audio on update when the field is cleared.
+                unset($attributes['audio_url']);
+            } else {
+                // Allow creating episodes without audio (nullable column).
+                $attributes['audio_url'] = null;
+            }
+        } elseif ($existing === null) {
+            $attributes['audio_url'] = null;
         }
 
         return $attributes;
+    }
+
+    private function isDuplicateEpisodeNumberException(\Illuminate\Database\QueryException $e): bool
+    {
+        $message = $e->getMessage();
+
+        return str_contains($message, 'episodes_story_id_episode_number_unique')
+            || (str_contains($message, 'Duplicate entry') && str_contains($message, 'episode_number'));
+    }
+
+    private function isInvalidEpisodeStatusException(\Illuminate\Database\QueryException $e): bool
+    {
+        $message = $e->getMessage();
+
+        return str_contains($message, 'status')
+            && (str_contains($message, 'Data truncated') || str_contains($message, '1265'));
     }
 
     /**
