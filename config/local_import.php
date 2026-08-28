@@ -40,6 +40,8 @@ return [
         'story-editor:import',
         'story-editor:scaffold',
         'stories:import-old',
+        'stories:delete',
+        'stories:update',
     ],
 
     /** Suggested local .env keys (for CLI output only). */

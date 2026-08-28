@@ -112,6 +112,53 @@ Flags:
 | `--deploy-only` | Copy files only; skip JSON/MD import |
 | `--dry-run` | Plan only |
 
+### Delete / edit on server (remote manage)
+
+Same token and script; new `-Action` / `-Target` on `agent-upload-stories.ps1`:
+
+```powershell
+# Delete full story (DB + editor files when linked)
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Delete -Target Story -JsonSummary
+
+# Delete one episode
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Delete -Target Episode -EpisodeNumber 3 -JsonSummary
+
+# Delete episode script only
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Delete -Target Script -EpisodeNumber 3 -JsonSummary
+
+# Delete character by JSON key
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Delete -Target Character -CharacterKey shaghad -JsonSummary
+
+# Update characters JSON from local folder
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Characters -JsonSummary
+
+# Update episode 3 script / prompts from local files
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Script -EpisodeNumber 3 -JsonSummary
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Prompts -EpisodeNumber 3 -JsonSummary
+
+# Full package re-import (same as Upload)
+.\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Package -JsonSummary
+```
+
+Artisan equivalent:
+
+```powershell
+php artisan stories:manage-remote delete story --folder-name="29 - داستان رستم و شغاد"
+php artisan stories:manage-remote update characters --folder-name="29 - ..." --file="..\manji-stories\...\characters_and_objects.json"
+```
+
+Server endpoints (POST, Bearer token):
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/local-import/stories/manage/delete-story` | Full story delete |
+| `/local-import/stories/manage/delete-episode` | Episode delete |
+| `/local-import/stories/manage/delete-script` | Script file only |
+| `/local-import/stories/manage/delete-character` | Character JSON + DB |
+| `/local-import/stories/manage/update-characters` | Upload `characters_and_objects.json` |
+| `/local-import/stories/manage/update-script` | Upload episode `*_story.md` |
+| `/local-import/stories/manage/update-prompts` | Upload episode `*_image_prompts.json` |
+
 ### 4) Verify on server
 
 ```powershell
@@ -177,7 +224,8 @@ From `manji-laravel/`:
 ```
 
 3. بعد از آپلود، تصاویر بسته، صوت، تایم‌لاین و انتشار را در داشبورد کامل کنید.
-4. برای اطمینان از وجود داستان روی سرور:
+4. حذف/ویرایش ریموت: `-Action Delete|Edit` و `-Target Story|Episode|Script|Character|Characters|Prompts`
+5. برای اطمینان از وجود داستان روی سرور:
 
 ```powershell
 .\scripts\verify-story-on-server.ps1 -Stories "21","22" -JsonSummary

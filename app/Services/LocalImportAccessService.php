@@ -72,7 +72,14 @@ class LocalImportAccessService
                 'story_editor_list' => 'GET /api/admin/story-editor/stories',
                 'story_import' => 'POST /api/admin/story-editor/stories/{storySlug}/import',
                 'episode_import' => 'POST /api/admin/story-editor/stories/{storySlug}/episodes/{episodeSlug}/import',
-                'import_old_remote' => 'POST /api/admin/local-import/stories/import-old (phase C step 2)',
+                'import_old_remote' => 'POST /api/admin/local-import/stories/import-old',
+                'delete_story' => 'POST /api/admin/local-import/stories/manage/delete-story',
+                'delete_episode' => 'POST /api/admin/local-import/stories/manage/delete-episode',
+                'delete_script' => 'POST /api/admin/local-import/stories/manage/delete-script',
+                'delete_character' => 'POST /api/admin/local-import/stories/manage/delete-character',
+                'update_characters' => 'POST /api/admin/local-import/stories/manage/update-characters',
+                'update_script' => 'POST /api/admin/local-import/stories/manage/update-script',
+                'update_prompts' => 'POST /api/admin/local-import/stories/manage/update-prompts',
             ],
         ];
     }

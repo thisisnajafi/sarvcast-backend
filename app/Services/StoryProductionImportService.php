@@ -1109,6 +1109,35 @@ class StoryProductionImportService
         ];
     }
 
+    /**
+     * Remove one entry from characters_and_objects.json (characters|objects|settings).
+     */
+    public function removeAssetFromCharactersDocument(string $storySlug, string $section, string $assetKey): bool
+    {
+        $assetType = match ($section) {
+            'characters' => StoryProductionAsset::TYPE_CHARACTER,
+            'objects' => StoryProductionAsset::TYPE_OBJECT,
+            'settings' => StoryProductionAsset::TYPE_SETTING,
+            default => null,
+        };
+
+        if ($assetType === null) {
+            return false;
+        }
+
+        $document = $this->loadOrRebuildCharactersDocument($storySlug);
+        if (! isset($document[$section]) || ! is_array($document[$section])) {
+            return false;
+        }
+        if (! array_key_exists($assetKey, $document[$section])) {
+            return false;
+        }
+
+        $this->removeCharactersAndObjectsJsonEntry($storySlug, $assetType, $assetKey);
+
+        return true;
+    }
+
     private function removeCharactersAndObjectsJsonEntry(
         string $storySlug,
         string $assetType,

@@ -22,6 +22,18 @@
 .EXAMPLE
   # Machine-readable summary
   .\scripts\agent-upload-stories.ps1 -Stories "22" -JsonSummary
+
+.EXAMPLE
+  # Delete a story from server by numeric id folder
+  .\scripts\agent-upload-stories.ps1 -Stories "29" -Action Delete -Target Story -JsonSummary
+
+.EXAMPLE
+  # Update only characters JSON from local package
+  .\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Characters -JsonSummary
+
+.EXAMPLE
+  # Update episode 3 script from local folder
+  .\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Script -EpisodeNumber 3 -JsonSummary
 #>
 
 [CmdletBinding()]
@@ -41,7 +53,23 @@ param(
 
     [switch]$IncludeConflicts,
 
-    [switch]$JsonSummary
+    [switch]$JsonSummary,
+
+    [ValidateSet('Upload', 'Delete', 'Edit')]
+    [string]$Action = 'Upload',
+
+    [ValidateSet('Package', 'Story', 'Episode', 'Script', 'Character', 'Characters', 'Prompts')]
+    [string]$Target = 'Package',
+
+    [int]$StoryId = 0,
+
+    [int]$EpisodeNumber = 0,
+
+    [string]$CharacterKey = '',
+
+    [int]$CharacterId = 0,
+
+    [int]$EpisodeId = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -136,6 +164,83 @@ function Invoke-Preflight([string]$storyPath) {
     return $issues
 }
 
+function Find-EpisodeFiles([string]$storyPath, [int]$episodeNumber, [string]$kind) {
+    $episodeDirs = Get-ChildItem -LiteralPath $storyPath -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^episode[\s_\-]*' + [regex]::Escape("$episodeNumber") + '([\s_\-]|$)' }
+    if ($episodeDirs.Count -eq 0) {
+        throw "Episode folder not found for number $episodeNumber under $storyPath"
+    }
+    if ($episodeDirs.Count -gt 1) {
+        throw "Ambiguous episode number $episodeNumber : $($episodeDirs.Name -join ', ')"
+    }
+    $epDir = $episodeDirs[0].FullName
+    if ($kind -eq 'Script') {
+        $files = @(Get-ChildItem -LiteralPath $epDir -Filter '*_story.md' -ErrorAction SilentlyContinue)
+        if ($files.Count -eq 0) { $files = @(Get-ChildItem -LiteralPath $epDir -Filter '*.md' -ErrorAction SilentlyContinue) }
+        if ($files.Count -eq 0) { throw "No script .md in $($episodeDirs[0].Name)" }
+        return $files[0].FullName
+    }
+    if ($kind -eq 'Prompts') {
+        $files = @(Get-ChildItem -LiteralPath $epDir -Filter '*_image_prompts.json' -ErrorAction SilentlyContinue)
+        if ($files.Count -eq 0) { throw "No *_image_prompts.json in $($episodeDirs[0].Name)" }
+        return $files[0].FullName
+    }
+    throw "Unknown kind $kind"
+}
+
+function Invoke-RemoteManage {
+    param(
+        [string]$ManageAction,
+        [string]$ManageTarget,
+        [string]$StoryPath,
+        [string]$FolderName
+    )
+
+    $args = @('stories:manage-remote', $ManageAction, $ManageTarget.ToLower())
+    if ($StoryId -gt 0) { $args += @('--story-id=' + $StoryId) }
+    else { $args += @('--folder-name=' + $FolderName) }
+
+    if ($EpisodeId -gt 0) { $args += @('--episode-id=' + $EpisodeId) }
+    elseif ($EpisodeNumber -gt 0) { $args += @('--episode=' + $EpisodeNumber) }
+
+    if ($CharacterId -gt 0) { $args += @('--character-id=' + $CharacterId) }
+    if ($CharacterKey -ne '') { $args += @('--character-key=' + $CharacterKey) }
+
+    switch ($ManageTarget) {
+        'Characters' {
+            $file = Join-Path $StoryPath 'characters_and_objects.json'
+            if (-not (Test-Path -LiteralPath $file)) { throw 'characters_and_objects.json missing locally' }
+            $args += @('--file=' + $file)
+        }
+        'Script' {
+            if ($EpisodeNumber -le 0 -and $EpisodeId -le 0) { throw 'Edit Script requires -EpisodeNumber or -EpisodeId' }
+            if ($EpisodeNumber -gt 0) {
+                $file = Find-EpisodeFiles $StoryPath $EpisodeNumber 'Script'
+                $args += @('--file=' + $file)
+            }
+        }
+        'Prompts' {
+            if ($EpisodeNumber -le 0 -and $EpisodeId -le 0) { throw 'Edit Prompts requires -EpisodeNumber or -EpisodeId' }
+            if ($EpisodeNumber -gt 0) {
+                $file = Find-EpisodeFiles $StoryPath $EpisodeNumber 'Prompts'
+                $args += @('--file=' + $file)
+            }
+        }
+        'Character' {
+            if ($CharacterId -le 0 -and $CharacterKey -eq '') { throw 'Delete Character requires -CharacterKey or -CharacterId' }
+        }
+        'Episode' {
+            if ($EpisodeNumber -le 0 -and $EpisodeId -le 0) { throw 'Delete Episode requires -EpisodeNumber or -EpisodeId' }
+        }
+    }
+
+    Write-Host "  php artisan $($args -join ' ')"
+    $out = & php artisan @args 2>&1 | Out-String
+    Write-Host $out
+    if ($LASTEXITCODE -ne 0) { throw "manage-remote exit code $LASTEXITCODE" }
+    return $out
+}
+
 $baseUrl = Read-DotEnvValue "LOCAL_IMPORT_API_BASE_URL"
 $token = Read-DotEnvValue "LOCAL_IMPORT_API_TOKEN"
 if ([string]::IsNullOrWhiteSpace($baseUrl) -or [string]::IsNullOrWhiteSpace($token)) {
@@ -147,6 +252,7 @@ Write-Host "=== agent-upload-stories ===" -ForegroundColor Cyan
 Write-Host "API:     $baseUrl"
 Write-Host "Stories: $ManjiStoriesRoot"
 Write-Host "Request: $($Stories -join ', ')"
+Write-Host "Action:  $Action | Target: $Target"
 Write-Host ""
 
 $results = @()
@@ -166,6 +272,35 @@ foreach ($storyQuery in $Stories) {
         $storyPath = Resolve-StoryFolder $storyQuery
         $entry.folder = Split-Path $storyPath -Leaf
         Write-Host "→ $($entry.folder)" -ForegroundColor Yellow
+
+        if ($Action -eq 'Delete') {
+            if ($DryRun) {
+                $entry.status = 'dry_run_delete'
+                Write-Host "  would delete target=$Target on server" -ForegroundColor DarkYellow
+            }
+            else {
+                $manageTarget = if ($Target -eq 'Package') { 'Story' } else { $Target }
+                Invoke-RemoteManage -ManageAction 'delete' -ManageTarget $manageTarget -StoryPath $storyPath -FolderName $entry.folder | Out-Null
+                $entry.status = 'deleted'
+                Write-Host "  OK (deleted $manageTarget)" -ForegroundColor Green
+            }
+            $results += [pscustomobject]$entry
+            continue
+        }
+
+        if ($Action -eq 'Edit' -and $Target -ne 'Package') {
+            if ($DryRun) {
+                $entry.status = 'dry_run_edit'
+                Write-Host "  would edit target=$Target on server" -ForegroundColor DarkYellow
+            }
+            else {
+                Invoke-RemoteManage -ManageAction 'update' -ManageTarget $Target -StoryPath $storyPath -FolderName $entry.folder | Out-Null
+                $entry.status = 'updated'
+                Write-Host "  OK (updated $Target)" -ForegroundColor Green
+            }
+            $results += [pscustomobject]$entry
+            continue
+        }
 
         if (-not $SkipPreflight) {
             $issues = Invoke-Preflight $storyPath

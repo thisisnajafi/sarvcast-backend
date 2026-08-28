@@ -968,6 +968,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         Route::get('/verify', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'verify']);
         Route::post('/token', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'create']);
         Route::post('/stories/import-old', [\App\Http\Controllers\Admin\LocalImportOldStoriesController::class, 'importOld']);
+        Route::prefix('stories/manage')->group(function () {
+            Route::post('/delete-story', [\App\Http\Controllers\Admin\LocalImportStoriesManageController::class, 'deleteStory']);
+            Route::post('/delete-episode', [\App\Http\Controllers\Admin\LocalImportStoriesManageController::class, 'deleteEpisode']);
+            Route::post('/delete-script', [\App\Http\Controllers\Admin\LocalImportStoriesManageController::class, 'deleteScript']);
+            Route::post('/delete-character', [\App\Http\Controllers\Admin\LocalImportStoriesManageController::class, 'deleteCharacter']);
+            Route::post('/update-characters', [\App\Http\Controllers\Admin\LocalImportStoriesManageController::class, 'updateCharacters']);
+            Route::post('/update-script', [\App\Http\Controllers\Admin\LocalImportStoriesManageController::class, 'updateScript']);
+            Route::post('/update-prompts', [\App\Http\Controllers\Admin\LocalImportStoriesManageController::class, 'updatePrompts']);
+        });
     });
 
     Route::get('/search', [\App\Http\Controllers\Admin\DashboardController::class, 'globalSearch']);
