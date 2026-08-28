@@ -19,6 +19,7 @@ use App\Models\PlayHistory;
 use App\Models\User;
 use App\Models\Character;
 use App\Models\Sponsor;
+use App\Support\PersianSlug;
 
 class Story extends Model
 {
@@ -38,8 +39,34 @@ class Story extends Model
      *
      * @var array<int, string>
      */
+    /**
+     * Generates `slug` from `title` on save when not explicitly supplied.
+     *
+     * The slug is a URL decoration only — story URLs are `/stories/{id}/{slug}`,
+     * so the ID resolves the record and a retitle can never 404. Uniqueness is
+     * still enforced so the column can carry a unique index.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $story): void {
+            if (filled($story->slug)) {
+                return;
+            }
+
+            $story->slug = PersianSlug::unique(
+                $story->title,
+                fn (string $slug) => static::query()
+                    ->where('slug', $slug)
+                    ->when($story->exists, fn ($q) => $q->whereKeyNot($story->getKey()))
+                    ->exists(),
+                150
+            );
+        });
+    }
+
     protected $fillable = [
         'title',
+        'slug',
         'subtitle',
         'description',
         'image_url',

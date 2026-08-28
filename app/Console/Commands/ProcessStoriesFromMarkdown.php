@@ -286,9 +286,11 @@ class ProcessStoriesFromMarkdown extends Command
 
         foreach ($categoriesToCreate as $categoryName) {
             try {
+                // Slug omitted deliberately: `Category::booted()` transliterates
+                // Persian correctly, whereas `Str::slug()` produced Arabic
+                // phonetic output such as `ksh-shb` for `قصه شب`.
                 Category::create([
                     'name' => $categoryName,
-                    'slug' => Str::slug($categoryName),
                     'is_active' => true,
                     'sort_order' => 0,
                 ]);

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Storage;
+use App\Support\PersianSlug;
 use App\Traits\HasImageUrl;
 
 class Category extends Model
@@ -130,16 +131,30 @@ class Category extends Model
     }
 
     /**
-     * Get the slug for the category (auto-generated from name if not set)
+     * Slugs are generated on save, not on read.
+     *
+     * A previous `getSlugAttribute()` accessor computed the slug from the name
+     * whenever the column was null. Because that value never existed in the
+     * database, `Category::where('slug', …)` could not match it — any category
+     * relying on the fallback was unroutable by its own slug. Persisting at
+     * write time keeps lookups and output in agreement.
      */
-    public function getSlugAttribute($value)
+    protected static function booted(): void
     {
-        if ($value) {
-            return $value;
-        }
-        
-        // Generate slug from name if not set
-        return \Illuminate\Support\Str::slug($this->name);
+        static::saving(function (self $category): void {
+            if (filled($category->slug)) {
+                return;
+            }
+
+            $category->slug = PersianSlug::unique(
+                $category->name,
+                fn (string $slug) => static::query()
+                    ->where('slug', $slug)
+                    ->when($category->exists, fn ($q) => $q->whereKeyNot($category->getKey()))
+                    ->exists(),
+                100
+            );
+        });
     }
 
     /**
