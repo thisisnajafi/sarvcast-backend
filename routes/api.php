@@ -60,6 +60,10 @@ Route::prefix('v1')->middleware('security')->group(function () {
         Route::get('voice-actors', [\App\Http\Controllers\Api\PublicVoiceActorController::class, 'index']);
         Route::get('voice-actors/{user}', [\App\Http\Controllers\Api\PublicVoiceActorController::class, 'show']);
         Route::post('contact', [ContactController::class, 'submit']);
+        Route::get('blog-posts', [\App\Http\Controllers\Api\PublicSeoController::class, 'blogIndex']);
+        Route::get('blog-posts/{slug}', [\App\Http\Controllers\Api\PublicSeoController::class, 'blogShow']);
+        Route::get('seo/robots', [\App\Http\Controllers\Api\PublicSeoController::class, 'robots']);
+        Route::get('seo/redirects', [\App\Http\Controllers\Api\PublicSeoController::class, 'redirects']);
     });
 
     // Authentication routes
@@ -1097,6 +1101,44 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         Route::put('/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'apiUpdate']);
         Route::delete('/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'apiDestroy']);
     });
+
+    Route::prefix('blog-posts')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\BlogPostController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\BlogPostController::class, 'apiStore']);
+        Route::get('/{blogPost}', [\App\Http\Controllers\Admin\BlogPostController::class, 'apiShow']);
+        Route::put('/{blogPost}', [\App\Http\Controllers\Admin\BlogPostController::class, 'apiUpdate']);
+        Route::delete('/{blogPost}', [\App\Http\Controllers\Admin\BlogPostController::class, 'apiDestroy']);
+    });
+
+    Route::prefix('blog-categories')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'apiStore']);
+        Route::get('/{blogCategory}', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'apiShow']);
+        Route::put('/{blogCategory}', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'apiUpdate']);
+        Route::delete('/{blogCategory}', [\App\Http\Controllers\Admin\BlogCategoryController::class, 'apiDestroy']);
+    });
+
+    Route::prefix('blog-tags')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\BlogTagController::class, 'apiIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\BlogTagController::class, 'apiStore']);
+        Route::get('/{blogTag}', [\App\Http\Controllers\Admin\BlogTagController::class, 'apiShow']);
+        Route::put('/{blogTag}', [\App\Http\Controllers\Admin\BlogTagController::class, 'apiUpdate']);
+        Route::delete('/{blogTag}', [\App\Http\Controllers\Admin\BlogTagController::class, 'apiDestroy']);
+    });
+
+    Route::prefix('seo-redirects')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SeoAdminController::class, 'redirectsIndex']);
+        Route::post('/', [\App\Http\Controllers\Admin\SeoAdminController::class, 'redirectsStore']);
+        Route::put('/{seoRedirect}', [\App\Http\Controllers\Admin\SeoAdminController::class, 'redirectsUpdate']);
+        Route::delete('/{seoRedirect}', [\App\Http\Controllers\Admin\SeoAdminController::class, 'redirectsDestroy']);
+    });
+
+    Route::prefix('seo-robots')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\SeoAdminController::class, 'robotsShow']);
+        Route::put('/', [\App\Http\Controllers\Admin\SeoAdminController::class, 'robotsUpdate']);
+    });
+
+    Route::get('seo-overview', [\App\Http\Controllers\Admin\SeoAdminController::class, 'overview']);
 
     // Sponsor Management API (static paths before /{sponsor})
     Route::prefix('sponsors')->group(function () {

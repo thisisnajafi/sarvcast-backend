@@ -54,6 +54,14 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'resumes.view_any', 'display_name' => 'مشاهده همه رزومه‌ها', 'group' => 'resumes'],
             ['name' => 'resumes.update_any', 'display_name' => 'ویرایش همه رزومه‌ها', 'group' => 'resumes'],
             ['name' => 'resumes.update', 'display_name' => 'به‌روزرسانی رزومه', 'group' => 'resumes'],
+            ['name' => 'blog.read', 'display_name' => 'مشاهده وبلاگ', 'group' => 'blog'],
+            ['name' => 'blog.create', 'display_name' => 'ایجاد مقاله وبلاگ', 'group' => 'blog'],
+            ['name' => 'blog.update', 'display_name' => 'ویرایش مقاله وبلاگ', 'group' => 'blog'],
+            ['name' => 'blog.delete', 'display_name' => 'حذف مقاله وبلاگ', 'group' => 'blog'],
+            ['name' => 'seo.read', 'display_name' => 'مشاهده SEO', 'group' => 'seo'],
+            ['name' => 'seo.create', 'display_name' => 'ایجاد قانون SEO', 'group' => 'seo'],
+            ['name' => 'seo.update', 'display_name' => 'ویرایش SEO', 'group' => 'seo'],
+            ['name' => 'seo.delete', 'display_name' => 'حذف قانون SEO', 'group' => 'seo'],
         ];
 
         $createdPermissions = 0;
@@ -86,7 +94,7 @@ class RolePermissionSeeder extends Seeder
         $adminPermissionIds = Permission::whereIn('group', [
             'dashboard', 'coin_management', 'coupon_management',
             'payment_management', 'partner_management', 'analytics',
-            'user_management', 'media_library', 'team_members', 'stories', 'story_editor', 'writers', 'resumes',
+            'user_management', 'media_library', 'team_members', 'stories', 'story_editor', 'writers', 'resumes', 'blog', 'seo',
         ])->pluck('id');
         $adminRole->permissions()->syncWithoutDetaching($adminPermissionIds);
 

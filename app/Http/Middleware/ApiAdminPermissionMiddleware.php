@@ -100,6 +100,12 @@ class ApiAdminPermissionMiddleware
             'audio-management' => 'audio.management',
             'file-upload' => 'files.upload',
             'story-editor' => 'story_editor',
+            'blog-posts' => 'blog',
+            'blog-categories' => 'blog',
+            'blog-tags' => 'blog',
+            'seo-redirects' => 'seo',
+            'seo-robots' => 'seo',
+            'seo-overview' => 'seo',
             default => str_replace('-', '.', $segment),
         };
 
