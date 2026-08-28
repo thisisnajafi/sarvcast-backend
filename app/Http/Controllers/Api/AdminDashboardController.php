@@ -9,6 +9,7 @@ use App\Models\Story;
 use App\Models\StoryComment;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\DashboardListeningAnalyticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -17,9 +18,13 @@ class AdminDashboardController extends Controller
 {
     private const ONLINE_WINDOW_MINUTES = 15;
 
+    public function __construct(
+        private DashboardListeningAnalyticsService $listeningAnalytics,
+    ) {}
+
     public function stats(): JsonResponse
     {
-        $data = [
+        $data = array_merge([
             'total_users' => User::count(),
             'active_users' => User::where('status', 'active')->count(),
             'total_stories' => Story::count(),
@@ -32,7 +37,7 @@ class AdminDashboardController extends Controller
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->sum('amount'),
-        ];
+        ], $this->listeningAnalytics->getStats());
 
         return response()->json([
             'success' => true,
@@ -43,14 +48,23 @@ class AdminDashboardController extends Controller
 
     public function charts(): JsonResponse
     {
-        $series = collect(range(6, 0))->map(function ($daysAgo) {
+        $listening = $this->listeningAnalytics->getChartPayload();
+        $listeningByDate = collect($listening['daily'] ?? [])->keyBy('date');
+
+        $series = collect(range(6, 0))->map(function ($daysAgo) use ($listeningByDate) {
             $date = now()->subDays($daysAgo)->toDateString();
+            $point = $listeningByDate->get($date, []);
+
             return [
                 'date' => $date,
                 'new_users' => User::whereDate('created_at', $date)->count(),
                 'revenue' => (int) Payment::where('status', 'completed')
                     ->whereDate('created_at', $date)
                     ->sum('amount'),
+                'listens' => (int) ($point['listens'] ?? 0),
+                'unique_listeners' => (int) ($point['unique_listeners'] ?? 0),
+                'unique_stories' => (int) ($point['unique_stories'] ?? 0),
+                'favorites' => (int) ($point['favorites'] ?? 0),
             ];
         })->values();
 
@@ -73,6 +87,10 @@ class AdminDashboardController extends Controller
             'message' => 'Dashboard chart data loaded successfully.',
             'data' => [
                 'daily' => $series,
+                'top_stories_today' => $listening['top_stories_today'] ?? [],
+                'top_stories_this_week' => $listening['top_stories_this_week'] ?? [],
+                'most_favorited_stories' => $listening['most_favorited_stories'] ?? [],
+                'most_favorited_episodes' => $listening['most_favorited_episodes'] ?? [],
                 'breakdown' => [
                     'content' => [
                         'stories' => [
