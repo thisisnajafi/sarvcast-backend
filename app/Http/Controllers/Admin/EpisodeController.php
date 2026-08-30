@@ -1232,6 +1232,20 @@ class EpisodeController extends BaseController
 
     public function apiShow(Episode $episode)
     {
+        $user = request()->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+
+        if ($user && ! $access->isFullAdmin($user) && ! $access->isHeadWriter($user)) {
+            $story = $episode->story ?? \App\Models\Story::query()->find($episode->story_id);
+            if (! $story || ! $access->canViewStory($user, $story)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'دسترسی به این قسمت مجاز نیست.',
+                    'error' => 'FORBIDDEN',
+                ], 403);
+            }
+        }
+
         return AdminApiResponse::success($this->formatApiEpisode($episode->load(['story', 'voiceActors'])));
     }
 

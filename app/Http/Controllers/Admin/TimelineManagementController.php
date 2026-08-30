@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Support\AdminCsvExport;
 use App\Models\Episode;
 use App\Models\ImageTimeline;
+use App\Models\User;
+use App\Services\ContributorStoryAccessService;
 use App\Services\MediaLibraryService;
 use App\Services\SyncTimelineFromScenesService;
 use Illuminate\Http\Request;
@@ -19,7 +21,35 @@ class TimelineManagementController extends Controller
     public function __construct(
         private readonly MediaLibraryService $mediaLibrary,
         private readonly SyncTimelineFromScenesService $syncFromScenes,
+        private readonly ContributorStoryAccessService $access,
     ) {}
+
+    private function forbiddenTimeline(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'دسترسی به تایم‌لاین این داستان مجاز نیست.',
+            'error' => 'FORBIDDEN',
+        ], 403);
+    }
+
+    private function assertCanManageEpisodeTimeline(?User $user, Episode $episode): ?\Illuminate\Http\JsonResponse
+    {
+        if (! $user || ! $this->access->canManageEpisodeTimeline($user, $episode)) {
+            return $this->forbiddenTimeline();
+        }
+
+        return null;
+    }
+
+    private function assertCanManageTimelineRecord(?User $user, ImageTimeline $timeline): ?\Illuminate\Http\JsonResponse
+    {
+        if (! $user || ! $this->access->canManageImageTimelineRecord($user, $timeline)) {
+            return $this->forbiddenTimeline();
+        }
+
+        return null;
+    }
 
     private function validateTimelinePayload(Request $request, ?ImageTimeline $current = null): array
     {
@@ -211,9 +241,18 @@ class TimelineManagementController extends Controller
     // API Methods
     public function apiIndex(Request $request)
     {
+        $user = $request->user();
         $query = ImageTimeline::with(['episode.story']);
 
+        if ($user instanceof User && ! $this->access->isFullAdmin($user)) {
+            $this->access->scopeTimelinesForUser($query, $user);
+        }
+
         if ($request->filled('episode_id')) {
+            $episode = Episode::query()->find((int) $request->episode_id);
+            if ($episode && ($denied = $this->assertCanManageEpisodeTimeline($user, $episode))) {
+                return $denied;
+            }
             $query->where('episode_id', $request->episode_id)
                 ->orderBy('start_time')
                 ->orderBy('image_order');
@@ -223,6 +262,10 @@ class TimelineManagementController extends Controller
 
 
         if ($request->filled('story_id')) {
+            $story = \App\Models\Story::query()->find((int) $request->story_id);
+            if ($story && $user instanceof User && ! $this->access->canManageTimeline($user, $story)) {
+                return $this->forbiddenTimeline();
+            }
             $query->whereHas('episode', function ($q) use ($request) {
                 $q->where('story_id', $request->story_id);
             });
@@ -253,6 +296,11 @@ class TimelineManagementController extends Controller
     public function apiStore(Request $request)
     {
         $validated = $this->validateTimelinePayload($request);
+        $episode = Episode::query()->find((int) ($validated['episode_id'] ?? 0));
+        if (! $episode || ($denied = $this->assertCanManageEpisodeTimeline($request->user(), $episode))) {
+            return $denied ?? $this->forbiddenTimeline();
+        }
+
         $timeline = ImageTimeline::create($validated);
         $this->mediaLibrary->syncUsageFor($timeline, 'image_url', $timeline->image_url);
 
@@ -275,6 +323,10 @@ class TimelineManagementController extends Controller
         ]);
 
         $episode = Episode::findOrFail((int) $validated['episode_id']);
+        if ($denied = $this->assertCanManageEpisodeTimeline($request->user(), $episode)) {
+            return $denied;
+        }
+
         $durationSeconds = (int) ($validated['duration_seconds'] ?? 0);
         if ($durationSeconds < 1) {
             $durationSeconds = max(1, (int) $episode->duration * 60);
@@ -372,6 +424,10 @@ class TimelineManagementController extends Controller
 
         $episodeId = (int) $validated['episode_id'];
         $episode = Episode::findOrFail($episodeId);
+        if ($denied = $this->assertCanManageEpisodeTimeline($request->user(), $episode)) {
+            return $denied;
+        }
+
         $incoming = collect($validated['frames']);
         $ids = $incoming->pluck('id')->map(fn ($id) => (int) $id)->unique()->values();
 
@@ -504,6 +560,10 @@ class TimelineManagementController extends Controller
 
     public function apiShow(ImageTimeline $timeline)
     {
+        if ($denied = $this->assertCanManageTimelineRecord(request()->user(), $timeline)) {
+            return $denied;
+        }
+
         return response()->json([
             'success' => true,
             'data' => $timeline->load(['episode.story']),
@@ -512,6 +572,10 @@ class TimelineManagementController extends Controller
 
     public function apiUpdate(Request $request, ImageTimeline $timeline)
     {
+        if ($denied = $this->assertCanManageTimelineRecord($request->user(), $timeline)) {
+            return $denied;
+        }
+
         $validated = $this->validateTimelinePayload($request, $timeline);
         $timeline->update($validated);
         $this->mediaLibrary->syncUsageFor($timeline->fresh(), 'image_url', $timeline->image_url);
@@ -525,6 +589,10 @@ class TimelineManagementController extends Controller
 
     public function apiDestroy(ImageTimeline $timeline)
     {
+        if ($denied = $this->assertCanManageTimelineRecord(request()->user(), $timeline)) {
+            return $denied;
+        }
+
         $timeline->delete();
 
         return response()->json([
@@ -542,6 +610,14 @@ class TimelineManagementController extends Controller
             'transition_type' => 'required_if:action,change_transition|in:fade,cut,dissolve,slide',
             'is_key_frame' => 'required_if:action,change_key_frame|boolean',
         ]);
+
+        $user = $request->user();
+        $timelines = ImageTimeline::query()->whereIn('id', $request->timeline_ids)->get();
+        foreach ($timelines as $timeline) {
+            if ($denied = $this->assertCanManageTimelineRecord($user, $timeline)) {
+                return $denied;
+            }
+        }
 
         $timelineIds = $request->timeline_ids;
         $action = $request->action;

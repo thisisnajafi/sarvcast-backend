@@ -1512,10 +1512,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
             Route::post('/import/json', [\App\Http\Controllers\Admin\StoryExportController::class, 'apiImportJson']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\StoryController::class, 'apiStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\StoryController::class, 'apiBulkAction']);
+            Route::get('/image-assistant-candidates', [\App\Http\Controllers\Admin\StoryController::class, 'apiImageAssistantCandidates']);
             Route::get('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiShow']);
             Route::put('/{story}/sponsor', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdateSponsor']);
             Route::post('/{story}/author', [\App\Http\Controllers\Admin\StoryController::class, 'apiAssignAuthor']);
             Route::delete('/{story}/author', [\App\Http\Controllers\Admin\StoryController::class, 'apiRevokeAuthor']);
+            Route::get('/{story}/production-assets', [\App\Http\Controllers\Admin\StoryController::class, 'apiProductionAssets']);
+            Route::get('/{story}/image-assistants', [\App\Http\Controllers\Admin\StoryController::class, 'apiListImageAssistants']);
+            Route::post('/{story}/image-assistants', [\App\Http\Controllers\Admin\StoryController::class, 'apiAssignImageAssistant']);
+            Route::delete('/{story}/image-assistants/{user}', [\App\Http\Controllers\Admin\StoryController::class, 'apiRevokeImageAssistant']);
             Route::put('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiUpdate']);
             Route::delete('/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'apiDestroy']);
             Route::post('/{story}/publish', [\App\Http\Controllers\Admin\StoryController::class, 'apiPublish']);

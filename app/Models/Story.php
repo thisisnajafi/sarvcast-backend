@@ -284,6 +284,18 @@ class Story extends Model
         return $this->belongsTo(User::class, 'author_id');
     }
 
+    public function imageAssistantAssignments()
+    {
+        return $this->hasMany(StoryImageAssistant::class);
+    }
+
+    public function imageAssistants()
+    {
+        return $this->belongsToMany(User::class, 'story_image_assistants')
+            ->withPivot(['id', 'assigned_by', 'notes'])
+            ->withTimestamps();
+    }
+
     public function authorDisplayName(): ?string
     {
         return self::displayNameForUser($this->author);

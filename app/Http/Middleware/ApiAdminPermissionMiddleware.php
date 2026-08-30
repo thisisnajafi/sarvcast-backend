@@ -38,8 +38,9 @@ class ApiAdminPermissionMiddleware
         }
 
         $segment = (string) $request->segment(3); // /api/admin/{segment}/...
-        $action = $this->resolveAction($request->method(), $request->path());
-        $permission = $this->resolvePermission($segment, $action);
+        $path = $request->path();
+        $action = $this->resolveAction($request->method(), $path);
+        $permission = $this->resolvePermission($segment, $action, $path);
 
         if ($permission === null) {
             return $next($request);
@@ -88,8 +89,25 @@ class ApiAdminPermissionMiddleware
         };
     }
 
-    private function resolvePermission(string $segment, string $action): ?string
+    private function resolvePermission(string $segment, string $action, string $path = ''): ?string
     {
+        if ($segment === 'stories') {
+            if (preg_match('#/stories/[^/]+/author$#', $path)) {
+                return 'stories.assign_writer';
+            }
+            if (preg_match('#/stories/[^/]+/image-assistants(?:/[^/]+)?$#', $path)) {
+                return 'stories.assign_image_assistant';
+            }
+        }
+
+        if ($segment === 'timeline-management') {
+            return match ($action) {
+                'create', 'update', 'delete', 'bulk' => 'timeline.update',
+                'export' => 'timeline.read',
+                default => 'timeline.read',
+            };
+        }
+
         $resource = match ($segment) {
             'user-analytics' => 'analytics.users',
             'revenue-analytics' => 'analytics.revenue',

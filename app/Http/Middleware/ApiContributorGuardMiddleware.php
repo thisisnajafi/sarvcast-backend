@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Restrict non-admin contributors to stories + story-editor script surfaces only.
+ * Restrict non-admin contributors to allowed panel surfaces only.
  */
 class ApiContributorGuardMiddleware
 {
@@ -43,6 +43,14 @@ class ApiContributorGuardMiddleware
 
         if ($this->access->isHeadWriter($user)) {
             return $this->guardHeadWriter($request, $next, $user, $method, $path, $segment);
+        }
+
+        if ($this->access->isImageAssistantStaff($user)) {
+            if ($segment === 'story-editor' && ($user->isWriter() || $user->isVoiceActor() || $this->access->isWriterStaff($user))) {
+                return $this->guardStoryEditor($request, $next, $user, $method, $path);
+            }
+
+            return $this->guardImageAssistant($request, $next, $user, $method, $path, $segment);
         }
 
         if (! in_array($segment, ['stories', 'story-editor'], true)) {
@@ -79,6 +87,63 @@ class ApiContributorGuardMiddleware
 
         if ($segment === 'story-editor') {
             return $this->guardStoryEditor($request, $next, $user, $method, $path);
+        }
+
+        return $this->forbidden('دسترسی به این بخش فقط برای مدیران است.');
+    }
+
+    private function guardImageAssistant(Request $request, Closure $next, User $user, string $method, string $path, string $segment): Response
+    {
+        if ($segment === 'stories') {
+            if (
+                in_array($method, ['GET', 'HEAD'], true)
+                && preg_match('#/stories/[^/]+/(production-assets|image-assistants)$#', $path)
+            ) {
+                return $next($request);
+            }
+
+            // Image assistants may not assign/revoke assistants or mutate stories.
+            if (preg_match('#/stories/[^/]+/(author|image-assistants|sponsor)$#', $path)) {
+                return $this->forbidden('این عملیات فقط برای مدیران است.');
+            }
+
+            return $this->guardStories($request, $next, $method, $path);
+        }
+
+        if ($segment === 'episodes') {
+            if (! in_array($method, ['GET', 'HEAD'], true)) {
+                return $this->forbidden('شما فقط مجاز به مشاهده قسمت‌ها هستید.');
+            }
+
+            if (str_contains($path, '/export') || str_contains($path, '/bulk-action') || str_contains($path, '/statistics')) {
+                return $this->forbidden('این عملیات برای حساب شما مجاز نیست.');
+            }
+
+            return $next($request);
+        }
+
+        if ($segment === 'timeline-management') {
+            if (str_contains($path, '/export') || str_contains($path, '/statistics')) {
+                return $this->forbidden('این عملیات برای حساب شما مجاز نیست.');
+            }
+
+            return $next($request);
+        }
+
+        if ($segment === 'media') {
+            if ($method === 'GET' || $method === 'HEAD') {
+                if (str_contains($path, '/import-legacy') || str_contains($path, '/statistics') || str_contains($path, '/bulk-action')) {
+                    return $this->forbidden('این عملیات برای حساب شما مجاز نیست.');
+                }
+
+                return $next($request);
+            }
+
+            if ($method === 'POST' && (str_ends_with($path, '/media') || preg_match('#/media/?$#', $path))) {
+                return $next($request);
+            }
+
+            return $this->forbidden('این عملیات رسانه برای حساب شما مجاز نیست.');
         }
 
         return $this->forbidden('دسترسی به این بخش فقط برای مدیران است.');

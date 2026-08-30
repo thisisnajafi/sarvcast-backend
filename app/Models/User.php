@@ -28,6 +28,7 @@ class User extends Authenticatable
     const ROLE_VOICE_ACTOR = 'voice_actor';
     const ROLE_WRITER = 'writer';
     const ROLE_HEAD_WRITER = 'head_writer';
+    const ROLE_IMAGE_ASSISTANT = 'image_assistant';
     const ROLE_PARENT = 'parent';
     const ROLE_CHILD = 'child';
     const ROLE_BASIC = 'basic';
@@ -66,7 +67,7 @@ class User extends Authenticatable
 
     /**
      * Admin panel login/API access (includes profile onboarding state).
-     * Staff: admin, super_admin, voice_actor, writer, head_writer (not parent/child/basic).
+     * Staff: admin, super_admin, voice_actor, writer, head_writer, image_assistant (not parent/child/basic).
      */
     public function mayAccessAdminPanel(): bool
     {
@@ -611,6 +612,18 @@ class User extends Authenticatable
         return $this->belongsToMany(Role::class, 'user_role')->using(UserRole::class);
     }
 
+    public function assistedStories(): BelongsToMany
+    {
+        return $this->belongsToMany(Story::class, 'story_image_assistants')
+            ->withPivot(['id', 'assigned_by', 'notes'])
+            ->withTimestamps();
+    }
+
+    public function storyImageAssistantAssignments()
+    {
+        return $this->hasMany(StoryImageAssistant::class);
+    }
+
     public function permissions()
     {
         return Permission::whereHas('roles', function ($query) {
@@ -726,6 +739,11 @@ class User extends Authenticatable
         return $this->role === self::ROLE_HEAD_WRITER || $this->hasRole(self::ROLE_HEAD_WRITER);
     }
 
+    public function isImageAssistant(): bool
+    {
+        return $this->role === self::ROLE_IMAGE_ASSISTANT || $this->hasRole(self::ROLE_IMAGE_ASSISTANT);
+    }
+
     /**
      * @return list<string>
      */
@@ -740,6 +758,7 @@ class User extends Authenticatable
             self::ROLE_VOICE_ACTOR,
             self::ROLE_WRITER,
             self::ROLE_HEAD_WRITER,
+            self::ROLE_IMAGE_ASSISTANT,
         ];
     }
 
@@ -765,6 +784,33 @@ class User extends Authenticatable
      * @return list<string>
      */
     public static function writerPromotableRoles(): array
+    {
+        return [self::ROLE_PARENT, self::ROLE_BASIC];
+    }
+
+    /**
+     * Roles that may be assigned as image assistants without changing users.role.
+     *
+     * @return list<string>
+     */
+    public static function imageAssistantAssignableRolesWithoutPromote(): array
+    {
+        return [
+            self::ROLE_IMAGE_ASSISTANT,
+            self::ROLE_WRITER,
+            self::ROLE_VOICE_ACTOR,
+            self::ROLE_HEAD_WRITER,
+            self::ROLE_ADMIN,
+            self::ROLE_SUPER_ADMIN,
+        ];
+    }
+
+    /**
+     * Consumer roles that may be promoted to image_assistant with explicit confirm.
+     *
+     * @return list<string>
+     */
+    public static function imageAssistantPromotableRoles(): array
     {
         return [self::ROLE_PARENT, self::ROLE_BASIC];
     }
@@ -796,6 +842,7 @@ class User extends Authenticatable
             self::ROLE_VOICE_ACTOR,
             self::ROLE_WRITER,
             self::ROLE_HEAD_WRITER,
+            self::ROLE_IMAGE_ASSISTANT,
         ];
     }
 

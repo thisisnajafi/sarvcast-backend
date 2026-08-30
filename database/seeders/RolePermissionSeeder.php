@@ -44,8 +44,12 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'team_members.delete', 'display_name' => 'حذف عضو تیم', 'group' => 'team_members'],
             ['name' => 'stories.read', 'display_name' => 'مشاهده داستان‌های اختصاصی', 'group' => 'stories'],
             ['name' => 'stories.assign_writer', 'display_name' => 'واگذاری نویسنده داستان', 'group' => 'stories'],
+            ['name' => 'stories.assign_image_assistant', 'display_name' => 'اختصاص دستیار تصویر به داستان', 'group' => 'stories'],
             ['name' => 'story_editor.read', 'display_name' => 'مشاهده ویرایشگر داستان', 'group' => 'story_editor'],
             ['name' => 'story_editor.update', 'display_name' => 'ویرایش اسکریپت داستان', 'group' => 'story_editor'],
+            ['name' => 'prompts.read', 'display_name' => 'مشاهده پرامپت‌های تولید تصویر', 'group' => 'prompts'],
+            ['name' => 'timeline.read', 'display_name' => 'مشاهده تایم‌لاین تصویری', 'group' => 'timeline'],
+            ['name' => 'timeline.update', 'display_name' => 'ویرایش تایم‌لاین تصویری', 'group' => 'timeline'],
             ['name' => 'writers.view', 'display_name' => 'مشاهده نویسندگان', 'group' => 'writers'],
             ['name' => 'writers.assign', 'display_name' => 'اختصاص نویسنده', 'group' => 'writers'],
             ['name' => 'writers.revoke', 'display_name' => 'لغو نویسنده', 'group' => 'writers'],
@@ -94,7 +98,8 @@ class RolePermissionSeeder extends Seeder
         $adminPermissionIds = Permission::whereIn('group', [
             'dashboard', 'coin_management', 'coupon_management',
             'payment_management', 'partner_management', 'analytics',
-            'user_management', 'media_library', 'team_members', 'stories', 'story_editor', 'writers', 'resumes', 'blog', 'seo',
+            'user_management', 'media_library', 'team_members', 'stories', 'story_editor',
+            'prompts', 'timeline', 'writers', 'resumes', 'blog', 'seo',
         ])->pluck('id');
         $adminRole->permissions()->syncWithoutDetaching($adminPermissionIds);
 
@@ -150,13 +155,30 @@ class RolePermissionSeeder extends Seeder
             ])->pluck('id')
         );
 
+        [$imageAssistantRole, $imageAssistantCreated] = $this->firstOrCreateRole('image_assistant', [
+            'display_name' => 'دستیار تصویر',
+            'description' => 'مشاهده پرامپت‌ها و مدیریت تایم‌لاین داستان‌های اختصاص‌یافته',
+        ]);
+        $imageAssistantRole->permissions()->syncWithoutDetaching(
+            Permission::whereIn('name', [
+                'dashboard.view',
+                'stories.read',
+                'prompts.read',
+                'timeline.read',
+                'timeline.update',
+                'media.read',
+                'media.create',
+            ])->pluck('id')
+        );
+
         $this->command?->info(sprintf(
-            'Roles: super_admin=%s, admin=%s, voice_actor=%s, writer=%s, head_writer=%s',
+            'Roles: super_admin=%s, admin=%s, voice_actor=%s, writer=%s, head_writer=%s, image_assistant=%s',
             $superCreated ? 'created' : 'exists(skipped)',
             $adminCreated ? 'created' : 'exists(skipped)',
             $voiceCreated ? 'created' : 'exists(skipped)',
             $writerCreated ? 'created' : 'exists(skipped)',
-            $headCreated ? 'created' : 'exists(skipped)'
+            $headCreated ? 'created' : 'exists(skipped)',
+            $imageAssistantCreated ? 'created' : 'exists(skipped)'
         ));
 
         $abolfazl = User::where('phone_number', '09136708883')->first();

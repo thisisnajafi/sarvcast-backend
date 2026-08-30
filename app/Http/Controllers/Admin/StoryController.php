@@ -1104,7 +1104,26 @@ class StoryController extends Controller
             'can_view_script' => $user ? $access->canViewStory($user, $story) : false,
             'can_access_package' => $user ? $access->canAccessPackage($user) : false,
             'can_assign_writer' => $user ? $access->canAssignStoryWriter($user) : false,
+            'can_assign_image_assistant' => $user ? $access->canAssignImageAssistant($user) : false,
+            'can_view_prompts' => $user ? $access->canViewPrompts($user, $story) : false,
+            'can_manage_timeline' => $user ? $access->canManageTimeline($user, $story) : false,
         ];
+
+        if ($user && $access->canAssignImageAssistant($user)) {
+            $payload['image_assistants'] = app(\App\Services\StoryImageAssistantAssignmentService::class)
+                ->listForStory($story)
+                ->values()
+                ->all();
+        } elseif ($user && $access->isAssignedImageAssistant($user, $story)) {
+            $payload['image_assistants'] = [[
+                'user_id' => $user->id,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => Story::displayNameForUser($user),
+                    'role' => $user->role,
+                ],
+            ]];
+        }
 
         return AdminApiResponse::success($payload);
     }
@@ -1134,6 +1153,154 @@ class StoryController extends Controller
         );
 
         return AdminApiResponse::success($story, 'نویسنده داستان برداشته شد.');
+    }
+
+    public function apiListImageAssistants(Request $request, Story $story)
+    {
+        $user = $request->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+
+        if (! $user || (! $access->canAssignImageAssistant($user) && ! $access->canViewStory($user, $story))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی مجاز نیست.',
+                'error' => 'FORBIDDEN',
+            ], 403);
+        }
+
+        $rows = app(\App\Services\StoryImageAssistantAssignmentService::class)->listForStory($story);
+
+        return AdminApiResponse::success($rows->values()->all());
+    }
+
+    public function apiImageAssistantCandidates(Request $request)
+    {
+        $actor = $request->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if (! $actor || ! $access->canAssignImageAssistant($actor)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی مجاز نیست.',
+                'error' => 'FORBIDDEN',
+            ], 403);
+        }
+
+        $search = trim((string) $request->input('q', $request->input('search', '')));
+        $query = User::query()
+            ->where('role', '!=', User::ROLE_CHILD)
+            ->whereIn('status', User::loginAllowedStatuses())
+            ->orderBy('first_name')
+            ->orderBy('last_name');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', '%'.$search.'%')
+                    ->orWhere('last_name', 'like', '%'.$search.'%')
+                    ->orWhere('phone_number', 'like', '%'.$search.'%');
+            });
+        }
+
+        $items = $query->limit(20)->get()->map(fn (User $user) => [
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'name' => Story::displayNameForUser($user),
+            'role' => $user->role,
+            'phone_number' => $user->phone_number,
+            'profile_image_url' => $user->profile_image_url,
+            'needs_promote' => in_array($user->role, User::imageAssistantPromotableRoles(), true),
+        ]);
+
+        return AdminApiResponse::success($items->values()->all());
+    }
+
+    public function apiAssignImageAssistant(Request $request, Story $story)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'promote_to_image_assistant' => 'sometimes|boolean',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $assignment = app(\App\Services\StoryImageAssistantAssignmentService::class)->assign(
+            $request->user(),
+            $story,
+            (int) $validated['user_id'],
+            $request->boolean('promote_to_image_assistant'),
+            $validated['notes'] ?? null,
+        );
+
+        return AdminApiResponse::success(
+            app(\App\Services\StoryImageAssistantAssignmentService::class)->summarizeAssignment($assignment),
+            'دستیار تصویر با موفقیت به داستان اختصاص داده شد.'
+        );
+    }
+
+    public function apiRevokeImageAssistant(Request $request, Story $story, User $user)
+    {
+        app(\App\Services\StoryImageAssistantAssignmentService::class)->revoke(
+            $request->user(),
+            $story,
+            (int) $user->id,
+        );
+
+        return AdminApiResponse::success(null, 'دستیار تصویر از داستان برداشته شد.');
+    }
+
+    public function apiProductionAssets(Request $request, Story $story)
+    {
+        $actor = $request->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+
+        if (! $actor || ! $access->canViewPrompts($actor, $story)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'دسترسی به پرامپت‌های این داستان مجاز نیست.',
+                'error' => 'FORBIDDEN',
+            ], 403);
+        }
+
+        $episodeId = $request->filled('episode_id') ? (int) $request->input('episode_id') : null;
+        $assetType = $request->filled('asset_type') ? (string) $request->input('asset_type') : null;
+
+        $query = \App\Models\StoryProductionAsset::query()
+            ->where('story_id', $story->id)
+            ->orderBy('asset_type')
+            ->orderBy('asset_key');
+
+        if ($episodeId) {
+            $query->where(function ($q) use ($episodeId) {
+                $q->where('episode_id', $episodeId)
+                    ->orWhereNull('episode_id');
+            });
+        }
+
+        if ($assetType) {
+            $query->where('asset_type', $assetType);
+        }
+
+        $assets = $query->get()->map(static function (\App\Models\StoryProductionAsset $asset) {
+            return [
+                'id' => $asset->id,
+                'story_id' => $asset->story_id,
+                'episode_id' => $asset->episode_id,
+                'episode_slug' => $asset->episode_slug,
+                'asset_type' => $asset->asset_type,
+                'asset_key' => $asset->asset_key,
+                'name_persian' => $asset->name_persian,
+                'name_english' => $asset->name_english,
+                'prompt' => $asset->prompt,
+                'image_url' => $asset->image_url,
+                'character_id' => $asset->character_id,
+                'metadata' => $asset->metadata,
+            ];
+        });
+
+        return AdminApiResponse::success([
+            'story_id' => $story->id,
+            'story_title' => $story->title,
+            'assets' => $assets,
+        ]);
     }
 
     public function apiUpdateSponsor(Request $request, Story $story)

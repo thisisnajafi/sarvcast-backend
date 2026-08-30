@@ -2,7 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Episode;
+use App\Models\ImageTimeline;
 use App\Models\Story;
+use App\Models\StoryImageAssistant;
+use App\Models\StoryProductionAsset;
 use App\Models\StoryProductionFile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -37,6 +41,15 @@ class ContributorStoryAccessService
         return $user->isWriter();
     }
 
+    public function isImageAssistantStaff(?User $user): bool
+    {
+        if (! $user || $this->isFullAdmin($user) || $this->isHeadWriter($user)) {
+            return false;
+        }
+
+        return $user->isImageAssistant() || $this->hasImageAssistantAssignments($user);
+    }
+
     public function canViewAllStories(?User $user): bool
     {
         return $this->isFullAdmin($user) || $this->isHeadWriter($user);
@@ -47,6 +60,11 @@ class ContributorStoryAccessService
         return $this->isFullAdmin($user) || $this->isHeadWriter($user);
     }
 
+    public function canAssignImageAssistant(?User $user): bool
+    {
+        return $this->isFullAdmin($user);
+    }
+
     public function isContributor(?User $user): bool
     {
         if (! $user || $this->isFullAdmin($user) || $this->isHeadWriter($user)) {
@@ -55,6 +73,7 @@ class ContributorStoryAccessService
 
         return $this->isWriterStaff($user)
             || $user->isVoiceActor()
+            || $this->isImageAssistantStaff($user)
             || $this->hasAnyAssignableStoryAccess($user);
     }
 
@@ -69,7 +88,10 @@ class ContributorStoryAccessService
             || $this->isHeadWriter($user)
             || $this->isWriterStaff($user)
             || $user->role === User::ROLE_VOICE_ACTOR
-            || $user->isVoiceActor();
+            || $user->isVoiceActor()
+            || $user->role === User::ROLE_IMAGE_ASSISTANT
+            || $user->isImageAssistant()
+            || $this->hasImageAssistantAssignments($user);
     }
 
     /**
@@ -81,13 +103,27 @@ class ContributorStoryAccessService
         return $this->mayAccessAdminPanel($user);
     }
 
+    public function hasImageAssistantAssignments(User $user): bool
+    {
+        return StoryImageAssistant::query()->where('user_id', $user->id)->exists();
+    }
+
+    public function isAssignedImageAssistant(User $user, Story $story): bool
+    {
+        return StoryImageAssistant::query()
+            ->where('story_id', $story->id)
+            ->where('user_id', $user->id)
+            ->exists();
+    }
+
     public function hasAnyAssignableStoryAccess(User $user): bool
     {
         return Story::query()
             ->where(function (Builder $q) use ($user) {
                 $q->where('author_id', $user->id)
                     ->orWhere('narrator_id', $user->id)
-                    ->orWhereHas('characters', fn (Builder $c) => $c->where('voice_actor_id', $user->id));
+                    ->orWhereHas('characters', fn (Builder $c) => $c->where('voice_actor_id', $user->id))
+                    ->orWhereHas('imageAssistants', fn (Builder $a) => $a->where('users.id', $user->id));
             })
             ->exists();
     }
@@ -98,11 +134,15 @@ class ContributorStoryAccessService
             return true;
         }
 
+        if ($this->isAssignedImageAssistant($user, $story)) {
+            return true;
+        }
+
         if ((int) $story->author_id === (int) $user->id) {
             return true;
         }
 
-        if ($this->isWriterStaff($user) && ! $user->isVoiceActor()) {
+        if ($this->isWriterStaff($user) && ! $user->isVoiceActor() && ! $this->isImageAssistantStaff($user)) {
             return false;
         }
 
@@ -111,6 +151,57 @@ class ContributorStoryAccessService
         }
 
         return $story->characters()->where('voice_actor_id', $user->id)->exists();
+    }
+
+    public function canViewPrompts(User $user, Story $story): bool
+    {
+        if ($this->isFullAdmin($user)) {
+            return true;
+        }
+
+        return $this->isAssignedImageAssistant($user, $story);
+    }
+
+    public function canManageTimeline(User $user, Story $story): bool
+    {
+        if ($this->isFullAdmin($user)) {
+            return true;
+        }
+
+        return $this->isAssignedImageAssistant($user, $story);
+    }
+
+    public function canManageEpisodeTimeline(User $user, Episode $episode): bool
+    {
+        $story = $episode->relationLoaded('story')
+            ? $episode->story
+            : Story::query()->find($episode->story_id);
+
+        if (! $story) {
+            return false;
+        }
+
+        return $this->canManageTimeline($user, $story);
+    }
+
+    public function canManageImageTimelineRecord(User $user, ImageTimeline $timeline): bool
+    {
+        if ($this->isFullAdmin($user)) {
+            return true;
+        }
+
+        $storyId = $timeline->story_id;
+        if (! $storyId && $timeline->episode_id) {
+            $storyId = Episode::query()->whereKey($timeline->episode_id)->value('story_id');
+        }
+
+        if (! $storyId) {
+            return false;
+        }
+
+        $story = Story::query()->find($storyId);
+
+        return $story ? $this->canManageTimeline($user, $story) : false;
     }
 
     public function canEditScript(User $user, Story $story): bool
@@ -183,20 +274,69 @@ class ContributorStoryAccessService
             ->all();
     }
 
+    /**
+     * @return array<int, int>
+     */
+    public function imageAssistantStoryIds(User $user): array
+    {
+        return StoryImageAssistant::query()
+            ->where('user_id', $user->id)
+            ->pluck('story_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function scopeStoriesForUser(Builder $query, User $user): Builder
     {
         if ($this->canViewAllStories($user)) {
             return $query;
         }
 
-        if ($this->isWriterStaff($user) && ! $user->isVoiceActor()) {
-            return $query->where('author_id', $user->id);
+        $imageStoryIds = $this->imageAssistantStoryIds($user);
+
+        if ($this->isWriterStaff($user) && ! $user->isVoiceActor() && ! $this->isImageAssistantStaff($user)) {
+            return $query->where(function (Builder $q) use ($user, $imageStoryIds) {
+                $q->where('author_id', $user->id);
+                if ($imageStoryIds !== []) {
+                    $q->orWhereIn('id', $imageStoryIds);
+                }
+            });
         }
 
-        return $query->where(function (Builder $q) use ($user) {
+        if ($this->isImageAssistantStaff($user) && ! $this->isWriterStaff($user) && ! $user->isVoiceActor()) {
+            if ($imageStoryIds === []) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->whereIn('id', $imageStoryIds);
+        }
+
+        return $query->where(function (Builder $q) use ($user, $imageStoryIds) {
             $q->where('author_id', $user->id)
                 ->orWhere('narrator_id', $user->id)
                 ->orWhereHas('characters', fn (Builder $c) => $c->where('voice_actor_id', $user->id));
+            if ($imageStoryIds !== []) {
+                $q->orWhereIn('id', $imageStoryIds);
+            }
+        });
+    }
+
+    public function scopeTimelinesForUser(Builder $query, User $user): Builder
+    {
+        if ($this->isFullAdmin($user)) {
+            return $query;
+        }
+
+        $storyIds = $this->imageAssistantStoryIds($user);
+        if ($storyIds === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $q) use ($storyIds) {
+            $q->whereIn('story_id', $storyIds)
+                ->orWhereHas('episode', fn (Builder $e) => $e->whereIn('story_id', $storyIds));
         });
     }
 
@@ -211,7 +351,7 @@ class ContributorStoryAccessService
             return (int) $fromFile;
         }
 
-        $fromAsset = \App\Models\StoryProductionAsset::query()
+        $fromAsset = StoryProductionAsset::query()
             ->where('story_slug', $storySlug)
             ->whereNotNull('story_id')
             ->value('story_id');
@@ -298,7 +438,7 @@ class ContributorStoryAccessService
             ->whereNotNull('story_id')
             ->pluck('story_id', 'story_slug');
 
-        $fromAssets = \App\Models\StoryProductionAsset::query()
+        $fromAssets = StoryProductionAsset::query()
             ->whereIn('story_slug', $slugs)
             ->whereNotNull('story_id')
             ->pluck('story_id', 'story_slug');
@@ -395,6 +535,7 @@ class ContributorStoryAccessService
         $fullAdmin = $this->isFullAdmin($user);
         $headWriter = $this->isHeadWriter($user);
         $writerStaff = $this->isWriterStaff($user);
+        $imageAssistant = $this->isImageAssistantStaff($user);
         $authored = Story::query()->where('author_id', $user->id)->exists();
         $cast = Story::query()
             ->where(function (Builder $q) use ($user) {
@@ -403,17 +544,22 @@ class ContributorStoryAccessService
             })
             ->exists();
         $voiceActor = $user->isVoiceActor();
+        $hasImageAssignments = $this->hasImageAssistantAssignments($user);
 
         return [
             'is_full_admin' => $fullAdmin,
-            'is_contributor' => ! $fullAdmin && ! $headWriter && ($writerStaff || $authored || $cast || $voiceActor),
+            'is_contributor' => ! $fullAdmin && ! $headWriter && ($writerStaff || $authored || $cast || $voiceActor || $imageAssistant || $hasImageAssignments),
             'is_head_writer' => $headWriter,
             'is_writer' => $writerStaff,
-            'can_view_assigned_stories' => $fullAdmin || $headWriter || $writerStaff || $authored || $cast || $voiceActor,
+            'is_image_assistant' => $imageAssistant || $hasImageAssignments,
+            'can_view_assigned_stories' => $fullAdmin || $headWriter || $writerStaff || $authored || $cast || $voiceActor || $imageAssistant || $hasImageAssignments,
             'can_view_all_stories' => $fullAdmin || $headWriter,
             'can_edit_authored_scripts' => $fullAdmin || $headWriter || $authored,
             'can_edit_all_scripts' => $fullAdmin || $headWriter,
             'can_assign_story_writers' => $fullAdmin || $headWriter,
+            'can_assign_image_assistants' => $fullAdmin,
+            'can_view_prompts' => $fullAdmin || $hasImageAssignments || $imageAssistant,
+            'can_manage_timeline' => $fullAdmin || $hasImageAssignments || $imageAssistant,
             'can_access_story_package' => $fullAdmin,
         ];
     }
@@ -442,12 +588,26 @@ class ContributorStoryAccessService
             ];
         }
 
-        $perms = ['stories.read', 'story_editor.read', 'dashboard.view'];
+        $perms = ['stories.read', 'dashboard.view'];
+
+        if ($this->isImageAssistantStaff($user) || $this->hasImageAssistantAssignments($user)) {
+            $perms = array_merge($perms, [
+                'prompts.read',
+                'timeline.read',
+                'timeline.update',
+                'media.read',
+                'media.create',
+            ]);
+        }
+
+        if ($this->isWriterStaff($user) || $user->isVoiceActor() || Story::query()->where('author_id', $user->id)->exists()) {
+            $perms[] = 'story_editor.read';
+        }
 
         if (Story::query()->where('author_id', $user->id)->exists()) {
             $perms[] = 'story_editor.update';
         }
 
-        return $perms;
+        return array_values(array_unique($perms));
     }
 }

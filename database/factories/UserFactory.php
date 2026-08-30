@@ -70,10 +70,10 @@ class UserFactory extends Factory
         ]);
     }
 
-    public function voiceActor(): static
+    public function imageAssistant(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => User::ROLE_VOICE_ACTOR,
+            'role' => User::ROLE_IMAGE_ASSISTANT,
             'status' => User::STATUS_ACTIVE,
             'onboarding_completed' => true,
         ]);
