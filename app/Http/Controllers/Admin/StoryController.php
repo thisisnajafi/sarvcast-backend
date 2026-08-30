@@ -1169,6 +1169,7 @@ class StoryController extends Controller
 
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
+            'subtitle' => 'nullable|string|max:300',
             'description' => 'sometimes|required|string',
             'category_id' => 'sometimes|required|exists:categories,id',
             'cover_image_url' => 'nullable|url|max:500',
@@ -1258,7 +1259,7 @@ class StoryController extends Controller
             'is_premium' => $validated['is_premium'] ?? $existing?->is_premium ?? false,
         ];
 
-        foreach (['title', 'description', 'category_id', 'status', 'tags'] as $field) {
+        foreach (['title', 'subtitle', 'description', 'category_id', 'status', 'tags'] as $field) {
             if (array_key_exists($field, $validated)) {
                 $attributes[$field] = $validated[$field];
             }
