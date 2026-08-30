@@ -15,11 +15,20 @@ class StoryImageAssistantAssignmentService
         private readonly ContributorStoryAccessService $access,
     ) {}
 
+    private function tableReady(): bool
+    {
+        return \Illuminate\Support\Facades\Schema::hasTable('story_image_assistants');
+    }
+
     /**
      * @return Collection<int, array<string, mixed>>
      */
     public function listForStory(Story $story): Collection
     {
+        if (! $this->tableReady()) {
+            return collect();
+        }
+
         return StoryImageAssistant::query()
             ->with(['user:id,first_name,last_name,phone_number,role,profile_image_url'])
             ->where('story_id', $story->id)
@@ -30,6 +39,14 @@ class StoryImageAssistantAssignmentService
 
     public function assign(User $actor, Story $story, int $userId, bool $promoteToImageAssistant, ?string $notes = null): StoryImageAssistant
     {
+        if (! $this->tableReady()) {
+            abort(response()->json([
+                'success' => false,
+                'message' => 'جدول دستیار تصویر هنوز روی سرور ایجاد نشده است. ابتدا migrate را اجرا کنید.',
+                'error' => 'MIGRATION_REQUIRED',
+            ], 503));
+        }
+
         if (! $this->access->canAssignImageAssistant($actor)) {
             abort(response()->json([
                 'success' => false,
