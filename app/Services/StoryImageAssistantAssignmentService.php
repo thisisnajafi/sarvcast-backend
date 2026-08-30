@@ -90,6 +90,14 @@ class StoryImageAssistantAssignmentService
 
     public function revoke(User $actor, Story $story, int $userId): void
     {
+        if (! $this->tableReady()) {
+            abort(response()->json([
+                'success' => false,
+                'message' => 'جدول دستیار تصویر هنوز روی سرور ایجاد نشده است. ابتدا migrate را اجرا کنید.',
+                'error' => 'MIGRATION_REQUIRED',
+            ], 503));
+        }
+
         if (! $this->access->canAssignImageAssistant($actor)) {
             abort(response()->json([
                 'success' => false,
