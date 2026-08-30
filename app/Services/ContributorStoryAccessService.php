@@ -105,11 +105,19 @@ class ContributorStoryAccessService
 
     public function hasImageAssistantAssignments(User $user): bool
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('story_image_assistants')) {
+            return false;
+        }
+
         return StoryImageAssistant::query()->where('user_id', $user->id)->exists();
     }
 
     public function isAssignedImageAssistant(User $user, Story $story): bool
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('story_image_assistants')) {
+            return false;
+        }
+
         return StoryImageAssistant::query()
             ->where('story_id', $story->id)
             ->where('user_id', $user->id)
@@ -279,6 +287,10 @@ class ContributorStoryAccessService
      */
     public function imageAssistantStoryIds(User $user): array
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('story_image_assistants')) {
+            return [];
+        }
+
         return StoryImageAssistant::query()
             ->where('user_id', $user->id)
             ->pluck('story_id')
@@ -535,7 +547,11 @@ class ContributorStoryAccessService
         $fullAdmin = $this->isFullAdmin($user);
         $headWriter = $this->isHeadWriter($user);
         $writerStaff = $this->isWriterStaff($user);
-        $imageAssistant = $this->isImageAssistantStaff($user);
+        // Avoid querying story_image_assistants for full admins (and before migrate).
+        $hasImageAssignments = $fullAdmin ? false : $this->hasImageAssistantAssignments($user);
+        $imageAssistant = $fullAdmin || $headWriter
+            ? false
+            : ($user->isImageAssistant() || $hasImageAssignments);
         $authored = Story::query()->where('author_id', $user->id)->exists();
         $cast = Story::query()
             ->where(function (Builder $q) use ($user) {
@@ -544,7 +560,6 @@ class ContributorStoryAccessService
             })
             ->exists();
         $voiceActor = $user->isVoiceActor();
-        $hasImageAssignments = $this->hasImageAssistantAssignments($user);
 
         return [
             'is_full_admin' => $fullAdmin,
