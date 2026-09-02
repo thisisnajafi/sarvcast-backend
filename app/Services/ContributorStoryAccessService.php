@@ -252,7 +252,12 @@ class ContributorStoryAccessService
             return true;
         }
 
-        return (int) $story->author_id === (int) $user->id;
+        if ((int) $story->author_id === (int) $user->id) {
+            return true;
+        }
+
+        // Image helpers may edit scripts on assigned stories (align scenes with timelines).
+        return $this->isAssignedImageAssistant($user, $story);
     }
 
     /**
@@ -665,6 +670,7 @@ class ContributorStoryAccessService
                 'media.read',
                 'media.create',
                 'story_editor.read',
+                'story_editor.update',
             ]);
         }
 

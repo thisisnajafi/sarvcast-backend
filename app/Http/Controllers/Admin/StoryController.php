@@ -1001,10 +1001,64 @@ class StoryController extends Controller
         $paginator = $query->with(['category', 'episodes', 'author'])
             ->paginate($perPage, ['*'], 'page', $page);
 
-        $paginator->getCollection()->transform(function (Story $story) {
+        $user = $request->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        $fullAdmin = $user ? $access->isFullAdmin($user) : false;
+        $headWriter = $user ? $access->isHeadWriter($user) : false;
+        $imageStoryIds = ($user && ! $fullAdmin && ! $headWriter)
+            ? array_fill_keys($access->imageAssistantStoryIds($user), true)
+            : [];
+
+        $editor = app(\App\Services\StoryEditorRepository::class);
+        $storyIds = $paginator->getCollection()->pluck('id')->all();
+        $slugByStoryId = [];
+        if ($storyIds !== []) {
+            $slugByStoryId = \App\Models\StoryProductionFile::query()
+                ->whereIn('story_id', $storyIds)
+                ->whereNotNull('story_id')
+                ->whereNotNull('story_slug')
+                ->orderByDesc('id')
+                ->get(['story_id', 'story_slug'])
+                ->unique('story_id')
+                ->mapWithKeys(fn ($row) => [(int) $row->story_id => (string) $row->story_slug])
+                ->all();
+            foreach ($storyIds as $id) {
+                $id = (int) $id;
+                if (! isset($slugByStoryId[$id])) {
+                    $found = $editor->findStorySlugByDbStoryId($id);
+                    if ($found) {
+                        $slugByStoryId[$id] = $found;
+                    }
+                }
+            }
+        }
+
+        $paginator->getCollection()->transform(function (Story $story) use (
+            $user,
+            $access,
+            $fullAdmin,
+            $headWriter,
+            $imageStoryIds,
+            $slugByStoryId,
+        ) {
             $row = $story->toArray();
             $row['author_name'] = $story->authorDisplayName();
             $row['author'] = $story->authorSummary();
+            $row['story_editor_slug'] = $slugByStoryId[(int) $story->id] ?? null;
+
+            if ($user) {
+                $isImageHelper = $fullAdmin
+                    ? true
+                    : (! $headWriter && isset($imageStoryIds[(int) $story->id]));
+
+                $row['permissions'] = [
+                    'can_edit_script' => $access->canEditScript($user, $story),
+                    'can_view_script' => $fullAdmin || $headWriter || $access->canViewStory($user, $story),
+                    'can_view_prompts' => $fullAdmin || $isImageHelper,
+                    'can_manage_timeline' => $fullAdmin || $isImageHelper,
+                    'is_image_helper' => $isImageHelper,
+                ];
+            }
 
             return $row;
         });

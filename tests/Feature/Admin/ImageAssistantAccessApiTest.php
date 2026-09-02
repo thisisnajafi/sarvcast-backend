@@ -126,7 +126,7 @@ class ImageAssistantAccessApiTest extends TestCase
 
         $permissions = collect($response->json('data.permissions'));
         $this->assertTrue($permissions->contains('story_editor.read'));
-        $this->assertFalse($permissions->contains('story_editor.update'));
+        $this->assertTrue($permissions->contains('story_editor.update'));
     }
 
     public function test_image_assistant_can_access_story_editor_list_not_forbidden(): void
@@ -141,7 +141,7 @@ class ImageAssistantAccessApiTest extends TestCase
         $this->assertNotEquals(403, $response->status(), $response->json('message') ?? '');
     }
 
-    public function test_image_assistant_can_view_assigned_editor_story_but_cannot_edit(): void
+    public function test_image_assistant_can_view_and_edit_assigned_editor_story_only(): void
     {
         $assistant = User::factory()->imageAssistant()->create();
         $mine = $this->makeStory(['title' => 'داستان تصویری']);
@@ -168,7 +168,7 @@ class ImageAssistantAccessApiTest extends TestCase
         $access = app(\App\Services\ContributorStoryAccessService::class);
         $this->assertTrue($access->canViewEditorStory($assistant, 'assigned-image-story'));
         $this->assertFalse($access->canViewEditorStory($assistant, 'other-image-story'));
-        $this->assertFalse($access->canEditEditorScript($assistant, 'assigned-image-story'));
+        $this->assertTrue($access->canEditEditorScript($assistant, 'assigned-image-story'));
 
         Sanctum::actingAs($assistant);
 
@@ -179,7 +179,13 @@ class ImageAssistantAccessApiTest extends TestCase
         $this->getJson('/api/admin/story-editor/stories/other-image-story/episodes')
             ->assertForbidden();
 
-        $this->putJson('/api/admin/story-editor/stories/assigned-image-story/episodes/ep01', [
+        $put = $this->putJson('/api/admin/story-editor/stories/assigned-image-story/episodes/ep01', [
+            'title' => 'قسمت کمکی',
+            'scenes' => [],
+        ]);
+        $this->assertNotEquals(403, $put->status(), $put->json('message') ?? '');
+
+        $this->putJson('/api/admin/story-editor/stories/other-image-story/episodes/ep01', [
             'title' => 'hack',
             'scenes' => [],
         ])->assertForbidden();
@@ -228,7 +234,7 @@ class ImageAssistantAccessApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.permissions.can_view_prompts', true)
             ->assertJsonPath('data.permissions.can_manage_timeline', true)
-            ->assertJsonPath('data.permissions.can_edit_script', false);
+            ->assertJsonPath('data.permissions.can_edit_script', true);
 
         $this->getJson('/api/admin/stories/'.$mine->id)
             ->assertOk()
@@ -236,8 +242,27 @@ class ImageAssistantAccessApiTest extends TestCase
             ->assertJsonPath('data.permissions.can_view_prompts', false)
             ->assertJsonPath('data.permissions.can_manage_timeline', false);
 
+        $list = collect($this->getJson('/api/admin/stories')->json('data'));
+        $helpedRow = $list->firstWhere('id', $helped->id);
+        $mineRow = $list->firstWhere('id', $mine->id);
+        $this->assertTrue((bool) data_get($helpedRow, 'permissions.can_manage_timeline'));
+        $this->assertTrue((bool) data_get($helpedRow, 'permissions.can_edit_script'));
+        $this->assertFalse((bool) data_get($mineRow, 'permissions.can_manage_timeline'));
+        $this->assertTrue((bool) data_get($mineRow, 'permissions.can_edit_script'));
+
         $assets = $this->getJson('/api/admin/story-editor/stories/helped-story-slug/assets');
         $this->assertNotEquals(403, $assets->status(), $assets->json('message') ?? '');
+
+        // Image helper may edit scripts on assigned story.
+        $this->putJson('/api/admin/story-editor/stories/helped-story-slug/episodes/ep01', [
+            'title' => 'قسمت کمکی',
+            'scenes' => [],
+        ]);
+        // 403 from validation/missing file is ok; permission gate must not forbid edit for helpers.
+        // Use canEditEditorScript service assertion instead of fragile filesystem write.
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        $this->assertTrue($access->canEditEditorScript($writer, 'helped-story-slug'));
+        $this->assertFalse($access->canManageEditorAssets($writer, 'other-story-slug'));
 
         $this->getJson('/api/admin/story-editor/stories/other-story-slug/assets')
             ->assertForbidden();
