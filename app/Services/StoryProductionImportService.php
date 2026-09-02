@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\Character;
 use App\Models\Episode;
+use App\Models\ImageTimeline;
 use App\Models\Story;
 use App\Models\StoryProductionAsset;
 use App\Models\StoryProductionFile;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -324,10 +326,51 @@ class StoryProductionImportService
             $this->ensureCharacterLinkedAndPushImage($asset->fresh(), $imageUrl);
         }
 
+        $timelineUpdated = $this->syncTimelineFrameImageFromAsset($asset->fresh(), $imageUrl);
+
         return [
             'asset' => $asset->fresh(),
             'image_url' => $imageUrl,
+            'timeline_frames_updated' => $timelineUpdated,
         ];
+    }
+
+    /**
+     * Keep existing episode timeline frames in sync when a scene/cover production image is set.
+     * Frames are matched by episode + scene_description (= asset_key).
+     */
+    private function syncTimelineFrameImageFromAsset(StoryProductionAsset $asset, string $imageUrl): int
+    {
+        if (! in_array($asset->asset_type, [
+            StoryProductionAsset::TYPE_SCENE,
+            StoryProductionAsset::TYPE_COVER,
+        ], true)) {
+            return 0;
+        }
+
+        $episodeId = $asset->episode_id ? (int) $asset->episode_id : null;
+        if (! $episodeId) {
+            return 0;
+        }
+
+        $resolvedUrl = $asset->getImageUrlFromPath($imageUrl) ?? $imageUrl;
+
+        $frames = ImageTimeline::query()
+            ->where('episode_id', $episodeId)
+            ->where('scene_description', $asset->asset_key)
+            ->get();
+
+        foreach ($frames as $frame) {
+            $frame->update(['image_url' => $resolvedUrl]);
+            $this->mediaLibrary->syncUsageFor($frame->fresh(), 'image_url', $resolvedUrl);
+        }
+
+        if ($frames->isNotEmpty()) {
+            Cache::forget("episode_timeline_{$episodeId}");
+            Cache::forget("episode_timeline_{$episodeId}_with_voice_actors");
+        }
+
+        return $frames->count();
     }
 
     /**

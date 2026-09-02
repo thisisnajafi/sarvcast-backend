@@ -1318,9 +1318,7 @@ class StoryController extends Controller
         $assetType = $request->filled('asset_type') ? (string) $request->input('asset_type') : null;
 
         $query = \App\Models\StoryProductionAsset::query()
-            ->where('story_id', $story->id)
-            ->orderBy('asset_type')
-            ->orderBy('asset_key');
+            ->where('story_id', $story->id);
 
         if ($episodeId) {
             $query->where(function ($q) use ($episodeId) {
@@ -1333,22 +1331,37 @@ class StoryController extends Controller
             $query->where('asset_type', $assetType);
         }
 
-        $assets = $query->get()->map(static function (\App\Models\StoryProductionAsset $asset) {
-            return [
-                'id' => $asset->id,
-                'story_id' => $asset->story_id,
-                'episode_id' => $asset->episode_id,
-                'episode_slug' => $asset->episode_slug,
-                'asset_type' => $asset->asset_type,
-                'asset_key' => $asset->asset_key,
-                'name_persian' => $asset->name_persian,
-                'name_english' => $asset->name_english,
-                'prompt' => $asset->prompt,
-                'image_url' => $asset->image_url,
-                'character_id' => $asset->character_id,
-                'metadata' => $asset->metadata,
-            ];
-        });
+        $assets = $query->get()
+            ->sort(static function (
+                \App\Models\StoryProductionAsset $a,
+                \App\Models\StoryProductionAsset $b
+            ) {
+                $typeCmp = strcasecmp((string) $a->asset_type, (string) $b->asset_type);
+                if ($typeCmp !== 0) {
+                    return $typeCmp;
+                }
+
+                // ep1_s1, ep1_s2, … ep1_s10 (not string order: s1, s10, s11, s2)
+                return strnatcasecmp((string) $a->asset_key, (string) $b->asset_key);
+            })
+            ->values()
+            ->map(static function (\App\Models\StoryProductionAsset $asset) {
+                return [
+                    'id' => $asset->id,
+                    'story_id' => $asset->story_id,
+                    'story_slug' => $asset->story_slug,
+                    'episode_id' => $asset->episode_id,
+                    'episode_slug' => $asset->episode_slug,
+                    'asset_type' => $asset->asset_type,
+                    'asset_key' => $asset->asset_key,
+                    'name_persian' => $asset->name_persian,
+                    'name_english' => $asset->name_english,
+                    'prompt' => $asset->prompt,
+                    'image_url' => $asset->image_url,
+                    'character_id' => $asset->character_id,
+                    'metadata' => $asset->metadata,
+                ];
+            });
 
         return AdminApiResponse::success([
             'story_id' => $story->id,
