@@ -325,6 +325,7 @@ class ContributorStoryAccessService
             return $query->whereIn('id', $imageStoryIds);
         }
 
+        // Voice actors (and hybrid cast/author): assigned cast + authored + image-assistant stories.
         return $query->where(function (Builder $q) use ($user, $imageStoryIds) {
             $q->where('author_id', $user->id)
                 ->orWhere('narrator_id', $user->id)
@@ -333,6 +334,20 @@ class ContributorStoryAccessService
                 $q->orWhereIn('id', $imageStoryIds);
             }
         });
+    }
+
+    public function scopeEpisodesForUser(Builder $query, User $user): Builder
+    {
+        if ($this->canViewAllStories($user)) {
+            return $query;
+        }
+
+        $storyIds = $this->accessibleStoryIds($user);
+        if ($storyIds === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn('story_id', $storyIds);
     }
 
     public function scopeTimelinesForUser(Builder $query, User $user): Builder
@@ -566,6 +581,7 @@ class ContributorStoryAccessService
             'is_contributor' => ! $fullAdmin && ! $headWriter && ($writerStaff || $authored || $cast || $voiceActor || $imageAssistant || $hasImageAssignments),
             'is_head_writer' => $headWriter,
             'is_writer' => $writerStaff,
+            'is_voice_actor' => ! $fullAdmin && ! $headWriter && $voiceActor,
             'is_image_assistant' => $imageAssistant || $hasImageAssignments,
             'can_view_assigned_stories' => $fullAdmin || $headWriter || $writerStaff || $authored || $cast || $voiceActor || $imageAssistant || $hasImageAssignments,
             'can_view_all_stories' => $fullAdmin || $headWriter,

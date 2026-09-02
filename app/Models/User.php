@@ -705,11 +705,53 @@ class User extends Authenticatable
     }
 
     /**
+     * Mutually exclusive staff identities on users.role.
+     * When set, they win over stale/conflicting RBAC pivots (e.g. voice_actor + head_writer).
+     *
+     * @return list<string>
+     */
+    public static function exclusiveStaffRoles(): array
+    {
+        return [
+            self::ROLE_SUPER_ADMIN,
+            self::ROLE_ADMIN,
+            self::ROLE_HEAD_WRITER,
+            self::ROLE_WRITER,
+            self::ROLE_VOICE_ACTOR,
+            self::ROLE_IMAGE_ASSISTANT,
+        ];
+    }
+
+    /**
+     * Resolve a staff identity from users.role first, then RBAC only if role is not exclusive staff.
+     */
+    protected function matchesStaffIdentity(string $roleName): bool
+    {
+        if ($this->role === $roleName) {
+            return true;
+        }
+
+        if (in_array($this->role, self::exclusiveStaffRoles(), true)) {
+            return false;
+        }
+
+        return $this->hasRole($roleName);
+    }
+
+    /**
      * Check if user is super admin (checks both role field and role relationship)
      */
     public function isSuperAdmin(): bool
     {
-        return $this->role === self::ROLE_SUPER_ADMIN || $this->hasRole('super_admin');
+        if ($this->role === self::ROLE_SUPER_ADMIN) {
+            return true;
+        }
+
+        if (in_array($this->role, self::exclusiveStaffRoles(), true)) {
+            return false;
+        }
+
+        return $this->hasRole('super_admin');
     }
 
     /**
@@ -717,8 +759,15 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN]) 
-            || $this->hasAnyRole(['super_admin', 'admin']);
+        if (in_array($this->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN], true)) {
+            return true;
+        }
+
+        if (in_array($this->role, self::exclusiveStaffRoles(), true)) {
+            return false;
+        }
+
+        return $this->hasAnyRole(['super_admin', 'admin']);
     }
 
     /**
@@ -726,22 +775,22 @@ class User extends Authenticatable
      */
     public function isVoiceActor(): bool
     {
-        return $this->role === self::ROLE_VOICE_ACTOR || $this->hasRole('voice_actor');
+        return $this->matchesStaffIdentity(self::ROLE_VOICE_ACTOR);
     }
 
     public function isWriter(): bool
     {
-        return $this->role === self::ROLE_WRITER || $this->hasRole(self::ROLE_WRITER);
+        return $this->matchesStaffIdentity(self::ROLE_WRITER);
     }
 
     public function isHeadWriter(): bool
     {
-        return $this->role === self::ROLE_HEAD_WRITER || $this->hasRole(self::ROLE_HEAD_WRITER);
+        return $this->matchesStaffIdentity(self::ROLE_HEAD_WRITER);
     }
 
     public function isImageAssistant(): bool
     {
-        return $this->role === self::ROLE_IMAGE_ASSISTANT || $this->hasRole(self::ROLE_IMAGE_ASSISTANT);
+        return $this->matchesStaffIdentity(self::ROLE_IMAGE_ASSISTANT);
     }
 
     /**

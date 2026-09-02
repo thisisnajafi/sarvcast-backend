@@ -29,7 +29,7 @@ class StoryEditorController extends Controller
             $user = request()->user();
             $access = app(\App\Services\ContributorStoryAccessService::class);
 
-            if ($user && ! $access->isFullAdmin($user) && ! $access->isHeadWriter($user)) {
+            if ($user && ! $access->canViewAllStories($user)) {
                 $stories = $access->filterEditorStoriesForUser($stories, $user);
             }
 

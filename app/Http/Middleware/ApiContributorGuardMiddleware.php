@@ -53,6 +53,19 @@ class ApiContributorGuardMiddleware
             return $this->guardImageAssistant($request, $next, $user, $method, $path, $segment);
         }
 
+        // Voice actors may list episodes for their assigned stories (scoped in controller).
+        if ($user->isVoiceActor() && $segment === 'episodes') {
+            if (! in_array($method, ['GET', 'HEAD'], true)) {
+                return $this->forbidden('شما فقط مجاز به مشاهده قسمت‌ها هستید.');
+            }
+
+            if (str_contains($path, '/export') || str_contains($path, '/bulk-action') || str_contains($path, '/statistics')) {
+                return $this->forbidden('این عملیات برای حساب شما مجاز نیست.');
+            }
+
+            return $next($request);
+        }
+
         if (! in_array($segment, ['stories', 'story-editor'], true)) {
             return $this->forbidden('دسترسی به این بخش فقط برای مدیران است.');
         }

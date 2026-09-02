@@ -1489,6 +1489,11 @@ class EpisodeController extends BaseController
     {
         $query = Episode::query();
 
+        $user = $request->user();
+        if ($user) {
+            app(\App\Services\ContributorStoryAccessService::class)->scopeEpisodesForUser($query, $user);
+        }
+
         $search = trim((string) $request->input('q', $request->input('search', '')));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
