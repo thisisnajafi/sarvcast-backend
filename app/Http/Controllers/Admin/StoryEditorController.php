@@ -151,6 +151,11 @@ class StoryEditorController extends Controller
 
     public function assets(Request $request, string $storyId)
     {
+        $denied = $this->denyUnlessCanViewEditorAssets($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
         $request->validate([
             'episode_slug' => ['nullable', 'string', 'max:191'],
             'asset_type' => ['nullable', Rule::in(['character', 'object', 'setting', 'scene', 'cover'])],
@@ -215,6 +220,11 @@ class StoryEditorController extends Controller
 
     public function uploadAssetImage(Request $request, string $storyId, string $assetType, string $assetKey)
     {
+        $denied = $this->denyUnlessCanManageEditorAssets($storyId);
+        if ($denied) {
+            return $denied;
+        }
+
         $request->validate([
             'image' => ['required_without:image_url', 'image', 'max:10240'],
             'image_url' => ['required_without:image', 'string', 'url', 'max:500'],
@@ -258,6 +268,16 @@ class StoryEditorController extends Controller
 
     public function updateAssetMetadata(Request $request, string $storyId, string $assetType, string $assetKey)
     {
+        $user = request()->user();
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($user && ! $access->isFullAdmin($user) && ! $access->canEditEditorScript($user, $storyId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ویرایش متادیتای دارایی فقط برای نویسنده/مدیر مجاز است.',
+                'error' => 'FORBIDDEN',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'metadata' => ['required', 'array'],
         ]);
@@ -711,6 +731,44 @@ class StoryEditorController extends Controller
         return response()->json([
             'success' => false,
             'message' => 'دسترسی به این داستان مجاز نیست.',
+            'error' => 'FORBIDDEN',
+        ], 403);
+    }
+
+    private function denyUnlessCanViewEditorAssets(string $storySlug): ?\Illuminate\Http\JsonResponse
+    {
+        $user = request()->user();
+        if (! $user) {
+            return null;
+        }
+
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($access->canViewEditorAssets($user, $storySlug)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'دسترسی به دارایی‌های این داستان مجاز نیست.',
+            'error' => 'FORBIDDEN',
+        ], 403);
+    }
+
+    private function denyUnlessCanManageEditorAssets(string $storySlug): ?\Illuminate\Http\JsonResponse
+    {
+        $user = request()->user();
+        if (! $user) {
+            return null;
+        }
+
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        if ($access->canManageEditorAssets($user, $storySlug)) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'آپلود تصویر فقط برای دستیار تصویر این داستان مجاز است.',
             'error' => 'FORBIDDEN',
         ], 403);
     }

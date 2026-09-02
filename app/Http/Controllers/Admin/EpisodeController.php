@@ -1234,9 +1234,9 @@ class EpisodeController extends BaseController
     {
         $user = request()->user();
         $access = app(\App\Services\ContributorStoryAccessService::class);
+        $story = $episode->story ?? \App\Models\Story::query()->find($episode->story_id);
 
         if ($user && ! $access->isFullAdmin($user) && ! $access->isHeadWriter($user)) {
-            $story = $episode->story ?? \App\Models\Story::query()->find($episode->story_id);
             if (! $story || ! $access->canViewStory($user, $story)) {
                 return response()->json([
                     'success' => false,
@@ -1246,7 +1246,14 @@ class EpisodeController extends BaseController
             }
         }
 
-        return AdminApiResponse::success($this->formatApiEpisode($episode->load(['story', 'voiceActors'])));
+        $payload = $this->formatApiEpisode($episode->load(['story', 'voiceActors']));
+        $payload['permissions'] = [
+            'can_view_prompts' => $user && $story ? $access->canViewPrompts($user, $story) : false,
+            'can_manage_timeline' => $user && $story ? $access->canManageTimeline($user, $story) : false,
+            'can_view_script' => $user && $story ? $access->canViewStory($user, $story) : false,
+        ];
+
+        return AdminApiResponse::success($payload);
     }
 
     public function apiUpdate(Request $request, Episode $episode)

@@ -179,6 +179,40 @@ class ContributorStoryAccessService
         return $this->isAssignedImageAssistant($user, $story);
     }
 
+    public function canViewEditorAssets(User $user, string $storySlug): bool
+    {
+        if ($this->isFullAdmin($user)) {
+            return true;
+        }
+
+        $dbId = $this->resolveDbStoryIdFromEditorSlug($storySlug);
+        if (! $dbId) {
+            return false;
+        }
+
+        $story = Story::query()->find($dbId);
+
+        return $story
+            ? ($this->canViewPrompts($user, $story) || $this->canViewStory($user, $story))
+            : false;
+    }
+
+    public function canManageEditorAssets(User $user, string $storySlug): bool
+    {
+        if ($this->isFullAdmin($user)) {
+            return true;
+        }
+
+        $dbId = $this->resolveDbStoryIdFromEditorSlug($storySlug);
+        if (! $dbId) {
+            return false;
+        }
+
+        $story = Story::query()->find($dbId);
+
+        return $story ? $this->canManageTimeline($user, $story) : false;
+    }
+
     public function canManageEpisodeTimeline(User $user, Episode $episode): bool
     {
         $story = $episode->relationLoaded('story')

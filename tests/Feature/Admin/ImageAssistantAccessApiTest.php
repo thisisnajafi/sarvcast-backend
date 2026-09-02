@@ -185,6 +185,85 @@ class ImageAssistantAccessApiTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_writer_with_image_assignment_can_read_assets_and_timeline_not_others(): void
+    {
+        $writer = User::factory()->writer()->create();
+        $mine = $this->makeStory(['title' => 'داستان نویسنده', 'author_id' => $writer->id]);
+        $helped = $this->makeStory(['title' => 'داستان تصویری']);
+        $other = $this->makeStory(['title' => 'داستان غریبه']);
+        $this->assignAssistant($helped, $writer);
+
+        StoryProductionFile::query()->create([
+            'story_slug' => 'helped-story-slug',
+            'episode_slug' => null,
+            'file_type' => StoryProductionFile::TYPE_STORY_SCRIPT,
+            'original_filename' => 'README.md',
+            'storage_path' => 'helped-story-slug/README.md',
+            'story_id' => $helped->id,
+        ]);
+        StoryProductionFile::query()->create([
+            'story_slug' => 'other-story-slug',
+            'episode_slug' => null,
+            'file_type' => StoryProductionFile::TYPE_STORY_SCRIPT,
+            'original_filename' => 'README.md',
+            'storage_path' => 'other-story-slug/README.md',
+            'story_id' => $other->id,
+        ]);
+
+        Sanctum::actingAs($writer);
+
+        $this->getJson('/api/admin/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.access.is_writer', true)
+            ->assertJsonPath('data.access.is_image_assistant', true)
+            ->assertJsonPath('data.access.can_manage_timeline', true)
+            ->assertJsonPath('data.access.can_view_prompts', true);
+
+        $ids = collect($this->getJson('/api/admin/stories')->json('data'))->pluck('id');
+        $this->assertTrue($ids->contains($mine->id));
+        $this->assertTrue($ids->contains($helped->id));
+        $this->assertFalse($ids->contains($other->id));
+
+        $this->getJson('/api/admin/stories/'.$helped->id)
+            ->assertOk()
+            ->assertJsonPath('data.permissions.can_view_prompts', true)
+            ->assertJsonPath('data.permissions.can_manage_timeline', true)
+            ->assertJsonPath('data.permissions.can_edit_script', false);
+
+        $this->getJson('/api/admin/stories/'.$mine->id)
+            ->assertOk()
+            ->assertJsonPath('data.permissions.can_edit_script', true)
+            ->assertJsonPath('data.permissions.can_view_prompts', false)
+            ->assertJsonPath('data.permissions.can_manage_timeline', false);
+
+        $assets = $this->getJson('/api/admin/story-editor/stories/helped-story-slug/assets');
+        $this->assertNotEquals(403, $assets->status(), $assets->json('message') ?? '');
+
+        $this->getJson('/api/admin/story-editor/stories/other-story-slug/assets')
+            ->assertForbidden();
+
+        $episode = $this->makeEpisode($helped);
+        $this->postJson('/api/admin/timeline-management', [
+            'episode_id' => $episode->id,
+            'story_id' => $helped->id,
+            'start_time' => 0,
+            'end_time' => 5,
+            'image_url' => 'https://example.com/t.webp',
+            'image_order' => 1,
+            'transition_type' => 'fade',
+            'is_key_frame' => true,
+        ])->assertOk();
+
+        $helpedImage = $this->postJson('/api/admin/story-editor/stories/helped-story-slug/assets/character/rostam/image', [
+            'image_url' => 'https://example.com/rostam.webp',
+        ]);
+        $this->assertNotEquals(403, $helpedImage->status(), $helpedImage->json('message') ?? '');
+
+        $this->postJson('/api/admin/story-editor/stories/other-story-slug/assets/character/x/image', [
+            'image_url' => 'https://example.com/x.webp',
+        ])->assertForbidden();
+    }
+
     public function test_image_assistant_can_manage_timeline_for_assigned_episode(): void
     {
         $assistant = User::factory()->imageAssistant()->create();

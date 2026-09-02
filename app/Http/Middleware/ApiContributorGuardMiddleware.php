@@ -178,17 +178,41 @@ class ApiContributorGuardMiddleware
 
     private function guardStoryEditor(Request $request, Closure $next, User $user, string $method, string $path): Response
     {
-        $deniedSubstrings = [
-            '/package',
-            '/assets',
-            '/import',
-            '/image',
-        ];
+        // Production package + JSON import remain admin-only.
+        if (str_contains($path, '/package') || str_contains($path, '/import')) {
+            return $this->forbidden('دسترسی به بسته تولید و import فقط برای مدیران است.');
+        }
 
-        foreach ($deniedSubstrings as $needle) {
-            if (str_contains($path, $needle)) {
-                return $this->forbidden('دسترسی به بسته تولید و دارایی‌ها فقط برای مدیران است.');
+        // Assets / image upload: assigned image assistants may read prompts and upload images.
+        if (preg_match('#story-editor/stories/([^/]+)/assets#', $path, $m)) {
+            $storySlug = urldecode($m[1]);
+
+            if (in_array($method, ['GET', 'HEAD'], true)) {
+                if (! $this->access->canViewEditorAssets($user, $storySlug)) {
+                    return $this->forbidden('دسترسی به دارایی‌های این داستان مجاز نیست.');
+                }
+
+                return $next($request);
             }
+
+            if ($method === 'POST' && str_contains($path, '/image')) {
+                if (! $this->access->canManageEditorAssets($user, $storySlug)) {
+                    return $this->forbidden('آپلود تصویر فقط برای دستیار تصویر این داستان مجاز است.');
+                }
+
+                return $next($request);
+            }
+
+            if ($method === 'PUT' || $method === 'PATCH') {
+                // Metadata edits stay with authors/admins (script editors), not image helpers.
+                if (! $this->access->canEditEditorScript($user, $storySlug) && ! $this->access->isFullAdmin($user)) {
+                    return $this->forbidden('ویرایش متادیتای دارایی فقط برای نویسنده/مدیر مجاز است.');
+                }
+
+                return $next($request);
+            }
+
+            return $this->forbidden('این عملیات دارایی برای حساب شما مجاز نیست.');
         }
 
         // Creating scaffolds is admin-only
