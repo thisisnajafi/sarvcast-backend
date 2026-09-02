@@ -208,6 +208,14 @@ class ImageAssistantAccessApiTest extends TestCase
             'story_id' => $helped->id,
         ]);
         StoryProductionFile::query()->create([
+            'story_slug' => 'mine-story-slug',
+            'episode_slug' => null,
+            'file_type' => StoryProductionFile::TYPE_STORY_SCRIPT,
+            'original_filename' => 'README.md',
+            'storage_path' => 'mine-story-slug/README.md',
+            'story_id' => $mine->id,
+        ]);
+        StoryProductionFile::query()->create([
             'story_slug' => 'other-story-slug',
             'episode_slug' => null,
             'file_type' => StoryProductionFile::TYPE_STORY_SCRIPT,
@@ -252,6 +260,14 @@ class ImageAssistantAccessApiTest extends TestCase
 
         $assets = $this->getJson('/api/admin/story-editor/stories/helped-story-slug/assets');
         $this->assertNotEquals(403, $assets->status(), $assets->json('message') ?? '');
+
+        // Authored-only story: scripts yes, production images/prompts no.
+        $this->getJson('/api/admin/story-editor/stories/mine-story-slug/assets')
+            ->assertForbidden();
+        $this->getJson('/api/admin/stories/'.$mine->id.'/production-assets')
+            ->assertForbidden();
+        $this->getJson('/api/admin/stories/'.$helped->id.'/production-assets')
+            ->assertOk();
 
         // Image helper may edit scripts on assigned story.
         $this->putJson('/api/admin/story-editor/stories/helped-story-slug/episodes/ep01', [

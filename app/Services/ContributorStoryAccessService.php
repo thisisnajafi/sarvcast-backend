@@ -150,7 +150,10 @@ class ContributorStoryAccessService
             return true;
         }
 
-        if ($this->isWriterStaff($user) && ! $user->isVoiceActor() && ! $this->isImageAssistantStaff($user)) {
+        // Pure writers (no cast / image-assistant role): authored stories only.
+        // Hybrids with image assignments still reach cast checks below for VA work,
+        // and already matched image-assist stories above.
+        if ($this->isWriterStaff($user) && ! $user->isVoiceActor() && ! $this->hasImageAssistantAssignments($user) && ! $user->isImageAssistant()) {
             return false;
         }
 
@@ -192,9 +195,8 @@ class ContributorStoryAccessService
 
         $story = Story::query()->find($dbId);
 
-        return $story
-            ? ($this->canViewPrompts($user, $story) || $this->canViewStory($user, $story))
-            : false;
+        // Production images/prompts are for image helpers (and admins), not plain authors.
+        return $story ? $this->canViewPrompts($user, $story) : false;
     }
 
     public function canManageEditorAssets(User $user, string $storySlug): bool
@@ -346,17 +348,12 @@ class ContributorStoryAccessService
         }
 
         $imageStoryIds = $this->imageAssistantStoryIds($user);
+        $isWriter = $this->isWriterStaff($user);
+        $isVoiceActor = $user->isVoiceActor();
+        $isImageOnly = $this->isImageAssistantStaff($user) && ! $isWriter && ! $isVoiceActor;
 
-        if ($this->isWriterStaff($user) && ! $user->isVoiceActor() && ! $this->isImageAssistantStaff($user)) {
-            return $query->where(function (Builder $q) use ($user, $imageStoryIds) {
-                $q->where('author_id', $user->id);
-                if ($imageStoryIds !== []) {
-                    $q->orWhereIn('id', $imageStoryIds);
-                }
-            });
-        }
-
-        if ($this->isImageAssistantStaff($user) && ! $this->isWriterStaff($user) && ! $user->isVoiceActor()) {
+        // Pure image assistants: only assigned stories.
+        if ($isImageOnly) {
             if ($imageStoryIds === []) {
                 return $query->whereRaw('1 = 0');
             }
@@ -364,11 +361,17 @@ class ContributorStoryAccessService
             return $query->whereIn('id', $imageStoryIds);
         }
 
-        // Voice actors (and hybrid cast/author): assigned cast + authored + image-assistant stories.
-        return $query->where(function (Builder $q) use ($user, $imageStoryIds) {
-            $q->where('author_id', $user->id)
-                ->orWhere('narrator_id', $user->id)
-                ->orWhereHas('characters', fn (Builder $c) => $c->where('voice_actor_id', $user->id));
+        // Writers, voice actors, and hybrids (e.g. writer who is also image-assigned):
+        // authored/cast stories OR image-assistant assignments — never drop the latter.
+        return $query->where(function (Builder $q) use ($user, $imageStoryIds, $isWriter, $isVoiceActor) {
+            if ($isWriter && ! $isVoiceActor) {
+                $q->where('author_id', $user->id);
+            } else {
+                $q->where('author_id', $user->id)
+                    ->orWhere('narrator_id', $user->id)
+                    ->orWhereHas('characters', fn (Builder $c) => $c->where('voice_actor_id', $user->id));
+            }
+
             if ($imageStoryIds !== []) {
                 $q->orWhereIn('id', $imageStoryIds);
             }
