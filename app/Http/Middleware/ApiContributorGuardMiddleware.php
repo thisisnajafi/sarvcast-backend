@@ -46,7 +46,8 @@ class ApiContributorGuardMiddleware
         }
 
         if ($this->access->isImageAssistantStaff($user)) {
-            if ($segment === 'story-editor' && ($user->isWriter() || $user->isVoiceActor() || $this->access->isWriterStaff($user))) {
+            // Assigned image assistants may read episode scripts (not edit) for timeline work.
+            if ($segment === 'story-editor') {
                 return $this->guardStoryEditor($request, $next, $user, $method, $path);
             }
 

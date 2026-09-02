@@ -157,12 +157,13 @@ class RolePermissionSeeder extends Seeder
 
         [$imageAssistantRole, $imageAssistantCreated] = $this->firstOrCreateRole('image_assistant', [
             'display_name' => 'دستیار تصویر',
-            'description' => 'مشاهده پرامپت‌ها و مدیریت تایم‌لاین داستان‌های اختصاص‌یافته',
+            'description' => 'مشاهده پرامپت‌ها، اسکریپت قسمت‌ها و مدیریت تایم‌لاین داستان‌های اختصاص‌یافته',
         ]);
         $imageAssistantRole->permissions()->syncWithoutDetaching(
             Permission::whereIn('name', [
                 'dashboard.view',
                 'stories.read',
+                'story_editor.read',
                 'prompts.read',
                 'timeline.read',
                 'timeline.update',

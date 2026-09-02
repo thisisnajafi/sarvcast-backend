@@ -6,6 +6,7 @@ use App\Models\Episode;
 use App\Models\Story;
 use App\Models\StoryImageAssistant;
 use App\Models\StoryProductionAsset;
+use App\Models\StoryProductionFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ class ImageAssistantAccessApiTest extends TestCase
             ->assertJsonPath('data.access.is_image_assistant', true)
             ->assertJsonPath('data.access.can_view_prompts', true)
             ->assertJsonPath('data.access.can_manage_timeline', true)
+            ->assertJsonPath('data.access.can_view_scripts', true)
             ->assertJsonPath('data.access.can_assign_image_assistants', false)
             ->assertJsonPath('data.access.can_access_story_package', false);
     }
@@ -111,6 +113,76 @@ class ImageAssistantAccessApiTest extends TestCase
             'story_id' => $story->id,
             'user_id' => $parent->id,
         ]);
+    }
+
+    public function test_image_assistant_me_includes_script_read_access(): void
+    {
+        $assistant = User::factory()->imageAssistant()->create();
+        Sanctum::actingAs($assistant);
+
+        $response = $this->getJson('/api/admin/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.access.can_view_scripts', true);
+
+        $permissions = collect($response->json('data.permissions'));
+        $this->assertTrue($permissions->contains('story_editor.read'));
+        $this->assertFalse($permissions->contains('story_editor.update'));
+    }
+
+    public function test_image_assistant_can_access_story_editor_list_not_forbidden(): void
+    {
+        $assistant = User::factory()->imageAssistant()->create();
+        $story = $this->makeStory();
+        $this->assignAssistant($story, $assistant);
+
+        Sanctum::actingAs($assistant);
+
+        $response = $this->getJson('/api/admin/story-editor/stories');
+        $this->assertNotEquals(403, $response->status(), $response->json('message') ?? '');
+    }
+
+    public function test_image_assistant_can_view_assigned_editor_story_but_cannot_edit(): void
+    {
+        $assistant = User::factory()->imageAssistant()->create();
+        $mine = $this->makeStory(['title' => 'داستان تصویری']);
+        $theirs = $this->makeStory(['title' => 'داستان دیگر']);
+        $this->assignAssistant($mine, $assistant);
+
+        StoryProductionFile::query()->create([
+            'story_slug' => 'assigned-image-story',
+            'episode_slug' => null,
+            'file_type' => StoryProductionFile::TYPE_STORY_SCRIPT,
+            'original_filename' => 'README.md',
+            'storage_path' => 'assigned-image-story/README.md',
+            'story_id' => $mine->id,
+        ]);
+        StoryProductionFile::query()->create([
+            'story_slug' => 'other-image-story',
+            'episode_slug' => null,
+            'file_type' => StoryProductionFile::TYPE_STORY_SCRIPT,
+            'original_filename' => 'README.md',
+            'storage_path' => 'other-image-story/README.md',
+            'story_id' => $theirs->id,
+        ]);
+
+        $access = app(\App\Services\ContributorStoryAccessService::class);
+        $this->assertTrue($access->canViewEditorStory($assistant, 'assigned-image-story'));
+        $this->assertFalse($access->canViewEditorStory($assistant, 'other-image-story'));
+        $this->assertFalse($access->canEditEditorScript($assistant, 'assigned-image-story'));
+
+        Sanctum::actingAs($assistant);
+
+        // Assigned story: ACL allows through (folder may be missing → 404, not 403).
+        $assigned = $this->getJson('/api/admin/story-editor/stories/assigned-image-story/episodes');
+        $this->assertNotEquals(403, $assigned->status(), $assigned->json('message') ?? '');
+
+        $this->getJson('/api/admin/story-editor/stories/other-image-story/episodes')
+            ->assertForbidden();
+
+        $this->putJson('/api/admin/story-editor/stories/assigned-image-story/episodes/ep01', [
+            'title' => 'hack',
+            'scenes' => [],
+        ])->assertForbidden();
     }
 
     public function test_image_assistant_can_manage_timeline_for_assigned_episode(): void

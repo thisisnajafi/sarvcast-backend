@@ -591,6 +591,8 @@ class ContributorStoryAccessService
             'can_assign_image_assistants' => $fullAdmin,
             'can_view_prompts' => $fullAdmin || $hasImageAssignments || $imageAssistant,
             'can_manage_timeline' => $fullAdmin || $hasImageAssignments || $imageAssistant,
+            // Scripts: authors/head writers edit; image assistants + cast may read assigned stories.
+            'can_view_scripts' => $fullAdmin || $headWriter || $writerStaff || $authored || $cast || $voiceActor || $imageAssistant || $hasImageAssignments,
             'can_access_story_package' => $fullAdmin,
         ];
     }
@@ -628,6 +630,7 @@ class ContributorStoryAccessService
                 'timeline.update',
                 'media.read',
                 'media.create',
+                'story_editor.read',
             ]);
         }
 
