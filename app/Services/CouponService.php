@@ -229,10 +229,17 @@ class CouponService
         Cache::forget($this->cafeBazaarPrepareCacheKey($prepareId));
     }
 
-    public function useCouponCode(string $code, User $user, Subscription $subscription, ?float $originalAmount = null): array
-    {
+    public function useCouponCode(
+        string $code,
+        User $user,
+        Subscription $subscription,
+        ?float $originalAmount = null,
+        bool $manageTransaction = true
+    ): array {
         try {
-            DB::beginTransaction();
+            if ($manageTransaction) {
+                DB::beginTransaction();
+            }
 
             $coupon = CouponCode::where('code', $code)->first();
             if (!$coupon) {
@@ -244,7 +251,9 @@ class CouponService
                 ->where('subscription_id', $subscription->id)
                 ->first();
             if ($existing) {
-                DB::commit();
+                if ($manageTransaction) {
+                    DB::commit();
+                }
 
                 return [
                     'success' => true,
@@ -284,7 +293,9 @@ class CouponService
                 $this->createCommissionPayment($coupon->partner, $usage);
             }
 
-            DB::commit();
+            if ($manageTransaction) {
+                DB::commit();
+            }
 
             return [
                 'success' => true,
@@ -292,7 +303,9 @@ class CouponService
                 'data' => $usage->toApiResponse()
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
+            if ($manageTransaction) {
+                DB::rollBack();
+            }
             Log::error("Error using coupon code: " . $e->getMessage());
             
             return [

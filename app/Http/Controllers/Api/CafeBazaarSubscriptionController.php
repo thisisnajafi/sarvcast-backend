@@ -62,6 +62,9 @@ class CafeBazaarSubscriptionController extends Controller
             'product_id' => 'required|string|max:100',
             'order_id' => 'nullable|string|max:100',
             'billing_platform' => 'nullable|string|in:cafebazaar',
+            'coupon_code' => 'nullable|string|max:50',
+            'prepare_id' => 'nullable|uuid',
+            'expected_amount' => 'nullable|numeric|min:0',
         ], [
             'purchase_token.required' => 'توکن خرید الزامی است',
             'purchase_token.string' => 'توکن خرید باید رشته باشد',
@@ -105,16 +108,29 @@ class CafeBazaarSubscriptionController extends Controller
         $purchaseToken = $request->input('purchase_token');
         $productId = $request->input('product_id');
         $orderId = $request->input('order_id');
+        $couponContext = [
+            'coupon_code' => $request->input('coupon_code'),
+            'prepare_id' => $request->input('prepare_id'),
+            'expected_amount' => $request->input('expected_amount'),
+        ];
 
         Log::info('CafeBazaar subscription verification started', [
             'user_id' => $user->id,
             'product_id' => $productId,
             'order_id' => $orderId,
+            'coupon_code' => $couponContext['coupon_code'],
+            'prepare_id' => $couponContext['prepare_id'],
             'purchase_token_preview' => substr($purchaseToken, 0, 20) . '...',
         ]);
 
         try {
-            $result = $this->cafeBazaarService->verifyAndFulfillSubscription($user, $purchaseToken, $productId, $orderId);
+            $result = $this->cafeBazaarService->verifyAndFulfillSubscription(
+                $user,
+                $purchaseToken,
+                $productId,
+                $orderId,
+                $couponContext
+            );
 
             if (!$result['success']) {
                 $statusCode = 400;

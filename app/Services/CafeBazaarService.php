@@ -514,17 +514,47 @@ class CafeBazaarService
             Log::info('CafeBazaar verifyAndFulfill: plan found', ['user_id' => $user->id, 'plan_id' => $plan->id, 'slug' => $plan->slug]);
 
             $subscriptionType = $plan->slug;
+            $planAmount = (float) $plan->getFinalPriceForFlavor('cafebazaar');
+            if ($planAmount <= 0) {
+                $planAmount = (float) $plan->final_price;
+            }
+
+            $couponResolution = $this->resolveCafeBazaarCouponAmounts(
+                $user,
+                $productId,
+                $subscriptionType,
+                $planAmount,
+                $couponContext
+            );
+            if (!($couponResolution['success'] ?? false)) {
+                return [
+                    'success' => false,
+                    'message' => $couponResolution['message'] ?? 'کد تخفیف نامعتبر است',
+                ];
+            }
+
+            $chargeAmount = (float) $couponResolution['final_amount'];
+            $couponCode = $couponResolution['coupon_code'] ?? null;
+            $prepareId = $couponResolution['prepare_id'] ?? null;
+            $originalAmount = (float) $couponResolution['original_amount'];
+            $discountAmount = (float) ($couponResolution['discount_amount'] ?? 0);
+
             $transactionId = $orderId ?? $verification['order_id'] ?? 'CB_' . time() . '_' . rand(1000, 9999);
-            Log::info('CafeBazaar verifyAndFulfill: step 4 begin transaction', ['user_id' => $user->id, 'transaction_id' => $transactionId]);
+            Log::info('CafeBazaar verifyAndFulfill: step 4 begin transaction', [
+                'user_id' => $user->id,
+                'transaction_id' => $transactionId,
+                'charge_amount' => $chargeAmount,
+                'coupon_code' => $couponCode,
+            ]);
 
             DB::beginTransaction();
             try {
                 // 4. Create payment
                 Log::info('CafeBazaar verifyAndFulfill: step 4a creating payment', ['user_id' => $user->id, 'product_id' => $productId]);
-                Log::info('CafeBazaar DB: inserting into payments table', ['user_id' => $user->id, 'amount' => $plan->final_price, 'transaction_id' => $transactionId]);
+                Log::info('CafeBazaar DB: inserting into payments table', ['user_id' => $user->id, 'amount' => $chargeAmount, 'transaction_id' => $transactionId]);
                 $payment = Payment::create([
                 'user_id' => $user->id,
-                'amount' => $plan->final_price,
+                'amount' => $chargeAmount,
                 'currency' => $plan->currency ?? 'IRR',
                 'payment_method' => 'in_app_purchase',
                 'payment_gateway' => 'cafebazaar',
@@ -546,6 +576,11 @@ class CafeBazaarService
                     'expiry_time' => $verification['expiry_time'] ?? null,
                     'auto_renewing' => $verification['auto_renewing'] ?? null,
                     'billing_platform' => 'cafebazaar',
+                    'coupon_code' => $couponCode,
+                    'prepare_id' => $prepareId,
+                    'original_amount' => $originalAmount,
+                    'discount_amount' => $discountAmount,
+                    'final_amount' => $chargeAmount,
                 ],
             ]);
             Log::info('CafeBazaar verifyAndFulfill: payment created', ['user_id' => $user->id, 'payment_id' => $payment->id]);
@@ -562,7 +597,7 @@ class CafeBazaarService
                 Log::info('CafeBazaar DB: updating subscriptions table (extend)', ['user_id' => $user->id, 'subscription_id' => $existingSubscription->id, 'new_end_date' => $newEndDate->toISOString()]);
                 $existingSubscription->update([
                     'end_date' => $newEndDate,
-                    'price' => $plan->final_price,
+                    'price' => $chargeAmount,
                     'currency' => $plan->currency ?? 'IRR',
                     'status' => 'active',
                     'auto_renew' => true,
@@ -574,6 +609,7 @@ class CafeBazaarService
                         'last_verification_time' => now()->toISOString(),
                         'expiry_time' => $verification['expiry_time'] ?? null,
                         'auto_renewing' => $verification['auto_renewing'] ?? null,
+                        'coupon_code' => $couponCode,
                     ]),
                 ]);
                 $subscription = $existingSubscription->fresh();
@@ -589,7 +625,7 @@ class CafeBazaarService
                     'status' => 'active',
                     'start_date' => $startDate,
                     'end_date' => $endDate,
-                    'price' => $plan->final_price,
+                    'price' => $chargeAmount,
                     'currency' => $plan->currency ?? 'IRR',
                     'auto_renew' => true,
                     'payment_method' => 'in_app_purchase',
@@ -605,6 +641,7 @@ class CafeBazaarService
                         'purchase_state' => $verification['purchase_state'] ?? 'purchased',
                         'expiry_time' => $verification['expiry_time'] ?? null,
                         'auto_renewing' => $verification['auto_renewing'] ?? null,
+                        'coupon_code' => $couponCode,
                     ]),
                 ]);
                 Log::info('CafeBazaar DB: subscriptions row inserted', ['user_id' => $user->id, 'subscription_id' => $subscription->id]);
@@ -614,6 +651,22 @@ class CafeBazaarService
             Log::info('CafeBazaar verifyAndFulfill: step 6 link payment to subscription', ['payment_id' => $payment->id, 'subscription_id' => $subscription->id]);
             Log::info('CafeBazaar DB: linking payment to subscription (update payments.subscription_id)', ['payment_id' => $payment->id, 'subscription_id' => $subscription->id]);
             $payment->update(['subscription_id' => $subscription->id]);
+
+            if ($couponCode) {
+                $couponResult = app(CouponService::class)->useCouponCode(
+                    $couponCode,
+                    $user,
+                    $subscription,
+                    $originalAmount,
+                    false
+                );
+                if (!($couponResult['success'] ?? false)) {
+                    throw new \RuntimeException($couponResult['message'] ?? 'ثبت استفاده از کد تخفیف ناموفق بود');
+                }
+                if ($prepareId) {
+                    app(CouponService::class)->forgetCafeBazaarPrepare($prepareId);
+                }
+            }
 
             // 6. Acknowledge (404 is non-fatal; see acknowledgePurchase)
             Log::info('CafeBazaar verifyAndFulfill: step 7 acknowledge purchase', ['product_id' => $productId]);
@@ -653,6 +706,84 @@ class CafeBazaarService
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Resolve charge amount from optional coupon / prepare reservation.
+     *
+     * @param  array{coupon_code?: string|null, prepare_id?: string|null, expected_amount?: float|int|null}  $couponContext
+     * @return array{success: bool, message?: string, coupon_code?: string|null, prepare_id?: string|null, original_amount: float, discount_amount: float, final_amount: float}
+     */
+    private function resolveCafeBazaarCouponAmounts(
+        User $user,
+        string $productId,
+        string $planSlug,
+        float $planAmount,
+        array $couponContext
+    ): array {
+        $prepareId = isset($couponContext['prepare_id']) ? trim((string) $couponContext['prepare_id']) : '';
+        $couponCode = isset($couponContext['coupon_code']) ? strtoupper(trim((string) $couponContext['coupon_code'])) : '';
+
+        if ($prepareId === '' && $couponCode === '') {
+            return [
+                'success' => true,
+                'coupon_code' => null,
+                'prepare_id' => null,
+                'original_amount' => $planAmount,
+                'discount_amount' => 0.0,
+                'final_amount' => $planAmount,
+            ];
+        }
+
+        $couponService = app(CouponService::class);
+
+        if ($prepareId !== '') {
+            $prepare = $couponService->getCafeBazaarPrepare($prepareId);
+            if ($prepare === null) {
+                return [
+                    'success' => false,
+                    'message' => 'نشست تخفیف منقضی شده است. لطفاً دوباره کد را اعمال کنید',
+                ];
+            }
+            if ((int) ($prepare['user_id'] ?? 0) !== (int) $user->id) {
+                return [
+                    'success' => false,
+                    'message' => 'نشست تخفیف متعلق به این کاربر نیست',
+                ];
+            }
+            if (($prepare['product_id'] ?? '') !== $productId) {
+                return [
+                    'success' => false,
+                    'message' => 'کد تخفیف برای این محصول آماده نشده است',
+                ];
+            }
+
+            return [
+                'success' => true,
+                'coupon_code' => $prepare['coupon_code'] ?? $couponCode,
+                'prepare_id' => $prepareId,
+                'original_amount' => (float) ($prepare['original_amount'] ?? $planAmount),
+                'discount_amount' => (float) ($prepare['discount_amount'] ?? 0),
+                'final_amount' => (float) ($prepare['final_amount'] ?? $planAmount),
+            ];
+        }
+
+        $validation = $couponService->validateCouponCode($couponCode, $user, $planAmount, $planSlug);
+        if (!($validation['success'] ?? false)) {
+            return [
+                'success' => false,
+                'message' => $validation['message'] ?? 'کد تخفیف نامعتبر است',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'coupon_code' => $couponCode,
+            'prepare_id' => null,
+            'original_amount' => (float) $validation['data']['original_amount'],
+            'discount_amount' => (float) $validation['data']['discount_amount'],
+            'final_amount' => (float) $validation['data']['final_amount'],
+        ];
     }
 
     /**

@@ -39,23 +39,17 @@ class CafeBazaarDynamicPriceService
             throw new RuntimeException('CAFEBAZAAR_DYNAMIC_PRICE_KEY is not configured');
         }
 
-        $now = time();
+        // Official CafeBazaar dynamic-discount tokens are HS256 JWTs with an
+        // `amount` claim (final price in Rials). Keep payload minimal for compatibility.
         $payload = [
             'amount' => $amountRials,
-            'iat' => $now,
-            'exp' => $now + max(60, $ttlSeconds),
         ];
-
-        if ($productId !== null && $productId !== '') {
-            $payload['productId'] = $productId;
-        }
 
         $token = $this->encodeHs256Jwt($payload, $key);
 
         Log::info('CafeBazaar dynamic price token created', [
             'amount_rials' => $amountRials,
             'product_id' => $productId,
-            'expires_at' => date('c', $payload['exp']),
         ]);
 
         return $token;
