@@ -395,11 +395,18 @@ class CafeBazaarService
      * @param string $purchaseToken
      * @param string $productId
      * @param string|null $orderId Client-supplied order_id; used when Bazaar does not return orderId (see class doc).
+     * @param  array{coupon_code?: string|null, prepare_id?: string|null, expected_amount?: float|int|null}  $couponContext
      * @return array{success: bool, message?: string, payment?: Payment, subscription?: Subscription, is_duplicate?: bool, acknowledged?: bool, error_code?: string}
      */
-    public function verifyAndFulfillSubscription(User $user, string $purchaseToken, string $productId, ?string $orderId = null): array
+    public function verifyAndFulfillSubscription(User $user, string $purchaseToken, string $productId, ?string $orderId = null, array $couponContext = []): array
     {
-        Log::info('CafeBazaar verifyAndFulfillSubscription: start', ['user_id' => $user->id, 'product_id' => $productId, 'order_id' => $orderId]);
+        Log::info('CafeBazaar verifyAndFulfillSubscription: start', [
+            'user_id' => $user->id,
+            'product_id' => $productId,
+            'order_id' => $orderId,
+            'coupon_code' => $couponContext['coupon_code'] ?? null,
+            'prepare_id' => $couponContext['prepare_id'] ?? null,
+        ]);
         $lockKey = 'cafebazaar_verify_' . md5($purchaseToken);
         $lock = Cache::lock($lockKey, 30);
 
@@ -412,7 +419,7 @@ class CafeBazaarService
         }
 
         try {
-            return $this->verifyAndFulfillSubscriptionUnderLock($user, $purchaseToken, $productId, $orderId);
+            return $this->verifyAndFulfillSubscriptionUnderLock($user, $purchaseToken, $productId, $orderId, $couponContext);
         } finally {
             $lock->release();
         }
@@ -420,8 +427,10 @@ class CafeBazaarService
 
     /**
      * Core verification and fulfillment logic; must be called while holding the purchase_token lock.
+     *
+     * @param  array{coupon_code?: string|null, prepare_id?: string|null, expected_amount?: float|int|null}  $couponContext
      */
-    private function verifyAndFulfillSubscriptionUnderLock(User $user, string $purchaseToken, string $productId, ?string $orderId): array
+    private function verifyAndFulfillSubscriptionUnderLock(User $user, string $purchaseToken, string $productId, ?string $orderId, array $couponContext = []): array
     {
         // 1. Idempotency (re-check inside lock; another request may have created it)
             Log::info('CafeBazaar verifyAndFulfill: step 1 idempotency check', ['user_id' => $user->id]);

@@ -23,16 +23,48 @@ class CouponController extends Controller
         $validated = $request->validate([
             'code' => 'required|string|max:50',
             'amount' => 'required|numeric|min:0',
+            'plan_slug' => 'nullable|string|max:50',
         ]);
 
         $user = Auth::user();
         $result = $this->couponService->validateCouponCode(
             $validated['code'],
             $user,
-            $validated['amount']
+            $validated['amount'],
+            $validated['plan_slug'] ?? null
         );
 
         return response()->json($result, $result['success'] ? 200 : 400);
+    }
+
+    /**
+     * Prepare a CafeBazaar dynamic-price token for a Manji coupon + SKU.
+     *
+     * POST /api/v1/coupons/cafebazaar/prepare
+     */
+    public function prepareCafeBazaarCoupon(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:50',
+            'product_id' => 'required|string|max:100',
+            'plan_slug' => 'nullable|string|max:50',
+        ]);
+
+        $result = $this->couponService->prepareCafeBazaarCoupon(
+            Auth::user(),
+            $validated['code'],
+            $validated['product_id'],
+            $validated['plan_slug'] ?? null
+        );
+
+        $status = 400;
+        if ($result['success'] ?? false) {
+            $status = 200;
+        } elseif (($result['error_code'] ?? null) === 'DYNAMIC_PRICE_NOT_CONFIGURED') {
+            $status = 503;
+        }
+
+        return response()->json($result, $status);
     }
 
     public function useCoupon(Request $request): JsonResponse

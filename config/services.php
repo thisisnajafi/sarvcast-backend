@@ -63,6 +63,12 @@ return [
         // One-time in-app purchase: POST validate/inapp/purchases/
         'api_url' => env('CAFEBAZAAR_API_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/validate/inapp/purchases/'),
         'acknowledge_url' => env('CAFEBAZAAR_ACKNOWLEDGE_URL', 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge'),
+        // کلید تخفیف پویا from CafeBazaar payment settings (server-only)
+        'dynamic_price_key' => env('CAFEBAZAAR_DYNAMIC_PRICE_KEY'),
+        // Multiply plan amounts before signing (use 10 if plan prices are Tomans and Bazaar expects Rials)
+        'dynamic_price_amount_factor' => (float) env('CAFEBAZAAR_DYNAMIC_PRICE_AMOUNT_FACTOR', 1),
+        'dynamic_price_token_ttl' => (int) env('CAFEBAZAAR_DYNAMIC_PRICE_TOKEN_TTL', 900),
+        'coupon_prepare_ttl' => (int) env('CAFEBAZAAR_COUPON_PREPARE_TTL', 900),
         'product_mapping' => [
             'subscription_1month' => '1month',
             'subscription_3months' => '3months',

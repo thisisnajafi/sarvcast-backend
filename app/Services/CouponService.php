@@ -8,6 +8,8 @@ use App\Models\CommissionPayment;
 use App\Models\AffiliatePartner;
 use App\Models\User;
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -53,7 +55,7 @@ class CouponService
         }
     }
 
-    public function validateCouponCode(string $code, User $user, float $amount): array
+    public function validateCouponCode(string $code, User $user, float $amount, ?string $planSlug = null): array
     {
         try {
             $coupon = CouponCode::where('code', $code)->first();
@@ -79,6 +81,13 @@ class CouponService
                 ];
             }
 
+            if ($planSlug !== null && !$this->couponAppliesToPlan($coupon, $planSlug)) {
+                return [
+                    'success' => false,
+                    'message' => 'این کد کوپن برای پلن انتخاب‌شده قابل استفاده نیست'
+                ];
+            }
+
             if ($coupon->minimum_amount && $amount < $coupon->minimum_amount) {
                 return [
                     'success' => false,
@@ -87,7 +96,7 @@ class CouponService
             }
 
             $discount = $coupon->calculateDiscount($amount);
-            $finalAmount = $amount - $discount;
+            $finalAmount = max(0, $amount - $discount);
 
             return [
                 'success' => true,
@@ -110,7 +119,117 @@ class CouponService
         }
     }
 
-    public function useCouponCode(string $code, User $user, Subscription $subscription): array
+    /**
+     * Validate a coupon for a CafeBazaar SKU and issue a dynamicPriceToken.
+     */
+    public function prepareCafeBazaarCoupon(User $user, string $code, string $productId, ?string $planSlug = null): array
+    {
+        try {
+            $dynamicPrice = app(CafeBazaarDynamicPriceService::class);
+            if (!$dynamicPrice->isConfigured()) {
+                return [
+                    'success' => false,
+                    'message' => 'تخفیف پویای کافه‌بازار روی سرور پیکربندی نشده است',
+                    'error_code' => 'DYNAMIC_PRICE_NOT_CONFIGURED',
+                ];
+            }
+
+            $plan = SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
+            if (!$plan && $planSlug) {
+                $plan = SubscriptionPlan::where('slug', $planSlug)->first();
+            }
+            if (!$plan) {
+                $mappedSlug = config("services.cafebazaar.product_mapping.{$productId}");
+                if ($mappedSlug) {
+                    $plan = SubscriptionPlan::where('slug', $mappedSlug)->first();
+                }
+            }
+            if (!$plan) {
+                return [
+                    'success' => false,
+                    'message' => 'پلن مرتبط با این محصول کافه‌بازار یافت نشد',
+                ];
+            }
+
+            $resolvedSlug = $plan->slug;
+            $originalAmount = (float) $plan->getFinalPriceForFlavor('cafebazaar');
+            if ($originalAmount <= 0) {
+                $originalAmount = (float) $plan->final_price;
+            }
+
+            $validation = $this->validateCouponCode($code, $user, $originalAmount, $resolvedSlug);
+            if (!$validation['success']) {
+                return $validation;
+            }
+
+            $finalAmount = (float) $validation['data']['final_amount'];
+            $amountRials = $dynamicPrice->toRials($finalAmount);
+            $ttl = (int) config('services.cafebazaar.dynamic_price_token_ttl', 900);
+            $token = $dynamicPrice->createToken($amountRials, $productId, $ttl);
+
+            $prepareId = (string) Str::uuid();
+            $prepareTtl = (int) config('services.cafebazaar.coupon_prepare_ttl', 900);
+            $expiresAt = now()->addSeconds($prepareTtl);
+
+            Cache::put($this->cafeBazaarPrepareCacheKey($prepareId), [
+                'user_id' => $user->id,
+                'coupon_code' => strtoupper(trim($code)),
+                'product_id' => $productId,
+                'plan_slug' => $resolvedSlug,
+                'original_amount' => $originalAmount,
+                'discount_amount' => $validation['data']['discount_amount'],
+                'final_amount' => $finalAmount,
+                'amount_rials' => $amountRials,
+            ], $expiresAt);
+
+            return [
+                'success' => true,
+                'message' => 'کد تخفیف برای کافه‌بازار آماده شد',
+                'data' => [
+                    'prepare_id' => $prepareId,
+                    'coupon_code' => strtoupper(trim($code)),
+                    'product_id' => $productId,
+                    'plan_slug' => $resolvedSlug,
+                    'original_amount' => $originalAmount,
+                    'discount_amount' => $validation['data']['discount_amount'],
+                    'final_amount' => $finalAmount,
+                    'final_amount_rials' => $amountRials,
+                    'dynamic_price_token' => $token,
+                    'expires_at' => $expiresAt->toISOString(),
+                    'coupon' => $validation['data']['coupon'],
+                ],
+            ];
+        } catch (\Throwable $e) {
+            Log::error('CafeBazaar coupon prepare failed', [
+                'user_id' => $user->id,
+                'code' => $code,
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'خطا در آماده‌سازی تخفیف کافه‌بازار',
+            ];
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getCafeBazaarPrepare(string $prepareId): ?array
+    {
+        $data = Cache::get($this->cafeBazaarPrepareCacheKey($prepareId));
+
+        return is_array($data) ? $data : null;
+    }
+
+    public function forgetCafeBazaarPrepare(string $prepareId): void
+    {
+        Cache::forget($this->cafeBazaarPrepareCacheKey($prepareId));
+    }
+
+    public function useCouponCode(string $code, User $user, Subscription $subscription, ?float $originalAmount = null): array
     {
         try {
             DB::beginTransaction();
@@ -120,8 +239,24 @@ class CouponService
                 throw new \Exception('کد کوپن یافت نشد');
             }
 
+            $existing = CouponUsage::where('coupon_code_id', $coupon->id)
+                ->where('user_id', $user->id)
+                ->where('subscription_id', $subscription->id)
+                ->first();
+            if ($existing) {
+                DB::commit();
+
+                return [
+                    'success' => true,
+                    'message' => 'کد کوپن قبلاً برای این اشتراک ثبت شده است',
+                    'data' => $existing->toApiResponse(),
+                ];
+            }
+
+            $amount = $originalAmount ?? (float) ($subscription->price ?? 0);
+
             // Validate coupon
-            $validation = $this->validateCouponCode($code, $user, $subscription->amount);
+            $validation = $this->validateCouponCode($code, $user, $amount, $subscription->type);
             if (!$validation['success']) {
                 throw new \Exception($validation['message']);
             }
@@ -165,6 +300,23 @@ class CouponService
                 'message' => 'خطا در استفاده از کد کوپن: ' . $e->getMessage()
             ];
         }
+    }
+
+    private function couponAppliesToPlan(CouponCode $coupon, string $planSlug): bool
+    {
+        $plans = $coupon->applicable_plans;
+        if (!is_array($plans) || $plans === []) {
+            return true;
+        }
+
+        $normalized = array_map(static fn ($p) => strtolower((string) $p), $plans);
+
+        return in_array(strtolower($planSlug), $normalized, true);
+    }
+
+    private function cafeBazaarPrepareCacheKey(string $prepareId): string
+    {
+        return "cafebazaar_coupon_prep_{$prepareId}";
     }
 
     public function getCouponCodes(array $filters = []): array

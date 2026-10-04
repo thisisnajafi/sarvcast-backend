@@ -833,6 +833,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Coupon System routes
     Route::prefix('coupons')->middleware('auth:sanctum')->group(function () {
         Route::post('validate', [\App\Http\Controllers\Api\CouponController::class, 'validateCoupon']);
+        Route::post('cafebazaar/prepare', [\App\Http\Controllers\Api\CouponController::class, 'prepareCafeBazaarCoupon']);
         Route::post('use', [\App\Http\Controllers\Api\CouponController::class, 'useCoupon']);
         Route::get('my-coupons', [\App\Http\Controllers\Api\CouponController::class, 'getMyCoupons']);
         Route::get('my-usage', [\App\Http\Controllers\Api\CouponController::class, 'getCouponUsage']);
