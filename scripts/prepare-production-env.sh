@@ -82,6 +82,30 @@ apply_ci_secret_overrides() {
       echo "prepare-production-env: applied MELIPAYAMAK_PASSWORD from FTP_PASSWORD (CI env)"
     fi
   fi
+
+  local dynamic_key="${PRODUCTION_CAFEBAZAAR_DYNAMIC_PRICE_KEY:-}"
+  dynamic_key="$(strip_wrapping_quotes "$dynamic_key")"
+  # Fallback: key is already stored in the tracked .env used by this repo when
+  # the GitHub secret has not been created yet.
+  if [ -z "$dynamic_key" ] && [ -f "$ROOT/.env" ]; then
+    dynamic_key="$(grep -m1 '^CAFEBAZAAR_DYNAMIC_PRICE_KEY=' "$ROOT/.env" | cut -d= -f2- || true)"
+    dynamic_key="$(strip_wrapping_quotes "$dynamic_key")"
+    if [ -n "$dynamic_key" ] && [[ "$dynamic_key" != __* ]]; then
+      echo "prepare-production-env: using CAFEBAZAAR_DYNAMIC_PRICE_KEY from repository .env"
+    else
+      dynamic_key=""
+    fi
+  fi
+  if [ -n "$dynamic_key" ]; then
+    if grep -q '^CAFEBAZAAR_DYNAMIC_PRICE_KEY=' "$OUT"; then
+      set_env_line CAFEBAZAAR_DYNAMIC_PRICE_KEY "$dynamic_key"
+    else
+      printf '\nCAFEBAZAAR_DYNAMIC_PRICE_KEY=%s\n' "$(quote_env_value "$dynamic_key")" >> "$OUT"
+    fi
+    echo "prepare-production-env: applied CAFEBAZAAR_DYNAMIC_PRICE_KEY from CI secret"
+  elif ! grep -q '^CAFEBAZAAR_DYNAMIC_PRICE_KEY=.\+' "$OUT"; then
+    echo "prepare-production-env: warning — CAFEBAZAAR_DYNAMIC_PRICE_KEY is empty; set GitHub secret PRODUCTION_CAFEBAZAAR_DYNAMIC_PRICE_KEY"
+  fi
 }
 
 ensure_sensitive_env_values_quoted() {
@@ -121,7 +145,7 @@ normalize_production_env() {
   sed -i 's|^MYKET_PACKAGE_NAME=.*|MYKET_PACKAGE_NAME=com.avinpishtazan.manji.myket|' "$OUT" || true
   sed -i 's|^SESSION_DRIVER=.*|SESSION_DRIVER=file|' "$OUT" || true
   sed -i 's|^CACHE_STORE=.*|CACHE_STORE=file|' "$OUT" || true
-  sed -i 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=sync|' "$OUT" || true
+  sed -i 's|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=database|' "$OUT" || true
   sed -i 's|^CORS_ALLOWED_ORIGINS=.*|CORS_ALLOWED_ORIGINS=https://manjiapp.ir,https://www.manjiapp.ir,https://app.manjiapp.ir,https://admin.manjiapp.ir,https://my.manjiapp.ir|' "$OUT" || true
   sed -i 's|^ADMIN_DASHBOARD_ENFORCE_ORIGIN=.*|ADMIN_DASHBOARD_ENFORCE_ORIGIN=false|' "$OUT" || true
 
@@ -134,7 +158,7 @@ normalize_production_env() {
   fi
 
   if ! grep -q '^QUEUE_CONNECTION=' "$OUT"; then
-    echo 'QUEUE_CONNECTION=sync' >> "$OUT"
+    echo 'QUEUE_CONNECTION=database' >> "$OUT"
   fi
 
   if ! grep -q '^FIREBASE_PROJECT_ID=' "$OUT"; then
@@ -244,6 +268,7 @@ elif [ -f "$TEMPLATE" ]; then
   MELIPAYAMAK_USERNAME="${PRODUCTION_MELIPAYAMAK_USERNAME:-09136708883}"
   MELIPAYAMAK_PASSWORD="${PRODUCTION_MELIPAYAMAK_PASSWORD:-${MELIPAYAMAK_PASSWORD:-${FTP_PASSWORD:-}}}"
   CAFEBAZAAR_API_KEY="${PRODUCTION_CAFEBAZAAR_API_KEY:-}"
+  CAFEBAZAAR_DYNAMIC_PRICE_KEY="${PRODUCTION_CAFEBAZAAR_DYNAMIC_PRICE_KEY:-}"
   MYKET_API_KEY="${PRODUCTION_MYKET_API_KEY:-}"
   ZARINPAL_MERCHANT_ID="${PRODUCTION_ZARINPAL_MERCHANT_ID:-}"
 
@@ -278,6 +303,7 @@ elif [ -f "$TEMPLATE" ]; then
     "__MELIPAYAMAK_USERNAME__|$(escape_sed_replacement "$MELIPAYAMAK_USERNAME")"
     "__MELIPAYAMAK_PASSWORD__|$(escape_sed_replacement "$MELIPAYAMAK_PASSWORD")"
     "__CAFEBAZAAR_API_KEY__|$(escape_sed_replacement "$CAFEBAZAAR_API_KEY")"
+    "__CAFEBAZAAR_DYNAMIC_PRICE_KEY__|$(escape_sed_replacement "$CAFEBAZAAR_DYNAMIC_PRICE_KEY")"
     "__MYKET_API_KEY__|$(escape_sed_replacement "$MYKET_API_KEY")"
     "__ZARINPAL_MERCHANT_ID__|$(escape_sed_replacement "$ZARINPAL_MERCHANT_ID")"
   )

@@ -126,6 +126,7 @@ jobs:
             env:
               - '.github/production.env.template'
               - 'scripts/prepare-production-env.sh'
+              - 'config/services.php'
             config:
               - 'config/**'
               - 'bootstrap/app.php'
@@ -304,6 +305,7 @@ jobs:
           PRODUCTION_MELIPAYAMAK_USERNAME: ${{ secrets.PRODUCTION_MELIPAYAMAK_USERNAME }}
           PRODUCTION_MELIPAYAMAK_PASSWORD: ${{ secrets.PRODUCTION_MELIPAYAMAK_PASSWORD }}
           PRODUCTION_CAFEBAZAAR_API_KEY: ${{ secrets.PRODUCTION_CAFEBAZAAR_API_KEY }}
+          PRODUCTION_CAFEBAZAAR_DYNAMIC_PRICE_KEY: ${{ secrets.PRODUCTION_CAFEBAZAAR_DYNAMIC_PRICE_KEY }}
           PRODUCTION_MYKET_API_KEY: ${{ secrets.PRODUCTION_MYKET_API_KEY }}
           PRODUCTION_ZARINPAL_MERCHANT_ID: ${{ secrets.PRODUCTION_ZARINPAL_MERCHANT_ID }}
           FTP_SERVER: ${{ env.FTP_SERVER }}
