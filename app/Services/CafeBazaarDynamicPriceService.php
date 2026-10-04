@@ -39,10 +39,12 @@ class CafeBazaarDynamicPriceService
             throw new RuntimeException('CAFEBAZAAR_DYNAMIC_PRICE_KEY is not configured');
         }
 
-        // Official CafeBazaar dynamic-discount tokens are HS256 JWTs with an
-        // `amount` claim (final price in Rials). Keep payload minimal for compatibility.
+        // CafeBazaar rejects tokens that use any other claim. The signed payload
+        // must be the final price in Rials plus an expiry. A missing `price`
+        // or a zero price surfaces as «اطلاعات ارسالی برنامه برای پرداخت نامعتبر است».
         $payload = [
-            'amount' => $amountRials,
+            'price' => $amountRials,
+            'exp' => time() + max(60, $ttlSeconds),
         ];
 
         $token = $this->encodeHs256Jwt($payload, $key);
@@ -58,11 +60,16 @@ class CafeBazaarDynamicPriceService
     /**
      * Convert a Manji plan amount into the integer Rials value Bazaar expects.
      */
-    public function toRials(float $amount): int
+    public function toRials(float $amount, ?string $currency = null): int
     {
         $factor = (float) config('services.cafebazaar.dynamic_price_amount_factor', 1);
+        $currency = strtoupper(trim((string) $currency));
+        // Plan prices are stored in Toman (IRT). Bazaar's `price` claim is Rials.
+        if ($factor == 1.0 && in_array($currency, ['IRT', 'TOMAN'], true)) {
+            $factor = 10;
+        }
 
-        return (int) max(1, round($amount * $factor));
+        return (int) max(0, round($amount * $factor));
     }
 
     /**

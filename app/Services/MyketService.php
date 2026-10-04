@@ -239,7 +239,7 @@ class MyketService
         if (!$plan) {
             $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
             if ($subscriptionType) {
-                $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+                $plan = SubscriptionPlan::findBySlug($subscriptionType);
             }
         }
         if (!$plan) {

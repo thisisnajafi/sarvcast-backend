@@ -139,8 +139,8 @@ class SubscriptionPlan extends Model
     {
         return match ($this->slug) {
             '1month' => '1-month-sub',
-            '3months' => '3-month-sub',
-            '6months' => '6-month-sub',
+            '3month', '3months' => '3-month-sub',
+            '6month', '6months' => '6-month-sub',
             '1year' => '1-year-sub',
             default => null,
         };
@@ -153,11 +153,34 @@ class SubscriptionPlan extends Model
     {
         return match ($this->slug) {
             '1month' => '1-month-sub',
-            '3months' => '3-month-sub',
-            '6months' => '6-month-sub',
+            '3month', '3months' => '3-month-sub',
+            '6month', '6months' => '6-month-sub',
             '1year' => '1-year-sub',
             default => null,
         };
+    }
+
+    /**
+     * Slugs that refer to the same plan. Production has used both 6month and 6months.
+     *
+     * @return list<string>
+     */
+    public static function slugAliases(string $slug): array
+    {
+        return match ($slug) {
+            '3month', '3months' => ['3months', '3month'],
+            '6month', '6months' => ['6months', '6month'],
+            default => [$slug],
+        };
+    }
+
+    public static function findBySlug(?string $slug): ?self
+    {
+        if ($slug === null || $slug === '') {
+            return null;
+        }
+
+        return static::query()->whereIn('slug', static::slugAliases($slug))->first();
     }
 
     /**

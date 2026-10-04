@@ -136,12 +136,12 @@ class CouponService
 
             $plan = SubscriptionPlan::where('cafebazaar_product_id', $productId)->first();
             if (!$plan && $planSlug) {
-                $plan = SubscriptionPlan::where('slug', $planSlug)->first();
+                $plan = SubscriptionPlan::findBySlug($planSlug);
             }
             if (!$plan) {
                 $mappedSlug = config("services.cafebazaar.product_mapping.{$productId}");
                 if ($mappedSlug) {
-                    $plan = SubscriptionPlan::where('slug', $mappedSlug)->first();
+                    $plan = SubscriptionPlan::findBySlug($mappedSlug);
                 }
             }
             if (!$plan) {
@@ -163,7 +163,15 @@ class CouponService
             }
 
             $finalAmount = (float) $validation['data']['final_amount'];
-            $amountRials = $dynamicPrice->toRials($finalAmount);
+            if ($finalAmount < 1000) {
+                return [
+                    'success' => false,
+                    'message' => 'کافه‌بازار مبلغ کمتر از ۱۰۰۰ تومان را نمی‌پذیرد. این کد قیمت را به صفر یا خیلی کم رسانده است.',
+                    'error_code' => 'DYNAMIC_PRICE_TOO_LOW',
+                ];
+            }
+
+            $amountRials = $dynamicPrice->toRials($finalAmount, $plan->currency ?? null);
             $ttl = (int) config('services.cafebazaar.dynamic_price_token_ttl', 900);
             $token = $dynamicPrice->createToken($amountRials, $productId, $ttl);
 

@@ -501,7 +501,7 @@ class CafeBazaarService
                 $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
                 Log::info('CafeBazaar verifyAndFulfill: plan by cafebazaar_product_id not found, trying slug', ['product_id' => $productId, 'mapped_slug' => $subscriptionType]);
                 if ($subscriptionType) {
-                    $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+                    $plan = SubscriptionPlan::findBySlug($subscriptionType);
                 }
             }
             if (!$plan) {
@@ -824,7 +824,7 @@ class CafeBazaarService
         if (!$plan) {
             $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
             if ($subscriptionType) {
-                $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+                $plan = SubscriptionPlan::findBySlug($subscriptionType);
             }
         }
         if (!$plan) {
@@ -883,7 +883,7 @@ class CafeBazaarService
         if (!$plan) {
             $subscriptionType = $this->mapProductIdToSubscriptionType($productId);
             if ($subscriptionType) {
-                $plan = SubscriptionPlan::where('slug', $subscriptionType)->first();
+                $plan = SubscriptionPlan::findBySlug($subscriptionType);
             }
         }
         if (!$plan) {
