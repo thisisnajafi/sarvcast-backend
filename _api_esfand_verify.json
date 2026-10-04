@@ -1,0 +1,29 @@
+{
+  "matched": [
+    {
+      "id": "4-haft-khan-rostam",
+      "folder_name": "4 - haft khan rostam",
+      "name_persian": "هفت خوان رستم",
+      "name_english": "Haft Khan Rostam — The Seven Labors of Rostam",
+      "episode_count": 7,
+      "target_age": "8-12"
+    },
+    {
+      "id": "19-mother-goat-and-wolf",
+      "folder_name": "19 - mother goat and wolf",
+      "name_persian": "مادر بز و هفت بزغاله",
+      "name_english": "Mother Goat and the Seven Kids",
+      "episode_count": 1,
+      "target_age": "4-7"
+    },
+    {
+      "id": "27-dastan-hftkhoan-asfndyar",
+      "folder_name": "27 - داستان هفتخوان اسفندیار",
+      "name_persian": "هفتخوان اسفندیار",
+      "name_english": "Seven Labors of Esfandiyar",
+      "episode_count": 7,
+      "target_age": "8-12"
+    }
+  ],
+  "total_stories": 106
+}

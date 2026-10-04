@@ -138,6 +138,10 @@ Same token and script; new `-Action` / `-Target` on `agent-upload-stories.ps1`:
 
 # Full package re-import (same as Upload)
 .\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Package -JsonSummary
+
+# Pull server-edited scripts into local *.md (previous file saved as *.md.bak)
+.\scripts\agent-upload-stories.ps1 -Stories "7 - hooshang" -Action Pull -Target Script -JsonSummary
+.\scripts\agent-upload-stories.ps1 -Stories "7" -Action Pull -Target Script -EpisodeNumber 2 -JsonSummary
 ```
 
 Artisan equivalent:
@@ -225,7 +229,8 @@ From `manji-laravel/`:
 
 3. بعد از آپلود، تصاویر بسته، صوت، تایم‌لاین و انتشار را در داشبورد کامل کنید.
 4. حذف/ویرایش ریموت: `-Action Delete|Edit` و `-Target Story|Episode|Script|Character|Characters|Prompts`
-5. برای اطمینان از وجود داستان روی سرور:
+5. دریافت اسکریپت از سرور به فایل محلی: `-Action Pull -Target Script`
+6. برای اطمینان از وجود داستان روی سرور:
 
 ```powershell
 .\scripts\verify-story-on-server.ps1 -Stories "21","22" -JsonSummary

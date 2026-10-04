@@ -2,9 +2,18 @@
 
 **Feature:** Let selected users help create images (covers, characters, timelines) by viewing story/episode prompts and managing episode image timelines — **only for stories an admin assigns to them** — inside `https://admin.manjiapp.ir`.
 
-**Status:** Implementation in progress (Phase 1–4 landed locally) · Deploy seeder + migrations before production use  
+**Status:** Documentation complete · Feature implemented and pushed to `main` (backend + dashboard) · Run migrate + `RolePermissionSeeder` on production before use  
 **Date:** 2026-08-30  
 **Related systems:** Custom RBAC · `ContributorStoryAccessService` · `story_production_assets` · `image_timelines` · Next dashboard authz
+
+### Document covers
+
+| Area | Sections |
+|------|----------|
+| Roles & permissions | §3.1, §5.1 (RP-*) |
+| Backend | §3.2–3.4, §5.2 (BE-*) |
+| Dashboard (`admin.manjiapp.ir`) | §3.5, §5.3 (FE-*) |
+| QA / deploy | §5.4, deploy checklist above |
 
 ### Implemented (code)
 

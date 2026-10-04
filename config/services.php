@@ -83,8 +83,10 @@ return [
 
     'myket' => [
         'package_name' => env('MYKET_PACKAGE_NAME', 'com.avinpishtazan.manji.myket'),
-        // X-Access-Token from Myket developer panel → In-App Billing (server-side only)
+        // App-specific X-Access-Token (توکن صحت‌سنجی) — server-side purchase verify only
         'api_key' => env('MYKET_API_KEY'),
+        // Optional account partner token (توکن عمومی) — not used for IAP verify
+        'partner_token' => env('MYKET_PARTNER_TOKEN'),
         'api_base_url' => env('MYKET_API_BASE_URL', 'https://developer.myket.ir/api/partners/applications'),
         'product_mapping' => [
             '1-month-sub' => '1month',

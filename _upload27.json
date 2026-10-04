@@ -1,0 +1,15 @@
+﻿{
+    "api_base_url":  "https://my.manjiapp.ir/api/admin",
+    "dry_run":  false,
+    "results":  [
+                    {
+                        "query":  "27",
+                        "folder":  "27 - داستان هفتخوان اسفندیار",
+                        "status":  "uploaded",
+                        "preflight":  null,
+                        "package":  "E:\\1 - laravel\\7 - SarvCast\\manji-stories\\40 - shahnameh\\staging\\27 - داستان هفتخوان اسفندیار",
+                        "error":  null
+                    }
+                ],
+    "failed_count":  0
+}

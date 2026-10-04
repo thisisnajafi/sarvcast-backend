@@ -13,6 +13,15 @@ class SendAdminPushNewUserNotification implements ShouldQueue
 {
     use InteractsWithQueue;
 
+    /**
+     * Dispatch only after the user row is committed, so queue workers
+     * never process a missing user on database/cPanel hosts.
+     */
+    public bool $afterCommit = true;
+
+    /** Retry a few times if FCM/network is flaky. */
+    public int $tries = 3;
+
     public function __construct(
         protected AdminPushNotificationService $adminPushService
     ) {}

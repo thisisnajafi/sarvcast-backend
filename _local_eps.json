@@ -1,0 +1,24 @@
+{
+  "folder": "27 - داستان هفتخوان اسفندیار",
+  "episodes": [
+    "episode_1_brass_hero",
+    "episode_2_wolves_lions",
+    "episode_3_dragon_pass",
+    "episode_4_sorceress",
+    "episode_5_simurgh_storm",
+    "episode_6_iron_fortress",
+    "episode_7_river_rescue",
+    "episode_outline.txt"
+  ],
+  "files": [
+    "characters_and_objects.json",
+    "episode_1_brass_hero",
+    "episode_2_wolves_lions",
+    "episode_3_dragon_pass",
+    "episode_4_sorceress",
+    "episode_5_simurgh_storm",
+    "episode_6_iron_fortress",
+    "episode_7_river_rescue",
+    "_build_episodes_full.py"
+  ]
+}

@@ -34,6 +34,14 @@
 .EXAMPLE
   # Update episode 3 script from local folder
   .\scripts\agent-upload-stories.ps1 -Stories "29" -Action Edit -Target Script -EpisodeNumber 3 -JsonSummary
+
+.EXAMPLE
+  # Pull all episode scripts from server into local *.md files
+  .\scripts\agent-upload-stories.ps1 -Stories "7 - hooshang" -Action Pull -Target Script -JsonSummary
+
+.EXAMPLE
+  # Pull only episode 2 script from server
+  .\scripts\agent-upload-stories.ps1 -Stories "7" -Action Pull -Target Script -EpisodeNumber 2 -JsonSummary
 #>
 
 [CmdletBinding()]
@@ -55,7 +63,7 @@ param(
 
     [switch]$JsonSummary,
 
-    [ValidateSet('Upload', 'Delete', 'Edit')]
+    [ValidateSet('Upload', 'Delete', 'Edit', 'Pull')]
     [string]$Action = 'Upload',
 
     [ValidateSet('Package', 'Story', 'Episode', 'Script', 'Character', 'Characters', 'Prompts')]
@@ -188,6 +196,165 @@ function Find-EpisodeFiles([string]$storyPath, [int]$episodeNumber, [string]$kin
     throw "Unknown kind $kind"
 }
 
+function Get-ApiHeaders {
+    return @{
+        Authorization = "Bearer $token"
+        Accept        = "application/json"
+    }
+}
+
+function Find-RemoteEditorStory {
+    param([string]$FolderName)
+
+    $listUrl = "$($baseUrl.TrimEnd('/'))/story-editor/stories"
+    $list = Invoke-RestMethod -Method Get -Uri $listUrl -Headers (Get-ApiHeaders)
+    $remoteStories = @()
+    if ($list.data -is [System.Array]) { $remoteStories = @($list.data) }
+    elseif ($list.data.stories) { $remoteStories = @($list.data.stories) }
+    elseif ($list.data -is [psobject]) { $remoteStories = @($list.data) }
+
+    $match = $null
+    foreach ($story in $remoteStories) {
+        $folder = [string]($story.folder_name)
+        $id = [string]($story.id)
+        if ($folder -eq $FolderName -or $id -eq $FolderName) {
+            $match = $story
+            break
+        }
+    }
+    if ($null -eq $match) {
+        foreach ($story in $remoteStories) {
+            $folder = [string]($story.folder_name)
+            $id = [string]($story.id)
+            if ($folder -like "*$FolderName*" -or $id -like "*$FolderName*") {
+                $match = $story
+                break
+            }
+        }
+    }
+    if ($null -eq $match -and $FolderName -match '^\d+\s*-') {
+        $num = ($FolderName -split '\s*-\s*', 2)[0].Trim()
+        foreach ($story in $remoteStories) {
+            $folder = [string]($story.folder_name)
+            if ($folder -match ("^{0}\s*-" -f [regex]::Escape($num))) {
+                $match = $story
+                break
+            }
+        }
+    }
+    if ($null -eq $match) {
+        throw "Story not found on story-editor for folder '$FolderName'"
+    }
+    return $match
+}
+
+function Resolve-LocalEpisodeMarkdownPath {
+    param(
+        [string]$StoryPath,
+        [int]$EpisodeNumber
+    )
+
+    $episodeDirs = @(Get-ChildItem -LiteralPath $StoryPath -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match ("(?i)^episode[_\s-]*{0}(\D|$)" -f $EpisodeNumber) })
+    if ($episodeDirs.Count -eq 0) {
+        return $null
+    }
+    $epDir = $episodeDirs[0].FullName
+    $files = @(Get-ChildItem -LiteralPath $epDir -Filter '*_story.md' -ErrorAction SilentlyContinue)
+    if ($files.Count -eq 0) {
+        $files = @(Get-ChildItem -LiteralPath $epDir -Filter '*.md' -ErrorAction SilentlyContinue)
+    }
+    if ($files.Count -gt 0) {
+        return $files[0].FullName
+    }
+    $slug = ($episodeDirs[0].Name -replace '[^\w\-]+', '_').Trim('_').ToLowerInvariant()
+    if ([string]::IsNullOrWhiteSpace($slug)) { $slug = "episode_$EpisodeNumber" }
+    return (Join-Path $epDir "${slug}_story.md")
+}
+
+function Invoke-PullScripts {
+    param(
+        [string]$StoryPath,
+        [string]$FolderName
+    )
+
+    $remote = Find-RemoteEditorStory -FolderName $FolderName
+    $storySlug = [string]$remote.id
+    Write-Host "  remote story-editor id: $storySlug ($([string]$remote.folder_name))"
+
+    $epsUrl = "$($baseUrl.TrimEnd('/'))/story-editor/stories/$([uri]::EscapeDataString($storySlug))/episodes"
+    $epsResp = Invoke-RestMethod -Method Get -Uri $epsUrl -Headers (Get-ApiHeaders)
+    $episodes = @()
+    if ($epsResp.data -is [System.Array]) { $episodes = @($epsResp.data) }
+    elseif ($epsResp.data.episodes) { $episodes = @($epsResp.data.episodes) }
+    elseif ($epsResp.data -is [psobject] -and $epsResp.data.id) { $episodes = @($epsResp.data) }
+
+    if ($episodes.Count -eq 0) {
+        throw "No episodes with scripts found on server for $storySlug"
+    }
+
+    $pulled = @()
+    foreach ($ep in $episodes) {
+        $epNum = [int]($ep.episode_number)
+        $epId = [string]($ep.id)
+        if ($EpisodeNumber -gt 0 -and $epNum -ne $EpisodeNumber) { continue }
+
+        $detailUrl = "$($baseUrl.TrimEnd('/'))/story-editor/stories/$([uri]::EscapeDataString($storySlug))/episodes/$([uri]::EscapeDataString($epId))"
+        $detail = Invoke-RestMethod -Method Get -Uri $detailUrl -Headers (Get-ApiHeaders)
+        $raw = $null
+        if ($detail.data -and $detail.data.raw_markdown) {
+            $raw = [string]$detail.data.raw_markdown
+        }
+        elseif ($detail.raw_markdown) {
+            $raw = [string]$detail.raw_markdown
+        }
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            throw "Episode $epNum ($epId) has empty raw_markdown on server"
+        }
+
+        $localMd = Resolve-LocalEpisodeMarkdownPath -StoryPath $StoryPath -EpisodeNumber $epNum
+        if ([string]::IsNullOrWhiteSpace($localMd)) {
+            throw "No local episode folder matching episode $epNum under $FolderName"
+        }
+
+        $rel = $localMd.Substring($StoryPath.Length).TrimStart('\', '/')
+        if ($DryRun) {
+            Write-Host "  would write ep$epNum -> $rel ($($raw.Length) chars)" -ForegroundColor DarkYellow
+            $pulled += [pscustomobject]@{
+                episode_number = $epNum
+                episode_id     = $epId
+                path           = $localMd
+                bytes          = $raw.Length
+                dry_run        = $true
+            }
+            continue
+        }
+
+        $dir = Split-Path $localMd -Parent
+        if (-not (Test-Path -LiteralPath $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
+        if (Test-Path -LiteralPath $localMd) {
+            Copy-Item -LiteralPath $localMd -Destination ($localMd + '.bak') -Force
+        }
+        [System.IO.File]::WriteAllText($localMd, $raw.Replace("`r`n", "`n").Replace("`r", "`n"), [System.Text.UTF8Encoding]::new($false))
+        Write-Host "  pulled ep$epNum -> $rel ($($raw.Length) chars)" -ForegroundColor Green
+        $pulled += [pscustomobject]@{
+            episode_number = $epNum
+            episode_id     = $epId
+            path           = $localMd
+            bytes          = $raw.Length
+            dry_run        = $false
+        }
+    }
+
+    if ($EpisodeNumber -gt 0 -and $pulled.Count -eq 0) {
+        throw "Episode $EpisodeNumber not found on server for $storySlug"
+    }
+
+    return $pulled
+}
+
 function Invoke-RemoteManage {
     param(
         [string]$ManageAction,
@@ -284,6 +451,18 @@ foreach ($storyQuery in $Stories) {
                 $entry.status = 'deleted'
                 Write-Host "  OK (deleted $manageTarget)" -ForegroundColor Green
             }
+            $results += [pscustomobject]$entry
+            continue
+        }
+
+        if ($Action -eq 'Pull') {
+            if ($Target -ne 'Script' -and $Target -ne 'Package') {
+                throw "Pull currently supports -Target Script (got $Target)"
+            }
+            $pulled = Invoke-PullScripts -StoryPath $storyPath -FolderName $entry.folder
+            $entry.package = $pulled
+            $entry.status = if ($DryRun) { 'dry_run_pull' } else { 'pulled' }
+            Write-Host "  OK ($($entry.status); $($pulled.Count) episode script(s))" -ForegroundColor Green
             $results += [pscustomobject]$entry
             continue
         }

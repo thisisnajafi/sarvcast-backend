@@ -1,0 +1,19 @@
+﻿{
+    "authenticated":  true,
+    "user_id":  3,
+    "results":  [
+                    {
+                        "query":  "27",
+                        "expected_slug":  "27",
+                        "found":  true,
+                        "match":  {
+                                      "id":  "27-aladdin-magic-lamp",
+                                      "folder_name":  "27 - aladdin magic lamp",
+                                      "title":  null,
+                                      "episode_count":  1
+                                  },
+                        "error":  null
+                    }
+                ],
+    "failed_count":  0
+}
