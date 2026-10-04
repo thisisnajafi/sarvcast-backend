@@ -95,8 +95,11 @@ Route::prefix('v1')->middleware('security')->group(function () {
 
     Route::get('sponsors/{sponsor}', [PublicSponsorController::class, 'show'])->middleware('cache.api:180');
 
-    /** Web app advanced search (no auth; same handler as authenticated mobile route). */
+    /** App/Flutter unified search + public story/episode search (no auth). */
+    Route::get('search', [\App\Http\Controllers\Api\SearchController::class, 'search'])->middleware('cache.api:60');
     Route::get('search/stories', [\App\Http\Controllers\Api\SearchController::class, 'searchStories'])->middleware('cache.api:60');
+    Route::get('search/episodes', [\App\Http\Controllers\Api\SearchController::class, 'searchEpisodes'])->middleware('cache.api:60');
+    Route::get('search/global', [\App\Http\Controllers\Api\SearchController::class, 'globalSearch'])->middleware('cache.api:60');
 
     Route::get('episodes', [EpisodeController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
     Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware(['auth:sanctum', 'cache.api:180']); // 3 minutes

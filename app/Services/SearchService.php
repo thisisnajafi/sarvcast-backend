@@ -24,14 +24,13 @@ class SearchService
             $query = Story::with(['category', 'episodes', 'director', 'writer', 'author', 'narrator'])
                          ->where('status', 'published');
 
-            // Text search
+            // Text search (avoid LIKE on JSON `tags` — breaks UTF-8 Persian queries)
             if (!empty($params['q'])) {
                 $searchTerm = $params['q'];
                 $query->where(function ($q) use ($searchTerm) {
                     $q->where('title', 'LIKE', "%{$searchTerm}%")
                       ->orWhere('subtitle', 'LIKE', "%{$searchTerm}%")
-                      ->orWhere('description', 'LIKE', "%{$searchTerm}%")
-                      ->orWhere('tags', 'LIKE', "%{$searchTerm}%");
+                      ->orWhere('description', 'LIKE', "%{$searchTerm}%");
                 });
             }
 
@@ -294,6 +293,63 @@ class SearchService
     }
 
     /**
+     * App search for Flutter/mobile — full story + episode models.
+     */
+    public function appSearch(array $params = []): array
+    {
+        $searchTerm = trim((string) ($params['q'] ?? ''));
+        $limit = min((int) ($params['limit'] ?? 20), 50);
+
+        if ($searchTerm === '') {
+            return [
+                'stories' => [],
+                'episodes' => [],
+                'people' => [],
+                'categories' => [],
+            ];
+        }
+
+        $stories = Story::with(['category'])
+            ->where('status', 'published')
+            ->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('subtitle', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('description', 'LIKE', "%{$searchTerm}%");
+            })
+            ->orderByDesc('play_count')
+            ->limit($limit)
+            ->get();
+
+        $episodes = Episode::with(['story.category', 'imageTimelines'])
+            ->publiclyVisible()
+            ->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                    ->orWhereHas('story', function ($storyQuery) use ($searchTerm) {
+                        $storyQuery->where('status', 'published')
+                            ->where(function ($inner) use ($searchTerm) {
+                                $inner->where('title', 'LIKE', "%{$searchTerm}%")
+                                    ->orWhere('subtitle', 'LIKE', "%{$searchTerm}%");
+                            });
+                    });
+            })
+            ->orderByDesc('play_count')
+            ->limit($limit)
+            ->get();
+
+        return [
+            'stories' => $stories,
+            'episodes' => $episodes,
+            'people' => [],
+            'categories' => [],
+            'filters_applied' => [
+                'search_term' => $searchTerm,
+                'limit' => $limit,
+            ],
+        ];
+    }
+
+    /**
      * Global search across all content types
      */
     public function globalSearch(array $params = []): array
@@ -336,7 +392,7 @@ class SearchService
 
             // Search episodes
             $episodes = Episode::with(['story.category'])
-                             ->where('status', 'published')
+                             ->publiclyVisible()
                              ->where(function ($q) use ($searchTerm) {
                                  $q->where('title', 'LIKE', "%{$searchTerm}%")
                                    ->orWhereHas('story', function ($storyQuery) use ($searchTerm) {

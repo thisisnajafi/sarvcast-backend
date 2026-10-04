@@ -19,6 +19,48 @@ class SearchController extends Controller
     }
 
     /**
+     * Unified app search (stories + episodes) — used by Flutter GET /search.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'q' => 'required|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ], [
+            'q.required' => 'عبارت جستجو الزامی است',
+            'q.max' => 'عبارت جستجو نمی‌تواند بیشتر از 255 کاراکتر باشد',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در اعتبارسنجی داده‌ها',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $results = $this->searchService->appSearch($request->all());
+
+            return response()->json([
+                'success' => true,
+                'data' => $results,
+                'message' => 'جستجو انجام شد',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('App search failed', [
+                'params' => $request->all(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در جستجو',
+            ], 500);
+        }
+    }
+
+    /**
      * Search stories
      */
     public function searchStories(Request $request): JsonResponse
