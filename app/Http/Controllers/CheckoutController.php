@@ -216,7 +216,8 @@ class CheckoutController extends Controller
     {
         $basePrice = $plan->price;
         $discount = $plan->discount_percentage ?? 0;
-        $discountedPrice = $basePrice - ($basePrice * $discount / 100);
+        // The stored price is what the customer pays. The percentage is not a second discount.
+        $discountedPrice = $basePrice;
 
         $priceInfo = [
             'type' => $plan->slug,

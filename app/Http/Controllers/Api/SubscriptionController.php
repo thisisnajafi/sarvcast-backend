@@ -871,7 +871,7 @@ class SubscriptionController extends Controller
     {
         $basePrice = $plan->price;
         $discount = $plan->discount_percentage ?? 0;
-        $discountedPrice = $basePrice - ($basePrice * $discount / 100);
+        $discountedPrice = $basePrice;
 
         return [
             'type' => $plan->slug ?? $plan->type,

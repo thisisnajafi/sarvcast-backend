@@ -70,9 +70,8 @@ class SubscriptionPlan extends Model
      */
     public function getFinalPriceAttribute()
     {
-        if ($this->discount_percentage > 0) {
-            return $this->price * (1 - $this->discount_percentage / 100);
-        }
+        // discount_percentage is the saving versus paying monthly, already
+        // reflected in the stored selling price. Do not subtract it again.
         return $this->price;
     }
 
@@ -214,10 +213,6 @@ class SubscriptionPlan extends Model
         $price = $this->getPriceForFlavor($flavor);
         if ($price === null) {
             return null;
-        }
-        
-        if ($this->discount_percentage > 0) {
-            return $price * (1 - $this->discount_percentage / 100);
         }
         
         return $price;

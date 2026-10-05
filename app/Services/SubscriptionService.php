@@ -394,7 +394,7 @@ class SubscriptionService
 
         $basePrice = $plan->price;
         $discount = $plan->discount_percentage;
-        $discountedPrice = $basePrice - ($basePrice * $discount / 100);
+        $discountedPrice = $basePrice;
 
         return [
             'type' => $type,
