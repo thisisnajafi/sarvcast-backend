@@ -163,15 +163,17 @@ class CouponService
             }
 
             $finalAmount = (float) $validation['data']['final_amount'];
-            if ($finalAmount < 1000) {
-                return [
-                    'success' => false,
-                    'message' => 'کافه‌بازار مبلغ کمتر از ۱۰۰۰ تومان را نمی‌پذیرد. این کد قیمت را به صفر یا خیلی کم رسانده است.',
-                    'error_code' => 'DYNAMIC_PRICE_TOO_LOW',
-                ];
-            }
+            $discountAmount = (float) $validation['data']['discount_amount'];
+            [$finalAmount, $discountAmount] = $dynamicPrice->floorZeroCharge(
+                $originalAmount,
+                $finalAmount,
+                $discountAmount
+            );
 
             $amountRials = $dynamicPrice->toRials($finalAmount, $plan->currency ?? null);
+            if ($amountRials < CafeBazaarDynamicPriceService::MIN_CHARGE_RIALS) {
+                $amountRials = CafeBazaarDynamicPriceService::MIN_CHARGE_RIALS;
+            }
             $ttl = (int) config('services.cafebazaar.dynamic_price_token_ttl', 900);
             $token = $dynamicPrice->createToken($amountRials, $productId, $ttl);
 
@@ -185,7 +187,7 @@ class CouponService
                 'product_id' => $productId,
                 'plan_slug' => $resolvedSlug,
                 'original_amount' => $originalAmount,
-                'discount_amount' => $validation['data']['discount_amount'],
+                'discount_amount' => $discountAmount,
                 'final_amount' => $finalAmount,
                 'amount_rials' => $amountRials,
             ], $expiresAt);
@@ -199,7 +201,7 @@ class CouponService
                     'product_id' => $productId,
                     'plan_slug' => $resolvedSlug,
                     'original_amount' => $originalAmount,
-                    'discount_amount' => $validation['data']['discount_amount'],
+                    'discount_amount' => $discountAmount,
                     'final_amount' => $finalAmount,
                     'final_amount_rials' => $amountRials,
                     'dynamic_price_token' => $token,

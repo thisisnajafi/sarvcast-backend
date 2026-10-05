@@ -776,13 +776,20 @@ class CafeBazaarService
             ];
         }
 
+        $dynamicPrice = app(CafeBazaarDynamicPriceService::class);
+        [$finalAmount, $discountAmount] = $dynamicPrice->floorZeroCharge(
+            (float) $validation['data']['original_amount'],
+            (float) $validation['data']['final_amount'],
+            (float) $validation['data']['discount_amount']
+        );
+
         return [
             'success' => true,
             'coupon_code' => $couponCode,
             'prepare_id' => null,
             'original_amount' => (float) $validation['data']['original_amount'],
-            'discount_amount' => (float) $validation['data']['discount_amount'],
-            'final_amount' => (float) $validation['data']['final_amount'],
+            'discount_amount' => $discountAmount,
+            'final_amount' => $finalAmount,
         ];
     }
 

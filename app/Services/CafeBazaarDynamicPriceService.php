@@ -16,6 +16,11 @@ use RuntimeException;
  */
 class CafeBazaarDynamicPriceService
 {
+    /** Lowest charge CafeBazaar will accept when a coupon would make the price 0. */
+    public const MIN_CHARGE_TOMAN = 1000;
+
+    public const MIN_CHARGE_RIALS = 10000;
+
     public function isConfigured(): bool
     {
         $key = (string) config('services.cafebazaar.dynamic_price_key', '');
@@ -70,6 +75,23 @@ class CafeBazaarDynamicPriceService
         }
 
         return (int) max(0, round($amount * $factor));
+    }
+
+    /**
+     * A coupon that zeroes the price is charged at 1,000 Toman (10,000 Rials).
+     *
+     * @return array{0: float, 1: float} final amount in Toman, then discount amount
+     */
+    public function floorZeroCharge(float $originalAmount, float $finalAmount, float $discountAmount): array
+    {
+        if ($finalAmount > 0) {
+            return [$finalAmount, $discountAmount];
+        }
+
+        $finalAmount = (float) self::MIN_CHARGE_TOMAN;
+        $discountAmount = max(0, round($originalAmount - $finalAmount, 2));
+
+        return [$finalAmount, $discountAmount];
     }
 
     /**
