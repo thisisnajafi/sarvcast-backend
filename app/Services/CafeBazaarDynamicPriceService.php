@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -44,12 +45,24 @@ class CafeBazaarDynamicPriceService
             throw new RuntimeException('CAFEBAZAAR_DYNAMIC_PRICE_KEY is not configured');
         }
 
-        // CafeBazaar rejects tokens that use any other claim. The signed payload
-        // must be the final price in Rials plus an expiry. A missing `price`
-        // or a zero price surfaces as «اطلاعات ارسالی برنامه برای پرداخت نامعتبر است».
+        $sku = trim((string) $productId);
+        $packageName = trim((string) config(
+            'services.cafebazaar.package_name',
+            'com.avinpishtazan.manji.cafebazaar'
+        ));
+        if ($sku === '' || $packageName === '') {
+            throw new RuntimeException('Dynamic price token requires package_name and sku');
+        }
+
+        // Official payload: price (Rials, number), package_name, sku, exp.
+        // Missing any of these is rejected as invalid payment data (error 6).
+        // https://developers.cafebazaar.ir/fa/guidelines/in-app-billing/dynamic-discount/
         $payload = [
             'price' => $amountRials,
+            'package_name' => $packageName,
+            'sku' => $sku,
             'exp' => time() + max(60, $ttlSeconds),
+            'nonce' => (string) Str::uuid(),
         ];
 
         $token = $this->encodeHs256Jwt($payload, $key);
@@ -57,6 +70,7 @@ class CafeBazaarDynamicPriceService
         Log::info('CafeBazaar dynamic price token created', [
             'amount_rials' => $amountRials,
             'product_id' => $productId,
+            'ttl_seconds' => $ttlSeconds,
         ]);
 
         return $token;

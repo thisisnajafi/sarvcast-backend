@@ -204,6 +204,11 @@ class CouponService
                     'discount_amount' => $discountAmount,
                     'final_amount' => $finalAmount,
                     'final_amount_rials' => $amountRials,
+                    'package_name' => (string) config(
+                        'services.cafebazaar.package_name',
+                        'com.avinpishtazan.manji.cafebazaar'
+                    ),
+                    'sku' => $productId,
                     'dynamic_price_token' => $token,
                     'expires_at' => $expiresAt->toISOString(),
                     'coupon' => $validation['data']['coupon'],
