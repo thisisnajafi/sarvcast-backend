@@ -37,6 +37,8 @@ use App\Http\Controllers\Api\AdminPanelController;
 use App\Http\Controllers\Api\CharacterController;
 use App\Http\Controllers\Api\VoiceActorPanelController;
 use App\Http\Controllers\Api\AdminDashboardController;
+use App\Http\Controllers\Api\Admin\SchoolManagerAdminController;
+use App\Http\Controllers\Api\Admin\SchoolPanelController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Admin\PersonController;
 
@@ -232,6 +234,27 @@ Route::prefix('admin/v1/dashboard')
         Route::get('charts', [AdminDashboardController::class, 'charts']);
         Route::get('export', [AdminDashboardController::class, 'export']);
         Route::get('online-users', [AdminDashboardController::class, 'onlineUsers']);
+    });
+
+Route::prefix('admin/v1/school-managers')
+    ->middleware(['security', 'admin.origin', 'auth:sanctum', 'api.admin', 'role:super_admin'])
+    ->group(function () {
+        Route::get('/', [SchoolManagerAdminController::class, 'index']);
+        Route::post('/', [SchoolManagerAdminController::class, 'store']);
+        Route::get('{profile}/members', [SchoolManagerAdminController::class, 'members']);
+        Route::get('{profile}', [SchoolManagerAdminController::class, 'show']);
+        Route::patch('{profile}', [SchoolManagerAdminController::class, 'update']);
+        Route::delete('{profile}', [SchoolManagerAdminController::class, 'destroy']);
+    });
+
+Route::prefix('admin/v1/school-panel')
+    ->middleware(['security', 'admin.origin', 'auth:sanctum', 'api.admin', 'school.panel'])
+    ->group(function () {
+        Route::get('me', [SchoolPanelController::class, 'me']);
+        Route::get('members', [SchoolPanelController::class, 'members']);
+        Route::post('members/lookup', [SchoolPanelController::class, 'lookup']);
+        Route::post('members', [SchoolPanelController::class, 'storeMember']);
+        Route::delete('members/{user}', [SchoolPanelController::class, 'destroyMember']);
     });
 
 // Optional legacy compatibility aliases for old dashboard clients.

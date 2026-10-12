@@ -28,6 +28,10 @@ class ApiContributorGuardMiddleware
             return $next($request);
         }
 
+        if ($user->isSchoolManager()) {
+            return $this->forbidden('دسترسی به این بخش فقط برای مدیران است.');
+        }
+
         $segment = (string) $request->segment(3); // /api/admin/{segment}
 
         if ($segment === 'resumes') {

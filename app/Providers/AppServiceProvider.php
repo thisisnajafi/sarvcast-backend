@@ -10,8 +10,13 @@ use Carbon\Carbon;
 use App\Helpers\JalaliHelper;
 use App\Models\Episode;
 use App\Models\MediaAsset;
+use App\Models\SchoolManagerProfile;
+use App\Models\SchoolMembership;
 use App\Models\Story;
 use App\Models\User;
+use App\Policies\SchoolManagerProfilePolicy;
+use App\Policies\SchoolMembershipPolicy;
+use Illuminate\Support\Facades\Gate;
 use App\Observers\EpisodeActivityLogObserver;
 use App\Observers\EpisodeObserver;
 use App\Observers\MediaAssetActivityLogObserver;
@@ -52,6 +57,9 @@ class AppServiceProvider extends ServiceProvider
         
         // Set default timezone to Tehran
         date_default_timezone_set('Asia/Tehran');
+
+        Gate::policy(SchoolManagerProfile::class, SchoolManagerProfilePolicy::class);
+        Gate::policy(SchoolMembership::class, SchoolMembershipPolicy::class);
 
         // Register observers
         Episode::observe(EpisodeObserver::class);

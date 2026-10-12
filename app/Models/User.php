@@ -29,6 +29,7 @@ class User extends Authenticatable
     const ROLE_WRITER = 'writer';
     const ROLE_HEAD_WRITER = 'head_writer';
     const ROLE_IMAGE_ASSISTANT = 'image_assistant';
+    const ROLE_SCHOOL_MANAGER = 'school_manager';
     const ROLE_PARENT = 'parent';
     const ROLE_CHILD = 'child';
     const ROLE_BASIC = 'basic';
@@ -67,7 +68,7 @@ class User extends Authenticatable
 
     /**
      * Admin panel login/API access (includes profile onboarding state).
-     * Staff: admin, super_admin, voice_actor, writer, head_writer, image_assistant (not parent/child/basic).
+     * Staff: admin, super_admin, voice_actor, writer, head_writer, image_assistant, school_manager (not parent/child/basic).
      */
     public function mayAccessAdminPanel(): bool
     {
@@ -719,6 +720,7 @@ class User extends Authenticatable
             self::ROLE_WRITER,
             self::ROLE_VOICE_ACTOR,
             self::ROLE_IMAGE_ASSISTANT,
+            self::ROLE_SCHOOL_MANAGER,
         ];
     }
 
@@ -793,6 +795,16 @@ class User extends Authenticatable
         return $this->matchesStaffIdentity(self::ROLE_IMAGE_ASSISTANT);
     }
 
+    public function isSchoolManager(): bool
+    {
+        return $this->matchesStaffIdentity(self::ROLE_SCHOOL_MANAGER);
+    }
+
+    public function schoolManagerProfile()
+    {
+        return $this->hasOne(SchoolManagerProfile::class);
+    }
+
     /**
      * @return list<string>
      */
@@ -808,7 +820,18 @@ class User extends Authenticatable
             self::ROLE_WRITER,
             self::ROLE_HEAD_WRITER,
             self::ROLE_IMAGE_ASSISTANT,
+            self::ROLE_SCHOOL_MANAGER,
         ];
+    }
+
+    /**
+     * Consumer roles a super admin may promote into a school manager.
+     *
+     * @return list<string>
+     */
+    public static function promotableSchoolManagerRoles(): array
+    {
+        return [self::ROLE_PARENT, self::ROLE_BASIC];
     }
 
     /**
@@ -869,11 +892,11 @@ class User extends Authenticatable
      */
     public function update2FARequirement(): void
     {
-        $isAdmin = $this->isAdmin();
-        
-        if ($isAdmin && !$this->requires_2fa) {
+        $needs2fa = $this->isAdmin() || $this->role === self::ROLE_SCHOOL_MANAGER;
+
+        if ($needs2fa && ! $this->requires_2fa) {
             $this->update(['requires_2fa' => true]);
-        } elseif (!$isAdmin && $this->requires_2fa) {
+        } elseif (! $needs2fa && $this->requires_2fa) {
             $this->update(['requires_2fa' => false]);
         }
     }
@@ -892,6 +915,7 @@ class User extends Authenticatable
             self::ROLE_WRITER,
             self::ROLE_HEAD_WRITER,
             self::ROLE_IMAGE_ASSISTANT,
+            self::ROLE_SCHOOL_MANAGER,
         ];
     }
 
@@ -970,8 +994,7 @@ class User extends Authenticatable
                 $user->timezone = 'Asia/Tehran';
             }
             
-            // Enable 2FA for admin and super admin users
-            if (in_array($user->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN])) {
+            if (in_array($user->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN, self::ROLE_SCHOOL_MANAGER], true)) {
                 $user->requires_2fa = true;
             }
         });
@@ -984,7 +1007,7 @@ class User extends Authenticatable
         // Update 2FA requirement when role changes
         static::updating(function ($user) {
             if ($user->isDirty('role')) {
-                if (in_array($user->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN])) {
+                if (in_array($user->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN, self::ROLE_SCHOOL_MANAGER], true)) {
                     $user->requires_2fa = true;
                 } else {
                     $user->requires_2fa = false;

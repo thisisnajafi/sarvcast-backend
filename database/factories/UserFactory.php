@@ -87,4 +87,14 @@ class UserFactory extends Factory
             'onboarding_completed' => true,
         ]);
     }
+
+    public function schoolManager(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => User::ROLE_SCHOOL_MANAGER,
+            'status' => User::STATUS_ACTIVE,
+            'onboarding_completed' => true,
+            'requires_2fa' => true,
+        ]);
+    }
 }

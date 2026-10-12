@@ -9,6 +9,7 @@ use App\Models\StoryImageAssistant;
 use App\Models\StoryProductionAsset;
 use App\Models\StoryProductionFile;
 use App\Models\User;
+use App\Support\SchoolAccessCatalog;
 use Illuminate\Database\Eloquent\Builder;
 
 class ContributorStoryAccessService
@@ -43,7 +44,7 @@ class ContributorStoryAccessService
 
     public function isImageAssistantStaff(?User $user): bool
     {
-        if (! $user || $this->isFullAdmin($user) || $this->isHeadWriter($user)) {
+        if (! $user || $this->isFullAdmin($user) || $this->isHeadWriter($user) || $user->isSchoolManager()) {
             return false;
         }
 
@@ -91,6 +92,7 @@ class ContributorStoryAccessService
             || $user->isVoiceActor()
             || $user->role === User::ROLE_IMAGE_ASSISTANT
             || $user->isImageAssistant()
+            || $user->isSchoolManager()
             || $this->hasImageAssistantAssignments($user);
     }
 
@@ -601,6 +603,10 @@ class ContributorStoryAccessService
      */
     public function accessPayload(User $user): array
     {
+        if ($user->isSchoolManager()) {
+            return $this->schoolManagerAccessPayload();
+        }
+
         $fullAdmin = $this->isFullAdmin($user);
         $headWriter = $this->isHeadWriter($user);
         $writerStaff = $this->isWriterStaff($user);
@@ -636,6 +642,33 @@ class ContributorStoryAccessService
             // Scripts: authors/head writers edit; image assistants + cast may read assigned stories.
             'can_view_scripts' => $fullAdmin || $headWriter || $writerStaff || $authored || $cast || $voiceActor || $imageAssistant || $hasImageAssignments,
             'can_access_story_package' => $fullAdmin,
+            'is_school_manager' => false,
+        ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function schoolManagerAccessPayload(): array
+    {
+        return [
+            'is_full_admin' => false,
+            'is_contributor' => false,
+            'is_head_writer' => false,
+            'is_writer' => false,
+            'is_voice_actor' => false,
+            'is_image_assistant' => false,
+            'can_view_assigned_stories' => false,
+            'can_view_all_stories' => false,
+            'can_edit_authored_scripts' => false,
+            'can_edit_all_scripts' => false,
+            'can_assign_story_writers' => false,
+            'can_assign_image_assistants' => false,
+            'can_view_prompts' => false,
+            'can_manage_timeline' => false,
+            'can_view_scripts' => false,
+            'can_access_story_package' => false,
+            'is_school_manager' => true,
         ];
     }
 
@@ -648,6 +681,10 @@ class ContributorStoryAccessService
     {
         if ($this->isFullAdmin($user)) {
             return [];
+        }
+
+        if ($user->isSchoolManager()) {
+            return SchoolAccessCatalog::panelPermissionNames();
         }
 
         if ($this->isHeadWriter($user)) {

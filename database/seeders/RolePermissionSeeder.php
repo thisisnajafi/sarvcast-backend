@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Role;
 use App\Models\Permission;
 use App\Models\User;
+use App\Support\SchoolAccessCatalog;
 
 /**
  * Idempotent roles/permissions seeder.
@@ -67,6 +68,8 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'seo.update', 'display_name' => 'ویرایش SEO', 'group' => 'seo'],
             ['name' => 'seo.delete', 'display_name' => 'حذف قانون SEO', 'group' => 'seo'],
         ];
+
+        $permissions = array_merge($permissions, SchoolAccessCatalog::definitions());
 
         $createdPermissions = 0;
         $skippedPermissions = 0;
@@ -172,14 +175,23 @@ class RolePermissionSeeder extends Seeder
             ])->pluck('id')
         );
 
+        [$schoolManagerRole, $schoolManagerCreated] = $this->firstOrCreateRole('school_manager', [
+            'display_name' => 'مدیر مدرسه',
+            'description' => 'مدیریت اعضای پنل مدرسه تا سقف تعیین‌شده',
+        ]);
+        $schoolManagerRole->permissions()->syncWithoutDetaching(
+            Permission::whereIn('name', SchoolAccessCatalog::panelPermissionNames())->pluck('id')
+        );
+
         $this->command?->info(sprintf(
-            'Roles: super_admin=%s, admin=%s, voice_actor=%s, writer=%s, head_writer=%s, image_assistant=%s',
+            'Roles: super_admin=%s, admin=%s, voice_actor=%s, writer=%s, head_writer=%s, image_assistant=%s, school_manager=%s',
             $superCreated ? 'created' : 'exists(skipped)',
             $adminCreated ? 'created' : 'exists(skipped)',
             $voiceCreated ? 'created' : 'exists(skipped)',
             $writerCreated ? 'created' : 'exists(skipped)',
             $headCreated ? 'created' : 'exists(skipped)',
-            $imageAssistantCreated ? 'created' : 'exists(skipped)'
+            $imageAssistantCreated ? 'created' : 'exists(skipped)',
+            $schoolManagerCreated ? 'created' : 'exists(skipped)'
         ));
 
         $abolfazl = User::where('phone_number', '09136708883')->first();

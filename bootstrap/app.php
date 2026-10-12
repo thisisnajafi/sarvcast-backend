@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'content.access' => \App\Http\Middleware\CheckContentAccess::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'role' => \App\Http\Middleware\CheckRole::class,
+            'school.panel' => \App\Http\Middleware\EnsureSchoolPanel::class,
             '2fa' => \App\Http\Middleware\RequireTwoFactorAuth::class,
         ]);
     })
