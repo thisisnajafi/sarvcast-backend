@@ -256,6 +256,9 @@ Route::prefix('admin/v1/school-managers')
 Route::prefix('admin/v1/school-panel')
     ->middleware(['security', 'admin.origin', 'auth:sanctum', 'api.admin', 'school.panel'])
     ->group(function () {
+        Route::get('dashboard/stats', [SchoolPanelController::class, 'dashboardStats']);
+        Route::get('dashboard/charts', [SchoolPanelController::class, 'dashboardCharts']);
+        Route::get('dashboard/online-users', [SchoolPanelController::class, 'dashboardOnlineUsers']);
         Route::get('me', [SchoolPanelController::class, 'me']);
         Route::get('activity', [SchoolPanelController::class, 'activity']);
         Route::get('subscription-plans', [SchoolPanelController::class, 'plans']);

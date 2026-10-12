@@ -15,6 +15,21 @@ class SchoolManagerProfilePolicy
             : Response::deny('فقط مدیر کل می‌تواند مدیران مدرسه را ببیند.');
     }
 
+    public function viewDashboard(User $user, SchoolManagerProfile $profile): Response
+    {
+        if (! $user->isSchoolManager() || (int) $profile->user_id !== (int) $user->id) {
+            return Response::deny('مشاهدهٔ داشبورد این پنل مجاز نیست.');
+        }
+
+        if ($profile->status !== SchoolManagerProfile::STATUS_ACTIVE) {
+            return Response::deny('مشاهدهٔ داشبورد این پنل مجاز نیست.');
+        }
+
+        return $user->hasPermission('school_panel.dashboard.view')
+            ? Response::allow()
+            : Response::deny('مشاهدهٔ داشبورد این پنل مجاز نیست.');
+    }
+
     public function view(User $user, SchoolManagerProfile $profile): Response
     {
         if ($user->isSuperAdmin()) {

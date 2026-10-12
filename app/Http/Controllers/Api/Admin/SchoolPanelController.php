@@ -10,6 +10,7 @@ use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
 use App\Models\User;
 use App\Models\SchoolPremiumGrant;
+use App\Services\SchoolDashboardService;
 use App\Services\SchoolManagerService;
 use App\Services\SchoolPremiumGrantService;
 use App\Services\SchoolSubscriptionCheckoutService;
@@ -24,6 +25,7 @@ class SchoolPanelController extends Controller
         private readonly SchoolManagerService $schoolManagers,
         private readonly SchoolSubscriptionCheckoutService $checkout,
         private readonly SchoolPremiumGrantService $premiumGrants,
+        private readonly SchoolDashboardService $dashboard,
     ) {}
 
     public function me(Request $request): JsonResponse
@@ -146,6 +148,46 @@ class SchoolPanelController extends Controller
         }
 
         return AdminApiResponse::success($payload, 'اشتراک رایگان فعال شد.', 201);
+    }
+
+    public function dashboardStats(Request $request): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('viewDashboard', $profile)) {
+            return $denied;
+        }
+
+        return AdminApiResponse::success($this->dashboard->stats($profile), 'آمار داشبورد مدرسه بارگذاری شد.');
+    }
+
+    public function dashboardCharts(Request $request): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('viewDashboard', $profile)) {
+            return $denied;
+        }
+
+        return AdminApiResponse::success($this->dashboard->charts($profile), 'نمودار داشبورد مدرسه بارگذاری شد.');
+    }
+
+    public function dashboardOnlineUsers(Request $request): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('viewDashboard', $profile)) {
+            return $denied;
+        }
+
+        $count = $this->dashboard->onlineCount($profile);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تعداد کاربران آنلاین بارگذاری شد.',
+            'count' => $count,
+            'data' => [
+                'count' => $count,
+                'window_minutes' => SchoolDashboardService::ONLINE_WINDOW_MINUTES,
+            ],
+        ]);
     }
 
     public function activity(Request $request): JsonResponse
