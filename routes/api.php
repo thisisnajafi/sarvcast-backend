@@ -239,9 +239,15 @@ Route::prefix('admin/v1/dashboard')
 Route::prefix('admin/v1/school-managers')
     ->middleware(['security', 'admin.origin', 'auth:sanctum', 'api.admin', 'role:super_admin'])
     ->group(function () {
+        Route::get('premium-overview', [SchoolManagerAdminController::class, 'premiumOverview']);
+        Route::post('grants/{grant}/revoke', [SchoolManagerAdminController::class, 'revokeGrant']);
         Route::get('/', [SchoolManagerAdminController::class, 'index']);
         Route::post('/', [SchoolManagerAdminController::class, 'store']);
         Route::get('{profile}/members', [SchoolManagerAdminController::class, 'members']);
+        Route::get('{profile}/grants', [SchoolManagerAdminController::class, 'grants']);
+        Route::put('{profile}/premium-window', [SchoolManagerAdminController::class, 'storeWindow']);
+        Route::patch('{profile}/premium-window', [SchoolManagerAdminController::class, 'updateWindow']);
+        Route::post('{profile}/premium-window/regrant', [SchoolManagerAdminController::class, 'regrantWindow']);
         Route::get('{profile}', [SchoolManagerAdminController::class, 'show']);
         Route::patch('{profile}', [SchoolManagerAdminController::class, 'update']);
         Route::delete('{profile}', [SchoolManagerAdminController::class, 'destroy']);
@@ -259,6 +265,7 @@ Route::prefix('admin/v1/school-panel')
         Route::get('members/{user}/activity', [SchoolPanelController::class, 'memberActivity'])->whereNumber('user');
         Route::get('members/{user}/subscriptions', [SchoolPanelController::class, 'memberSubscriptions'])->whereNumber('user');
         Route::post('members/{user}/subscriptions', [SchoolPanelController::class, 'storeSubscription'])->whereNumber('user');
+        Route::post('members/{user}/premium-grant', [SchoolPanelController::class, 'storePremiumGrant'])->whereNumber('user');
         Route::delete('members/{user}', [SchoolPanelController::class, 'destroyMember']);
     });
 

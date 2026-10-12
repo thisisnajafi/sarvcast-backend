@@ -170,7 +170,7 @@ class Subscription extends Model
             '1year' => 'اشتراک یک ساله'
         ];
 
-        return $plans[$this->type] ?? $this->type;
+        return $this->schoolGrantLabel(true) ?? ($plans[$this->type] ?? $this->type);
     }
 
     /**
@@ -233,7 +233,18 @@ class Subscription extends Model
             '1year' => 'یک ساله'
         ];
 
-        return $types[$this->type] ?? $this->type;
+        return $this->schoolGrantLabel(false) ?? ($types[$this->type] ?? $this->type);
+    }
+
+    private function schoolGrantLabel(bool $long): ?string
+    {
+        if (! preg_match('/^school_(\d+)m$/', (string) $this->type, $matches)) {
+            return null;
+        }
+
+        $months = (int) $matches[1];
+
+        return $long ? "اشتراک رایگان {$months} ماهه" : "رایگان {$months} ماهه";
     }
 
     /**

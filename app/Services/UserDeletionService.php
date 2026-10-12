@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Character;
 use App\Models\ContentModeration;
+use App\Models\SchoolManagerProfile;
+use App\Models\SchoolPremiumWindow;
 use App\Models\Story;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,11 @@ class UserDeletionService
         ContentModeration::query()
             ->where('moderator_id', $user->id)
             ->update(['moderator_id' => null]);
+
+        $profile = SchoolManagerProfile::query()->where('user_id', $user->id)->first();
+        if ($profile) {
+            app(SchoolPremiumGrantService::class)->closeOpenWindow($profile, SchoolPremiumWindow::STATUS_REVOKED);
+        }
     }
 
     public function deleteUser(User $user): void

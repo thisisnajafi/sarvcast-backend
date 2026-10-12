@@ -9,7 +9,9 @@ use App\Http\Support\AdminApiResponse;
 use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
 use App\Models\User;
+use App\Models\SchoolPremiumGrant;
 use App\Services\SchoolManagerService;
+use App\Services\SchoolPremiumGrantService;
 use App\Services\SchoolSubscriptionCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,7 @@ class SchoolPanelController extends Controller
     public function __construct(
         private readonly SchoolManagerService $schoolManagers,
         private readonly SchoolSubscriptionCheckoutService $checkout,
+        private readonly SchoolPremiumGrantService $premiumGrants,
     ) {}
 
     public function me(Request $request): JsonResponse
@@ -30,9 +33,17 @@ class SchoolPanelController extends Controller
             return $denied;
         }
 
-        $profile->loadCount(['memberships as active_member_count' => function ($memberships) {
-            $memberships->active();
+        $profile->load(['latestWindow' => function ($windows) {
+            $windows->withCount('grants');
         }]);
+        $profile->loadCount([
+            'memberships as active_member_count' => function ($memberships) {
+                $memberships->active();
+            },
+            'grants as active_grant_count' => function ($grants) {
+                $grants->where('status', SchoolPremiumGrant::STATUS_ACTIVE);
+            },
+        ]);
 
         return AdminApiResponse::success($this->schoolManagers->profilePayload($profile));
     }
@@ -119,6 +130,22 @@ class SchoolPanelController extends Controller
         }
 
         return AdminApiResponse::okMessage('کاربر از پنل خارج شد.');
+    }
+
+    public function storePremiumGrant(Request $request, int $user): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('create', [SchoolPremiumGrant::class, $profile])) {
+            return $denied;
+        }
+
+        try {
+            $payload = $this->premiumGrants->grant($profile, $request->user(), $user);
+        } catch (SchoolPanelException $exception) {
+            return $this->schoolError($exception);
+        }
+
+        return AdminApiResponse::success($payload, 'اشتراک رایگان فعال شد.', 201);
     }
 
     public function activity(Request $request): JsonResponse

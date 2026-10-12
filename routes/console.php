@@ -41,6 +41,12 @@ Schedule::command('notifications:check-subscriptions')
     ->description('Send subscription expiring and expired push notifications')
     ->appendOutputTo(storage_path('logs/scheduler.log'));
 
+Schedule::command('school:close-premium-windows')
+    ->dailyAt('09:00')
+    ->name('close-school-premium-windows')
+    ->description('Close expired school premium windows and mark ended free grants')
+    ->appendOutputTo(storage_path('logs/scheduler.log'));
+
 // Prune old activity logs according to retention policy
 Schedule::command('activity-logs:prune')
     ->dailyAt('03:30')

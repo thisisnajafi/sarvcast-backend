@@ -12,10 +12,14 @@ use App\Models\Episode;
 use App\Models\MediaAsset;
 use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
+use App\Models\SchoolPremiumGrant;
+use App\Models\SchoolPremiumWindow;
 use App\Models\Story;
 use App\Models\User;
 use App\Policies\SchoolManagerProfilePolicy;
 use App\Policies\SchoolMembershipPolicy;
+use App\Policies\SchoolPremiumGrantPolicy;
+use App\Policies\SchoolPremiumWindowPolicy;
 use Illuminate\Support\Facades\Gate;
 use App\Observers\EpisodeActivityLogObserver;
 use App\Observers\EpisodeObserver;
@@ -60,6 +64,8 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(SchoolManagerProfile::class, SchoolManagerProfilePolicy::class);
         Gate::policy(SchoolMembership::class, SchoolMembershipPolicy::class);
+        Gate::policy(SchoolPremiumWindow::class, SchoolPremiumWindowPolicy::class);
+        Gate::policy(SchoolPremiumGrant::class, SchoolPremiumGrantPolicy::class);
 
         // Register observers
         Episode::observe(EpisodeObserver::class);

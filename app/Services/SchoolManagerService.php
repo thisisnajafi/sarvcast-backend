@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\PlayHistory;
 use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
+use App\Models\SchoolPremiumWindow;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -125,6 +126,8 @@ class SchoolManagerService
                     'updated_at' => now(),
                 ]);
 
+            app(SchoolPremiumGrantService::class)->closeOpenWindow($profile, SchoolPremiumWindow::STATUS_REVOKED);
+
             $profile->update(['status' => SchoolManagerProfile::STATUS_DELETED]);
 
             $manager = $profile->user;
@@ -227,6 +230,8 @@ class SchoolManagerService
                 'status' => $user->status,
             ] : null,
             'created_at' => $profile->created_at?->toIso8601String(),
+            'active_grant_count' => app(SchoolPremiumGrantService::class)->activeGrantCount($profile),
+            'premium_window' => app(SchoolPremiumGrantService::class)->windowPayload($profile),
         ];
     }
 

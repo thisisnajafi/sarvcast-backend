@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SchoolManagerProfile extends Model
 {
@@ -47,6 +48,21 @@ class SchoolManagerProfile extends Model
     public function activeMemberships(): HasMany
     {
         return $this->memberships()->active();
+    }
+
+    public function windows(): HasMany
+    {
+        return $this->hasMany(SchoolPremiumWindow::class);
+    }
+
+    public function latestWindow(): HasOne
+    {
+        return $this->hasOne(SchoolPremiumWindow::class)->latestOfMany();
+    }
+
+    public function grants(): HasMany
+    {
+        return $this->hasMany(SchoolPremiumGrant::class);
     }
 
     /**
