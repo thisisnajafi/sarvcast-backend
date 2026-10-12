@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Exceptions\SchoolPanelException;
+use App\Models\Payment;
+use App\Models\PlayHistory;
 use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
 use App\Models\Subscription;
@@ -240,8 +242,13 @@ class SchoolManagerService
             $models->pluck('user_id')->filter()->map(static fn ($id): int => (int) $id)->all(),
         );
 
-        return $models->map(function (SchoolMembership $membership) use ($subscriptions): array {
+        $listenCounts = $this->listenCounts(
+            $models->pluck('user_id')->filter()->map(static fn ($id): int => (int) $id)->all(),
+        );
+
+        return $models->map(function (SchoolMembership $membership) use ($subscriptions, $listenCounts): array {
             $user = $membership->user;
+            $listens = $listenCounts[(int) $membership->user_id] ?? $this->emptyListenCounts();
 
             return [
                 'membership_id' => $membership->id,
@@ -252,8 +259,151 @@ class SchoolManagerService
                 'status' => $user?->status,
                 'attached_at' => $membership->created_at?->toIso8601String(),
                 'subscription' => $subscriptions[$membership->user_id] ?? null,
+                'listen_count' => $listens['play_count'],
+                'distinct_stories' => $listens['distinct_stories'],
+                'completed_count' => $listens['completed_count'],
             ];
         })->values()->all();
+    }
+
+    /**
+     * Listening totals for this manager's current members, plus one row per member.
+     *
+     * @return array{totals: array{play_count: int, distinct_stories: int, completed_count: int}, members: list<array<string, mixed>>}
+     */
+    public function cohortActivity(SchoolManagerProfile $profile): array
+    {
+        $memberships = SchoolMembership::query()
+            ->where('school_manager_profile_id', $profile->id)
+            ->active()
+            ->with('user:id,first_name,last_name')
+            ->orderByDesc('id')
+            ->get();
+
+        $userIds = $memberships->pluck('user_id')->map(static fn ($id): int => (int) $id)->all();
+        $counts = $this->listenCounts($userIds);
+
+        $members = $memberships->map(function (SchoolMembership $membership) use ($counts): array {
+            $row = $counts[(int) $membership->user_id] ?? $this->emptyListenCounts();
+
+            return [
+                'user_id' => (int) $membership->user_id,
+                'first_name' => $membership->user?->first_name,
+                'last_name' => $membership->user?->last_name,
+                'play_count' => $row['play_count'],
+                'distinct_stories' => $row['distinct_stories'],
+                'completed_count' => $row['completed_count'],
+            ];
+        })->values()->all();
+
+        return [
+            'totals' => $this->listenTotals($userIds),
+            'members' => $members,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function memberActivity(SchoolManagerProfile $profile, int $userId, int $perPage): array
+    {
+        $member = $this->activeMember($profile, $userId);
+        $plays = PlayHistory::query()
+            ->where('user_id', $member->id)
+            ->with(['story:id,title', 'episode:id,title'])
+            ->orderByDesc('played_at')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+
+        return [
+            'user' => $this->memberIdentity($member),
+            'totals' => $this->listenTotals([(int) $member->id]),
+            'plays' => collect($plays->items())->map(function (PlayHistory $play): array {
+                return [
+                    'id' => $play->id,
+                    'story_id' => $play->story_id,
+                    'story_title' => $play->story?->title,
+                    'episode_id' => $play->episode_id,
+                    'episode_title' => $play->episode?->title,
+                    'played_at' => $play->played_at?->toIso8601String(),
+                    'duration_played' => (int) $play->duration_played,
+                    'completed' => (bool) $play->completed,
+                ];
+            })->values()->all(),
+            'meta' => [
+                'page' => $plays->currentPage(),
+                'perPage' => $plays->perPage(),
+                'total' => $plays->total(),
+                'lastPage' => $plays->lastPage(),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function memberSubscriptions(SchoolManagerProfile $profile, int $userId): array
+    {
+        $member = $this->activeMember($profile, $userId);
+
+        $subscriptions = Subscription::query()
+            ->where('user_id', $member->id)
+            ->orderByDesc('id')
+            ->get();
+
+        $payments = Payment::query()
+            ->where('user_id', $member->id)
+            ->orderByDesc('id')
+            ->get();
+
+        return [
+            'user' => $this->memberIdentity($member),
+            'subscriptions' => $subscriptions->map(function (Subscription $subscription): array {
+                return [
+                    'id' => $subscription->id,
+                    'type' => $subscription->type,
+                    'status' => $subscription->status,
+                    'start_date' => $subscription->start_date?->toIso8601String(),
+                    'end_date' => $subscription->end_date?->toIso8601String(),
+                    'price' => (int) $subscription->price,
+                    'currency' => $subscription->currency,
+                    'auto_renew' => (bool) $subscription->auto_renew,
+                    'payment_method' => $subscription->payment_method,
+                    'grants_access' => $subscription->grantsAccess(),
+                ];
+            })->values()->all(),
+            'payments' => $payments->map(function (Payment $payment): array {
+                $metadata = $payment->payment_metadata ?? [];
+
+                return [
+                    'id' => $payment->id,
+                    'subscription_id' => $payment->subscription_id,
+                    'amount' => (int) $payment->amount,
+                    'currency' => $payment->currency,
+                    'status' => $payment->status,
+                    'payment_method' => $payment->payment_method,
+                    'created_at' => $payment->created_at?->toIso8601String(),
+                    'source' => $metadata['source'] ?? null,
+                    'payer_user_id' => isset($metadata['payer_user_id']) ? (int) $metadata['payer_user_id'] : null,
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    public function activeMember(SchoolManagerProfile $profile, int $userId): User
+    {
+        $membership = SchoolMembership::query()
+            ->where('school_manager_profile_id', $profile->id)
+            ->where('user_id', $userId)
+            ->active()
+            ->first();
+
+        $member = $membership?->user;
+        if (! $member) {
+            throw new SchoolPanelException('not_found', 'این کاربر در پنل شما نیست.', 404);
+        }
+
+        return $member;
     }
 
     /**
@@ -366,6 +516,87 @@ class SchoolManagerService
         }
 
         return $summaries;
+    }
+
+    /**
+     * @param  list<int>  $userIds
+     * @return array<int, array{play_count: int, distinct_stories: int, completed_count: int}>
+     */
+    private function listenCounts(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        $rows = PlayHistory::query()
+            ->whereIn('user_id', $userIds)
+            ->select('user_id')
+            ->selectRaw('COUNT(*) as play_count')
+            ->selectRaw('COUNT(DISTINCT story_id) as distinct_stories')
+            ->selectRaw('SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed_count')
+            ->groupBy('user_id')
+            ->get();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[(int) $row->user_id] = [
+                'play_count' => (int) $row->play_count,
+                'distinct_stories' => (int) $row->distinct_stories,
+                'completed_count' => (int) $row->completed_count,
+            ];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param  list<int>  $userIds
+     * @return array{play_count: int, distinct_stories: int, completed_count: int}
+     */
+    private function listenTotals(array $userIds): array
+    {
+        if ($userIds === []) {
+            return $this->emptyListenCounts();
+        }
+
+        $row = PlayHistory::query()
+            ->whereIn('user_id', $userIds)
+            ->selectRaw('COUNT(*) as play_count')
+            ->selectRaw('COUNT(DISTINCT story_id) as distinct_stories')
+            ->selectRaw('SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completed_count')
+            ->first();
+
+        return [
+            'play_count' => (int) ($row->play_count ?? 0),
+            'distinct_stories' => (int) ($row->distinct_stories ?? 0),
+            'completed_count' => (int) ($row->completed_count ?? 0),
+        ];
+    }
+
+    /**
+     * @return array{play_count: int, distinct_stories: int, completed_count: int}
+     */
+    private function emptyListenCounts(): array
+    {
+        return [
+            'play_count' => 0,
+            'distinct_stories' => 0,
+            'completed_count' => 0,
+        ];
+    }
+
+    /**
+     * @return array{id: int, first_name: string|null, last_name: string|null, phone_number: string|null, status: string|null}
+     */
+    private function memberIdentity(User $member): array
+    {
+        return [
+            'id' => (int) $member->id,
+            'first_name' => $member->first_name,
+            'last_name' => $member->last_name,
+            'phone_number' => $member->phone_number,
+            'status' => $member->status,
+        ];
     }
 
     private function assertPromotable(User $user): void

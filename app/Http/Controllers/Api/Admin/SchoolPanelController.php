@@ -10,6 +10,7 @@ use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
 use App\Models\User;
 use App\Services\SchoolManagerService;
+use App\Services\SchoolSubscriptionCheckoutService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,7 +18,10 @@ class SchoolPanelController extends Controller
 {
     use RespondsWithSchoolPanel;
 
-    public function __construct(private readonly SchoolManagerService $schoolManagers) {}
+    public function __construct(
+        private readonly SchoolManagerService $schoolManagers,
+        private readonly SchoolSubscriptionCheckoutService $checkout,
+    ) {}
 
     public function me(Request $request): JsonResponse
     {
@@ -115,6 +119,99 @@ class SchoolPanelController extends Controller
         }
 
         return AdminApiResponse::okMessage('کاربر از پنل خارج شد.');
+    }
+
+    public function activity(Request $request): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('viewActivity', [SchoolMembership::class, $profile])) {
+            return $denied;
+        }
+
+        return AdminApiResponse::success($this->schoolManagers->cohortActivity($profile));
+    }
+
+    public function plans(Request $request): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('viewSubscriptions', [SchoolMembership::class, $profile])) {
+            return $denied;
+        }
+
+        return AdminApiResponse::success($this->checkout->plans());
+    }
+
+    public function memberActivity(Request $request, int $user): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('viewActivity', [SchoolMembership::class, $profile])) {
+            return $denied;
+        }
+
+        $perPage = min(max((int) $request->input('per_page', 20), 1), 100);
+
+        try {
+            $payload = $this->schoolManagers->memberActivity($profile, $user, $perPage);
+        } catch (SchoolPanelException $exception) {
+            return $this->schoolError($exception);
+        }
+
+        return AdminApiResponse::success($payload);
+    }
+
+    public function memberSubscriptions(Request $request, int $user): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('viewSubscriptions', [SchoolMembership::class, $profile])) {
+            return $denied;
+        }
+
+        try {
+            $payload = $this->schoolManagers->memberSubscriptions($profile, $user);
+        } catch (SchoolPanelException $exception) {
+            return $this->schoolError($exception);
+        }
+
+        return AdminApiResponse::success($payload);
+    }
+
+    public function storeSubscription(Request $request, int $user): JsonResponse
+    {
+        $profile = $this->profile($request);
+        if ($denied = $this->denyUnlessSchool('purchase', [SchoolMembership::class, $profile])) {
+            return $denied;
+        }
+
+        $data = $request->validate([
+            'plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
+            'coupon_code' => ['nullable', 'string', 'max:50'],
+        ], [
+            'plan_id.required' => 'پلن اشتراک را انتخاب کنید.',
+            'plan_id.exists' => 'پلن اشتراک یافت نشد.',
+            'coupon_code.max' => 'کد کوپن نمی‌تواند بیشتر از ۵۰ کاراکتر باشد.',
+        ]);
+
+        try {
+            $payload = $this->checkout->start(
+                $profile,
+                $request->user(),
+                $user,
+                (int) $data['plan_id'],
+                $data['coupon_code'] ?? null,
+            );
+        } catch (SchoolPanelException $exception) {
+            return $this->schoolError($exception);
+        }
+
+        $status = ($payload['reused'] ?? false) ? 200 : 201;
+
+        return AdminApiResponse::success(
+            $payload,
+            $status === 201
+                ? 'اشتراک ایجاد شد. لطفاً پرداخت را تکمیل کنید.'
+                : 'پرداخت قبلی هنوز باز است. همان لینک را ادامه دهید.',
+            $status,
+        );
     }
 
     private function profile(Request $request): SchoolManagerProfile

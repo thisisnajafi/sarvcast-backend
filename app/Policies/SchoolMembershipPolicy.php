@@ -33,6 +33,32 @@ class SchoolMembershipPolicy
             : Response::deny('حذف عضو فقط برای مدیر همین پنل مجاز است.');
     }
 
+    public function viewActivity(User $user, SchoolManagerProfile $profile): Response
+    {
+        return $this->allows($user, $profile, 'school_panel.activity.view', 'مشاهدهٔ فعالیت این پنل مجاز نیست.');
+    }
+
+    public function viewSubscriptions(User $user, SchoolManagerProfile $profile): Response
+    {
+        return $this->allows($user, $profile, 'school_panel.subscriptions.view', 'مشاهدهٔ اشتراک این پنل مجاز نیست.');
+    }
+
+    public function purchase(User $user, SchoolManagerProfile $profile): Response
+    {
+        return $this->allows($user, $profile, 'school_panel.subscriptions.purchase', 'خرید اشتراک فقط برای مدیر همین پنل مجاز است.');
+    }
+
+    private function allows(User $user, SchoolManagerProfile $profile, string $permission, string $message): Response
+    {
+        if (! $this->ownsActivePanel($user, $profile)) {
+            return Response::deny($message);
+        }
+
+        return $user->hasPermission($permission)
+            ? Response::allow()
+            : Response::deny($message);
+    }
+
     private function ownsActivePanel(User $user, SchoolManagerProfile $profile): bool
     {
         return $user->isSchoolManager()

@@ -251,9 +251,14 @@ Route::prefix('admin/v1/school-panel')
     ->middleware(['security', 'admin.origin', 'auth:sanctum', 'api.admin', 'school.panel'])
     ->group(function () {
         Route::get('me', [SchoolPanelController::class, 'me']);
+        Route::get('activity', [SchoolPanelController::class, 'activity']);
+        Route::get('subscription-plans', [SchoolPanelController::class, 'plans']);
         Route::get('members', [SchoolPanelController::class, 'members']);
         Route::post('members/lookup', [SchoolPanelController::class, 'lookup']);
         Route::post('members', [SchoolPanelController::class, 'storeMember']);
+        Route::get('members/{user}/activity', [SchoolPanelController::class, 'memberActivity'])->whereNumber('user');
+        Route::get('members/{user}/subscriptions', [SchoolPanelController::class, 'memberSubscriptions'])->whereNumber('user');
+        Route::post('members/{user}/subscriptions', [SchoolPanelController::class, 'storeSubscription'])->whereNumber('user');
         Route::delete('members/{user}', [SchoolPanelController::class, 'destroyMember']);
     });
 

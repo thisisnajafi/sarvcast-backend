@@ -74,6 +74,11 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+    | Next admin dashboard. School-manager Zarinpal returns land here.
+    */
+    'admin_dashboard_url' => env('ADMIN_DASHBOARD_URL', 'https://admin.manjiapp.ir'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

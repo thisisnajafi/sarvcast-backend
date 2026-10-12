@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Services\PaymentService;
+use App\Support\SchoolCheckoutUrl;
 use Illuminate\Http\Request;
 
 class PaymentCallbackController extends Controller
@@ -54,6 +55,31 @@ class PaymentCallbackController extends Controller
         $episodeId = $metadata['episode_id'] ?? null;
 
         $webBase = rtrim((string) config('services.manji_web.app_url', 'https://app.manji.ir'), '/');
+
+        // School panel: return the manager to the admin dashboard, never a deep link.
+        if ($source === 'school_panel') {
+            $memberId = (int) ($metadata['beneficiary_user_id'] ?? $payment?->user_id ?? 0);
+            $returnUrl = SchoolCheckoutUrl::sanitize(
+                isset($metadata['return_url']) ? (string) $metadata['return_url'] : null,
+                SchoolCheckoutUrl::memberUrl($memberId, 'ok'),
+            );
+            $failureUrl = SchoolCheckoutUrl::sanitize(
+                isset($metadata['failure_url']) ? (string) $metadata['failure_url'] : null,
+                SchoolCheckoutUrl::memberUrl($memberId, 'failed'),
+            );
+
+            if ($result['success'] && $payment) {
+                return redirect()->away($this->appendQueryParams($returnUrl, [
+                    'subscription' => 'activated',
+                    'payment_id' => (string) $payment->id,
+                ]));
+            }
+
+            return redirect()->away($this->appendQueryParams($failureUrl, array_filter([
+                'subscription' => 'failed',
+                'reason' => $result['message'] ?? null,
+            ])));
+        }
 
         // Next.js web app: redirect to configured frontend (subscription activated / failed)
         if ($source === 'web') {
