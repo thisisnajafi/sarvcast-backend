@@ -21,18 +21,20 @@ class AdminDashboardMiddlewareAlignmentTest extends TestCase
             'throttle:20,1',
         ]);
 
+        // School managers and story contributors sign in here. The role gate stays on
+        // the global dashboard routes below, not on this session.
         $this->assertRouteHasMiddleware('GET', '/api/admin/v1/auth/me', [
             'security',
             'admin.origin',
             'auth:sanctum',
-            'role:admin,super_admin',
+            'api.admin',
         ]);
 
         $this->assertRouteHasMiddleware('POST', '/api/admin/v1/auth/logout', [
             'security',
             'admin.origin',
             'auth:sanctum',
-            'role:admin,super_admin',
+            'api.admin',
             'api.audit',
         ]);
 
@@ -40,7 +42,7 @@ class AdminDashboardMiddlewareAlignmentTest extends TestCase
             'security',
             'admin.origin',
             'auth:sanctum',
-            'role:admin,super_admin',
+            'api.admin',
             'api.audit',
         ]);
 
@@ -48,7 +50,7 @@ class AdminDashboardMiddlewareAlignmentTest extends TestCase
             'security',
             'admin.origin',
             'auth:sanctum',
-            'role:admin,super_admin',
+            'api.admin',
             'api.audit',
         ]);
 
@@ -56,7 +58,7 @@ class AdminDashboardMiddlewareAlignmentTest extends TestCase
             'security',
             'admin.origin',
             'auth:sanctum',
-            'role:admin,super_admin',
+            'api.admin',
             'api.audit',
         ]);
 
