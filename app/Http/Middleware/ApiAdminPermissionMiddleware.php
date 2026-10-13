@@ -47,6 +47,9 @@ class ApiAdminPermissionMiddleware
         }
 
         $hasPermission = method_exists($user, 'hasPermission') && $user->hasPermission($permission);
+        if (! $hasPermission && $permission === 'roles.update' && method_exists($user, 'hasPermission') && $user->hasPermission('roles.edit')) {
+            $hasPermission = true;
+        }
         if (! $hasPermission) {
             return response()->json([
                 'success' => false,
@@ -108,6 +111,36 @@ class ApiAdminPermissionMiddleware
             };
         }
 
+        if (in_array($segment, ['schools', 'teachers', 'influencers', 'corporate'], true)) {
+            if ($action === 'bulk') {
+                $bulkAction = (string) request()->input('action', '');
+                if ($bulkAction === 'delete') {
+                    return 'partners.delete';
+                }
+
+                return 'partners.update';
+            }
+
+            return match ($action) {
+                'create' => 'partners.create',
+                'update' => 'partners.update',
+                'delete' => 'partners.delete',
+                default => null,
+            };
+        }
+
+        if ($segment === 'app-settings') {
+            return match ($action) {
+                'update' => 'settings.update',
+                default => null,
+            };
+        }
+
+        $segmentResource = match ($segment) {
+            'team-members' => 'team_members',
+            default => null,
+        };
+
         $resource = match ($segment) {
             'user-analytics' => 'analytics.users',
             'revenue-analytics' => 'analytics.revenue',
@@ -124,7 +157,7 @@ class ApiAdminPermissionMiddleware
             'seo-redirects' => 'seo',
             'seo-robots' => 'seo',
             'seo-overview' => 'seo',
-            default => str_replace('-', '.', $segment),
+            default => $segmentResource ?? str_replace('-', '.', $segment),
         };
 
         if ($resource === '') {

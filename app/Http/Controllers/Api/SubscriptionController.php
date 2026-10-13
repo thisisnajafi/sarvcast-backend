@@ -460,11 +460,13 @@ class SubscriptionController extends Controller
                 'payment_method' => $request->input('payment_method', 'zarinpal'),
                 'status' => 'pending',
                 'transaction_id' => $this->generateTransactionId(),
-                'payment_metadata' => [
+                'payment_metadata' => array_filter([
                     'source' => 'web',
                     'return_url' => $returnUrl,
                     'failure_url' => $failureUrl,
-                ],
+                    'coupon_code' => $couponCode ?: null,
+                    'plan_id' => $plan->id,
+                ], static fn ($value) => $value !== null && $value !== ''),
             ]);
 
             // Set description for payment service (since it's not in database)

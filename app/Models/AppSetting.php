@@ -9,6 +9,10 @@ class AppSetting extends Model
 {
     public const PUBLIC_VOICE_ACTORS_REQUIRE_PHOTO = 'public_voice_actors_require_photo';
 
+    public const MAINTENANCE_MODE = 'maintenance_mode';
+
+    public const SITE_ANNOUNCEMENT = 'site_announcement';
+
     public $incrementing = false;
 
     protected $primaryKey = 'key';
@@ -38,9 +42,14 @@ class AppSetting extends Model
 
     public static function setBool(string $key, bool $value): void
     {
+        self::setValue($key, $value ? '1' : '0');
+    }
+
+    public static function setValue(string $key, ?string $value): void
+    {
         static::query()->updateOrCreate(
             ['key' => $key],
-            ['value' => $value ? '1' : '0']
+            ['value' => $value]
         );
         Cache::forget(self::cacheKey($key));
     }

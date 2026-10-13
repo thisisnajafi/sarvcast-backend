@@ -90,7 +90,7 @@ class PaymentController extends Controller
         $payment = Payment::create([
             'user_id' => $user->id,
             'subscription_id' => $subscription->id,
-            'amount' => $subscription->amount,
+            'amount' => $subscription->price,
             'currency' => 'IRR',
             'payment_method' => 'zarinpal',
             'status' => 'pending',

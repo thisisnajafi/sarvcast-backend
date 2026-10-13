@@ -1593,20 +1593,33 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         Route::get('/flavor-analytics/export', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'apiExport']);
         Route::get('/flavor-analytics', [\App\Http\Controllers\Admin\FlavorAnalyticsController::class, 'api']);
 
+        Route::prefix('app-settings')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AppSettingController::class, 'apiIndex']);
+            Route::put('/', [\App\Http\Controllers\Admin\AppSettingController::class, 'apiUpdate']);
+        });
+
         // Partner programs
         Route::prefix('teachers')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersIndex']);
+            Route::post('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersStore']);
             Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersBulkAction']);
             Route::get('/{teacher}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersShow']);
+            Route::put('/{teacher}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersUpdate']);
+            Route::patch('/{teacher}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersUpdate']);
+            Route::delete('/{teacher}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'teachersDestroy']);
         });
         Route::prefix('schools')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsIndex']);
+            Route::post('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsStore']);
             Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsBulkAction']);
             Route::get('/{school}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsShow']);
+            Route::put('/{school}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsUpdate']);
+            Route::patch('/{school}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsUpdate']);
+            Route::delete('/{school}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'schoolsDestroy']);
         });
         Route::prefix('influencers')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersIndex']);

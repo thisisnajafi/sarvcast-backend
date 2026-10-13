@@ -11,6 +11,8 @@ use App\Models\TeacherAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PartnerProgramsApiController extends Controller
@@ -39,6 +41,61 @@ class PartnerProgramsApiController extends Controller
     public function teachersShow(TeacherAccount $teacher)
     {
         return AdminApiResponse::success($teacher->load('user'));
+    }
+
+    public function teachersStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id|unique:teacher_accounts,user_id',
+            'institution_name' => 'required|string|max:255',
+            'institution_type' => 'nullable|string|max:64',
+            'status' => ['nullable', Rule::in(['pending', 'active', 'suspended'])],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $payload = $validator->validated();
+        $payload['status'] = $payload['status'] ?? 'pending';
+
+        $teacher = TeacherAccount::create($payload);
+
+        return AdminApiResponse::success($teacher->load('user'), 'حساب معلم ثبت شد.', 201);
+    }
+
+    public function teachersUpdate(Request $request, TeacherAccount $teacher)
+    {
+        $validator = Validator::make($request->all(), [
+            'institution_name' => 'sometimes|required|string|max:255',
+            'institution_type' => 'nullable|string|max:64',
+            'teaching_subject' => 'nullable|string|max:128',
+            'student_count' => 'nullable|integer|min:0',
+            'status' => ['nullable', Rule::in(['pending', 'active', 'suspended'])],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $teacher->update($validator->validated());
+
+        return AdminApiResponse::success($teacher->fresh()->load('user'), 'حساب معلم بروزرسانی شد.');
+    }
+
+    public function teachersDestroy(TeacherAccount $teacher)
+    {
+        $teacher->delete();
+
+        return AdminApiResponse::okMessage('حساب معلم حذف شد.');
     }
 
     public function teachersStatistics()
@@ -121,6 +178,47 @@ class PartnerProgramsApiController extends Controller
     public function schoolsShow(SchoolPartnership $school)
     {
         return AdminApiResponse::success($school->load(['affiliatePartner', 'assignedTeacher']));
+    }
+
+    public function schoolsStore(Request $request)
+    {
+        $validator = $this->schoolPartnershipValidator($request, false);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $school = SchoolPartnership::create($this->schoolCreatePayload($validator->validated()));
+
+        return AdminApiResponse::success($school->fresh(), 'مدرسه ثبت شد.', 201);
+    }
+
+    public function schoolsUpdate(Request $request, SchoolPartnership $school)
+    {
+        $validator = $this->schoolPartnershipValidator($request, true);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $payload = $validator->validated();
+        unset($payload['school_address']);
+        $school->update($payload);
+
+        return AdminApiResponse::success($school->fresh()->load(['affiliatePartner', 'assignedTeacher']), 'مدرسه بروزرسانی شد.');
+    }
+
+    public function schoolsDestroy(SchoolPartnership $school)
+    {
+        $school->delete();
+
+        return AdminApiResponse::okMessage('مدرسه حذف شد.');
     }
 
     public function schoolsStatistics()
@@ -337,6 +435,70 @@ class PartnerProgramsApiController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    private function schoolPartnershipValidator(Request $request, bool $updating): \Illuminate\Contracts\Validation\Validator
+    {
+        $statuses = ['pending', 'active', 'suspended', 'expired', 'terminated'];
+        $models = array_keys(SchoolPartnership::getPartnershipModels());
+        $types = array_keys(SchoolPartnership::getSchoolTypes());
+        $levels = array_keys(SchoolPartnership::getSchoolLevels());
+
+        $rules = [
+            'school_address' => 'prohibited',
+            'school_name' => ($updating ? 'sometimes|' : '').'required|string|max:255',
+            'school_type' => ['nullable', Rule::in($types)],
+            'school_level' => ['nullable', Rule::in($levels)],
+            'location' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
+            'contact_email' => 'nullable|email|max:255',
+            'contact_phone' => 'nullable|string|max:32',
+            'student_count' => 'nullable|integer|min:0',
+            'teacher_count' => 'nullable|integer|min:0',
+            'partnership_model' => ['nullable', Rule::in($models)],
+            'max_student_capacity' => 'nullable|integer|min:1',
+            'affiliate_partner_id' => 'nullable|exists:affiliate_partners,id',
+            'assigned_teacher_id' => 'nullable|exists:teacher_accounts,id',
+            'status' => ['nullable', Rule::in($statuses)],
+            'notes' => 'nullable|string|max:5000',
+            'partnership_start_date' => 'nullable|date',
+            'partnership_end_date' => 'nullable|date|after_or_equal:partnership_start_date',
+        ];
+
+        return Validator::make($request->all(), $rules);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function schoolCreatePayload(array $validated): array
+    {
+        $modelKey = $validated['partnership_model'] ?? 'pilot';
+        $modelConfig = SchoolPartnership::getPartnershipModels()[$modelKey] ?? SchoolPartnership::getPartnershipModels()['pilot'];
+
+        return [
+            'school_name' => $validated['school_name'],
+            'school_type' => $validated['school_type'] ?? 'public',
+            'school_level' => $validated['school_level'] ?? 'elementary',
+            'location' => $validated['location'] ?? '',
+            'contact_person' => $validated['contact_person'] ?? '',
+            'contact_email' => $validated['contact_email'] ?? 'noreply@manjiapp.ir',
+            'contact_phone' => $validated['contact_phone'] ?? '',
+            'student_count' => $validated['student_count'] ?? 0,
+            'teacher_count' => $validated['teacher_count'] ?? 0,
+            'partnership_model' => $modelKey,
+            'discount_rate' => $modelConfig['discount_rate'] ?? 60.00,
+            'revenue_share_rate' => $modelConfig['revenue_share_rate'] ?? null,
+            'annual_license_fee' => $modelConfig['annual_license_fee'] ?? null,
+            'max_student_capacity' => $validated['max_student_capacity'] ?? ($modelConfig['max_capacity'] ?? 500),
+            'partnership_start_date' => $validated['partnership_start_date'] ?? now()->toDateString(),
+            'partnership_end_date' => $validated['partnership_end_date'] ?? now()->addYear()->toDateString(),
+            'status' => $validated['status'] ?? 'pending',
+            'notes' => $validated['notes'] ?? null,
+            'affiliate_partner_id' => $validated['affiliate_partner_id'] ?? null,
+            'assigned_teacher_id' => $validated['assigned_teacher_id'] ?? null,
+        ];
     }
 
     private function runBulk(Request $request, string $idsKey, string $modelClass, array $actions)

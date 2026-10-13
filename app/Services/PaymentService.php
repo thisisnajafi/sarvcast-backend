@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use App\Events\SalesNotificationEvent;
 use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
@@ -387,9 +388,15 @@ class PaymentService
                             'user_id' => $subscription->user_id
                         ]);
 
-                        // Calculate end date based on subscription type
+                        $paymentMetadata = is_array($payment->payment_metadata) ? $payment->payment_metadata : [];
+                        $subscriptionMetadata = is_array($subscription->subscription_metadata) ? $subscription->subscription_metadata : [];
+                        $planId = isset($paymentMetadata['plan_id'])
+                            ? (int) $paymentMetadata['plan_id']
+                            : (isset($subscriptionMetadata['plan_id']) ? (int) $subscriptionMetadata['plan_id'] : null);
+
+                        // Calculate end date based on plan / subscription type
                         $startDate = now();
-                        $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate);
+                        $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate, $planId);
 
                         Log::info('Calculated subscription dates', [
                             'subscription_id' => $subscription->id,
@@ -399,7 +406,7 @@ class PaymentService
                         ]);
 
                         // Update subscription with transaction to ensure data integrity
-                        \DB::transaction(function() use ($subscription, $startDate, $endDate) {
+                        \DB::transaction(function () use ($subscription, $startDate, $endDate, $payment, $paymentMetadata) {
                             $subscription->update([
                                 'status' => 'active',
                                 'start_date' => $startDate,
@@ -412,6 +419,26 @@ class PaymentService
                                 'new_start_date' => $subscription->fresh()->start_date,
                                 'new_end_date' => $subscription->fresh()->end_date
                             ]);
+
+                            $couponCode = $paymentMetadata['coupon_code'] ?? $paymentMetadata['coupon'] ?? null;
+                            if ($couponCode && $payment->user) {
+                                try {
+                                    app(CouponService::class)->useCouponCode(
+                                        (string) $couponCode,
+                                        $payment->user,
+                                        $subscription->fresh(),
+                                        (float) $payment->amount,
+                                        false
+                                    );
+                                } catch (\Throwable $e) {
+                                    Log::warning('Coupon usage after payment callback failed', [
+                                        'payment_id' => $payment->id,
+                                        'subscription_id' => $subscription->id,
+                                        'coupon_code' => $couponCode,
+                                        'error' => $e->getMessage(),
+                                    ]);
+                                }
+                            }
                         });
 
                         // Verify the subscription is now active
@@ -500,25 +527,38 @@ class PaymentService
     /**
      * Calculate subscription end date based on type
      */
-    private function calculateSubscriptionEndDate(string $subscriptionType, $startDate): \Carbon\Carbon
+    private function calculateSubscriptionEndDate(string $subscriptionType, $startDate, ?int $planId = null): \Carbon\Carbon
     {
-        $durationDays = $this->getSubscriptionDurationDays($subscriptionType);
+        $durationDays = $this->getSubscriptionDurationDays($subscriptionType, $planId);
+
         return $startDate->copy()->addDays($durationDays);
     }
 
     /**
-     * Get subscription duration in days based on type
+     * Get subscription duration in days based on plan or type
      */
-    private function getSubscriptionDurationDays(string $subscriptionType): int
+    private function getSubscriptionDurationDays(string $subscriptionType, ?int $planId = null): int
     {
+        if ($planId) {
+            $plan = SubscriptionPlan::find($planId);
+            if ($plan && (int) $plan->duration_days > 0) {
+                return (int) $plan->duration_days;
+            }
+        }
+
+        $plan = SubscriptionPlan::findBySlug($subscriptionType);
+        if ($plan && (int) $plan->duration_days > 0) {
+            return (int) $plan->duration_days;
+        }
+
         $durations = [
             '1month' => 30,
             '3months' => 90,
             '6months' => 180,
-            '1year' => 365
+            '1year' => 365,
         ];
 
-        return $durations[$subscriptionType] ?? 30; // Default to 30 days if type not found
+        return $durations[$subscriptionType] ?? 30;
     }
 
     /**
@@ -546,10 +586,12 @@ class PaymentService
 
             // Calculate dates
             $startDate = now();
-            $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate);
+            $metadata = is_array($subscription->subscription_metadata) ? $subscription->subscription_metadata : [];
+            $planId = isset($metadata['plan_id']) ? (int) $metadata['plan_id'] : null;
+            $endDate = $this->calculateSubscriptionEndDate($subscription->type, $startDate, $planId);
 
             // Update subscription
-            \DB::transaction(function() use ($subscription, $startDate, $endDate) {
+            \DB::transaction(function () use ($subscription, $startDate, $endDate) {
                 $subscription->update([
                     'status' => 'active',
                     'start_date' => $startDate,

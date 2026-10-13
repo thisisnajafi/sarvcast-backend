@@ -125,9 +125,15 @@ class SchoolManagerService
     /**
      * @param  list<int>  $roleIds
      * @param  list<int>  $permissionIds
+     * @param  array{member_limit?: int, label?: string|null}  $profileInput
      */
-    public function assignFromUserForm(User $user, ?User $actor, array $roleIds, array $permissionIds): void
-    {
+    public function assignFromUserForm(
+        User $user,
+        ?User $actor,
+        array $roleIds,
+        array $permissionIds,
+        array $profileInput = [],
+    ): void {
         $promoting = $user->role !== User::ROLE_SCHOOL_MANAGER
             && in_array($user->role, User::promotableSchoolManagerRoles(), true)
             && $this->hasPostedOrStoredSchoolAssignment($user, $roleIds, $permissionIds);
@@ -137,24 +143,45 @@ class SchoolManagerService
         }
 
         if ($user->fresh()?->role === User::ROLE_SCHOOL_MANAGER) {
-            $this->ensureActiveProfile($user, $actor, true);
+            $this->ensureActiveProfile($user, $actor, true, $profileInput);
         }
     }
 
-    public function ensureActiveProfile(User $user, ?User $actor, bool $reopenDeleted = false): SchoolManagerProfile
-    {
+    /**
+     * @param  array{member_limit?: int, label?: string|null}  $profileInput
+     */
+    public function ensureActiveProfile(
+        User $user,
+        ?User $actor,
+        bool $reopenDeleted = false,
+        array $profileInput = [],
+    ): SchoolManagerProfile {
         $profile = SchoolManagerProfile::query()->where('user_id', $user->id)->first();
+        $hasLimit = array_key_exists('member_limit', $profileInput);
+        $hasLabel = array_key_exists('label', $profileInput);
+
         if (! $profile) {
             return SchoolManagerProfile::query()->create([
                 'user_id' => $user->id,
-                'member_limit' => 0,
+                'member_limit' => $hasLimit ? (int) $profileInput['member_limit'] : 0,
+                'label' => $hasLabel ? $this->nullableLabel($profileInput['label']) : null,
                 'status' => SchoolManagerProfile::STATUS_ACTIVE,
                 'created_by' => $actor?->id,
             ]);
         }
 
+        $attributes = [];
         if ($reopenDeleted && $profile->status === SchoolManagerProfile::STATUS_DELETED) {
-            $profile->update(['status' => SchoolManagerProfile::STATUS_ACTIVE]);
+            $attributes['status'] = SchoolManagerProfile::STATUS_ACTIVE;
+        }
+        if ($hasLimit) {
+            $attributes['member_limit'] = (int) $profileInput['member_limit'];
+        }
+        if ($hasLabel) {
+            $attributes['label'] = $this->nullableLabel($profileInput['label']);
+        }
+        if ($attributes !== []) {
+            $profile->update($attributes);
         }
 
         return $profile->fresh() ?? $profile;

@@ -46,10 +46,14 @@ class SchoolManagerAdminLoginTest extends TestCase
             'status' => User::STATUS_ACTIVE,
             'role_ids' => [$schoolRoleId],
             'direct_permission_ids' => $permissionIds,
+            'member_limit' => 25,
+            'label' => 'مدرسه تست',
         ])->assertOk();
 
         $assigned = collect($saved->json('data.assigned_roles'))->pluck('name');
         $this->assertTrue($assigned->contains('school_manager'));
+        $this->assertSame(25, (int) $saved->json('data.school_manager_profile.member_limit'));
+        $this->assertSame('مدرسه تست', $saved->json('data.school_manager_profile.label'));
 
         $parent->refresh();
         $this->assertSame(User::ROLE_SCHOOL_MANAGER, $parent->role);
@@ -62,6 +66,8 @@ class SchoolManagerAdminLoginTest extends TestCase
         $this->assertDatabaseHas('school_manager_profiles', [
             'user_id' => $parent->id,
             'status' => SchoolManagerProfile::STATUS_ACTIVE,
+            'member_limit' => 25,
+            'label' => 'مدرسه تست',
         ]);
 
         Cache::put('otp_'.$phone.'_login', '123456', 300);

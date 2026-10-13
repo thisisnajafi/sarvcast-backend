@@ -867,9 +867,14 @@ class UserController extends Controller
             'status' => 'required|in:active,inactive,suspended,pending,profile_completion_needed',
             'language' => 'nullable|string|max:10',
             'timezone' => 'nullable|string|max:50',
+            'member_limit' => 'nullable|integer|min:0|max:100000',
+            'label' => 'nullable|string|max:120',
+        ], [
+            'member_limit.min' => 'سقف اعضا نمی‌تواند منفی باشد.',
+            'label.max' => 'نام پنل حداکثر ۱۲۰ کاراکتر است.',
         ]);
 
-        $data = $request->except(['password_confirmation']);
+        $data = $request->except(['password_confirmation', 'member_limit', 'label']);
         $data['password'] = Hash::make($request->password);
 
         $actor = $request->user() ?? auth('sanctum')->user();
@@ -882,11 +887,39 @@ class UserController extends Controller
             ], 422);
         }
 
+        $isSchoolManager = ($data['role'] ?? null) === User::ROLE_SCHOOL_MANAGER;
+        if ($isSchoolManager) {
+            if (! $actor instanceof User || ! $actor->isSuperAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فقط مدیر کل می‌تواند نقش مدیر مدرسه را اختصاص دهد.',
+                    'error' => 'FORBIDDEN',
+                ], 403);
+            }
+            if (! $request->filled('member_limit') && $request->input('member_limit') !== 0 && $request->input('member_limit') !== '0') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'سقف اعضا را وارد کنید.',
+                    'error' => 'VALIDATION_ERROR',
+                    'errors' => ['member_limit' => ['سقف اعضا را وارد کنید.']],
+                ], 422);
+            }
+        }
+
         $user = User::create($data);
         $user->applyLegacyRoleChange($user->role);
 
+        if ($user->role === User::ROLE_SCHOOL_MANAGER) {
+            app(SchoolManagerService::class)->ensureActiveProfile($user, $actor instanceof User ? $actor : null, true, [
+                'member_limit' => (int) $request->input('member_limit'),
+                'label' => $request->input('label'),
+            ]);
+        }
+
+        $user->load(['profiles', 'activeSubscription', 'roles', 'schoolManagerProfile']);
+
         return AdminApiResponse::success(
-            $user->load(['profiles', 'activeSubscription', 'roles']),
+            $this->formatUserForApi($user),
             'کاربر با موفقیت ایجاد شد.',
             201
         );
@@ -930,9 +963,14 @@ class UserController extends Controller
             'role_ids.*' => 'integer|exists:roles,id',
             'direct_permission_ids' => 'nullable|array',
             'direct_permission_ids.*' => 'integer|exists:permissions,id',
+            'member_limit' => 'nullable|integer|min:0|max:100000',
+            'label' => 'nullable|string|max:120',
+        ], [
+            'member_limit.min' => 'سقف اعضا نمی‌تواند منفی باشد.',
+            'label.max' => 'نام پنل حداکثر ۱۲۰ کاراکتر است.',
         ]);
 
-        $data = $request->except(['password_confirmation', 'role_ids', 'direct_permission_ids']);
+        $data = $request->except(['password_confirmation', 'role_ids', 'direct_permission_ids', 'member_limit', 'label']);
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
@@ -960,6 +998,29 @@ class UserController extends Controller
                 'success' => false,
                 'message' => 'فقط مدیر کل می‌تواند نقش مدیر مدرسه را اختصاص دهد.',
                 'error' => 'FORBIDDEN',
+            ], 422);
+        }
+
+        $willBeSchoolManager = $newRole === User::ROLE_SCHOOL_MANAGER || $postedSchoolManager;
+        $hasProfileFields = $request->exists('member_limit') || $request->exists('label');
+        $existingProfile = $user->schoolManagerProfile;
+
+        if ($hasProfileFields || ($willBeSchoolManager && ! $existingProfile)) {
+            if (! $actor instanceof User || ! $actor->isSuperAdmin()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'فقط مدیر کل می‌تواند سقف اعضا یا نام پنل مدیر مدرسه را تغییر دهد.',
+                    'error' => 'FORBIDDEN',
+                ], 403);
+            }
+        }
+
+        if ($willBeSchoolManager && ! $existingProfile && ! $request->exists('member_limit')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'سقف اعضا را وارد کنید.',
+                'error' => 'VALIDATION_ERROR',
+                'errors' => ['member_limit' => ['سقف اعضا را وارد کنید.']],
             ], 422);
         }
 
@@ -999,15 +1060,33 @@ class UserController extends Controller
         // The edit form used to leave users.role as parent and then drop the
         // school_manager pivot, because mergeStaffRoleIds treats every staff
         // role as foreign while the account is still a consumer role.
+        $profileInput = [];
+        if ($request->exists('member_limit')) {
+            $profileInput['member_limit'] = (int) $request->input('member_limit');
+        }
+        if ($request->exists('label')) {
+            $profileInput['label'] = $request->input('label');
+        }
         $schoolManagers->assignFromUserForm(
             $user,
             $actor instanceof User ? $actor : null,
             $request->has('role_ids') ? $roleIds : [],
             $request->has('direct_permission_ids') ? $permissionIds : [],
+            $profileInput,
         );
+
+        // Super admin may edit limit/label on an existing manager without re-promotion.
+        if ($user->fresh()?->role === User::ROLE_SCHOOL_MANAGER && $profileInput !== [] && $existingProfile) {
+            $schoolManagers->ensureActiveProfile(
+                $user,
+                $actor instanceof User ? $actor : null,
+                false,
+                $profileInput,
+            );
+        }
         $user->refresh();
 
-        $user->load(['profiles', 'activeSubscription', 'roles.permissions', 'directPermissions']);
+        $user->load(['profiles', 'activeSubscription', 'roles.permissions', 'directPermissions', 'schoolManagerProfile']);
 
         return AdminApiResponse::success(
             $this->formatUserForApi($user),
@@ -1409,7 +1488,7 @@ class UserController extends Controller
      */
     private function formatUserForApi(User $user): array
     {
-        $user->loadMissing(['roles.permissions', 'directPermissions']);
+        $user->loadMissing(['roles.permissions', 'directPermissions', 'schoolManagerProfile']);
 
         $data = $user->toArray();
         $data['role_ids'] = $user->roles->pluck('id')->values()->all();
@@ -1436,6 +1515,16 @@ class UserController extends Controller
             ->unique()
             ->values()
             ->all();
+
+        $profile = $user->schoolManagerProfile;
+        $data['school_manager_profile'] = $profile ? [
+            'id' => $profile->id,
+            'member_limit' => (int) $profile->member_limit,
+            'label' => $profile->label,
+            'status' => $profile->status,
+        ] : null;
+        $data['member_limit'] = $profile ? (int) $profile->member_limit : null;
+        $data['label'] = $profile?->label;
 
         return $data;
     }

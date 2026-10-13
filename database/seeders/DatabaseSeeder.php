@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
         // Seed admin users and categories
         $this->call([
             AdminSeeder::class,
+            RolePermissionSeeder::class,
+            SmsPermissionSeeder::class,
             CategorySeeder::class,
         ]);
 
