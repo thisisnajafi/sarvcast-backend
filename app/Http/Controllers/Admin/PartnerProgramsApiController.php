@@ -189,7 +189,12 @@ class PartnerProgramsApiController extends Controller
 
     public function schoolsShow(SchoolPartnership $school)
     {
-        return AdminApiResponse::success($school->load(['affiliatePartner', 'assignedTeacher']));
+        $school->load(['affiliatePartner', 'assignedTeacher']);
+        $payload = $school->toArray();
+        $payload['license_premium'] = app(\App\Services\SchoolLicenseEntitlementService::class)
+            ->summarizePartnership($school);
+
+        return AdminApiResponse::success($payload);
     }
 
     public function schoolsStore(Request $request)

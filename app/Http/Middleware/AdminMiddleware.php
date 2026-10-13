@@ -29,7 +29,7 @@ class AdminMiddleware
                 ], 401);
             }
             
-            return redirect()->route('admin.auth.login');
+            return redirect()->away(rtrim((string) config('app.admin_dashboard_url', 'https://admin.manjiapp.ir'), '/').'/login');
         }
 
         $user = auth('web')->user();

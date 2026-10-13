@@ -11,16 +11,33 @@ use Carbon\Carbon;
 
 class AccessControlService
 {
+    private SchoolLicenseEntitlementService $schoolLicenseEntitlementService;
+
+    public function __construct(?SchoolLicenseEntitlementService $schoolLicenseEntitlementService = null)
+    {
+        $this->schoolLicenseEntitlementService = $schoolLicenseEntitlementService ?? new SchoolLicenseEntitlementService();
+    }
+
     /**
      * Check if user has access to premium content
      */
     public function hasPremiumAccess(int $userId): bool
     {
+        return $this->resolvePremiumAccess($userId)['has_premium'];
+    }
+
+    /**
+     * Resolve premium access including subscription and school/student licenses.
+     *
+     * @return array{has_premium: bool, source: string|null, expires_at: mixed, details: array<string, mixed>}
+     */
+    public function resolvePremiumAccess(int $userId): array
+    {
         try {
             $user = User::find($userId);
             if (!$user) {
                 Log::info('hasPremiumAccess: User not found', ['user_id' => $userId]);
-                return false;
+                return ['has_premium' => false, 'source' => null, 'expires_at' => null, 'details' => []];
             }
 
             // Voice actors and admins have access to all premium content
@@ -29,7 +46,7 @@ class AccessControlService
                     'user_id' => $userId,
                     'role' => $user->role
                 ]);
-                return true;
+                return ['has_premium' => true, 'source' => 'role', 'expires_at' => null, 'details' => ['role' => $user->role]];
             }
 
             // Any subscription whose paid period has not ended grants access
@@ -47,34 +64,44 @@ class AccessControlService
                     'end_date' => $grantingSubscription->end_date,
                     'current_time' => now(),
                 ]);
-                return true;
+                return [
+                    'has_premium' => true,
+                    'source' => 'subscription',
+                    'expires_at' => $grantingSubscription->end_date,
+                    'details' => [
+                        'subscription_id' => $grantingSubscription->id,
+                        'status' => $grantingSubscription->status,
+                    ],
+                ];
             }
 
-            // Debug: log all subscriptions for this user when no active/trial found
-            $allSubscriptions = Subscription::where('user_id', $userId)->get();
+            $license = $this->schoolLicenseEntitlementService->resolveForUser($userId);
+            if ($license['has_premium']) {
+                Log::info('hasPremiumAccess: School/student license grants premium', [
+                    'user_id' => $userId,
+                    'source' => $license['source'],
+                    'license_id' => $license['license_id'],
+                ]);
+                return [
+                    'has_premium' => true,
+                    'source' => $license['source'],
+                    'expires_at' => $license['expires_at'],
+                    'details' => $license,
+                ];
+            }
 
-            Log::info('hasPremiumAccess: No active or trial subscription found', [
+            Log::info('hasPremiumAccess: No active subscription or school license found', [
                 'user_id' => $userId,
-                'all_subscriptions' => $allSubscriptions->map(function($sub) {
-                    return [
-                        'id' => $sub->id,
-                        'status' => $sub->status,
-                        'end_date' => $sub->end_date,
-                        'is_active_status' => $sub->status === 'active',
-                        'is_end_date_future' => $sub->end_date ? $sub->end_date > now() : false,
-                        'should_be_active' => $sub->status === 'active' && $sub->end_date && $sub->end_date > now()
-                    ];
-                })
             ]);
 
-            return false;
+            return ['has_premium' => false, 'source' => null, 'expires_at' => null, 'details' => []];
 
         } catch (\Exception $e) {
             Log::error('Failed to check premium access', [
                 'user_id' => $userId,
                 'error' => $e->getMessage()
             ]);
-            return false;
+            return ['has_premium' => false, 'source' => null, 'expires_at' => null, 'details' => []];
         }
     }
 
@@ -288,7 +315,8 @@ class AccessControlService
                     'subscription' => $activeSubscription->summary,
                     'expires_at' => $activeSubscription->end_date,
                     'days_remaining' => max(0, $daysRemaining),
-                    'type' => $activeSubscription->type
+                    'type' => $activeSubscription->type,
+                    'source' => 'subscription',
                 ];
             }
 
@@ -300,7 +328,25 @@ class AccessControlService
                     'subscription' => $trialSubscription->summary,
                     'expires_at' => $trialSubscription->end_date,
                     'days_remaining' => max(0, $daysRemaining),
-                    'type' => 'trial'
+                    'type' => 'trial',
+                    'source' => 'subscription',
+                ];
+            }
+
+            $license = $this->schoolLicenseEntitlementService->resolveForUser($userId);
+            if ($license['has_premium']) {
+                $expires = $license['expires_at'] ? Carbon::parse($license['expires_at']) : null;
+                $daysRemaining = $expires ? max(0, now()->diffInDays($expires, false)) : 0;
+
+                return [
+                    'level' => 'premium',
+                    'has_premium' => true,
+                    'subscription' => null,
+                    'expires_at' => $expires,
+                    'days_remaining' => $daysRemaining,
+                    'type' => $license['source'],
+                    'source' => $license['source'],
+                    'license' => $license,
                 ];
             }
 
@@ -309,7 +355,8 @@ class AccessControlService
                 'has_premium' => false,
                 'subscription' => null,
                 'expires_at' => null,
-                'days_remaining' => 0
+                'days_remaining' => 0,
+                'source' => null,
             ];
 
         } catch (\Exception $e) {

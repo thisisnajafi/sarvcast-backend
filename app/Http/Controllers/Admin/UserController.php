@@ -1526,6 +1526,16 @@ class UserController extends Controller
         $data['member_limit'] = $profile ? (int) $profile->member_limit : null;
         $data['label'] = $profile?->label;
 
+        $licensePremium = app(\App\Services\SchoolLicenseEntitlementService::class)->resolveForUser((int) $user->id);
+        $data['license_premium'] = [
+            'has_premium' => (bool) $licensePremium['has_premium'],
+            'source' => $licensePremium['source'],
+            'expires_at' => $licensePremium['expires_at'],
+            'school_partnership_id' => $licensePremium['school_partnership_id'],
+            'license_id' => $licensePremium['license_id'],
+            'teacher_account_id' => $licensePremium['teacher_account_id'],
+        ];
+
         return $data;
     }
 

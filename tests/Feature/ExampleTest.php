@@ -12,8 +12,10 @@ class ExampleTest extends TestCase
      */
     public function test_the_application_returns_a_successful_response(): void
     {
+        config(['app.admin_dashboard_url' => 'https://admin.manjiapp.ir']);
+
         $response = $this->get('/');
 
-        $response->assertRedirect(route('admin.auth.login'));
+        $response->assertRedirect('https://admin.manjiapp.ir');
     }
 }

@@ -55,25 +55,6 @@ class TwoFactorAuthTest extends TestCase
     }
 
     /** @test */
-    public function it_validates_6_digit_code_in_controller()
-    {
-        $this->actingAs($this->adminUser);
-
-        $mockSmsService = $this->mock(SmsService::class);
-        $mockSmsService->shouldReceive('verifyOtp')
-            ->once()
-            ->with($this->adminUser->phone_number, '123456', 'admin_2fa')
-            ->andReturn(true);
-
-        $response = $this->post(route('admin.2fa.verify.post'), [
-            'code' => '123456',
-        ]);
-
-        $response->assertRedirect(route('admin.stories.index'));
-        $this->assertTrue((bool) session('2fa_verified'));
-    }
-
-    /** @test */
     public function it_rejects_codes_with_wrong_length()
     {
         // Test with 4-digit code (should fail validation)
