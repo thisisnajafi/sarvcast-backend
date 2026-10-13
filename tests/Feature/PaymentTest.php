@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
@@ -17,8 +18,38 @@ class PaymentTest extends TestCase
     {
         parent::setUp();
         
+        \Illuminate\Support\Facades\Http::fake([
+            'https://api.zarinpal.com/*' => function () {
+                return \Illuminate\Support\Facades\Http::response([
+                    'data' => [
+                        'code' => 100,
+                        'authority' => 'AUTH'.uniqid(),
+                        'ref_id' => random_int(1000, 999999),
+                        'message' => 'Success',
+                    ],
+                ], 200);
+            },
+            'https://sandbox.zarinpal.com/*' => function () {
+                return \Illuminate\Support\Facades\Http::response([
+                    'data' => [
+                        'code' => 100,
+                        'authority' => 'AUTH'.uniqid(),
+                        'ref_id' => random_int(1000, 999999),
+                        'message' => 'Success',
+                    ],
+                ], 200);
+            },
+        ]);
+
         $this->user = User::factory()->create();
         $this->token = $this->user->createToken('test-token')->plainTextToken;
+        SubscriptionPlan::factory()->create([
+            'name' => 'یک ماهه',
+            'slug' => '1month',
+            'duration_days' => 30,
+            'price' => 100000,
+            'features' => ['stories'],
+        ]);
     }
 
     /**
@@ -341,8 +372,7 @@ class PaymentTest extends TestCase
 
         $response->assertStatus(401)
                 ->assertJson([
-                    'success' => false,
-                    'message' => 'Unauthenticated'
+                    'message' => 'Unauthenticated.',
                 ]);
     }
 
@@ -357,8 +387,7 @@ class PaymentTest extends TestCase
 
         $response->assertStatus(401)
                 ->assertJson([
-                    'success' => false,
-                    'message' => 'Unauthenticated'
+                    'message' => 'Unauthenticated.',
                 ]);
     }
 }

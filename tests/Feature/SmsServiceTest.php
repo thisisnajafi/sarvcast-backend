@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Services\SmsService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class SmsServiceTest extends TestCase
 {
+    use RefreshDatabase;
     protected SmsService $smsService;
 
     protected function setUp(): void
@@ -151,7 +153,7 @@ class SmsServiceTest extends TestCase
         $result = $this->smsService->sendPaymentNotification('09136708883', 100000, 'IRT');
 
         $this->assertTrue($result['success']);
-        $this->assertStringContains('100,000', $result['response']['text'] ?? '');
+        $this->assertStringContainsString('100,000', $result['response']['text'] ?? '');
     }
 
     /**

@@ -29,6 +29,8 @@ class CouponCode extends Model
         'starts_at',
         'expires_at',
         'is_active',
+        'value',
+        'status',
         'applicable_plans',
         'metadata',
     ];
@@ -39,9 +41,26 @@ class CouponCode extends Model
         'maximum_discount' => 'decimal:2',
         'starts_at' => 'datetime',
         'expires_at' => 'datetime',
+        'is_active' => 'boolean',
+        'value' => 'decimal:2',
         'applicable_plans' => 'array',
         'metadata' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (CouponCode $coupon) {
+            if ($coupon->value === null && $coupon->discount_value !== null) {
+                $coupon->value = $coupon->discount_value;
+            }
+            if ($coupon->discount_value === null && $coupon->value !== null) {
+                $coupon->discount_value = $coupon->value;
+            }
+            if ($coupon->status === null || $coupon->status === '') {
+                $coupon->status = $coupon->is_active ? 'active' : 'inactive';
+            }
+        });
+    }
 
     public function partner(): BelongsTo
     {

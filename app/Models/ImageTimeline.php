@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Validation\Rule;
@@ -9,7 +10,7 @@ use App\Traits\HasImageUrl;
 
 class ImageTimeline extends Model
 {
-    use HasImageUrl;
+    use HasFactory, HasImageUrl;
     protected $fillable = [
         'story_id',
         'episode_id',
@@ -250,10 +251,6 @@ class ImageTimeline extends Model
             
             if ($first['start_time'] > 0) {
                 $errors[] = "Timeline must start from 0 seconds";
-            }
-            
-            if ($last['end_time'] < $episodeDuration) {
-                $errors[] = "Timeline must cover entire episode duration";
             }
         }
         

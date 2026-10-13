@@ -340,8 +340,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
             Route::get('/data', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'getVoiceActorsData'])->name('data');
             Route::get('/statistics', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'getVoiceActorStatistics'])->name('statistics');
             Route::post('/validate-time-range', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'validateTimeRange'])->name('validate-time-range');
-            Route::get('/available-people', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'getAvailablePeople'])->name('available-people');
         });
+        // People search is not tied to one episode.
+        Route::get('voice-actors/available-people', [\App\Http\Controllers\Admin\EpisodeVoiceActorController::class, 'getAvailablePeople'])->name('voice-actors.available-people');
 
         // Admin Audio Processing API routes
         Route::prefix('audio')->name('audio.')->group(function () {
@@ -653,13 +654,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
         Route::get('/', [\App\Http\Controllers\Admin\CoinController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\Admin\CoinController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\Admin\CoinController::class, 'store'])->name('store');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CoinController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\CoinController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\CoinController::class, 'statistics'])->name('statistics');
         Route::get('/{coin}', [\App\Http\Controllers\Admin\CoinController::class, 'show'])->name('show');
         Route::get('/{coin}/edit', [\App\Http\Controllers\Admin\CoinController::class, 'edit'])->name('edit');
         Route::put('/{coin}', [\App\Http\Controllers\Admin\CoinController::class, 'update'])->name('update');
         Route::delete('/{coin}', [\App\Http\Controllers\Admin\CoinController::class, 'destroy'])->name('destroy');
-        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CoinController::class, 'bulkAction'])->name('bulk-action');
-        Route::get('/export', [\App\Http\Controllers\Admin\CoinController::class, 'export'])->name('export');
-        Route::get('/statistics', [\App\Http\Controllers\Admin\CoinController::class, 'statistics'])->name('statistics');
     });
 
     // Coupon Management Routes
@@ -667,13 +668,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
         Route::get('/', [\App\Http\Controllers\Admin\CouponController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\Admin\CouponController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\Admin\CouponController::class, 'store'])->name('store');
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CouponController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/export', [\App\Http\Controllers\Admin\CouponController::class, 'export'])->name('export');
+        Route::get('/statistics', [\App\Http\Controllers\Admin\CouponController::class, 'statistics'])->name('statistics');
         Route::get('/{coupon}', [\App\Http\Controllers\Admin\CouponController::class, 'show'])->name('show');
         Route::get('/{coupon}/edit', [\App\Http\Controllers\Admin\CouponController::class, 'edit'])->name('edit');
         Route::put('/{coupon}', [\App\Http\Controllers\Admin\CouponController::class, 'update'])->name('update');
         Route::delete('/{coupon}', [\App\Http\Controllers\Admin\CouponController::class, 'destroy'])->name('destroy');
-        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CouponController::class, 'bulkAction'])->name('bulk-action');
-        Route::get('/export', [\App\Http\Controllers\Admin\CouponController::class, 'export'])->name('export');
-        Route::get('/statistics', [\App\Http\Controllers\Admin\CouponController::class, 'statistics'])->name('statistics');
     });
 
     // Commission Payment Management Routes
@@ -773,6 +774,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth:web', 'admin'])->group
 // Payment Callback Routes
 Route::prefix('payment')->group(function () {
     Route::get('zarinpal/callback', [PaymentCallbackController::class, 'zarinpalCallback']);
+    Route::get('payir/callback', [PaymentCallbackController::class, 'payirCallback']);
     Route::get('success', [PaymentCallbackController::class, 'success'])->name('payment.success');
     Route::get('failure', [PaymentCallbackController::class, 'failure'])->name('payment.failure');
     Route::get('retry', [PaymentCallbackController::class, 'retry'])->name('payment.retry');

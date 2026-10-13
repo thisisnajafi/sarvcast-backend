@@ -88,8 +88,6 @@ class SmsService
             // Use Melipayamak library exactly as documented
             $username = $this->username;
             $password = $this->apiToken;
-            $api = new MelipayamakApi($username, $password);
-            $sms = $api->sms();
 
             $from = config('services.melipayamk.sender');
 
@@ -107,11 +105,14 @@ class SmsService
                 'isFlash' => false
             ];
 
-            // Set timeout for Melipayamak library (if supported)
-            ini_set('default_socket_timeout', 30);
-
-            // Send SMS exactly as documented with timeout
-            $response = $sms->send($to, $from, $message);
+            $response = $this->postPayamak('SendSMS', [
+                'UserName' => $username,
+                'PassWord' => $password,
+                'To' => $to,
+                'From' => $from,
+                'Text' => $message,
+                'IsFlash' => false,
+            ]);
             $json = json_decode($response);
 
             // Log the response
@@ -125,9 +126,12 @@ class SmsService
 
             $success = $this->melipayamakResponseSucceeded($json);
 
+            $payload = is_object($json) ? get_object_vars($json) : [];
+            $payload['text'] = $message;
+
             return [
                 'success' => $success,
-                'response' => $json,
+                'response' => $payload,
                 'message_id' => $json->Value ?? $json->StrRetStatus ?? null,
                 'error' => $success ? null : $this->melipayamakResponseError($json),
             ];
@@ -600,6 +604,26 @@ class SmsService
     }
 
     /**
+     * POST a Melipayamak REST action through Laravel's HTTP client so tests can fake it.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function postPayamak(string $action, array $data): string
+    {
+        $response = Http::asForm()
+            ->timeout(30)
+            ->connectTimeout(10)
+            ->withOptions(['verify' => false])
+            ->post('https://rest.payamak-panel.com/api/SendSMS/'.$action, $data);
+
+        if ($response->failed()) {
+            throw new \RuntimeException('HTTP Error: '.$response->status());
+        }
+
+        return $response->body();
+    }
+
+    /**
      * Send SMS using procedural PHP cURL method (fallback)
      * Based on procedural PHP example from Melipayamak documentation
      */
@@ -617,56 +641,8 @@ class SmsService
                 'bodyId' => $bodyId
             );
 
-            $post_data = http_build_query($data);
-            $handle = curl_init('https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber');
-
-            curl_setopt($handle, CURLOPT_HTTPHEADER, array(
-                'content-type' => 'application/x-www-form-urlencoded'
-            ));
-            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($handle, CURLOPT_POST, true);
-            curl_setopt($handle, CURLOPT_POSTFIELDS, $post_data);
-
-            // Add timeout settings to prevent hanging
-            curl_setopt($handle, CURLOPT_TIMEOUT, 30); // 30 seconds total timeout
-            curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 10); // 10 seconds connection timeout
-
-            $response = curl_exec($handle);
-            $httpCode = curl_getinfo($handle, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($handle);
-            $totalTime = curl_getinfo($handle, CURLINFO_TOTAL_TIME);
-            curl_close($handle);
-
-            Log::info('cURL request details', [
-                'phone' => $to,
-                'bodyId' => $bodyId,
-                'url' => 'https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber',
-                'http_code' => $httpCode,
-                'total_time' => $totalTime,
-                'response_length' => strlen($response ?? ''),
-                'has_error' => !empty($curlError)
-            ]);
-
-            if ($curlError) {
-                Log::error('cURL Error in SMS sending', [
-                    'error' => $curlError,
-                    'phone' => $to,
-                    'bodyId' => $bodyId
-                ]);
-                throw new \Exception("cURL Error: " . $curlError);
-            }
-
-            if ($httpCode !== 200) {
-                Log::error('HTTP Error in SMS sending', [
-                    'http_code' => $httpCode,
-                    'response' => $response,
-                    'phone' => $to,
-                    'bodyId' => $bodyId
-                ]);
-                throw new \Exception("HTTP Error: {$httpCode}");
-            }
+            $response = $this->postPayamak('BaseServiceNumber', $data);
+            $httpCode = 200;
 
             Log::info('Procedural PHP SMS response', [
                 'phone' => $to,

@@ -28,7 +28,7 @@ class ApiAdminMiddleware
         if (! $user instanceof User || ! app(ContributorStoryAccessService::class)->mayAccessAdminPanel($user)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Forbidden.',
+                'message' => 'دسترسی غیرمجاز. شما مجوز دسترسی به این بخش را ندارید.',
                 'error' => 'FORBIDDEN',
             ], 403);
         }

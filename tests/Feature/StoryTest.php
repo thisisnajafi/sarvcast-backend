@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Story;
 use App\Models\Category;
 use App\Models\Episode;
+use App\Models\ImageTimeline;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
@@ -30,7 +31,7 @@ class StoryTest extends TestCase
      */
     public function test_can_get_all_stories()
     {
-        Story::factory()->count(5)->create();
+        Story::factory()->count(5)->create(['status' => 'published']);
 
         $response = $this->getJson('/api/v1/stories');
 
@@ -38,18 +39,15 @@ class StoryTest extends TestCase
                 ->assertJsonStructure([
                     'success',
                     'data' => [
-                        'stories' => [
-                            '*' => [
-                                'id',
-                                'title',
-                                'description',
-                                'category_id',
-                                'author',
-                                'status',
-                                'created_at'
-                            ]
-                        ],
-                        'pagination'
+                        '*' => [
+                            'id',
+                            'title',
+                            'description',
+                            'category_id',
+                            'author',
+                            'status',
+                            'created_at'
+                        ]
                     ]
                 ]);
     }
@@ -65,14 +63,16 @@ class StoryTest extends TestCase
                 ->assertJsonStructure([
                     'success',
                     'data' => [
-                        'id',
-                        'title',
-                        'description',
-                        'category_id',
-                        'author',
-                        'status',
-                        'episodes_count',
-                        'created_at'
+                        'story' => [
+                            'id',
+                            'title',
+                            'description',
+                            'category_id',
+                            'author',
+                            'status',
+                            'episodes_count',
+                            'created_at'
+                        ]
                     ]
                 ]);
     }
@@ -82,7 +82,17 @@ class StoryTest extends TestCase
      */
     public function test_can_get_story_episodes()
     {
-        Episode::factory()->count(3)->create(['story_id' => $this->story->id]);
+        $episodes = Episode::factory()->count(3)->create([
+            'story_id' => $this->story->id,
+            'status' => 'published',
+            'is_premium' => false,
+        ]);
+        foreach ($episodes as $episode) {
+            ImageTimeline::factory()->create([
+                'episode_id' => $episode->id,
+                'story_id' => $this->story->id,
+            ]);
+        }
 
         $response = $this->getJson("/api/v1/stories/{$this->story->id}/episodes");
 
@@ -198,24 +208,25 @@ class StoryTest extends TestCase
      */
     public function test_can_get_stories_by_category()
     {
-        Story::factory()->count(3)->create(['category_id' => $this->category->id]);
+        Story::factory()->count(3)->create([
+            'category_id' => $this->category->id,
+            'status' => 'published',
+        ]);
 
-        $response = $this->getJson("/api/v1/categories/{$this->category->id}/stories");
+        $response = $this->getJson("/api/v1/categories/{$this->category->id}/stories?page=1");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
                     'data' => [
-                        'stories' => [
-                            '*' => [
-                                'id',
-                                'title',
-                                'description',
-                                'category_id'
-                            ]
-                        ],
-                        'pagination'
-                    ]
+                        '*' => [
+                            'id',
+                            'title',
+                            'description',
+                            'category_id'
+                        ]
+                    ],
+                    'pagination'
                 ]);
     }
 
@@ -224,8 +235,8 @@ class StoryTest extends TestCase
      */
     public function test_can_search_stories()
     {
-        Story::factory()->create(['title' => 'Test Story']);
-        Story::factory()->create(['title' => 'Another Story']);
+        Story::factory()->create(['title' => 'Test Story', 'status' => 'published']);
+        Story::factory()->create(['title' => 'Another Story', 'status' => 'published']);
 
         $response = $this->getJson('/api/v1/stories?search=Test');
 
@@ -233,9 +244,10 @@ class StoryTest extends TestCase
                 ->assertJsonStructure([
                     'success',
                     'data' => [
-                        'stories'
+                        '*' => ['id', 'title']
                     ]
-                ]);
+                ])
+                ->assertJsonFragment(['title' => 'Test Story']);
     }
 
     /**
@@ -243,18 +255,14 @@ class StoryTest extends TestCase
      */
     public function test_can_filter_stories_by_status()
     {
-        Story::factory()->create(['status' => 'published']);
-        Story::factory()->create(['status' => 'draft']);
+        Story::factory()->create(['status' => 'published', 'title' => 'Published Story']);
+        Story::factory()->create(['status' => 'draft', 'title' => 'Draft Story']);
 
         $response = $this->getJson('/api/v1/stories?status=published');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'success',
-                    'data' => [
-                        'stories'
-                    ]
-                ]);
+                ->assertJsonFragment(['title' => 'Published Story'])
+                ->assertJsonMissing(['title' => 'Draft Story']);
     }
 
     /**
@@ -262,7 +270,7 @@ class StoryTest extends TestCase
      */
     public function test_can_sort_stories()
     {
-        Story::factory()->count(3)->create();
+        Story::factory()->count(3)->create(['status' => 'published']);
 
         $response = $this->getJson('/api/v1/stories?sort=title&order=asc');
 
@@ -270,7 +278,7 @@ class StoryTest extends TestCase
                 ->assertJsonStructure([
                     'success',
                     'data' => [
-                        'stories'
+                        '*' => ['id', 'title']
                     ]
                 ]);
     }
@@ -312,7 +320,10 @@ class StoryTest extends TestCase
         $episode = Episode::factory()->create(['story_id' => $this->story->id]);
         $this->user->playHistories()->create([
             'episode_id' => $episode->id,
-            'played_at' => now()
+            'story_id' => $this->story->id,
+            'played_at' => now(),
+            'duration_played' => 10,
+            'total_duration' => $episode->duration,
         ]);
 
         $response = $this->withHeaders([
@@ -340,7 +351,15 @@ class StoryTest extends TestCase
      */
     public function test_episode_details_includes_story_favorite_status()
     {
-        $episode = Episode::factory()->create(['story_id' => $this->story->id]);
+        $episode = Episode::factory()->create([
+            'story_id' => $this->story->id,
+            'status' => 'published',
+            'is_premium' => false,
+        ]);
+        ImageTimeline::factory()->create([
+            'episode_id' => $episode->id,
+            'story_id' => $this->story->id,
+        ]);
 
         // Test when story is not favorited
         $response = $this->withHeaders([

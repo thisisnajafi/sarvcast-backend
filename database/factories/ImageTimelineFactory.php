@@ -37,10 +37,11 @@ class ImageTimelineFactory extends Factory
 
         return [
             'episode_id' => Episode::factory(),
+            'story_id' => fn (array $attributes) => Episode::query()->find($attributes['episode_id'])->story_id,
             'voice_actor_id' => EpisodeVoiceActor::factory(),
             'start_time' => $this->faker->numberBetween(0, 100),
             'end_time' => $this->faker->numberBetween(101, 300),
-            'image_url' => $this->faker->imageUrl(800, 600, 'fantasy'),
+            'image_url' => 'https://example.com/timeline.jpg',
             'image_order' => $this->faker->numberBetween(1, 10),
             'scene_description' => $this->faker->randomElement($sceneDescriptions),
             'transition_type' => $this->faker->randomElement($transitionTypes),

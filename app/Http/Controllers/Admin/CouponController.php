@@ -69,18 +69,29 @@ class CouponController extends Controller
             'description' => 'nullable|string|max:500',
             'usage_limit' => 'nullable|integer|min:1',
             'expires_at' => 'nullable|date|after:now',
-            'is_active' => 'required|boolean',
+            'is_active' => 'nullable|boolean',
+            'status' => 'nullable|in:active,inactive',
         ]);
+
+        $isActive = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : $request->input('status', 'active') !== 'inactive';
+
+        if ($request->input('type') === 'percentage' && (float) $request->input('value') > 100) {
+            return back()->withErrors(['value' => 'درصد تخفیف نمی‌تواند بیشتر از ۱۰۰ باشد.'])->withInput();
+        }
 
         $coupon = CouponCode::create([
             'code' => strtoupper($request->code),
             'name' => $request->code, // Use code as name if not provided
             'type' => $request->type,
             'discount_value' => $request->value,
+            'value' => $request->value,
             'description' => $request->description,
             'usage_limit' => $request->usage_limit,
             'expires_at' => $request->expires_at,
-            'is_active' => $request->is_active,
+            'is_active' => $isActive,
+            'status' => $isActive ? 'active' : 'inactive',
             'created_by' => auth()->id(), // Set the current admin as creator
         ]);
 
@@ -107,18 +118,25 @@ class CouponController extends Controller
             'description' => 'nullable|string|max:500',
             'usage_limit' => 'nullable|integer|min:1',
             'expires_at' => 'nullable|date|after:now',
-            'is_active' => 'required|boolean',
+            'is_active' => 'nullable|boolean',
+            'status' => 'nullable|in:active,inactive',
         ]);
+
+        $isActive = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : $request->input('status', 'active') !== 'inactive';
 
         $coupon->update([
             'code' => strtoupper($request->code),
-            'name' => $request->code, // Use code as name if not provided
+            'name' => $request->code,
             'type' => $request->type,
             'discount_value' => $request->value,
+            'value' => $request->value,
             'description' => $request->description,
             'usage_limit' => $request->usage_limit,
             'expires_at' => $request->expires_at,
-            'is_active' => $request->is_active,
+            'is_active' => $isActive,
+            'status' => $isActive ? 'active' : 'inactive',
         ]);
 
         return redirect()->route('admin.coupons.index')
@@ -150,12 +168,12 @@ class CouponController extends Controller
                 break;
 
             case 'activate':
-                $coupons->update(['is_active' => true]);
+                $coupons->update(['is_active' => true, 'status' => 'active']);
                 $message = 'کدهای تخفیف انتخاب شده با موفقیت فعال شدند.';
                 break;
 
             case 'deactivate':
-                $coupons->update(['is_active' => false]);
+                $coupons->update(['is_active' => false, 'status' => 'inactive']);
                 $message = 'کدهای تخفیف انتخاب شده با موفقیت غیرفعال شدند.';
                 break;
         }
@@ -362,11 +380,11 @@ class CouponController extends Controller
                 $message = 'کدهای تخفیف انتخاب شده با موفقیت حذف شدند.';
                 break;
             case 'activate':
-                $coupons->update(['is_active' => true]);
+                $coupons->update(['is_active' => true, 'status' => 'active']);
                 $message = 'کدهای تخفیف انتخاب شده با موفقیت فعال شدند.';
                 break;
             case 'deactivate':
-                $coupons->update(['is_active' => false]);
+                $coupons->update(['is_active' => false, 'status' => 'inactive']);
                 $message = 'کدهای تخفیف انتخاب شده با موفقیت غیرفعال شدند.';
                 break;
             default:

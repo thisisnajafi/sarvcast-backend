@@ -203,6 +203,7 @@ class StoryController extends Controller
         // Prepare story data with empty people
         $storyData = $story->toArray();
         $storyData['people'] = [];
+        $storyData['episodes_count'] = $story->episodes()->count();
         $storyData['sponsor'] = ($story->sponsor && $story->sponsor->is_active)
             ? $story->sponsor->toStorySummary()
             : null;
@@ -290,7 +291,13 @@ class StoryController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'episodes' => $episodesData
+                'episodes' => $episodesData,
+                'pagination' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => max(count($episodesData), 1),
+                    'total' => count($episodesData),
+                ],
             ]
         ]);
     }
@@ -335,6 +342,32 @@ class StoryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Story removed from favorites'
+        ]);
+    }
+
+    /**
+     * Rate a story.
+     */
+    public function rate(Request $request, Story $story)
+    {
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:1000',
+        ]);
+
+        $user = Auth::user();
+
+        Rating::updateOrCreate(
+            ['user_id' => $user->id, 'story_id' => $story->id],
+            [
+                'rating' => $validated['rating'],
+                'review' => $validated['comment'] ?? null,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Story rated successfully',
         ]);
     }
 

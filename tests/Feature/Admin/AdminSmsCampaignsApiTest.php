@@ -6,6 +6,7 @@ use App\Jobs\ProcessSmsCampaign;
 use App\Jobs\SendCampaignSms;
 use App\Models\SmsCampaign;
 use App\Models\SmsCampaignRecipient;
+use App\Models\SmsLog;
 use App\Models\SmsTemplate;
 use App\Models\Subscription;
 use App\Models\User;
@@ -162,13 +163,20 @@ class AdminSmsCampaignsApiTest extends TestCase
             'status' => SmsCampaignRecipient::STATUS_PENDING,
         ]);
 
+        $log = SmsLog::create([
+            'phone_number' => '09120000031',
+            'message' => 'سلام',
+            'provider' => 'melipayamak',
+            'status' => 'sent',
+        ]);
+
         $mock = Mockery::mock(SmsService::class);
         $mock->shouldReceive('sendSmsWithTemplate')
             ->once()
             ->andReturn([
                 'success' => true,
                 'message_id' => 'msg-999',
-                'sms_log_id' => 1,
+                'sms_log_id' => $log->id,
             ]);
         $this->app->instance(SmsService::class, $mock);
 

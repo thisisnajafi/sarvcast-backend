@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.contributor' => \App\Http\Middleware\ApiContributorGuardMiddleware::class,
             'api.audit' => \App\Http\Middleware\ApiAdminAuditMiddleware::class,
             'api.permission' => \App\Http\Middleware\ApiAdminPermissionMiddleware::class,
+            'admin.api.throttle' => \App\Http\Middleware\AdminApiThrottle::class,
+            'performance' => \App\Http\Middleware\PerformanceMiddleware::class,
             'admin.origin' => \App\Http\Middleware\EnsureAllowedAdminOrigin::class,
             'legacy.api.deprecation' => \App\Http\Middleware\LegacyApiDeprecationHeaders::class,
             'cache.api' => \App\Http\Middleware\CacheApiResponses::class,
@@ -37,6 +39,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($wantsJson) {
                 if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                    if ($request->is('api/admin') || $request->is('api/admin/*')) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'احراز هویت الزامی است.',
+                            'error' => 'UNAUTHENTICATED',
+                        ], 401);
+                    }
+
                     return response()->json(['message' => 'Unauthenticated.'], 401);
                 }
 

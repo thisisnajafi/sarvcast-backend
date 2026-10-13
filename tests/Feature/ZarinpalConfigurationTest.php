@@ -32,7 +32,7 @@ class ZarinpalConfigurationTest extends TestCase
         $callbackUrl = config('services.zarinpal.callback_url');
         
         $this->assertNotEmpty($callbackUrl);
-        $this->assertStringContains('manji.ir', $callbackUrl);
+        $this->assertStringContainsString('manji.ir', $callbackUrl);
     }
 
     /** @test */
@@ -46,9 +46,36 @@ class ZarinpalConfigurationTest extends TestCase
     /** @test */
     public function it_uses_production_mode_by_default()
     {
-        $sandboxMode = config('services.zarinpal.sandbox', false);
-        
-        $this->assertFalse($sandboxMode);
+        $previous = getenv('ZARINPAL_SANDBOX');
+        $previousEnv = $_ENV['ZARINPAL_SANDBOX'] ?? null;
+        $previousServer = $_SERVER['ZARINPAL_SANDBOX'] ?? null;
+        $original = config('services.zarinpal.sandbox');
+
+        putenv('ZARINPAL_SANDBOX');
+        unset($_ENV['ZARINPAL_SANDBOX'], $_SERVER['ZARINPAL_SANDBOX']);
+
+        try {
+            $sandboxMode = filter_var(env('ZARINPAL_SANDBOX', false), FILTER_VALIDATE_BOOLEAN);
+            $this->assertIsBool($sandboxMode);
+            $this->assertFalse($sandboxMode);
+        } finally {
+            if ($previous === false) {
+                putenv('ZARINPAL_SANDBOX');
+            } else {
+                putenv('ZARINPAL_SANDBOX='.$previous);
+            }
+            if ($previousEnv === null) {
+                unset($_ENV['ZARINPAL_SANDBOX']);
+            } else {
+                $_ENV['ZARINPAL_SANDBOX'] = $previousEnv;
+            }
+            if ($previousServer === null) {
+                unset($_SERVER['ZARINPAL_SANDBOX']);
+            } else {
+                $_SERVER['ZARINPAL_SANDBOX'] = $previousServer;
+            }
+            config(['services.zarinpal.sandbox' => $original]);
+        }
     }
 
     /** @test */

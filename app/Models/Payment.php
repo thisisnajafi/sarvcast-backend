@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
+    use HasFactory;
     /**
      * The attributes that are mass assignable.
      */
@@ -18,6 +20,7 @@ class Payment extends Model
         'currency',
         'status',
         'payment_method',
+        'gateway',
         'payment_gateway',
         'billing_platform',
         'transaction_id',
@@ -59,6 +62,15 @@ class Payment extends Model
             'processed_at' => 'datetime',
             'refunded_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Payment $payment) {
+            if (empty($payment->gateway)) {
+                $payment->gateway = $payment->payment_gateway ?: $payment->payment_method;
+            }
+        });
     }
 
     /**

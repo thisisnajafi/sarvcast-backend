@@ -96,6 +96,10 @@
 
         <!-- Action Buttons -->
         <div class="space-y-4">
+            <a href="{{ route('payment.retry') }}" class="block w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-2xl transition duration-300">
+                تلاش مجدد برای پرداخت
+            </a>
+
             <a href="#" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-2xl transition duration-300">
                 📞 تماس با پشتیبانی
             </a>

@@ -370,7 +370,15 @@ class SubscriptionService
             'expires_at' => $activeSubscription->end_date,
             'days_remaining' => max(0, $daysRemaining),
             'auto_renew' => $activeSubscription->auto_renew,
-            'plan_info' => $this->getPlan($activeSubscription->type)
+            'plan_info' => $this->getPlan($activeSubscription->type),
+            'subscription' => [
+                'id' => $activeSubscription->id,
+                'plan_id' => \App\Models\SubscriptionPlan::query()
+                    ->where('slug', $activeSubscription->type)
+                    ->value('id'),
+                'status' => $activeSubscription->status,
+                'expires_at' => $activeSubscription->end_date,
+            ],
         ];
     }
 

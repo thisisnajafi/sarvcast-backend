@@ -78,8 +78,15 @@ class MediaLegacyImportService
         $imported = 0;
         $skipped = 0;
         $items = [];
+        $candidates = iterator_to_array($this->collectCandidates(), false);
+        usort($candidates, function (array $a, array $b): int {
+            $aTime = isset($a['absolute_path']) && is_file($a['absolute_path']) ? filemtime($a['absolute_path']) : 0;
+            $bTime = isset($b['absolute_path']) && is_file($b['absolute_path']) ? filemtime($b['absolute_path']) : 0;
 
-        foreach ($this->collectCandidates() as $candidate) {
+            return $bTime <=> $aTime;
+        });
+
+        foreach ($candidates as $candidate) {
             if ($processed >= $limit) {
                 break;
             }
@@ -134,6 +141,15 @@ class MediaLegacyImportService
     {
         $seen = [];
 
+        foreach ($this->candidatesFromStoryEditor() as $candidate) {
+            $key = $this->candidateKey($candidate);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            yield $candidate;
+        }
+
         foreach ($this->candidatesFromPublicImages() as $candidate) {
             $key = $this->candidateKey($candidate);
             if (isset($seen[$key])) {
@@ -144,15 +160,6 @@ class MediaLegacyImportService
         }
 
         foreach ($this->candidatesFromStoragePublic() as $candidate) {
-            $key = $this->candidateKey($candidate);
-            if (isset($seen[$key])) {
-                continue;
-            }
-            $seen[$key] = true;
-            yield $candidate;
-        }
-
-        foreach ($this->candidatesFromStoryEditor() as $candidate) {
             $key = $this->candidateKey($candidate);
             if (isset($seen[$key])) {
                 continue;

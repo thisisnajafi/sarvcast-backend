@@ -26,6 +26,8 @@ class Notification extends Model
         'is_important',
         'read_at',
         'expires_at',
+        'created_at',
+        'updated_at',
         'priority',
         'category',
         'metadata'

@@ -131,10 +131,9 @@ class AdminVoiceActorInterfaceTest extends TestCase
         $createView = file_get_contents(resource_path('views/admin/episodes/voice-actors/create.blade.php'));
         $editView = file_get_contents(resource_path('views/admin/episodes/voice-actors/edit.blade.php'));
         
-        // Check index view
-        $this->assertStringContainsString('صداپیشگان اپیزود', $indexView);
+        // Check index view. The script is loaded from the layout and binds on data-episode-id.
+        $this->assertStringContainsString('مدیریت صداپیشگان', $indexView);
         $this->assertStringContainsString('data-episode-id', $indexView);
-        $this->assertStringContainsString('voice-actor-management', $indexView);
         
         // Check create view
         $this->assertStringContainsString('افزودن صداپیشه جدید', $createView);
@@ -162,15 +161,15 @@ class AdminVoiceActorInterfaceTest extends TestCase
 
     public function test_web_routes_are_defined()
     {
-        $webRoutes = file_get_contents(base_path('routes/web.php'));
-        
-        $this->assertStringContainsString('episodes.voice-actors.', $webRoutes);
-        $this->assertStringContainsString('EpisodeVoiceActorController', $webRoutes);
-        $this->assertStringContainsString('voice-actors.index', $webRoutes);
-        $this->assertStringContainsString('voice-actors.create', $webRoutes);
-        $this->assertStringContainsString('voice-actors.store', $webRoutes);
-        $this->assertStringContainsString('voice-actors.edit', $webRoutes);
-        $this->assertStringContainsString('voice-actors.update', $webRoutes);
-        $this->assertStringContainsString('voice-actors.destroy', $webRoutes);
+        foreach ([
+            'admin.episodes.voice-actors.index',
+            'admin.episodes.voice-actors.create',
+            'admin.episodes.voice-actors.store',
+            'admin.episodes.voice-actors.edit',
+            'admin.episodes.voice-actors.update',
+            'admin.episodes.voice-actors.destroy',
+        ] as $name) {
+            $this->assertTrue(app('router')->has($name), $name);
+        }
     }
 }

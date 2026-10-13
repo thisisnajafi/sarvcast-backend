@@ -57,21 +57,20 @@ class TwoFactorAuthTest extends TestCase
     /** @test */
     public function it_validates_6_digit_code_in_controller()
     {
-        // Test validation with 6-digit code
-        $request = new \Illuminate\Http\Request();
-        $request->merge(['code' => '123456']);
-        
-        // Mock the SMS service verification
+        $this->actingAs($this->adminUser);
+
         $mockSmsService = $this->mock(SmsService::class);
         $mockSmsService->shouldReceive('verifyOtp')
             ->once()
             ->with($this->adminUser->phone_number, '123456', 'admin_2fa')
             ->andReturn(true);
-        
-        $controller = new TwoFactorAuthController($mockSmsService);
-        
-        // This would normally be tested through HTTP request, but we're testing the validation logic
-        $this->assertTrue(true); // Validation passed
+
+        $response = $this->post(route('admin.2fa.verify.post'), [
+            'code' => '123456',
+        ]);
+
+        $response->assertRedirect(route('admin.stories.index'));
+        $this->assertTrue((bool) session('2fa_verified'));
     }
 
     /** @test */

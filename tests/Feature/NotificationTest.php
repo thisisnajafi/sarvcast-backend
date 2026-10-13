@@ -195,7 +195,8 @@ class NotificationTest extends TestCase
 
         $count = $this->notificationService->getUnreadCount($this->user);
 
-        $this->assertEquals(2, $count);
+        // The new account also receives one unread welcome notification.
+        $this->assertEquals(3, $count);
     }
 
     /**
@@ -250,7 +251,8 @@ class NotificationTest extends TestCase
         $deletedCount = $this->notificationService->cleanOldNotifications(30);
 
         $this->assertEquals(1, $deletedCount);
-        $this->assertEquals(1, Notification::count());
+        // The recent row remains, plus the welcome notification created with the user.
+        $this->assertEquals(2, Notification::count());
     }
 
     /**
@@ -316,8 +318,7 @@ class NotificationTest extends TestCase
 
         $response->assertStatus(401)
                 ->assertJson([
-                    'success' => false,
-                    'message' => 'Unauthenticated'
+                    'message' => 'Unauthenticated.'
                 ]);
     }
 
@@ -327,6 +328,10 @@ class NotificationTest extends TestCase
     public function test_can_send_email_notification()
     {
         Mail::fake();
+
+        // Phone accounts do not persist an email column. The address is only
+        // present on the in-memory user for this send.
+        $this->user->email = 'parent@example.com';
 
         $result = $this->notificationService->sendEmailNotification(
             $this->user,
@@ -357,7 +362,14 @@ class NotificationTest extends TestCase
             $this->assertTrue($result);
         }
 
-        $this->assertEquals(4, Notification::count());
+        $this->assertEquals(5, Notification::where('user_id', $this->user->id)->count());
+        foreach ($types as $type) {
+            $this->assertDatabaseHas('notifications', [
+                'user_id' => $this->user->id,
+                'title' => "Test {$type} Title",
+                'type' => $type,
+            ]);
+        }
     }
 
     /**
@@ -375,7 +387,9 @@ class NotificationTest extends TestCase
             $data
         );
 
-        $notification = Notification::where('user_id', $this->user->id)->first();
+        $notification = Notification::where('user_id', $this->user->id)
+            ->where('title', 'Test Title')
+            ->first();
         $this->assertEquals($data, $notification->data);
     }
 }

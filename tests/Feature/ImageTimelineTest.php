@@ -28,7 +28,10 @@ class ImageTimelineTest extends TestCase
         // Create test data
         $this->category = Category::factory()->create();
         $this->story = Story::factory()->create(['category_id' => $this->category->id]);
-        $this->episode = Episode::factory()->create(['story_id' => $this->story->id]);
+        $this->episode = Episode::factory()->create([
+            'story_id' => $this->story->id,
+            'duration' => 20,
+        ]);
         $this->user = User::factory()->create();
     }
 

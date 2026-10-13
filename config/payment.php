@@ -12,7 +12,7 @@ return [
 
     'zarinpal' => [
         'merchant_id' => env('ZARINPAL_MERCHANT_ID', '77751ff3-c1cc-411b-869d-2ac7d7b02f88'),
-        'sandbox' => env('ZARINPAL_SANDBOX', false),
+        'sandbox' => filter_var(env('ZARINPAL_SANDBOX', false), FILTER_VALIDATE_BOOLEAN),
         'api_url' => 'https://api.zarinpal.com/pg/v4/payment/',
     ],
 

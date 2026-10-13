@@ -26,6 +26,40 @@ class PaymentController extends Controller
      */
     public function initiate(Request $request)
     {
+        if (! $request->filled('subscription_id')) {
+            $validated = $request->validate([
+                'amount' => 'required|numeric|min:1',
+                'gateway' => 'required|string|max:50',
+                'description' => 'nullable|string|max:500',
+            ]);
+
+            $payment = Payment::create([
+                'user_id' => Auth::id(),
+                'amount' => $validated['amount'],
+                'currency' => 'IRR',
+                'payment_method' => $validated['gateway'],
+                'payment_gateway' => $validated['gateway'],
+                'gateway' => $validated['gateway'],
+                'status' => 'pending',
+                'transaction_id' => $this->generateTransactionId(),
+                'payment_metadata' => [
+                    'description' => $validated['description'] ?? null,
+                ],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment initiated successfully',
+                'data' => [
+                    'payment_id' => $payment->id,
+                    'gateway' => $payment->gateway,
+                    'amount' => (int) $payment->amount,
+                    'status' => $payment->status,
+                    'payment_url' => url('/payment/demo?payment='.$payment->id),
+                ],
+            ]);
+        }
+
         $request->validate([
             'subscription_id' => 'required|exists:subscriptions,id',
             'source' => 'nullable|string|in:app,web',
@@ -95,6 +129,41 @@ class PaymentController extends Controller
      */
     public function verify(Request $request)
     {
+        if ($request->filled('payment_id') && ! $request->filled('authority')) {
+            $validated = $request->validate([
+                'payment_id' => 'required|exists:payments,id',
+                'transaction_id' => 'required|string|max:100',
+            ]);
+
+            $payment = Payment::query()
+                ->where('id', $validated['payment_id'])
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (! $payment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'پرداخت یافت نشد',
+                ], 404);
+            }
+
+            $payment->update([
+                'status' => 'completed',
+                'transaction_id' => $validated['transaction_id'],
+                'processed_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment verified successfully',
+                'data' => [
+                    'payment_id' => $payment->id,
+                    'status' => $payment->status,
+                    'transaction_id' => $payment->transaction_id,
+                ],
+            ]);
+        }
+
         $request->validate([
             'authority' => 'required|string',
             'status' => 'required|string'
@@ -277,11 +346,13 @@ class PaymentController extends Controller
     public function history(Request $request)
     {
         $user = Auth::user();
-        
-        $payments = $user->payments()
-            ->with('subscription')
-            ->latest()
-            ->paginate($request->get('per_page', 20));
+
+        $paymentsQuery = $user->payments()->with('subscription')->latest();
+        if ($request->filled('status')) {
+            $paymentsQuery->where('status', $request->string('status'));
+        }
+
+        $payments = $paymentsQuery->paginate($request->get('per_page', 20));
 
         return response()->json([
             'success' => true,

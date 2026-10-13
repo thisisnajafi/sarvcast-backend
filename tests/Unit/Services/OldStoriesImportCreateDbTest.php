@@ -174,6 +174,7 @@ class OldStoriesImportCreateDbTest extends TestCase
         Schema::create('stories', function (Blueprint $table) {
             $table->id();
             $table->string('title');
+            $table->string('slug', 191)->nullable();
             $table->string('subtitle')->nullable();
             $table->text('description')->nullable();
             $table->string('image_url')->nullable();

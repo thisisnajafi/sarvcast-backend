@@ -489,6 +489,10 @@ class SubscriptionController extends Controller
                 'success' => true,
                 'message' => 'اشتراک ایجاد شد. لطفاً پرداخت را تکمیل کنید.',
                 'data' => [
+                    'subscription_id' => $subscription->id,
+                    'plan_id' => $plan->id,
+                    'status' => $subscription->status,
+                    'expires_at' => $subscription->end_date,
                     'subscription' => [
                         'id' => $subscription->id,
                         'user_id' => $subscription->user_id,
@@ -674,6 +678,33 @@ class SubscriptionController extends Controller
                 'message' => 'خطا در لغو اشتراک: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Cancel one subscription owned by the current user.
+     */
+    public function destroy(Request $request, int $subscriptionId): JsonResponse
+    {
+        $subscription = Subscription::query()
+            ->where('id', $subscriptionId)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (! $subscription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Subscription not found',
+            ], 404);
+        }
+
+        if ($subscription->status !== 'cancelled') {
+            $this->subscriptionService->cancelSubscription($subscription->id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Subscription cancelled successfully',
+        ]);
     }
 
     /**

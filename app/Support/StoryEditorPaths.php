@@ -31,7 +31,7 @@ class StoryEditorPaths
         }
 
         foreach (array_unique($candidates) as $path) {
-            if (is_dir($path)) {
+            if (is_dir($path) && self::hasStoryDirectories($path)) {
                 return realpath($path) ?: $path;
             }
         }
@@ -49,6 +49,13 @@ class StoryEditorPaths
             'Stories directory not found. Expected storage path: '
             . (is_string($storageDefault) ? $storageDefault : storage_path('app/manji-stories'))
         );
+    }
+
+    private static function hasStoryDirectories(string $path): bool
+    {
+        $directories = glob(rtrim($path, '/\\').'/*', GLOB_ONLYDIR) ?: [];
+
+        return $directories !== [];
     }
 
     private static function ensureDirectory(string $path): void

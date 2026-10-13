@@ -24,6 +24,12 @@ class StoryCommentController extends Controller
             'user_id' => $request->user()?->id,
         ]);
 
+        if ($request->exists('include_pending')) {
+            $request->merge([
+                'include_pending' => filter_var($request->input('include_pending'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
@@ -151,7 +157,8 @@ class StoryCommentController extends Controller
         ]);
 
         $validator = Validator::make($request->all(), [
-            'content' => 'nullable|string|max:1000',
+            'content' => 'nullable|string|min:2|max:1000',
+            'comment' => 'nullable|string|min:2|max:1000',
             'parent_id' => 'nullable|integer|exists:story_comments,id',
             'rating' => 'nullable|integer|min:1|max:5',
             'metadata' => 'nullable|array'
@@ -165,6 +172,10 @@ class StoryCommentController extends Controller
         ]);
 
         // Content or rating must be provided
+        if (! $request->filled('content') && $request->filled('comment')) {
+            $request->merge(['content' => $request->input('comment')]);
+        }
+
         if (empty($request->get('content')) && empty($request->get('rating'))) {
             Log::warning('Comment submission failed: content and rating both empty', [
                 'story_id' => $storyId,
@@ -301,7 +312,8 @@ class StoryCommentController extends Controller
                 'user_id' => $user->id,
                 'parent_id' => $parentId,
                 'content' => $content,
-                'is_approved' => true, // Auto-approve for now
+                'comment' => $content,
+                'is_approved' => false,
                 'is_visible' => true,
                 'metadata' => $request->get('metadata', [])
             ];
@@ -398,7 +410,7 @@ class StoryCommentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $parentId ? 'پاسخ شما با موفقیت ارسال شد' : 'نظر شما با موفقیت ارسال شد',
+                'message' => $parentId ? 'پاسخ شما با موفقیت ارسال شد' : 'نظر شما با موفقیت ارسال شد و در انتظار تایید است',
                 'data' => [
                     'comment' => $comment->toApiResponse($user->id)
                 ]

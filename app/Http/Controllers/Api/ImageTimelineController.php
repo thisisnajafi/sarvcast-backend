@@ -77,7 +77,9 @@ class ImageTimelineController extends Controller
         try {
             $result = $this->timelineService->saveTimelineForEpisode($episodeId, $request->get('image_timeline'));
 
-            return response()->json($result, $result['success'] ? 200 : 400);
+            $status = $result['success'] ? 200 : (isset($result['errors']) ? 422 : 400);
+
+            return response()->json($result, $status);
 
         } catch (\Exception $e) {
             return response()->json([

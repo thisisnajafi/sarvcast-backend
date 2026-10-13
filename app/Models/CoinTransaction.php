@@ -19,12 +19,43 @@ class CoinTransaction extends Model
         'description',
         'metadata',
         'transacted_at',
+        'type',
+        'status',
     ];
 
     protected $casts = [
         'metadata' => 'array',
         'transacted_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (CoinTransaction $transaction) {
+            $typeMap = [
+                'earned' => 'earned',
+                'purchased' => 'bonus',
+                'gift' => 'bonus',
+                'refund' => 'bonus',
+                'admin_adjustment' => 'bonus',
+            ];
+
+            if (empty($transaction->transaction_type)) {
+                $transaction->transaction_type = $typeMap[$transaction->type] ?? 'earned';
+            }
+
+            if (empty($transaction->type)) {
+                $transaction->type = $transaction->transaction_type === 'earned' ? 'earned' : 'gift';
+            }
+
+            if (empty($transaction->status)) {
+                $transaction->status = 'completed';
+            }
+
+            if (empty($transaction->transacted_at)) {
+                $transaction->transacted_at = now();
+            }
+        });
+    }
 
     /**
      * Get the user that owns the transaction

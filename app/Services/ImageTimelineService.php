@@ -59,6 +59,8 @@ class ImageTimelineService
             // Validate timeline data
             $errors = ImageTimeline::validateTimeline($timelineData, $episode->duration);
             if (!empty($errors)) {
+                DB::rollBack();
+
                 return [
                     'success' => false,
                     'message' => 'خطا در اعتبارسنجی تایم‌لاین',
@@ -73,6 +75,7 @@ class ImageTimelineService
             foreach ($timelineData as $index => $timeline) {
                 ImageTimeline::create([
                     'episode_id' => $episodeId,
+                    'story_id' => $episode->story_id,
                     'voice_actor_id' => $timeline['voice_actor_id'] ?? null,
                     'start_time' => $timeline['start_time'],
                     'end_time' => $timeline['end_time'],
@@ -166,6 +169,11 @@ class ImageTimelineService
     /**
      * Validate timeline data using the dedicated validation service
      */
+    public function validateTimeline(int $episodeDuration, array $timelineData): array
+    {
+        return $this->validateTimelineData($timelineData, $episodeDuration);
+    }
+
     public function validateTimelineData(array $timelineData, int $episodeDuration): array
     {
         $validationService = new \App\Services\TimelineValidationService();
@@ -192,8 +200,9 @@ class ImageTimelineService
             $nextEntry = $sortedTimeline[$i];
 
             // If images are the same and times are adjacent, merge them
-            if ($currentEntry['image_url'] === $nextEntry['image_url'] && 
-                $currentEntry['end_time'] === $nextEntry['start_time']) {
+            $adjacent = $currentEntry['end_time'] === $nextEntry['start_time']
+                || ((int) $currentEntry['end_time'] + 1) === (int) $nextEntry['start_time'];
+            if ($currentEntry['image_url'] === $nextEntry['image_url'] && $adjacent) {
                 $currentEntry['end_time'] = $nextEntry['end_time'];
             } else {
                 $optimizedTimeline[] = $currentEntry;
@@ -214,6 +223,9 @@ class ImageTimelineService
         $timeline = ImageTimeline::forEpisode($episodeId)->with('voiceActor.person')->get();
         
         return [
+            'total_entries' => $timeline->count(),
+            'first_image_start' => $timeline->min('start_time'),
+            'last_image_end' => $timeline->max('end_time'),
             'total_segments' => $timeline->count(),
             'total_duration' => $timeline->sum('end_time') - $timeline->min('start_time'),
             'unique_images' => $timeline->pluck('image_url')->unique()->count(),

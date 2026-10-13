@@ -76,10 +76,6 @@ Route::prefix('v1')->middleware('security')->group(function () {
         // User authentication (SMS-based)
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
-
-        // Admin authentication (OTP-based)
-        Route::post('admin/send-otp', [AuthController::class, 'sendAdminOtp']);
-        Route::post('admin/login', [AuthController::class, 'adminLogin']);
     });
 
     // Public content routes (with caching)
@@ -104,7 +100,8 @@ Route::prefix('v1')->middleware('security')->group(function () {
     Route::get('search/global', [\App\Http\Controllers\Api\SearchController::class, 'globalSearch'])->middleware('cache.api:60');
 
     Route::get('episodes', [EpisodeController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
-    Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware(['auth:sanctum', 'cache.api:180']); // 3 minutes
+    // Favorite status and access are per user, so this response is not cached.
+    Route::get('episodes/{episode}', [EpisodeController::class, 'show'])->middleware('auth:sanctum');
 
     // Story ratings routes
     Route::get('stories/{story}/ratings', [\App\Http\Controllers\Api\StoryRatingController::class, 'index'])->middleware('cache.api:180'); // 3 minutes
@@ -156,12 +153,6 @@ Route::prefix('v1')->middleware('security')->group(function () {
         Route::get('{user}/view-count', [UserController::class, 'getProfileViewCount']);
     });
 
-    // Dashboard API routes (for AJAX data loading)
-    Route::prefix('dashboard')->middleware('role:admin,super_admin')->group(function () {
-        Route::get('stats', [\App\Http\Controllers\Api\DashboardApiController::class, 'getStats']);
-        Route::get('charts', [\App\Http\Controllers\Api\DashboardApiController::class, 'getChartData']);
-    });
-
     // Admin Panel routes
     Route::prefix('admin-panel')->middleware('role:admin,super_admin')->group(function () {
         // Stats (super admin only)
@@ -201,6 +192,8 @@ Route::prefix('v1')->middleware('security')->group(function () {
         Route::delete('{character}', [CharacterController::class, 'destroy']);
         Route::post('{character}/assign-voice-actor', [CharacterController::class, 'assignVoiceActor']);
     });
+
+    Route::get('subscriptions/plans', [SubscriptionController::class, 'plans']);
 });
 
 // Canonical Admin Auth API (for separate Next.js dashboard)
@@ -356,6 +349,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::put('profile', [UserController::class, 'updateUserProfile']);
         Route::get('favorites', [UserController::class, 'favorites']);
         Route::get('history', [UserController::class, 'history']);
+        Route::get('play-history', [UserController::class, 'history']);
         Route::post('profiles', [UserController::class, 'createProfile']);
         Route::get('profiles', [UserController::class, 'profiles']);
         Route::put('profiles/{profile}', [UserController::class, 'updateProfile']);
@@ -453,11 +447,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Subscription routes
         Route::prefix('subscriptions')->group(function () {
-            Route::get('plans', [SubscriptionController::class, 'plans']);
+            Route::get('status', [SubscriptionController::class, 'status']);
             Route::post('calculate-price', [SubscriptionController::class, 'calculatePrice']);
             Route::post('/', [SubscriptionController::class, 'store']);
             Route::get('current', [SubscriptionController::class, 'current']);
-            Route::get('{subscriptionId}', [SubscriptionController::class, 'show']);
+            Route::delete('{subscriptionId}', [SubscriptionController::class, 'destroy'])->whereNumber('subscriptionId');
+            Route::get('{subscriptionId}', [SubscriptionController::class, 'show'])->whereNumber('subscriptionId');
             Route::post('cancel', [SubscriptionController::class, 'cancel']);
             Route::get('debug/subscription', [SubscriptionController::class, 'debugSubscription']);
             Route::post('debug/subscription/{subscriptionId}/activate', [SubscriptionController::class, 'manuallyActivateSubscription']);
@@ -500,8 +495,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Notification routes
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
-        Route::put('{notification}/read', [NotificationController::class, 'markAsRead']);
-        Route::put('read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::post('mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::match(['put', 'post'], 'read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::match(['put', 'post'], '{notification}/read', [NotificationController::class, 'markAsRead']);
     });
 
     // File upload routes (DISABLED - Admin only)
@@ -632,11 +628,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Subscription Management routes
         Route::get('subscriptions', [\App\Http\Controllers\Api\SubscriptionController::class, 'index']);
         Route::get('subscriptions/status', [\App\Http\Controllers\Api\SubscriptionController::class, 'status']);
-        Route::get('subscriptions/plans', [\App\Http\Controllers\Api\SubscriptionController::class, 'plans']);
         Route::post('subscriptions/calculate-price', [\App\Http\Controllers\Api\SubscriptionController::class, 'calculatePrice']);
         Route::post('subscriptions', [\App\Http\Controllers\Api\SubscriptionController::class, 'create']);
         Route::post('subscriptions/{subscriptionId}/activate', [\App\Http\Controllers\Api\SubscriptionController::class, 'activate']);
         Route::post('subscriptions/{subscriptionId}/cancel', [\App\Http\Controllers\Api\SubscriptionController::class, 'cancel']);
+        Route::delete('subscriptions/{subscriptionId}', [\App\Http\Controllers\Api\SubscriptionController::class, 'destroy'])->whereNumber('subscriptionId');
         Route::post('subscriptions/{subscriptionId}/renew', [\App\Http\Controllers\Api\SubscriptionController::class, 'renew']);
         Route::post('subscriptions/{subscriptionId}/upgrade', [\App\Http\Controllers\Api\SubscriptionController::class, 'upgrade']);
         Route::post('subscriptions/trial', [\App\Http\Controllers\Api\SubscriptionController::class, 'createTrial']);
@@ -767,6 +763,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Enhanced Image Timeline routes (User read-only access)
     Route::prefix('episodes')->middleware('auth:sanctum')->group(function () {
         Route::get('{episodeId}/image-timeline', [ImageTimelineController::class, 'getTimeline']);
+        Route::post('{episodeId}/image-timeline', [ImageTimelineController::class, 'saveTimeline']);
+        Route::delete('{episodeId}/image-timeline', [ImageTimelineController::class, 'deleteTimeline']);
         Route::get('{episodeId}/image-timeline-with-voice-actors', [ImageTimelineController::class, 'getTimelineWithVoiceActors']);
         Route::get('{episodeId}/image-timeline-for-voice-actor', [ImageTimelineController::class, 'getTimelineForVoiceActor']);
         Route::get('{episodeId}/key-frames', [ImageTimelineController::class, 'getKeyFrames']);
@@ -1004,7 +1002,7 @@ Route::prefix('admin/local-import')->middleware(['throttle:10,1'])->group(functi
 });
 
 // Admin API Routes
-Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributor', 'api.permission', 'throttle:120,1', 'api.audit'])->group(function () {
+Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributor', 'api.permission', 'throttle:120,1', 'admin.api.throttle', 'performance', 'api.audit'])->group(function () {
 
     Route::prefix('local-import')->group(function () {
         Route::get('/verify', [\App\Http\Controllers\Admin\LocalImportAccessController::class, 'verify']);
@@ -1585,9 +1583,8 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
             Route::post('/{episode}/duplicate', [\App\Http\Controllers\Admin\EpisodeController::class, 'apiDuplicate']);
         });
 
-        // Dashboard API (legacy aliases — canonical paths are /api/admin/v1/dashboard/*)
-        Route::get('/dashboard/stats', [AdminDashboardController::class, 'stats']);
-        Route::get('/dashboard/charts', [AdminDashboardController::class, 'charts']);
+        // Canonical dashboard paths are /api/admin/v1/dashboard/*.
+        // /api/admin/dashboard/stats and /charts stay unregistered.
         Route::get('/dashboard/export', [AdminDashboardController::class, 'export']);
         Route::get('/online-users', [AdminDashboardController::class, 'onlineUsers']);
 

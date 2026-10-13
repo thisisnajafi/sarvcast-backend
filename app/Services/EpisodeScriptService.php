@@ -155,8 +155,8 @@ class EpisodeScriptService
             ->value('story_slug');
 
         if (! is_string($storySlug) || $storySlug === '') {
-            $storySlug = $this->editorRepository->findLinkedStorySlug($episode->story_id)
-                ?? $this->editorRepository->findStorySlugByDbStoryId($episode->story_id);
+            $storySlug = $this->editorRepository->findStorySlugByDbStoryId($episode->story_id)
+                ?? $this->editorRepository->findLinkedStorySlug($episode->story_id);
         }
 
         if (! is_string($storySlug) || $storySlug === '') {
@@ -174,11 +174,6 @@ class EpisodeScriptService
             if (is_array($data) && ! empty($data['file_path'])) {
                 return $data['file_path'];
             }
-        }
-
-        $storyDir = $this->editorRepository->findStoryDirectory($storySlug);
-        if ($storyDir === null) {
-            return null;
         }
 
         foreach ($this->editorRepository->listEpisodes($storySlug) as $editorEpisode) {

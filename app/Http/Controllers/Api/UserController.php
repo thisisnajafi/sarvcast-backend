@@ -26,14 +26,22 @@ class UserController extends Controller
         $user = Auth::user();
 
         $favorites = $user->favorites()
-            ->with(['story', 'episode'])
+            ->with('story')
             ->latest()
             ->paginate($request->get('per_page', 20));
 
         return response()->json([
             'success' => true,
             'data' => [
-                'favorites' => $favorites->items(),
+                'favorites' => collect($favorites->items())->map(function ($favorite) {
+                    $payload = $favorite->toArray();
+                    $story = $favorite->story;
+                    $payload['title'] = $story?->title;
+                    $payload['description'] = $story?->description;
+                    $payload['category_id'] = $story?->category_id;
+
+                    return $payload;
+                })->values(),
                 'pagination' => [
                     'current_page' => $favorites->currentPage(),
                     'last_page' => $favorites->lastPage(),
@@ -60,6 +68,7 @@ class UserController extends Controller
             'success' => true,
             'data' => [
                 'history' => $history->items(),
+                'play_history' => $history->items(),
                 'pagination' => [
                     'current_page' => $history->currentPage(),
                     'last_page' => $history->lastPage(),

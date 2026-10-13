@@ -169,9 +169,9 @@ class PaymentCallbackTest extends TestCase
     {
         $response = $this->get('/payment/success');
         
-        $response->assertSee('<title>پرداخت موفق - مانجی</title>');
-        $response->assertSee('lang="fa"');
-        $response->assertSee('dir="rtl"');
+        $response->assertSee('<title>پرداخت موفق - مانجی</title>', false);
+        $response->assertSee('lang="fa"', false);
+        $response->assertSee('dir="rtl"', false);
     }
 
     /** @test */
@@ -179,9 +179,9 @@ class PaymentCallbackTest extends TestCase
     {
         $response = $this->get('/payment/failure');
         
-        $response->assertSee('<title>پرداخت ناموفق - مانجی</title>');
-        $response->assertSee('lang="fa"');
-        $response->assertSee('dir="rtl"');
+        $response->assertSee('<title>پرداخت ناموفق - مانجی</title>', false);
+        $response->assertSee('lang="fa"', false);
+        $response->assertSee('dir="rtl"', false);
     }
 
     /** @test */

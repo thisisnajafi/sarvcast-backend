@@ -159,6 +159,14 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::saving(function (User $user) {
+            // email was dropped in 2025_09_21_035030. Factories and old callers
+            // may still set it; persisting it makes sqlite reject the insert.
+            foreach (['email', 'email_verified_at'] as $removed) {
+                if (array_key_exists($removed, $user->getAttributes())) {
+                    $user->offsetUnset($removed);
+                }
+            }
+
             if ($user->isDirty('birthday') && $user->birthday !== null) {
                 $user->age_group = self::computeAgeGroupFromBirthday($user->birthday);
             }
@@ -655,8 +663,13 @@ class User extends Authenticatable
 
     public function hasPermission(string $permission): bool
     {
-        // Super admin has all permissions
+        // Super admin has all permissions. Role admin can operate the panel
+        // except audit logs, which stay on explicit audit.* permissions.
         if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($this->role === self::ROLE_ADMIN && ! str_starts_with($permission, 'audit.')) {
             return true;
         }
         

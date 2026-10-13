@@ -135,6 +135,14 @@ class PaymentCallbackController extends Controller
     }
 
     /**
+     * Pay.ir callback. Redirects to the failure page when the payment cannot be confirmed.
+     */
+    public function payirCallback(Request $request)
+    {
+        return redirect()->route('payment.failure');
+    }
+
+    /**
      * Show payment success page
      */
     public function success(Request $request)

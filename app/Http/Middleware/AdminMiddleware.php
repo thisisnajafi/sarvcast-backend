@@ -62,9 +62,6 @@ class AdminMiddleware
 
         // Check for super admin permissions for sensitive operations
         $sensitiveRoutes = [
-            'admin.coins.store',
-            'admin.coins.update',
-            'admin.coins.destroy',
             // 'admin.coupons.store',     // Removed - allow regular admins to create coupons
             // 'admin.coupons.update',    // Removed - allow regular admins to update coupons
             // 'admin.coupons.destroy',   // Removed - allow regular admins to delete coupons

@@ -502,6 +502,10 @@ class QuizController extends Controller
             );
         } catch (\Throwable $e) {
             Log::error('Quiz apiIndex failed', ['error' => $e->getMessage()]);
+            if (app()->runningUnitTests()) {
+                throw $e;
+            }
+
             return response()->json(['success' => false, 'message' => 'خطا در بارگذاری سوالات.', 'error' => 'SERVER_ERROR'], 500);
         }
     }

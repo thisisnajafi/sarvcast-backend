@@ -223,11 +223,7 @@ class NotificationService
                 return false;
             }
 
-            Mail::send($template, $data, function ($message) use ($user, $subject) {
-                $message->to($user->email, $user->first_name . ' ' . $user->last_name)
-                        ->subject($subject)
-                        ->from($this->emailFrom, 'مانجی');
-            });
+            Mail::to($user->email)->send(new \App\Mail\NotificationEmail($subject, $template, $data, $this->emailFrom));
 
             // Log notification
             $this->logNotification($user, 'email', $subject, '', $data);

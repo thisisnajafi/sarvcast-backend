@@ -99,12 +99,13 @@ class SmsCampaign extends Model
 
     public function getProgressPercentAttribute(): float
     {
-        if ($this->total_recipients === 0) {
+        $total = (int) $this->total_recipients;
+        if ($total === 0) {
             return 0.0;
         }
 
         $processed = $this->sent_count + $this->failed_count + $this->skipped_count;
 
-        return round(($processed / $this->total_recipients) * 100, 1);
+        return round(($processed / $total) * 100, 1);
     }
 }

@@ -98,7 +98,7 @@
             <div class="space-y-3 text-right">
                 <div class="flex justify-between items-center">
                     <span class="text-gray-600">💰 مبلغ پرداخت:</span>
-                    <span class="font-semibold text-gray-800">{{ number_format($payment->amount) }} ریال</span>
+                    <span class="font-semibold text-gray-800">{{ number_format($payment->amount) }} تومان</span>
                 </div>
                 
                 <div class="flex justify-between items-center">

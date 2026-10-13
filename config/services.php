@@ -40,7 +40,7 @@ return [
     'zarinpal' => [
         'merchant_id' => env('ZARINPAL_MERCHANT_ID', '77751ff3-c1cc-411b-869d-2ac7d7b02f88'),
         'callback_url' => env('ZARINPAL_CALLBACK_URL', 'https://my.manji.ir'),
-        'sandbox' => env('ZARINPAL_SANDBOX', false),
+        'sandbox' => filter_var(env('ZARINPAL_SANDBOX', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
     /** Next.js web app (app.manji.ir) — Zarinpal callback redirects here after subscription payment. */

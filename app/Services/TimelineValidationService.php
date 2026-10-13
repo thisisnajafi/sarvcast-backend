@@ -14,6 +14,11 @@ class TimelineValidationService
         'min_timeline_entries' => 1,
         'max_episode_duration' => 7200, // 2 hours in seconds
         'min_episode_duration' => 1, // seconds
+        'min_duration_per_image' => 1,
+        'max_duration_per_image' => 7200,
+        'min_coverage_percentage' => 1,
+        'max_unique_images' => 500,
+        'max_gap_between_images' => 7200,
     ];
 
     /**

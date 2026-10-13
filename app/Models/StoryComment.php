@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,11 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class StoryComment extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'story_id',
         'user_id',
         'parent_id',
         'content',
+        'comment',
         'rating',
         'is_approved',
         'is_visible',
@@ -322,6 +325,7 @@ class StoryComment extends Model
         return [
             'id' => $this->id,
             'content' => $this->content,
+            'comment' => $this->content,
             'rating' => $this->rating,
             'is_approved' => $this->is_approved,
             'is_visible' => $this->is_visible,
