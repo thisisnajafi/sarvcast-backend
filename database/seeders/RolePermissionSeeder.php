@@ -79,6 +79,10 @@ class RolePermissionSeeder extends Seeder
             ['name' => 'seo.create', 'display_name' => 'ایجاد قانون SEO', 'group' => 'seo'],
             ['name' => 'seo.update', 'display_name' => 'ویرایش SEO', 'group' => 'seo'],
             ['name' => 'seo.delete', 'display_name' => 'حذف قانون SEO', 'group' => 'seo'],
+            ['name' => 'support.view',   'display_name' => 'مشاهده تیکت‌های پشتیبانی', 'group' => 'support'],
+            ['name' => 'support.reply',  'display_name' => 'پاسخ به تیکت پشتیبانی',    'group' => 'support'],
+            ['name' => 'support.close',  'display_name' => 'بستن تیکت پشتیبانی',        'group' => 'support'],
+            ['name' => 'support.assign', 'display_name' => 'تخصیص تیکت پشتیبانی',      'group' => 'support'],
         ];
 
         $permissions = array_merge($permissions, SchoolAccessCatalog::definitions());
@@ -114,7 +118,7 @@ class RolePermissionSeeder extends Seeder
             'dashboard', 'coin_management', 'coupon_management',
             'payment_management', 'partner_management', 'analytics', 'settings',
             'user_management', 'role_management', 'media_library', 'team_members', 'stories', 'story_editor',
-            'prompts', 'timeline', 'writers', 'resumes', 'blog', 'seo',
+            'prompts', 'timeline', 'writers', 'resumes', 'blog', 'seo', 'support',
         ])->pluck('id');
         $adminRole->permissions()->syncWithoutDetaching($adminPermissionIds);
 

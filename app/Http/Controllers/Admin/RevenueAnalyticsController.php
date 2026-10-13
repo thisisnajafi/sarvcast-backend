@@ -6,35 +6,41 @@ use App\Http\Controllers\Controller;
 use App\Http\Support\AnalyticsCsvExport;
 use App\Models\Subscription;
 use App\Models\CoinTransaction;
-use App\Models\CouponCode;
+use App\Models\Payment;
+use App\Services\RevenueAnalyticsService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class RevenueAnalyticsController extends Controller
 {
+    public function __construct(private RevenueAnalyticsService $revenueService) {}
+
+    // ──────────────────────────────────────────────────────────────
+    // Blade views (kept but now use real counts where trivial)
+    // ──────────────────────────────────────────────────────────────
+
     public function overview(Request $request)
     {
         $dateRange = $request->get('date_range', '30');
         $startDate = Carbon::now()->subDays($dateRange);
 
+        $overview = $this->revenueService->getRevenueOverview($startDate, now());
+
         $revenueStats = [
-            'total_revenue' => rand(50000, 200000),
-            'subscription_revenue' => rand(30000, 150000),
-            'coin_revenue' => rand(10000, 50000),
-            'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            'total_subscribers' => Subscription::count(),
-            'average_revenue_per_user' => rand(15, 45),
+            'total_revenue'           => $overview['total_revenue'],
+            'subscription_revenue'    => $this->subscriptionRevenue($overview['revenue_by_type']),
+            'coin_revenue'            => $this->coinRevenue($startDate, now()),
+            'active_subscriptions'    => $overview['active_subscriptions'],
+            'total_subscribers'       => Subscription::count(),
+            'average_revenue_per_user' => $overview['avg_revenue_per_customer'],
         ];
 
-        $revenueTrends = [];
-        for ($i = $dateRange; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $revenueTrends[] = [
-                'date' => $date->format('Y-m-d'),
-                'revenue' => rand(1000, 5000),
-                'subscriptions' => rand(10, 50),
-            ];
-        }
+        $trends = $this->revenueService->getRevenueTrends($startDate, now());
+        $revenueTrends = collect($trends['daily_revenue'])->map(fn ($r) => [
+            'date'          => $r->date,
+            'revenue'       => $r->revenue,
+            'subscriptions' => $r->payments ?? 0,
+        ])->values()->all();
 
         return view('admin.revenue-analytics.overview', compact('revenueStats', 'revenueTrends', 'dateRange'));
     }
@@ -44,20 +50,22 @@ class RevenueAnalyticsController extends Controller
         $dateRange = $request->get('date_range', '30');
         $startDate = Carbon::now()->subDays($dateRange);
 
+        $subMetrics = $this->revenueService->getSubscriptionMetrics($startDate, now());
+
         $subscriptionStats = [
-            'total_subscriptions' => Subscription::count(),
-            'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            'new_subscriptions' => Subscription::where('created_at', '>=', $startDate)->count(),
-            'cancelled_subscriptions' => Subscription::where('status', 'cancelled')->count(),
-            'renewal_rate' => rand(70, 90),
-            'churn_rate' => rand(5, 15),
+            'total_subscriptions'       => Subscription::count(),
+            'active_subscriptions'      => $subMetrics['total_active_subscriptions'],
+            'new_subscriptions'         => $subMetrics['total_new_subscriptions'],
+            'cancelled_subscriptions'   => Subscription::where('status', 'cancelled')->count(),
+            'renewal_rate'              => $subMetrics['renewal_rate'],
+            'churn_rate'                => $this->churnRateFromAnalysis($startDate, now()),
         ];
 
-        $subscriptionPlans = [
-            ['name' => 'ماهانه', 'count' => rand(100, 500), 'revenue' => rand(10000, 50000)],
-            ['name' => 'سه ماهه', 'count' => rand(50, 200), 'revenue' => rand(15000, 60000)],
-            ['name' => 'سالانه', 'count' => rand(20, 100), 'revenue' => rand(20000, 80000)],
-        ];
+        $subscriptionPlans = collect($subMetrics['subscriptions_by_type'])->map(fn ($s) => [
+            'name'    => $s->type ?? 'نامشخص',
+            'count'   => $s->count,
+            'revenue' => 0,
+        ])->values()->all();
 
         return view('admin.revenue-analytics.subscriptions', compact('subscriptionStats', 'subscriptionPlans', 'dateRange'));
     }
@@ -67,239 +75,240 @@ class RevenueAnalyticsController extends Controller
         $dateRange = $request->get('date_range', '30');
         $startDate = Carbon::now()->subDays($dateRange);
 
+        $payMetrics = $this->revenueService->getPaymentMetrics($startDate, now());
+
         $paymentStats = [
-            'total_payments' => rand(1000, 5000),
-            'successful_payments' => rand(800, 4500),
-            'failed_payments' => rand(50, 200),
-            'pending_payments' => rand(20, 100),
-            'average_payment_amount' => rand(25, 75),
-            'payment_success_rate' => rand(85, 95),
+            'total_payments'         => $payMetrics['total_payments'],
+            'successful_payments'    => $payMetrics['successful_payments'],
+            'failed_payments'        => $payMetrics['failed_payments'],
+            'pending_payments'       => Payment::whereBetween('created_at', [$startDate, now()])->where('status', 'pending')->count(),
+            'average_payment_amount' => $this->revenueService->getRevenueOverview($startDate, now())['avg_payment_amount'],
+            'payment_success_rate'   => $payMetrics['success_rate'],
         ];
 
-        $paymentMethods = [
-            ['method' => 'کارت اعتباری', 'count' => rand(500, 2000), 'amount' => rand(20000, 80000)],
-            ['method' => 'پرداخت آنلاین', 'count' => rand(300, 1500), 'amount' => rand(15000, 60000)],
-            ['method' => 'کیف پول', 'count' => rand(200, 1000), 'amount' => rand(10000, 40000)],
-        ];
+        $paymentMethods = collect($payMetrics['payments_by_method'])->map(fn ($m) => [
+            'method' => $m->payment_method ?? 'نامشخص',
+            'count'  => $m->count,
+            'amount' => $m->total_amount,
+        ])->values()->all();
 
         return view('admin.revenue-analytics.payments', compact('paymentStats', 'paymentMethods', 'dateRange'));
     }
 
     public function export(Request $request)
     {
-        $type = $request->get('type', 'overview');
+        $type   = $request->get('type', 'overview');
         $format = $request->get('format', 'csv');
 
         return redirect()->back()
             ->with('success', "گزارش تحلیل درآمد {$type} با فرمت {$format} آماده دانلود است.");
     }
 
-    // API Methods
+    // ──────────────────────────────────────────────────────────────
+    // API methods — used by Next.js dashboard
+    // ──────────────────────────────────────────────────────────────
+
     public function apiOverview(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
+        $dateRange = max(1, (int) $request->get('date_range', 30));
         $startDate = Carbon::now()->subDays($dateRange);
+        $endDate   = Carbon::now();
+
+        $overview  = $this->revenueService->getRevenueOverview($startDate, $endDate);
+        $trends    = $this->revenueService->getRevenueTrends($startDate, $endDate);
+        $churn     = $this->revenueService->getChurnAnalysis($startDate, $endDate);
+
+        $subscriptionRevenue = $this->subscriptionRevenue($overview['revenue_by_type']);
+        $coinRevenue         = $this->coinRevenue($startDate, $endDate);
 
         $revenueStats = [
-            'total_revenue' => rand(50000, 200000),
-            'subscription_revenue' => rand(30000, 150000),
-            'coin_revenue' => rand(10000, 50000),
-            'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            'total_subscribers' => Subscription::count(),
-            'average_revenue_per_user' => rand(15, 45),
-            'revenue_growth_rate' => rand(5, 25),
-            'monthly_recurring_revenue' => rand(40000, 120000),
+            'total_revenue'             => $overview['total_revenue'],
+            'subscription_revenue'      => $subscriptionRevenue,
+            'coin_revenue'              => $coinRevenue,
+            'active_subscriptions'      => $overview['active_subscriptions'],
+            'total_subscribers'         => Subscription::count(),
+            'average_revenue_per_user'  => $overview['avg_revenue_per_customer'],
+            'revenue_growth_rate'       => $trends['revenue_growth_rate'],
+            'monthly_recurring_revenue' => $overview['mrr'],
         ];
 
-        $revenueTrends = [];
-        for ($i = $dateRange; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $revenueTrends[] = [
-                'date' => $date->format('Y-m-d'),
-                'revenue' => rand(1000, 5000),
-                'subscriptions' => rand(10, 50),
-                'coins_sold' => rand(100, 500),
-            ];
-        }
+        $revenueTrends = collect($trends['daily_revenue'])->map(fn ($r) => [
+            'date'          => $r->date,
+            'revenue'       => (float) $r->revenue,
+            'subscriptions' => (int) ($r->payments ?? 0),
+            'coins_sold'    => 0,
+        ])->values()->all();
 
-        $revenueSources = [
-            ['source' => 'اشتراک ماهانه', 'amount' => rand(20000, 80000), 'percentage' => rand(40, 60)],
-            ['source' => 'اشتراک سالانه', 'amount' => rand(15000, 60000), 'percentage' => rand(25, 40)],
-            ['source' => 'فروش سکه', 'amount' => rand(10000, 40000), 'percentage' => rand(15, 25)],
-            ['source' => 'پیشنهادات ویژه', 'amount' => rand(5000, 20000), 'percentage' => rand(5, 15)],
-        ];
+        $revenueSources = $this->buildRevenueSources($overview['revenue_by_type'], $subscriptionRevenue, $coinRevenue);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'revenue_stats' => $revenueStats,
-                'revenue_trends' => $revenueTrends,
+            'data'    => [
+                'revenue_stats'   => $revenueStats,
+                'revenue_trends'  => $revenueTrends,
                 'revenue_sources' => $revenueSources,
-                'date_range' => $dateRange
-            ]
+                'date_range'      => $dateRange,
+            ],
         ]);
     }
 
     public function apiSubscriptions(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
+        $dateRange = max(1, (int) $request->get('date_range', 30));
         $startDate = Carbon::now()->subDays($dateRange);
+        $endDate   = Carbon::now();
+
+        $subMetrics = $this->revenueService->getSubscriptionMetrics($startDate, $endDate);
+        $churn      = $this->revenueService->getChurnAnalysis($startDate, $endDate);
+        $trends     = $this->revenueService->getRevenueTrends($startDate, $endDate);
 
         $subscriptionStats = [
-            'total_subscriptions' => Subscription::count(),
-            'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            'new_subscriptions' => Subscription::where('created_at', '>=', $startDate)->count(),
-            'cancelled_subscriptions' => Subscription::where('status', 'cancelled')->count(),
-            'renewal_rate' => rand(70, 90),
-            'churn_rate' => rand(5, 15),
-            'average_subscription_duration' => rand(6, 18),
-            'lifetime_value' => rand(50, 200),
+            'total_subscriptions'          => Subscription::count(),
+            'active_subscriptions'         => $subMetrics['total_active_subscriptions'],
+            'new_subscriptions'            => $subMetrics['total_new_subscriptions'],
+            'cancelled_subscriptions'      => Subscription::where('status', 'cancelled')->count(),
+            'renewal_rate'                 => $subMetrics['renewal_rate'],
+            'churn_rate'                   => $churn['churn_rate'],
+            'average_subscription_duration' => $subMetrics['avg_subscription_duration'],
+            'lifetime_value'               => 0,
         ];
 
-        $subscriptionPlans = [
-            ['name' => 'ماهانه', 'count' => rand(100, 500), 'revenue' => rand(10000, 50000), 'price' => 29],
-            ['name' => 'سه ماهه', 'count' => rand(50, 200), 'revenue' => rand(15000, 60000), 'price' => 79],
-            ['name' => 'سالانه', 'count' => rand(20, 100), 'revenue' => rand(20000, 80000), 'price' => 299],
-        ];
+        $subscriptionPlans = collect($subMetrics['subscriptions_by_type'])->map(fn ($s) => [
+            'name'    => $this->localiseSubscriptionType($s->type ?? ''),
+            'count'   => (int) $s->count,
+            'revenue' => 0,
+            'price'   => 0,
+        ])->values()->all();
 
-        $subscriptionTrends = [];
-        for ($i = $dateRange; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $subscriptionTrends[] = [
-                'date' => $date->format('Y-m-d'),
-                'new_subscriptions' => rand(5, 25),
-                'cancelled_subscriptions' => rand(1, 10),
-                'revenue' => rand(500, 2500),
-            ];
-        }
+        $subscriptionTrends = collect($trends['daily_revenue'])->map(fn ($r) => [
+            'date'                   => $r->date,
+            'new_subscriptions'      => 0,
+            'cancelled_subscriptions' => 0,
+            'revenue'                => (float) $r->revenue,
+        ])->values()->all();
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'subscription_stats' => $subscriptionStats,
-                'subscription_plans' => $subscriptionPlans,
+            'data'    => [
+                'subscription_stats'  => $subscriptionStats,
+                'subscription_plans'  => $subscriptionPlans,
                 'subscription_trends' => $subscriptionTrends,
-                'date_range' => $dateRange
-            ]
+                'date_range'          => $dateRange,
+            ],
         ]);
     }
 
     public function apiPayments(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
+        $dateRange = max(1, (int) $request->get('date_range', 30));
         $startDate = Carbon::now()->subDays($dateRange);
+        $endDate   = Carbon::now();
+
+        $overview   = $this->revenueService->getRevenueOverview($startDate, $endDate);
+        $payMetrics = $this->revenueService->getPaymentMetrics($startDate, $endDate);
+        $trends     = $this->revenueService->getRevenueTrends($startDate, $endDate);
 
         $paymentStats = [
-            'total_payments' => rand(1000, 5000),
-            'successful_payments' => rand(800, 4500),
-            'failed_payments' => rand(50, 200),
-            'pending_payments' => rand(20, 100),
-            'average_payment_amount' => rand(25, 75),
-            'payment_success_rate' => rand(85, 95),
-            'total_payment_volume' => rand(50000, 200000),
-            'refund_rate' => rand(2, 8),
+            'total_payments'        => $payMetrics['total_payments'],
+            'successful_payments'   => $payMetrics['successful_payments'],
+            'failed_payments'       => $payMetrics['failed_payments'],
+            'pending_payments'      => Payment::whereBetween('created_at', [$startDate, $endDate])->where('status', 'pending')->count(),
+            'average_payment_amount' => $overview['avg_payment_amount'],
+            'payment_success_rate'  => $payMetrics['success_rate'],
+            'total_payment_volume'  => $overview['total_revenue'],
+            'refund_rate'           => $this->revenueService->getRefundAnalysis($startDate, $endDate)['refund_rate'],
         ];
 
-        $paymentMethods = [
-            ['method' => 'کارت اعتباری', 'count' => rand(500, 2000), 'amount' => rand(20000, 80000), 'percentage' => rand(40, 60)],
-            ['method' => 'پرداخت آنلاین', 'count' => rand(300, 1500), 'amount' => rand(15000, 60000), 'percentage' => rand(25, 40)],
-            ['method' => 'کیف پول', 'count' => rand(200, 1000), 'amount' => rand(10000, 40000), 'percentage' => rand(15, 25)],
-        ];
+        $paymentMethods = collect($payMetrics['payments_by_method'])->map(fn ($m) => [
+            'method'     => $m->payment_method ?? 'نامشخص',
+            'count'      => (int) $m->count,
+            'amount'     => (float) $m->total_amount,
+            'percentage' => $payMetrics['total_payments'] > 0
+                ? round(($m->count / $payMetrics['total_payments']) * 100, 1)
+                : 0,
+        ])->values()->all();
 
-        $paymentTrends = [];
-        for ($i = $dateRange; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $paymentTrends[] = [
-                'date' => $date->format('Y-m-d'),
-                'total_payments' => rand(20, 100),
-                'successful_payments' => rand(18, 95),
-                'failed_payments' => rand(1, 5),
-                'total_amount' => rand(1000, 5000),
-            ];
-        }
+        $paymentTrends = collect($trends['daily_revenue'])->map(fn ($r) => [
+            'date'                => $r->date,
+            'total_payments'      => (int) ($r->payments ?? 0),
+            'successful_payments' => (int) ($r->payments ?? 0),
+            'failed_payments'     => 0,
+            'total_amount'        => (float) $r->revenue,
+        ])->values()->all();
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'payment_stats' => $paymentStats,
+            'data'    => [
+                'payment_stats'   => $paymentStats,
                 'payment_methods' => $paymentMethods,
-                'payment_trends' => $paymentTrends,
-                'date_range' => $dateRange
-            ]
+                'payment_trends'  => $paymentTrends,
+                'date_range'      => $dateRange,
+            ],
         ]);
     }
 
     public function apiStatistics()
     {
+        $startDate = Carbon::now()->startOfMonth();
+        $endDate   = Carbon::now();
+        $overview  = $this->revenueService->getRevenueOverview($startDate, $endDate);
+        $subMet    = $this->revenueService->getSubscriptionMetrics($startDate, $endDate);
+        $trends    = $this->revenueService->getRevenueTrends(Carbon::now()->subDays(30), $endDate);
+
         $stats = [
-            'total_revenue' => rand(50000, 200000),
-            'monthly_revenue' => rand(15000, 60000),
-            'daily_revenue' => rand(500, 2000),
-            'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            'total_subscribers' => Subscription::count(),
-            'new_subscriptions_today' => Subscription::whereDate('created_at', Carbon::today())->count(),
+            'total_revenue'               => $this->revenueService->getRevenueOverview(Carbon::parse('2000-01-01'), $endDate)['total_revenue'],
+            'monthly_revenue'             => $overview['total_revenue'],
+            'daily_revenue'               => $this->revenueService->getRevenueOverview(Carbon::today(), $endDate)['total_revenue'],
+            'active_subscriptions'        => $overview['active_subscriptions'],
+            'total_subscribers'           => Subscription::count(),
+            'new_subscriptions_today'     => Subscription::whereDate('created_at', Carbon::today())->count(),
             'new_subscriptions_this_week' => Subscription::where('created_at', '>=', Carbon::now()->startOfWeek())->count(),
-            'new_subscriptions_this_month' => Subscription::where('created_at', '>=', Carbon::now()->startOfMonth())->count(),
-            'average_revenue_per_user' => rand(15, 45),
-            'revenue_growth_rate' => rand(5, 25),
-            'subscription_plans' => [
-                ['name' => 'ماهانه', 'count' => rand(100, 500), 'revenue' => rand(10000, 50000)],
-                ['name' => 'سه ماهه', 'count' => rand(50, 200), 'revenue' => rand(15000, 60000)],
-                ['name' => 'سالانه', 'count' => rand(20, 100), 'revenue' => rand(20000, 80000)],
-            ],
-            'payment_methods' => [
-                ['method' => 'کارت اعتباری', 'count' => rand(500, 2000), 'amount' => rand(20000, 80000)],
-                ['method' => 'پرداخت آنلاین', 'count' => rand(300, 1500), 'amount' => rand(15000, 60000)],
-                ['method' => 'کیف پول', 'count' => rand(200, 1000), 'amount' => rand(10000, 40000)],
-            ],
-            'revenue_trends' => [],
+            'new_subscriptions_this_month' => $subMet['total_new_subscriptions'],
+            'average_revenue_per_user'    => $overview['avg_revenue_per_customer'],
+            'revenue_growth_rate'         => $trends['revenue_growth_rate'],
+            'subscription_plans'          => collect($subMet['subscriptions_by_type'])->map(fn ($s) => [
+                'name'    => $this->localiseSubscriptionType($s->type ?? ''),
+                'count'   => (int) $s->count,
+                'revenue' => 0,
+            ])->values()->all(),
+            'payment_methods'      => collect($this->revenueService->getPaymentMetrics($startDate, $endDate)['payments_by_method'])->map(fn ($m) => [
+                'method' => $m->payment_method ?? 'نامشخص',
+                'count'  => (int) $m->count,
+                'amount' => (float) $m->total_amount,
+            ])->values()->all(),
+            'revenue_trends'      => [],
             'subscription_trends' => [],
-            'payment_trends' => []
+            'payment_trends'      => [],
         ];
 
-        // Generate trends for the last 30 days
-        for ($i = 30; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $stats['revenue_trends'][] = [
-                'date' => $date->format('Y-m-d'),
-                'revenue' => rand(500, 2500),
-            ];
-            $stats['subscription_trends'][] = [
-                'date' => $date->format('Y-m-d'),
-                'new_subscriptions' => rand(2, 15),
-            ];
-            $stats['payment_trends'][] = [
-                'date' => $date->format('Y-m-d'),
-                'total_payments' => rand(10, 50),
-            ];
+        foreach ($trends['daily_revenue'] as $r) {
+            $stats['revenue_trends'][]      = ['date' => $r->date, 'revenue' => (float) $r->revenue];
+            $stats['subscription_trends'][] = ['date' => $r->date, 'new_subscriptions' => (int) ($r->payments ?? 0)];
+            $stats['payment_trends'][]      = ['date' => $r->date, 'total_payments' => (int) ($r->payments ?? 0)];
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $stats
-        ]);
+        return response()->json(['success' => true, 'data' => $stats]);
     }
 
     public function apiExport(Request $request)
     {
         $dateRange = max(1, (int) $request->get('date_range', 30));
         $startDate = Carbon::now()->subDays($dateRange);
+        $endDate   = Carbon::now();
 
-        $metrics = [
-            'total_subscriptions' => Subscription::count(),
-            'active_subscriptions' => Subscription::where('status', 'active')->count(),
-            'new_subscriptions' => Subscription::where('created_at', '>=', $startDate)->count(),
+        $overview = $this->revenueService->getRevenueOverview($startDate, $endDate);
+        $metrics  = [
+            'total_subscriptions'    => Subscription::count(),
+            'active_subscriptions'   => $overview['active_subscriptions'],
+            'new_subscriptions'      => $this->revenueService->getSubscriptionMetrics($startDate, $endDate)['total_new_subscriptions'],
             'cancelled_subscriptions' => Subscription::where('status', 'cancelled')->count(),
         ];
 
-        $rows = [];
-        for ($i = $dateRange; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $rows[] = [
-                'date' => $date->format('Y-m-d'),
-                'new_subscriptions' => Subscription::whereDate('created_at', $date)->count(),
-            ];
-        }
+        $trends = $this->revenueService->getRevenueTrends($startDate, $endDate);
+        $rows   = collect($trends['daily_revenue'])->map(fn ($r) => [
+            'date'             => $r->date,
+            'new_subscriptions' => (int) ($r->payments ?? 0),
+        ])->all();
 
         return AnalyticsCsvExport::stream(
             'revenue-analytics-'.now()->format('Y-m-d-His').'.csv',
@@ -308,5 +317,58 @@ class RevenueAnalyticsController extends Controller
             $rows,
             $dateRange,
         );
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Private helpers
+    // ──────────────────────────────────────────────────────────────
+
+    private function subscriptionRevenue($revenueByType): float
+    {
+        return collect($revenueByType)->sum(fn ($r) => (float) ($r->revenue ?? 0));
+    }
+
+    private function coinRevenue(Carbon $from, Carbon $to): float
+    {
+        return (float) CoinTransaction::where('transaction_type', 'purchased')
+            ->whereBetween('created_at', [$from, $to])
+            ->sum('amount');
+    }
+
+    private function churnRateFromAnalysis(Carbon $from, Carbon $to): float
+    {
+        return $this->revenueService->getChurnAnalysis($from, $to)['churn_rate'];
+    }
+
+    private function buildRevenueSources($revenueByType, float $subscriptionRevenue, float $coinRevenue): array
+    {
+        $total = $subscriptionRevenue + $coinRevenue;
+
+        $sources = collect($revenueByType)->map(fn ($r) => [
+            'source'     => $this->localiseSubscriptionType($r->type ?? ''),
+            'amount'     => (float) ($r->revenue ?? 0),
+            'percentage' => $total > 0 ? round(((float)($r->revenue ?? 0) / $total) * 100, 1) : 0,
+        ])->values()->all();
+
+        if ($coinRevenue > 0) {
+            $sources[] = [
+                'source'     => 'فروش سکه',
+                'amount'     => $coinRevenue,
+                'percentage' => $total > 0 ? round(($coinRevenue / $total) * 100, 1) : 0,
+            ];
+        }
+
+        return $sources;
+    }
+
+    private function localiseSubscriptionType(string $type): string
+    {
+        return match ($type) {
+            '1month', 'monthly'  => 'اشتراک ماهانه',
+            '3months', 'quarterly' => 'اشتراک سه‌ماهه',
+            '12months', 'yearly', 'annual' => 'اشتراک سالانه',
+            'trial'              => 'آزمایشی',
+            default              => $type ?: 'نامشخص',
+        };
     }
 }

@@ -25,71 +25,73 @@ class ContentAnalyticsController extends Controller
      */
     public function index(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
-        $startDate = Carbon::now()->subDays($dateRange);
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $startDate = Carbon::now()->subDays($dateRange)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+        $listenStats = $this->listeningAnalytics->computeStats();
 
-        // Get basic content statistics
         $contentStats = [
             'total_stories' => Story::count(),
             'total_episodes' => Episode::count(),
             'total_categories' => Category::count(),
             'published_content' => Story::where('status', 'published')->count(),
-            'total_listens' => rand(50000, 200000),
-            'average_rating' => rand(35, 50) / 10,
+            'total_listens' => PlayHistory::whereBetween('played_at', [$startDate, $endDate])->count(),
+            'average_rating' => round((float) (Rating::avg('rating') ?? 0), 2),
+            'listens_today' => $listenStats['listens_today'],
+            'listens_this_week' => $listenStats['listens_this_week'],
         ];
 
-        // Get top performing stories
         $topStories = Story::with(['category'])
             ->orderBy('listens_count', 'desc')
             ->limit(10)
             ->get();
 
-        // Get top categories by story count
         $topCategories = Category::withCount('stories')
             ->orderBy('stories_count', 'desc')
             ->limit(10)
             ->get();
 
-        // Get recent content performance
         $recentContent = Story::where('created_at', '>=', $startDate)
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
 
-        // Get content performance trends
-        $performanceTrends = [];
-        for ($i = $dateRange; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $performanceTrends[] = [
-                'date' => $date->format('Y-m-d'),
-                'views' => rand(1000, 5000),
-                'listens' => rand(800, 4000),
-                'completion_rate' => rand(60, 85),
-            ];
-        }
+        $totalListens = $contentStats['total_listens'];
+        $completedListens = PlayHistory::whereBetween('played_at', [$startDate, $endDate])->completed()->count();
+        $completionRate = $totalListens > 0 ? round(($completedListens / $totalListens) * 100, 1) : 0;
+
+        $performanceTrends = collect($this->listeningAnalytics->dailySeries($dateRange))
+            ->map(fn (array $point) => [
+                'date' => $point['date'],
+                'views' => $point['unique_listeners'],
+                'listens' => $point['listens'],
+                'completion_rate' => $completionRate,
+            ])
+            ->all();
 
         return view('admin.content-analytics.index', compact(
-            'contentStats', 
-            'topStories', 
-            'topCategories', 
-            'recentContent', 
-            'performanceTrends', 
+            'contentStats',
+            'topStories',
+            'topCategories',
+            'recentContent',
+            'performanceTrends',
             'dateRange'
         ));
     }
 
     public function overview(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
-        $startDate = Carbon::now()->subDays($dateRange);
+        $dateRange = max(1, (int) $request->get('date_range', 30));
+        $startDate = Carbon::now()->subDays($dateRange)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
 
         $contentStats = [
             'total_stories' => Story::count(),
             'total_episodes' => Episode::count(),
             'total_categories' => Category::count(),
             'published_content' => Story::where('status', 'published')->count(),
-            'total_listens' => rand(50000, 200000),
-            'average_rating' => rand(35, 50) / 10,
+            'total_listens' => PlayHistory::whereBetween('played_at', [$startDate, $endDate])->count(),
+            'average_rating' => round((float) (Rating::avg('rating') ?? 0), 2),
         ];
 
         $topStories = Story::with(['category'])
@@ -107,28 +109,35 @@ class ContentAnalyticsController extends Controller
 
     public function performance(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
-        $startDate = Carbon::now()->subDays($dateRange);
+        $dateRange = max(1, min(90, (int) $request->get('date_range', 30)));
+        $startDate = Carbon::now()->subDays($dateRange)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        $totalListens = PlayHistory::whereBetween('played_at', [$startDate, $endDate])->count();
+        $completedListens = PlayHistory::whereBetween('played_at', [$startDate, $endDate])->completed()->count();
+        $uniqueListeners = (int) PlayHistory::whereBetween('played_at', [$startDate, $endDate])
+            ->selectRaw('COUNT(DISTINCT user_id) as aggregate')
+            ->value('aggregate');
+        $avgListeningSeconds = (float) (PlayHistory::whereBetween('played_at', [$startDate, $endDate])->avg('duration_played') ?? 0);
+        $completionRate = $totalListens > 0 ? round(($completedListens / $totalListens) * 100, 1) : 0;
 
         $performanceStats = [
-            'total_views' => rand(100000, 500000),
-            'total_listens' => rand(80000, 400000),
-            'completion_rate' => rand(60, 85),
-            'average_listening_time' => rand(15, 45),
-            'bounce_rate' => rand(15, 35),
-            'engagement_rate' => rand(70, 95),
+            'total_views' => $uniqueListeners,
+            'total_listens' => $totalListens,
+            'completion_rate' => $completionRate,
+            'average_listening_time' => round($avgListeningSeconds / 60, 1),
+            'bounce_rate' => $totalListens > 0 ? round((1 - ($completedListens / $totalListens)) * 100, 1) : 0,
+            'engagement_rate' => $completionRate,
         ];
 
-        $dailyPerformance = [];
-        for ($i = $dateRange; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $dailyPerformance[] = [
-                'date' => $date->format('Y-m-d'),
-                'views' => rand(1000, 5000),
-                'listens' => rand(800, 4000),
-                'completion_rate' => rand(60, 85),
-            ];
-        }
+        $dailyPerformance = collect($this->listeningAnalytics->dailySeries($dateRange))
+            ->map(fn (array $point) => [
+                'date' => $point['date'],
+                'views' => $point['unique_listeners'],
+                'listens' => $point['listens'],
+                'completion_rate' => $completionRate,
+            ])
+            ->all();
 
         return view('admin.content-analytics.performance', compact('performanceStats', 'dailyPerformance', 'dateRange'));
     }

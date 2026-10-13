@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ActivityLog;
+use App\Models\PerformanceMetric;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -339,18 +341,27 @@ class SystemAnalyticsService
 
     private function getTotalApiRequests($dateFrom, $dateTo): int
     {
-        // This would typically come from API logs or monitoring system
-        return Cache::remember("api_requests_{$dateFrom}_{$dateTo}", 300, function() use ($dateFrom, $dateTo) {
-            // Simulate API request count - in real implementation, this would query logs
-            return rand(10000, 100000);
+        // Count admin/app activity log entries as a proxy for API requests
+        return Cache::remember("api_requests_{$dateFrom}_{$dateTo}", 300, function () use ($dateFrom, $dateTo) {
+            try {
+                return (int) ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+            } catch (\Exception) {
+                return 0;
+            }
         });
     }
 
     private function getAverageResponseTime($dateFrom, $dateTo): float
     {
-        return Cache::remember("avg_response_time_{$dateFrom}_{$dateTo}", 300, function() use ($dateFrom, $dateTo) {
-            // Simulate average response time - in real implementation, this would query logs
-            return round(rand(100, 500) / 1000, 3); // Convert to seconds
+        return Cache::remember("avg_response_time_{$dateFrom}_{$dateTo}", 300, function () use ($dateFrom, $dateTo) {
+            try {
+                $avg = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+                    ->whereNotNull('response_time')
+                    ->avg('response_time');
+                return round((float) ($avg ?? 0), 3);
+            } catch (\Exception) {
+                return 0.0;
+            }
         });
     }
 
@@ -373,10 +384,8 @@ class SystemAnalyticsService
 
     private function getCacheHitRate($dateFrom, $dateTo): float
     {
-        // This would typically come from cache monitoring
-        return Cache::remember("cache_hit_rate_{$dateFrom}_{$dateTo}", 300, function() {
-            return round(rand(80, 95), 2);
-        });
+        // Cache hit-rate is not tracked in DB; return 0 to indicate unavailable
+        return 0.0;
     }
 
     private function getStorageUsage(): array
@@ -509,16 +518,33 @@ class SystemAnalyticsService
 
     private function getP95ResponseTime($dateFrom, $dateTo): float
     {
-        return Cache::remember("p95_response_time_{$dateFrom}_{$dateTo}", 300, function() {
-            return round(rand(200, 800) / 1000, 3);
-        });
+        // Percentile queries need a metrics table with sufficient rows; return 0 if unavailable
+        try {
+            $count = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+            if ($count < 5) return 0.0;
+            $offset = (int) ceil($count * 0.95) - 1;
+            $val = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->orderBy('response_time')
+                ->skip($offset)->take(1)->value('response_time');
+            return round((float) ($val ?? 0), 3);
+        } catch (\Exception) {
+            return 0.0;
+        }
     }
 
     private function getP99ResponseTime($dateFrom, $dateTo): float
     {
-        return Cache::remember("p99_response_time_{$dateFrom}_{$dateTo}", 300, function() {
-            return round(rand(500, 1500) / 1000, 3);
-        });
+        try {
+            $count = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])->count();
+            if ($count < 5) return 0.0;
+            $offset = (int) ceil($count * 0.99) - 1;
+            $val = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->orderBy('response_time')
+                ->skip($offset)->take(1)->value('response_time');
+            return round((float) ($val ?? 0), 3);
+        } catch (\Exception) {
+            return 0.0;
+        }
     }
 
     private function getQueryPerformance($dateFrom, $dateTo): array
@@ -581,16 +607,25 @@ class SystemAnalyticsService
 
     private function getAverageQueryTime($dateFrom, $dateTo): float
     {
-        return Cache::remember("avg_query_time_{$dateFrom}_{$dateTo}", 300, function() {
-            return round(rand(50, 150) / 1000, 3);
-        });
+        try {
+            $avg = PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->whereNotNull('database_queries')
+                ->avg('database_queries');
+            // database_queries is a count; we cannot derive timing without a separate column
+            return 0.0;
+        } catch (\Exception) {
+            return 0.0;
+        }
     }
 
     private function getTotalQueries($dateFrom, $dateTo): int
     {
-        return Cache::remember("total_queries_{$dateFrom}_{$dateTo}", 300, function() {
-            return rand(50000, 200000);
-        });
+        try {
+            return (int) PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->sum('database_queries');
+        } catch (\Exception) {
+            return 0;
+        }
     }
 
     private function getDiskUsage(): array
@@ -617,13 +652,8 @@ class SystemAnalyticsService
 
     private function getNetworkIO(): array
     {
-        // This would typically come from system monitoring
-        return [
-            'bytes_in' => rand(1000000, 10000000),
-            'bytes_out' => rand(500000, 5000000),
-            'packets_in' => rand(10000, 100000),
-            'packets_out' => rand(5000, 50000)
-        ];
+        // Network I/O is not accessible from PHP without system tools
+        return ['bytes_in' => 0, 'bytes_out' => 0, 'packets_in' => 0, 'packets_out' => 0];
     }
 
     private function getProcessCount(): int
@@ -637,99 +667,104 @@ class SystemAnalyticsService
 
     private function getSystemTemperature(): float
     {
-        // This would typically come from hardware monitoring
-        return round(rand(35, 65), 1);
+        // Hardware temperature is not accessible from PHP; return 0
+        return 0.0;
     }
 
     private function getErrorsByType($dateFrom, $dateTo): array
     {
-        return [
-            ['type' => 'Database Error', 'count' => 45],
-            ['type' => 'API Error', 'count' => 32],
-            ['type' => 'Authentication Error', 'count' => 28],
-            ['type' => 'Validation Error', 'count' => 15],
-            ['type' => 'System Error', 'count' => 8]
-        ];
+        try {
+            return ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->where('status', ActivityLog::STATUS_FAILED)
+                ->selectRaw('action as type, COUNT(*) as count')
+                ->groupBy('action')
+                ->orderByDesc('count')
+                ->limit(10)
+                ->get()
+                ->map(fn ($r) => ['type' => $r->type, 'count' => (int) $r->count])
+                ->all();
+        } catch (\Exception) {
+            return [];
+        }
     }
 
     private function getErrorsBySeverity($dateFrom, $dateTo): array
     {
-        return [
-            ['severity' => 'Critical', 'count' => 5],
-            ['severity' => 'High', 'count' => 18],
-            ['severity' => 'Medium', 'count' => 35],
-            ['severity' => 'Low', 'count' => 72]
-        ];
+        // Severity is not stored separately; return empty
+        return [];
     }
 
     private function getErrorTrends($dateFrom, $dateTo): array
     {
-        // Simulate error trends over time
-        $trends = [];
-        $currentDate = Carbon::parse($dateFrom);
-        $endDate = Carbon::parse($dateTo);
-        
-        while ($currentDate->lte($endDate)) {
-            $trends[] = [
-                'date' => $currentDate->format('Y-m-d'),
-                'errors' => rand(5, 25)
-            ];
-            $currentDate->addDay();
+        try {
+            return ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->where('status', ActivityLog::STATUS_FAILED)
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as errors')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->map(fn ($r) => ['date' => $r->date, 'errors' => (int) $r->errors])
+                ->all();
+        } catch (\Exception) {
+            return [];
         }
-        
-        return $trends;
     }
 
     private function getMostCommonErrors($dateFrom, $dateTo): array
     {
-        return [
-            ['error' => 'Database connection timeout', 'count' => 25],
-            ['error' => 'Invalid authentication token', 'count' => 18],
-            ['error' => 'File upload size exceeded', 'count' => 12],
-            ['error' => 'Rate limit exceeded', 'count' => 8],
-            ['error' => 'Memory limit exceeded', 'count' => 5]
-        ];
+        try {
+            return ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->where('status', ActivityLog::STATUS_FAILED)
+                ->selectRaw('action as error, COUNT(*) as count')
+                ->groupBy('action')
+                ->orderByDesc('count')
+                ->limit(5)
+                ->get()
+                ->map(fn ($r) => ['error' => $r->error, 'count' => (int) $r->count])
+                ->all();
+        } catch (\Exception) {
+            return [];
+        }
     }
 
     private function getErrorResolutionTime($dateFrom, $dateTo): float
     {
-        return Cache::remember("error_resolution_time_{$dateFrom}_{$dateTo}", 300, function() {
-            return round(rand(30, 180), 2); // Minutes
-        });
+        // Not tracked; return 0
+        return 0.0;
     }
 
     private function getTotalErrors($dateFrom, $dateTo): int
     {
-        return Cache::remember("total_errors_{$dateFrom}_{$dateTo}", 300, function() {
-            return rand(100, 500);
-        });
+        try {
+            return (int) ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->where('status', ActivityLog::STATUS_FAILED)
+                ->count();
+        } catch (\Exception) {
+            return 0;
+        }
     }
 
     private function getNetworkUsage(): array
     {
-        return [
-            'bytes_in' => rand(1000000, 10000000),
-            'bytes_out' => rand(500000, 5000000),
-            'packets_in' => rand(10000, 100000),
-            'packets_out' => rand(5000, 50000)
-        ];
+        return ['bytes_in' => 0, 'bytes_out' => 0, 'packets_in' => 0, 'packets_out' => 0];
     }
 
     private function getCacheUsage(): array
     {
+        $mem = memory_get_usage(true);
         return [
-            'memory_usage' => rand(50, 200), // MB
-            'hit_rate' => round(rand(80, 95), 2),
-            'miss_rate' => round(rand(5, 20), 2)
+            'memory_usage' => round($mem / 1024 / 1024, 2), // MB (PHP process memory)
+            'hit_rate'     => 0.0,  // not tracked
+            'miss_rate'    => 0.0,
         ];
     }
 
     private function getDatabaseUsage(): array
     {
         return [
-            'connections' => $this->getDatabaseConnections(),
-            'queries_per_second' => rand(100, 1000),
-            'slow_queries' => rand(5, 50)
+            'connections'       => $this->getDatabaseConnections(),
+            'queries_per_second' => 0,   // not tracked in real-time
+            'slow_queries'      => 0,
         ];
     }
 
@@ -753,7 +788,8 @@ class SystemAnalyticsService
 
     private function getUptimePercentage($dateFrom, $dateTo): float
     {
-        return round(rand(99, 100), 2);
+        // No downtime tracking table exists; return 100 (no tracked incidents)
+        return 100.0;
     }
 
     private function getLastRestart(): string
@@ -822,77 +858,74 @@ class SystemAnalyticsService
 
     private function getSecurityScore($dateFrom, $dateTo): int
     {
-        return rand(85, 95);
+        // Security score not computed; return 0 (unavailable)
+        return 0;
     }
 
     private function getResponseTimeTrends($dateFrom, $dateTo): array
     {
-        $trends = [];
-        $currentDate = Carbon::parse($dateFrom);
-        $endDate = Carbon::parse($dateTo);
-        
-        while ($currentDate->lte($endDate)) {
-            $trends[] = [
-                'date' => $currentDate->format('Y-m-d'),
-                'avg_response_time' => round(rand(100, 300) / 1000, 3)
-            ];
-            $currentDate->addDay();
+        try {
+            return PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->selectRaw('DATE(created_at) as date, AVG(response_time) as avg_response_time')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->map(fn ($r) => ['date' => $r->date, 'avg_response_time' => round((float) $r->avg_response_time, 3)])
+                ->all();
+        } catch (\Exception) {
+            return [];
         }
-        
-        return $trends;
     }
 
     private function getErrorRateTrends($dateFrom, $dateTo): array
     {
-        $trends = [];
-        $currentDate = Carbon::parse($dateFrom);
-        $endDate = Carbon::parse($dateTo);
-        
-        while ($currentDate->lte($endDate)) {
-            $trends[] = [
-                'date' => $currentDate->format('Y-m-d'),
-                'error_rate' => round(rand(1, 5), 2)
-            ];
-            $currentDate->addDay();
+        try {
+            return ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->where('status', ActivityLog::STATUS_FAILED)
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as errors')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->map(fn ($r) => ['date' => $r->date, 'error_rate' => (int) $r->errors])
+                ->all();
+        } catch (\Exception) {
+            return [];
         }
-        
-        return $trends;
     }
 
     private function getResourceUsageTrends($dateFrom, $dateTo): array
     {
-        $trends = [];
-        $currentDate = Carbon::parse($dateFrom);
-        $endDate = Carbon::parse($dateTo);
-        
-        while ($currentDate->lte($endDate)) {
-            $trends[] = [
-                'date' => $currentDate->format('Y-m-d'),
-                'cpu_usage' => rand(20, 80),
-                'memory_usage' => rand(30, 70),
-                'disk_usage' => rand(40, 90)
-            ];
-            $currentDate->addDay();
+        try {
+            return PerformanceMetric::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->selectRaw('DATE(created_at) as date, AVG(memory_usage) as memory_usage, AVG(database_queries) as db_queries')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->map(fn ($r) => [
+                    'date'         => $r->date,
+                    'cpu_usage'    => 0,   // not tracked per-request
+                    'memory_usage' => round((float) $r->memory_usage / 1024 / 1024, 2),
+                    'disk_usage'   => 0,
+                ])
+                ->all();
+        } catch (\Exception) {
+            return [];
         }
-        
-        return $trends;
     }
 
     private function getThroughputTrends($dateFrom, $dateTo): array
     {
-        $trends = [];
-        $currentDate = Carbon::parse($dateFrom);
-        $endDate = Carbon::parse($dateTo);
-        
-        while ($currentDate->lte($endDate)) {
-            $trends[] = [
-                'date' => $currentDate->format('Y-m-d'),
-                'requests_per_second' => rand(100, 1000)
-            ];
-            $currentDate->addDay();
+        try {
+            return ActivityLog::whereBetween('created_at', [$dateFrom, $dateTo])
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as requests')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get()
+                ->map(fn ($r) => ['date' => $r->date, 'requests_per_second' => (int) $r->requests])
+                ->all();
+        } catch (\Exception) {
+            return [];
         }
-        
-        return $trends;
     }
 
     private function getActiveAlerts(): array
@@ -934,7 +967,8 @@ class SystemAnalyticsService
 
     private function getAlertResolutionTime($dateFrom, $dateTo): float
     {
-        return round(rand(15, 120), 2); // Minutes
+        // Alert resolution time not tracked; return 0
+        return 0.0;
     }
 
     private function parseMemoryLimit($limit): int

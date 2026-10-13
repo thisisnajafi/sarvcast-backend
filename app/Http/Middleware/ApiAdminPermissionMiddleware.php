@@ -84,6 +84,10 @@ class ApiAdminPermissionMiddleware
             return 'export';
         }
 
+        if (str_contains($path, '/reply') || str_contains($path, '/close')) {
+            return 'reply';
+        }
+
         return match ($method) {
             'POST' => 'create',
             'PUT', 'PATCH' => 'update',
@@ -94,6 +98,17 @@ class ApiAdminPermissionMiddleware
 
     private function resolvePermission(string $segment, string $action, string $path = ''): ?string
     {
+        if ($segment === 'support-tickets') {
+            return match ($action) {
+                'read'   => 'support.view',
+                'create' => 'support.view',
+                'reply'  => 'support.reply',
+                'update' => 'support.assign',
+                'bulk'   => 'support.close',
+                default  => 'support.view',
+            };
+        }
+
         if ($segment === 'stories') {
             if (preg_match('#/stories/[^/]+/author$#', $path)) {
                 return 'stories.assign_writer';
@@ -157,6 +172,7 @@ class ApiAdminPermissionMiddleware
             'seo-redirects' => 'seo',
             'seo-robots' => 'seo',
             'seo-overview' => 'seo',
+            'support-tickets' => 'support',
             default => $segmentResource ?? str_replace('-', '.', $segment),
         };
 

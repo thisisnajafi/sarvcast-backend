@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlayHistory;
 use App\Models\User;
 use App\Services\UserAnalyticsService;
 use Illuminate\Http\Request;
@@ -115,14 +116,18 @@ class UserAnalyticsController extends Controller
 
     public function engagement(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
+        $dateRange = max(1, (int) $request->get('date_range', 30));
         $startDate = Carbon::now()->subDays($dateRange);
 
+        $totalSessions  = PlayHistory::where('played_at', '>=', $startDate)->count();
+        $avgDuration    = (float) (PlayHistory::where('played_at', '>=', $startDate)->avg('duration_played') ?? 0);
+        $completedCount = PlayHistory::where('played_at', '>=', $startDate)->where('completed', true)->count();
+
         $engagementStats = [
-            'total_sessions' => rand(1000, 5000),
-            'average_session_duration' => rand(300, 1800),
-            'bounce_rate' => rand(20, 60),
-            'pages_per_session' => rand(2, 8),
+            'total_sessions'           => $totalSessions,
+            'average_session_duration' => round($avgDuration),
+            'bounce_rate'              => $totalSessions > 0 ? round((1 - ($completedCount / $totalSessions)) * 100, 1) : 0,
+            'pages_per_session'        => 0,
         ];
 
         return view('admin.user-analytics.engagement', compact('engagementStats', 'dateRange'));
@@ -249,16 +254,22 @@ class UserAnalyticsController extends Controller
 
     public function apiEngagement(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
+        $dateRange = max(1, (int) $request->get('date_range', 30));
         $startDate = Carbon::now()->subDays($dateRange);
 
+        // Use PlayHistory as proxy for sessions (one session ≈ one listening event)
+        $totalSessions   = PlayHistory::where('played_at', '>=', $startDate)->count();
+        $avgDuration     = (float) (PlayHistory::where('played_at', '>=', $startDate)->avg('duration_played') ?? 0);
+        $completedCount  = PlayHistory::where('played_at', '>=', $startDate)->where('completed', true)->count();
+        $bounceRate      = $totalSessions > 0 ? round((1 - ($completedCount / $totalSessions)) * 100, 1) : 0;
+
         $engagementStats = [
-            'total_sessions' => rand(1000, 5000),
-            'average_session_duration' => rand(300, 1800),
-            'bounce_rate' => rand(20, 60),
-            'pages_per_session' => rand(2, 8),
-            'returning_users' => User::where('last_login_at', '>=', $startDate)->count(),
-            'new_users' => User::where('created_at', '>=', $startDate)->count(),
+            'total_sessions'           => $totalSessions,
+            'average_session_duration' => round($avgDuration),
+            'bounce_rate'              => $bounceRate,
+            'pages_per_session'        => 0, // page-level tracking not available
+            'returning_users'          => User::where('last_login_at', '>=', $startDate)->count(),
+            'new_users'                => User::where('created_at', '>=', $startDate)->count(),
         ];
 
         $dailyActiveUsers = User::selectRaw('DATE(last_login_at) as date, COUNT(*) as count')

@@ -304,6 +304,83 @@ class PartnerProgramsApiController extends Controller
         return AdminApiResponse::success($influencer->load('affiliatePartner'));
     }
 
+    public function influencersStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'affiliate_partner_id' => 'required|exists:affiliate_partners,id',
+            'campaign_name' => 'required|string|max:255',
+            'campaign_description' => 'required|string',
+            'campaign_type' => ['required', Rule::in(['story_review', 'educational_content', 'cultural_preservation', 'brand_partnership'])],
+            'content_type' => ['required', Rule::in(['post', 'story', 'reel', 'video', 'live'])],
+            'required_posts' => 'nullable|integer|min:0',
+            'required_stories' => 'nullable|integer|min:0',
+            'compensation_per_post' => 'required|numeric|min:0',
+            'commission_rate' => 'required|numeric|min:0|max:100',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'status' => ['nullable', Rule::in(['draft', 'active', 'paused', 'completed', 'cancelled'])],
+            'content_guidelines' => 'nullable|array',
+            'hashtags' => 'nullable|array',
+            'target_audience' => 'nullable|array',
+            'requires_approval' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $payload = $validator->validated();
+        $payload['status'] = $payload['status'] ?? 'draft';
+
+        $influencer = InfluencerCampaign::create($payload);
+
+        return AdminApiResponse::success($influencer->load('affiliatePartner'), 'کمپین اینفلوئنسر ایجاد شد.', 201);
+    }
+
+    public function influencersUpdate(Request $request, InfluencerCampaign $influencer)
+    {
+        $validator = Validator::make($request->all(), [
+            'campaign_name' => 'sometimes|required|string|max:255',
+            'campaign_description' => 'sometimes|required|string',
+            'campaign_type' => ['nullable', Rule::in(['story_review', 'educational_content', 'cultural_preservation', 'brand_partnership'])],
+            'content_type' => ['nullable', Rule::in(['post', 'story', 'reel', 'video', 'live'])],
+            'required_posts' => 'nullable|integer|min:0',
+            'required_stories' => 'nullable|integer|min:0',
+            'compensation_per_post' => 'nullable|numeric|min:0',
+            'commission_rate' => 'nullable|numeric|min:0|max:100',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => ['nullable', Rule::in(['draft', 'active', 'paused', 'completed', 'cancelled'])],
+            'content_guidelines' => 'nullable|array',
+            'hashtags' => 'nullable|array',
+            'target_audience' => 'nullable|array',
+            'requires_approval' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $influencer->update($validator->validated());
+
+        return AdminApiResponse::success($influencer->fresh()->load('affiliatePartner'), 'کمپین اینفلوئنسر بروزرسانی شد.');
+    }
+
+    public function influencersDestroy(InfluencerCampaign $influencer)
+    {
+        $influencer->delete();
+
+        return AdminApiResponse::okMessage('کمپین اینفلوئنسر حذف شد.');
+    }
+
     public function influencersStatistics()
     {
         return AdminApiResponse::success([
@@ -370,6 +447,100 @@ class PartnerProgramsApiController extends Controller
     public function corporateShow(CorporateSponsorship $corporate)
     {
         return AdminApiResponse::success($corporate->load('affiliatePartner'));
+    }
+
+    public function corporateStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'affiliate_partner_id' => 'nullable|exists:affiliate_partners,id',
+            'company_name' => 'required|string|max:255',
+            'company_type' => 'required|string|max:64',
+            'industry' => 'required|string|max:64',
+            'company_size' => 'required|string|max:64',
+            'contact_person' => 'required|string|max:255',
+            'contact_email' => 'required|email|max:255',
+            'contact_phone' => 'required|string|max:32',
+            'website_url' => 'nullable|url|max:255',
+            'company_description' => 'required|string',
+            'sponsorship_type' => ['required', Rule::in(['content_sponsorship', 'brand_partnership', 'educational_initiative', 'cultural_preservation', 'technology_partnership'])],
+            'sponsorship_amount' => 'required|numeric|min:0',
+            'currency' => 'nullable|string|max:3',
+            'payment_frequency' => ['required', Rule::in(['one_time', 'monthly', 'quarterly', 'annually'])],
+            'sponsorship_start_date' => 'required|date',
+            'sponsorship_end_date' => 'required|date|after_or_equal:sponsorship_start_date',
+            'status' => ['nullable', Rule::in(['pending', 'approved', 'active', 'suspended', 'completed', 'cancelled'])],
+            'sponsorship_benefits' => 'nullable|array',
+            'content_requirements' => 'nullable|array',
+            'target_audience' => 'nullable|array',
+            'requires_content_approval' => 'nullable|boolean',
+            'allows_brand_mention' => 'nullable|boolean',
+            'requires_logo_display' => 'nullable|boolean',
+            'special_requirements' => 'nullable|string|max:5000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $payload = $validator->validated();
+        $payload['status'] = $payload['status'] ?? 'pending';
+        $payload['currency'] = $payload['currency'] ?? 'IRR';
+
+        $corporate = CorporateSponsorship::create($payload);
+
+        return AdminApiResponse::success($corporate->load('affiliatePartner'), 'اسپانسرشیپ شرکتی ایجاد شد.', 201);
+    }
+
+    public function corporateUpdate(Request $request, CorporateSponsorship $corporate)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_name' => 'sometimes|required|string|max:255',
+            'company_type' => 'nullable|string|max:64',
+            'industry' => 'nullable|string|max:64',
+            'company_size' => 'nullable|string|max:64',
+            'contact_person' => 'nullable|string|max:255',
+            'contact_email' => 'nullable|email|max:255',
+            'contact_phone' => 'nullable|string|max:32',
+            'website_url' => 'nullable|url|max:255',
+            'company_description' => 'nullable|string',
+            'sponsorship_type' => ['nullable', Rule::in(['content_sponsorship', 'brand_partnership', 'educational_initiative', 'cultural_preservation', 'technology_partnership'])],
+            'sponsorship_amount' => 'nullable|numeric|min:0',
+            'currency' => 'nullable|string|max:3',
+            'payment_frequency' => ['nullable', Rule::in(['one_time', 'monthly', 'quarterly', 'annually'])],
+            'sponsorship_start_date' => 'nullable|date',
+            'sponsorship_end_date' => 'nullable|date|after_or_equal:sponsorship_start_date',
+            'status' => ['nullable', Rule::in(['pending', 'approved', 'active', 'suspended', 'completed', 'cancelled'])],
+            'sponsorship_benefits' => 'nullable|array',
+            'content_requirements' => 'nullable|array',
+            'target_audience' => 'nullable|array',
+            'requires_content_approval' => 'nullable|boolean',
+            'allows_brand_mention' => 'nullable|boolean',
+            'requires_logo_display' => 'nullable|boolean',
+            'special_requirements' => 'nullable|string|max:5000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'error' => 'VALIDATION_ERROR',
+            ], 422);
+        }
+
+        $corporate->update($validator->validated());
+
+        return AdminApiResponse::success($corporate->fresh()->load('affiliatePartner'), 'اسپانسرشیپ شرکتی بروزرسانی شد.');
+    }
+
+    public function corporateDestroy(CorporateSponsorship $corporate)
+    {
+        $corporate->delete();
+
+        return AdminApiResponse::okMessage('اسپانسرشیپ شرکتی حذف شد.');
     }
 
     public function corporateStatistics()

@@ -1054,6 +1054,31 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         Route::delete('/{coupon}', [\App\Http\Controllers\Admin\CouponController::class, 'apiDestroy']);
     });
 
+    // Commission Ledger API (G08)
+    Route::prefix('commissions')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\CommissionController::class, 'apiIndex']);
+        Route::get('/export', [\App\Http\Controllers\Admin\CommissionController::class, 'apiExport']);
+        Route::get('/statistics/data', [\App\Http\Controllers\Admin\CommissionController::class, 'apiStatistics']);
+        Route::post('/bulk-action', [\App\Http\Controllers\Admin\CommissionController::class, 'apiBulkAction']);
+        Route::get('/{commission}', [\App\Http\Controllers\Admin\CommissionController::class, 'apiShow']);
+        Route::post('/{commission}/approve', [\App\Http\Controllers\Admin\CommissionController::class, 'apiApprove']);
+        Route::post('/{commission}/reject', [\App\Http\Controllers\Admin\CommissionController::class, 'apiReject']);
+    });
+
+    // Referral Analytics Admin Alias (G08)
+    Route::prefix('referral-analytics')->group(function () {
+        Route::get('overview', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getOverview']);
+        Route::get('trends', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getTrends']);
+        Route::get('top-referrers', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getTopReferrers']);
+        Route::get('sources', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getSources']);
+        Route::get('performance-by-timeframe', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getPerformanceByTimeframe']);
+        Route::get('funnel-analysis', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getFunnelAnalysis']);
+        Route::get('geographic-distribution', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getGeographicDistribution']);
+        Route::get('revenue-analysis', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getRevenueAnalysis']);
+        Route::get('system-health', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getSystemHealth']);
+        Route::get('comprehensive-report', [\App\Http\Controllers\Api\ReferralAnalyticsController::class, 'getComprehensiveReport']);
+    });
+
     // Commission Payment API
     Route::prefix('commission-payments')->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\CommissionPaymentController::class, 'apiIndex']);
@@ -1304,6 +1329,20 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
             Route::get('/health', [\App\Http\Controllers\Admin\SystemAnalyticsController::class, 'apiHealth']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\SystemAnalyticsController::class, 'apiStatistics']);
             Route::get('/export', [\App\Http\Controllers\Admin\SystemAnalyticsController::class, 'apiExport']);
+        });
+
+        // Coin Analytics API (admin alias — delegates to Api\CoinAnalyticsController via shared service)
+        Route::prefix('coin-analytics')->group(function () {
+            Route::get('/overview', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getOverview']);
+            Route::get('/earning-sources', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getEarningSources']);
+            Route::get('/spending-patterns', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getSpendingPatterns']);
+            Route::get('/transaction-trends', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getTransactionTrends']);
+            Route::get('/user-distribution', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getUserDistribution']);
+            Route::get('/quiz-performance', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getQuizPerformance']);
+            Route::get('/referral-performance', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getReferralPerformance']);
+            Route::get('/top-earners', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getTopEarners']);
+            Route::get('/system-health', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getSystemHealth']);
+            Route::get('/comprehensive-report', [\App\Http\Controllers\Api\CoinAnalyticsController::class, 'getComprehensiveReport']);
         });
 
         // Quiz System API
@@ -1623,17 +1662,49 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'api.admin', 'api.contributo
         });
         Route::prefix('influencers')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersIndex']);
+            Route::post('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersStore']);
             Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersBulkAction']);
             Route::get('/{influencer}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersShow']);
+            Route::put('/{influencer}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersUpdate']);
+            Route::patch('/{influencer}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersUpdate']);
+            Route::delete('/{influencer}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'influencersDestroy']);
         });
         Route::prefix('corporate')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateIndex']);
+            Route::post('/', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateStore']);
             Route::get('/export', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateExport']);
             Route::get('/statistics/data', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateStatistics']);
             Route::post('/bulk-action', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateBulkAction']);
             Route::get('/{corporate}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateShow']);
+            Route::put('/{corporate}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateUpdate']);
+            Route::patch('/{corporate}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateUpdate']);
+            Route::delete('/{corporate}', [\App\Http\Controllers\Admin\PartnerProgramsApiController::class, 'corporateDestroy']);
+        });
+
+        // Character Admin API (G12)
+        Route::prefix('characters')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\CharacterAdminController::class, 'apiIndex']);
+            Route::post('/', [\App\Http\Controllers\Admin\CharacterAdminController::class, 'apiStore']);
+            Route::get('/stories', [\App\Http\Controllers\Admin\CharacterAdminController::class, 'apiStories']);
+            Route::get('/{character}', [\App\Http\Controllers\Admin\CharacterAdminController::class, 'apiShow']);
+            Route::put('/{character}', [\App\Http\Controllers\Admin\CharacterAdminController::class, 'apiUpdate']);
+            Route::patch('/{character}', [\App\Http\Controllers\Admin\CharacterAdminController::class, 'apiUpdate']);
+            Route::delete('/{character}', [\App\Http\Controllers\Admin\CharacterAdminController::class, 'apiDestroy']);
+        });
+
+        // Support tickets (G06)
+        Route::prefix('support-tickets')->group(function () {
+            Route::get('/',                   [\App\Http\Controllers\Admin\SupportTicketController::class, 'index']);
+            Route::post('/',                  [\App\Http\Controllers\Admin\SupportTicketController::class, 'store']);
+            Route::get('/statistics/data',    [\App\Http\Controllers\Admin\SupportTicketController::class, 'statistics']);
+            Route::post('/bulk-action',       [\App\Http\Controllers\Admin\SupportTicketController::class, 'bulkAction']);
+            Route::get('/{ticket}',           [\App\Http\Controllers\Admin\SupportTicketController::class, 'show']);
+            Route::post('/{ticket}/reply',    [\App\Http\Controllers\Admin\SupportTicketController::class, 'reply']);
+            Route::post('/{ticket}/close',    [\App\Http\Controllers\Admin\SupportTicketController::class, 'close']);
+            Route::put('/{ticket}',           [\App\Http\Controllers\Admin\SupportTicketController::class, 'update']);
+            Route::patch('/{ticket}',         [\App\Http\Controllers\Admin\SupportTicketController::class, 'update']);
         });
     });
 

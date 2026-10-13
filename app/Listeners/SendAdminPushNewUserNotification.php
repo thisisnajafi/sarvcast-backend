@@ -33,7 +33,7 @@ class SendAdminPushNewUserNotification implements ShouldQueue
             // Hold a long-lived marker so a second dispatch for the same user
             // cannot send again (do not release after send).
             $dedupeKey = "admin_push_new_user_{$user->id}";
-            if (! Cache::add($dedupeKey, true, now()->addMinutes(10))) {
+            if (! Cache::add($dedupeKey, true, now()->addDays(30))) {
                 Log::info('Skipping duplicate admin push new user notification', [
                     'user_id' => $user->id,
                 ]);

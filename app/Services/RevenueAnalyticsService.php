@@ -74,8 +74,8 @@ class RevenueAnalyticsService
             ->count();
 
         // Revenue by subscription type
-        $revenueByType = Payment::where('status', 'completed')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
+        $revenueByType = Payment::where('payments.status', 'completed')
+            ->whereBetween('payments.created_at', [$dateFrom, $dateTo])
             ->join('subscriptions', 'payments.subscription_id', '=', 'subscriptions.id')
             ->selectRaw('subscriptions.type, SUM(payments.amount) as revenue, COUNT(*) as count')
             ->groupBy('subscriptions.type')
@@ -134,13 +134,16 @@ class RevenueAnalyticsService
             ->groupBy('type')
             ->get();
 
-        // Subscription duration analysis
+        // Subscription duration analysis (DB-agnostic)
+        $durationRaw = DB::connection()->getDriverName() === 'sqlite'
+            ? 'AVG(julianday(end_date) - julianday(start_date)) as avg_duration'
+            : 'AVG(DATEDIFF(end_date, start_date)) as avg_duration';
         $avgSubscriptionDuration = Subscription::whereBetween('created_at', [$dateFrom, $dateTo])
             ->when($subscriptionType, function($q) use ($subscriptionType) {
                 $q->where('type', $subscriptionType);
             })
             ->whereNotNull('end_date')
-            ->selectRaw('AVG(DATEDIFF(end_date, start_date)) as avg_duration')
+            ->selectRaw($durationRaw)
             ->value('avg_duration');
 
         // Renewal rate
@@ -256,7 +259,10 @@ class RevenueAnalyticsService
             ->orderBy('date')
             ->get();
 
-        // Weekly revenue trends
+        // Weekly revenue trends (using DB-agnostic date truncation)
+        $weekRaw = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%W', created_at) as week"
+            : "YEARWEEK(created_at) as week";
         $weeklyRevenue = Payment::where('status', 'completed')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->when($subscriptionType, function($q) use ($subscriptionType) {
@@ -267,12 +273,15 @@ class RevenueAnalyticsService
             ->when($paymentMethod, function($q) use ($paymentMethod) {
                 $q->where('payment_method', $paymentMethod);
             })
-            ->selectRaw('YEARWEEK(created_at) as week, SUM(amount) as revenue, COUNT(*) as payments')
+            ->selectRaw("{$weekRaw}, SUM(amount) as revenue, COUNT(*) as payments")
             ->groupBy('week')
             ->orderBy('week')
             ->get();
 
-        // Monthly revenue trends
+        // Monthly revenue trends (DB-agnostic)
+        $monthRaw = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', created_at) as month"
+            : "DATE_FORMAT(created_at, '%Y-%m') as month";
         $monthlyRevenue = Payment::where('status', 'completed')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->when($subscriptionType, function($q) use ($subscriptionType) {
@@ -283,7 +292,7 @@ class RevenueAnalyticsService
             ->when($paymentMethod, function($q) use ($paymentMethod) {
                 $q->where('payment_method', $paymentMethod);
             })
-            ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(amount) as revenue, COUNT(*) as payments')
+            ->selectRaw("{$monthRaw}, SUM(amount) as revenue, COUNT(*) as payments")
             ->groupBy('month')
             ->orderBy('month')
             ->get();
@@ -452,10 +461,10 @@ class RevenueAnalyticsService
             ->get();
 
         // Revenue lost due to churn
-        $revenueLost = Subscription::whereBetween('end_date', [$dateFrom, $dateTo])
-            ->where('status', 'cancelled')
+        $revenueLost = Subscription::whereBetween('subscriptions.end_date', [$dateFrom, $dateTo])
+            ->where('subscriptions.status', 'cancelled')
             ->when($subscriptionType, function($q) use ($subscriptionType) {
-                $q->where('type', $subscriptionType);
+                $q->where('subscriptions.type', $subscriptionType);
             })
             ->join('payments', 'subscriptions.id', '=', 'payments.subscription_id')
             ->where('payments.status', 'completed')
@@ -538,8 +547,8 @@ class RevenueAnalyticsService
         $avgRefundAmount = $refundQuery->avg('amount');
 
         // Refunds by subscription type
-        $refundsByType = Payment::where('status', 'refunded')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
+        $refundsByType = Payment::where('payments.status', 'refunded')
+            ->whereBetween('payments.created_at', [$dateFrom, $dateTo])
             ->join('subscriptions', 'payments.subscription_id', '=', 'subscriptions.id')
             ->selectRaw('subscriptions.type, COUNT(*) as count, SUM(payments.amount) as amount')
             ->groupBy('subscriptions.type')
@@ -724,12 +733,15 @@ class RevenueAnalyticsService
     private function calculateCLV($dateFrom, $dateTo, $subscriptionType = null): float
     {
         $avgARPU = $this->calculateARPU($dateFrom, $dateTo, $subscriptionType);
+        $durationRaw = DB::connection()->getDriverName() === 'sqlite'
+            ? 'AVG(julianday(end_date) - julianday(start_date)) as avg_duration'
+            : 'AVG(DATEDIFF(end_date, start_date)) as avg_duration';
         $avgSubscriptionDuration = Subscription::whereBetween('created_at', [$dateFrom, $dateTo])
             ->when($subscriptionType, function($q) use ($subscriptionType) {
                 $q->where('type', $subscriptionType);
             })
             ->whereNotNull('end_date')
-            ->selectRaw('AVG(DATEDIFF(end_date, start_date)) as avg_duration')
+            ->selectRaw($durationRaw)
             ->value('avg_duration');
 
         $avgDurationMonths = $avgSubscriptionDuration ? $avgSubscriptionDuration / 30 : 1;
