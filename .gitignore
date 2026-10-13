@@ -15,6 +15,9 @@ deploy-upload/
 deploy-staging/
 .env.backup
 .env.production
+.env.verification
+/database/verification.sqlite
+/database/*.sqlite-journal
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

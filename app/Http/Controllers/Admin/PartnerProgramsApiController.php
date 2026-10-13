@@ -49,7 +49,10 @@ class PartnerProgramsApiController extends Controller
             'user_id' => 'required|exists:users,id|unique:teacher_accounts,user_id',
             'institution_name' => 'required|string|max:255',
             'institution_type' => 'nullable|string|max:64',
-            'status' => ['nullable', Rule::in(['pending', 'active', 'suspended'])],
+            'teaching_subject' => 'nullable|string|max:128',
+            'years_of_experience' => 'nullable|integer|min:0|max:80',
+            'student_count' => 'nullable|integer|min:0',
+            'status' => ['nullable', Rule::in(['pending', 'verified', 'active', 'suspended', 'expired'])],
         ]);
 
         if ($validator->fails()) {
@@ -61,7 +64,10 @@ class PartnerProgramsApiController extends Controller
         }
 
         $payload = $validator->validated();
-        $payload['status'] = $payload['status'] ?? 'pending';
+        $payload['status'] = $this->normalizeTeacherStatus($payload['status'] ?? 'pending');
+        $payload['institution_type'] = $payload['institution_type'] ?? 'school';
+        $payload['teaching_subject'] = $payload['teaching_subject'] ?? 'general';
+        $payload['years_of_experience'] = $payload['years_of_experience'] ?? 0;
 
         $teacher = TeacherAccount::create($payload);
 
@@ -74,8 +80,9 @@ class PartnerProgramsApiController extends Controller
             'institution_name' => 'sometimes|required|string|max:255',
             'institution_type' => 'nullable|string|max:64',
             'teaching_subject' => 'nullable|string|max:128',
+            'years_of_experience' => 'nullable|integer|min:0|max:80',
             'student_count' => 'nullable|integer|min:0',
-            'status' => ['nullable', Rule::in(['pending', 'active', 'suspended'])],
+            'status' => ['nullable', Rule::in(['pending', 'verified', 'active', 'suspended', 'expired'])],
         ]);
 
         if ($validator->fails()) {
@@ -86,7 +93,12 @@ class PartnerProgramsApiController extends Controller
             ], 422);
         }
 
-        $teacher->update($validator->validated());
+        $payload = $validator->validated();
+        if (array_key_exists('status', $payload)) {
+            $payload['status'] = $this->normalizeTeacherStatus($payload['status']);
+        }
+
+        $teacher->update($payload);
 
         return AdminApiResponse::success($teacher->fresh()->load('user'), 'حساب معلم بروزرسانی شد.');
     }
@@ -112,9 +124,9 @@ class PartnerProgramsApiController extends Controller
     public function teachersBulkAction(Request $request)
     {
         return $this->runBulk($request, 'teacher_ids', TeacherAccount::class, [
-            'verify' => fn ($q) => $q->update(['is_verified' => true, 'verified_at' => now(), 'status' => 'active']),
+            'verify' => fn ($q) => $q->update(['is_verified' => true, 'verified_at' => now(), 'status' => 'verified']),
             'suspend' => fn ($q) => $q->update(['status' => 'suspended']),
-            'activate' => fn ($q) => $q->update(['status' => 'active']),
+            'activate' => fn ($q) => $q->update(['status' => 'verified']),
             'delete' => fn ($q) => $q->delete(),
         ]);
     }
@@ -537,5 +549,18 @@ class PartnerProgramsApiController extends Controller
                 'error' => 'SERVER_ERROR',
             ], 500);
         }
+    }
+
+    /**
+     * teacher_accounts.status enum is pending|verified|suspended|expired.
+     * Accept "active" from the dashboard as an alias for "verified".
+     */
+    private function normalizeTeacherStatus(?string $status): string
+    {
+        if ($status === 'active') {
+            return 'verified';
+        }
+
+        return $status ?: 'pending';
     }
 }

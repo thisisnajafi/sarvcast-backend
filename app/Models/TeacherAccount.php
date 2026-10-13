@@ -231,27 +231,38 @@ class TeacherAccount extends Model
      */
     public function generateCouponCode(): string
     {
-        if (!$this->coupon_code) {
-            $prefix = 'TCH';
-            $teacherId = str_pad($this->id, 4, '0', STR_PAD_LEFT);
-            $random = strtoupper(substr(md5(uniqid()), 0, 3));
-            
-            $this->coupon_code = $prefix . $teacherId . $random;
-            $this->save();
+        $existing = $this->attributes['coupon_code'] ?? null;
+        if ($existing) {
+            return $existing;
         }
-        
-        return $this->coupon_code;
+
+        $prefix = 'TCH';
+        $teacherId = str_pad((string) ($this->id ?? 0), 4, '0', STR_PAD_LEFT);
+        $random = strtoupper(substr(md5(uniqid('', true)), 0, 3));
+        $code = $prefix.$teacherId.$random;
+
+        $this->attributes['coupon_code'] = $code;
+        if ($this->exists) {
+            $this->saveQuietly();
+        }
+
+        return $code;
     }
 
     /**
-     * Get the coupon code (generate if not exists)
+     * Get the coupon code (generate if not exists). Uses raw attributes to avoid recursion.
      */
-    public function getCouponCodeAttribute($value): string
+    public function getCouponCodeAttribute($value): ?string
     {
-        if (!$value) {
-            return $this->generateCouponCode();
+        if ($value) {
+            return $value;
         }
-        return $value;
+
+        if (! $this->exists) {
+            return null;
+        }
+
+        return $this->generateCouponCode();
     }
 
     /**
