@@ -200,6 +200,7 @@ Route::prefix('v1')->middleware('security')->group(function () {
 Route::prefix('admin/v1/auth')->middleware(['security', 'admin.origin'])->group(function () {
     // Public admin auth endpoints (rate-limited)
     Route::middleware('throttle:20,1')->group(function () {
+        Route::post('captcha', [AuthController::class, 'issueAdminCaptcha']);
         Route::post('send-otp', [AuthController::class, 'sendAdminOtp']);
         Route::post('login', [AuthController::class, 'adminLogin']);
     });

@@ -51,4 +51,19 @@ abstract class TestCase extends BaseTestCase
             return new SmsService();
         });
     }
+
+    /**
+     * Mint a captcha without the HTTP rate limiter. The answer is not returned by the API.
+     *
+     * @return array{captcha_token: string, captcha_answer: string}
+     */
+    protected function adminCaptchaPayload(): array
+    {
+        $challenge = app(\App\Services\AdminLoginCaptchaService::class)->createChallenge();
+
+        return [
+            'captcha_token' => $challenge['token'],
+            'captcha_answer' => $challenge['answer'],
+        ];
+    }
 }

@@ -348,7 +348,10 @@ class ImageAssistantAccessApiTest extends TestCase
 
         $assistant = User::factory()->imageAssistant()->create(['phone_number' => '09124444444']);
 
-        $this->postJson('/api/admin/v1/auth/send-otp', ['phone_number' => $assistant->phone_number])
+        $this->postJson('/api/admin/v1/auth/send-otp', array_merge(
+            ['phone_number' => $assistant->phone_number],
+            $this->adminCaptchaPayload(),
+        ))
             ->assertOk()
             ->assertJsonPath('success', true);
     }

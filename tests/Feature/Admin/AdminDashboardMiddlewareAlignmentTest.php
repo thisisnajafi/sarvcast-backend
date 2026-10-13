@@ -9,6 +9,12 @@ class AdminDashboardMiddlewareAlignmentTest extends TestCase
 {
     public function test_admin_v1_auth_and_dashboard_routes_enforce_expected_security_middleware(): void
     {
+        $this->assertRouteHasMiddleware('POST', '/api/admin/v1/auth/captcha', [
+            'security',
+            'admin.origin',
+            'throttle:20,1',
+        ]);
+
         $this->assertRouteHasMiddleware('POST', '/api/admin/v1/auth/send-otp', [
             'security',
             'admin.origin',

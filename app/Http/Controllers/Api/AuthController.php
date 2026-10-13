@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\AdminLoginCaptchaService;
+use App\Services\ContributorStoryAccessService;
+use App\Services\SchoolManagerService;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -149,12 +152,26 @@ class AuthController extends Controller
     }
 
     /**
-     * Whether an admin user may request OTP / log in.
-     * Only super_admin, admin, voice_actor, writer, and head_writer (not parent/child/basic).
+     * Staff roles and accounts that hold panel permissions (including school_manager).
+     * A plain parent, child, or basic user with neither is rejected.
      */
     private function adminMayLogin(User $user): bool
     {
         return $user->mayAccessAdminPanel();
+    }
+
+    /**
+     * Exact phone match. Role is not filtered here; panel access is decided after
+     * a school-manager assignment on the same account is repaired.
+     */
+    private function findAdminPanelUser(string $phoneNumber): ?User
+    {
+        $user = User::query()->where('phone_number', $phoneNumber)->first();
+        if (! $user) {
+            return null;
+        }
+
+        return app(SchoolManagerService::class)->repairLoginAssignment($user);
     }
 
     /**
@@ -246,12 +263,52 @@ class AuthController extends Controller
     }
 
     /**
-     * Send OTP code to admin phone number (API)
+     * Image or math captcha issued before any admin OTP SMS.
      */
-    public function sendAdminOtp(Request $request)
+    public function issueAdminCaptcha(Request $request, AdminLoginCaptchaService $captcha)
     {
         $validator = Validator::make($request->all(), [
             'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شماره موبایل نامعتبر است',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $issued = $captcha->issue((string) $request->ip(), (string) $request->phone_number);
+        if ($issued['limited'] ?? false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً کمی صبر کنید.',
+            ], 429);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کد امنیتی ساخته شد.',
+            'data' => [
+                'captcha_token' => $issued['token'],
+                'image' => $issued['image'],
+                'question' => $issued['question'],
+                'prompt' => $issued['prompt'],
+                'expires_in' => $issued['expires_in'],
+            ],
+        ]);
+    }
+
+    /**
+     * Send OTP code to admin phone number (API)
+     */
+    public function sendAdminOtp(Request $request, AdminLoginCaptchaService $captcha)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/',
+            'captcha_token' => 'required|string|max:80',
+            'captcha_answer' => 'required|string|max:8',
         ]);
 
         if ($validator->fails()) {
@@ -264,7 +321,26 @@ class AuthController extends Controller
 
         $phoneNumber = $request->phone_number;
 
-        $user = User::where('phone_number', $phoneNumber)->first();
+        if ($captcha->tooManyAttempts((string) $request->ip(), $phoneNumber)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً کمی صبر کنید.',
+            ], 429);
+        }
+
+        $captcha->hit((string) $request->ip(), $phoneNumber);
+
+        if (! $captcha->consume((string) $request->input('captcha_token'), (string) $request->input('captcha_answer'))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'کد امنیتی نادرست یا منقضی شده است.',
+                'errors' => [
+                    'captcha_answer' => ['کد امنیتی نادرست یا منقضی شده است.'],
+                ],
+            ], 422);
+        }
+
+        $user = $this->findAdminPanelUser($phoneNumber);
 
         if (! $user || ! $this->adminMayLogin($user)) {
             return response()->json([
@@ -321,7 +397,7 @@ class AuthController extends Controller
         $phoneNumber = $request->phone_number;
         $verificationCode = $request->verification_code;
 
-        $user = User::where('phone_number', $phoneNumber)->first();
+        $user = $this->findAdminPanelUser($phoneNumber);
 
         if (! $user || ! $this->adminMayLogin($user)) {
             $this->activityLog->recordSecurityEvent(
@@ -396,6 +472,7 @@ class AuthController extends Controller
                 'token' => $token,
                 'two_factor_required' => $twoFactorRequired,
                 'two_factor_code_sent' => $twoFactorCodeSent,
+                'redirect_to' => app(ContributorStoryAccessService::class)->adminLandingPath($user),
             ]
         ]);
     }
@@ -406,7 +483,7 @@ class AuthController extends Controller
     public function sendAdminTwoFactorCode(Request $request)
     {
         $user = $request->user();
-        if (!$user || !in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true)) {
+        if (! $user instanceof User || ! $user->mayAccessAdminPanel()) {
             return response()->json([
                 'success' => false,
                 'message' => 'دسترسی غیرمجاز'
@@ -458,7 +535,7 @@ class AuthController extends Controller
         ]);
 
         $user = $request->user();
-        if (!$user || !in_array($user->role, [User::ROLE_ADMIN, User::ROLE_SUPER_ADMIN], true)) {
+        if (! $user instanceof User || ! $user->mayAccessAdminPanel()) {
             return response()->json([
                 'success' => false,
                 'message' => 'دسترسی غیرمجاز'

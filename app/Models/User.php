@@ -68,7 +68,7 @@ class User extends Authenticatable
 
     /**
      * Admin panel login/API access (includes profile onboarding state).
-     * Staff: admin, super_admin, voice_actor, writer, head_writer, image_assistant, school_manager (not parent/child/basic).
+     * Staff roles, plus a parent or basic account that holds panel permissions.
      */
     public function mayAccessAdminPanel(): bool
     {

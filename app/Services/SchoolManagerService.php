@@ -9,7 +9,10 @@ use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
 use App\Models\SchoolPremiumWindow;
 use App\Models\Subscription;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
+use App\Support\SchoolAccessCatalog;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +86,109 @@ class SchoolManagerService
                 ...$attributes,
             ])->load('user');
         });
+    }
+
+    /**
+     * A parent or basic user who was given the school-manager role or panel
+     * permissions from the user form becomes a real school manager. The same
+     * phone stays on the same account so the app login still works.
+     *
+     * A closed panel is not reopened here. That stays on the school-managers screen.
+     */
+    public function repairLoginAssignment(User $user): User
+    {
+        if ($user->role === User::ROLE_SCHOOL_MANAGER) {
+            $this->ensureActiveProfile($user, null, false);
+
+            return $user->fresh() ?? $user;
+        }
+
+        if (! in_array($user->role, [User::ROLE_PARENT, User::ROLE_BASIC], true)) {
+            return $user;
+        }
+
+        $profile = $user->schoolManagerProfile;
+        if ($profile && $profile->status === SchoolManagerProfile::STATUS_DELETED) {
+            return $user;
+        }
+
+        if (! $this->hasPostedOrStoredSchoolAssignment($user, [], [])) {
+            return $user;
+        }
+
+        $user->applyLegacyRoleChange(User::ROLE_SCHOOL_MANAGER);
+        $this->ensureActiveProfile($user, null, false);
+
+        return $user->fresh() ?? $user;
+    }
+
+    /**
+     * @param  list<int>  $roleIds
+     * @param  list<int>  $permissionIds
+     */
+    public function assignFromUserForm(User $user, ?User $actor, array $roleIds, array $permissionIds): void
+    {
+        $promoting = $user->role !== User::ROLE_SCHOOL_MANAGER
+            && in_array($user->role, User::promotableSchoolManagerRoles(), true)
+            && $this->hasPostedOrStoredSchoolAssignment($user, $roleIds, $permissionIds);
+
+        if ($promoting && $actor instanceof User && $actor->isSuperAdmin()) {
+            $user->applyLegacyRoleChange(User::ROLE_SCHOOL_MANAGER);
+        }
+
+        if ($user->fresh()?->role === User::ROLE_SCHOOL_MANAGER) {
+            $this->ensureActiveProfile($user, $actor, true);
+        }
+    }
+
+    public function ensureActiveProfile(User $user, ?User $actor, bool $reopenDeleted = false): SchoolManagerProfile
+    {
+        $profile = SchoolManagerProfile::query()->where('user_id', $user->id)->first();
+        if (! $profile) {
+            return SchoolManagerProfile::query()->create([
+                'user_id' => $user->id,
+                'member_limit' => 0,
+                'status' => SchoolManagerProfile::STATUS_ACTIVE,
+                'created_by' => $actor?->id,
+            ]);
+        }
+
+        if ($reopenDeleted && $profile->status === SchoolManagerProfile::STATUS_DELETED) {
+            $profile->update(['status' => SchoolManagerProfile::STATUS_ACTIVE]);
+        }
+
+        return $profile->fresh() ?? $profile;
+    }
+
+    /**
+     * @param  list<int>  $roleIds
+     * @param  list<int>  $permissionIds
+     */
+    public function hasPostedOrStoredSchoolAssignment(User $user, array $roleIds, array $permissionIds): bool
+    {
+        $schoolRoleId = Role::query()->where('name', User::ROLE_SCHOOL_MANAGER)->value('id');
+        if ($schoolRoleId && in_array((int) $schoolRoleId, $roleIds, true)) {
+            return true;
+        }
+
+        $panelIds = Permission::query()
+            ->whereIn('name', SchoolAccessCatalog::panelPermissionNames())
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
+
+        if ($permissionIds !== [] && array_intersect($permissionIds, $panelIds) !== []) {
+            return true;
+        }
+
+        if ($user->roles()->where('name', User::ROLE_SCHOOL_MANAGER)->exists()) {
+            return true;
+        }
+
+        $names = SchoolAccessCatalog::panelPermissionNames();
+
+        return $user->directPermissions()->whereIn('name', $names)->exists()
+            || $user->permissions()->whereIn('name', $names)->exists();
     }
 
     public function updateProfile(SchoolManagerProfile $profile, array $input): SchoolManagerProfile

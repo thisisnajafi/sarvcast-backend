@@ -14,6 +14,7 @@ use App\Models\Rating;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Services\InAppNotificationService;
+use App\Services\SchoolManagerService;
 use App\Services\UserDeletionService;
 use App\Services\UserStoryContributionService;
 use Carbon\Carbon;
@@ -944,6 +945,24 @@ class UserController extends Controller
         unset($data['role']);
 
         $actor = $request->user() ?? auth('sanctum')->user();
+        $roleIds = array_map('intval', (array) $request->input('role_ids', []));
+        $permissionIds = array_map('intval', (array) $request->input('direct_permission_ids', []));
+        $schoolManagers = app(SchoolManagerService::class);
+        $postedSchoolManager = $newRole !== User::ROLE_SCHOOL_MANAGER
+            && in_array($previousRole, User::promotableSchoolManagerRoles(), true)
+            && $schoolManagers->hasPostedOrStoredSchoolAssignment(
+                $user,
+                $request->has('role_ids') ? $roleIds : [],
+                $request->has('direct_permission_ids') ? $permissionIds : [],
+            );
+        if ($postedSchoolManager && (! $actor instanceof User || ! $actor->isSuperAdmin())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فقط مدیر کل می‌تواند نقش مدیر مدرسه را اختصاص دهد.',
+                'error' => 'FORBIDDEN',
+            ], 422);
+        }
+
         if ($newRole !== $previousRole) {
             $block = $this->resolveAppRoleAssignmentBlock(
                 $actor instanceof User ? $actor : null,
@@ -963,16 +982,30 @@ class UserController extends Controller
 
         if ($newRole !== $previousRole) {
             $user->applyLegacyRoleChange($newRole);
+            $user->refresh();
         }
 
         if ($request->has('role_ids')) {
-            $user->syncRoles($user->mergeStaffRoleIdsForLegacyRole($request->input('role_ids', [])));
+            $user->syncRoles($user->mergeStaffRoleIdsForLegacyRole($roleIds));
             $user->update2FARequirement();
+            $user->refresh();
         }
 
         if ($request->has('direct_permission_ids')) {
-            $user->directPermissions()->sync($request->input('direct_permission_ids', []));
+            $user->directPermissions()->sync($permissionIds);
+            $user->refresh();
         }
+
+        // The edit form used to leave users.role as parent and then drop the
+        // school_manager pivot, because mergeStaffRoleIds treats every staff
+        // role as foreign while the account is still a consumer role.
+        $schoolManagers->assignFromUserForm(
+            $user,
+            $actor instanceof User ? $actor : null,
+            $request->has('role_ids') ? $roleIds : [],
+            $request->has('direct_permission_ids') ? $permissionIds : [],
+        );
+        $user->refresh();
 
         $user->load(['profiles', 'activeSubscription', 'roles.permissions', 'directPermissions']);
 
@@ -1288,6 +1321,9 @@ class UserController extends Controller
 
             case 'change_role':
                 $target->applyLegacyRoleChange((string) $request->role);
+                if ((string) $request->role === User::ROLE_SCHOOL_MANAGER) {
+                    app(SchoolManagerService::class)->ensureActiveProfile($target, $actor, true);
+                }
                 break;
 
             case 'send_notification':
@@ -1359,6 +1395,10 @@ class UserController extends Controller
 
         if ($newRole === User::ROLE_HEAD_WRITER && ! $actor->isAdmin()) {
             return 'فقط مدیر می‌تواند نقش سرپرست نویسندگان را اختصاص دهد.';
+        }
+
+        if ($newRole === User::ROLE_SCHOOL_MANAGER && ! $actor->isSuperAdmin()) {
+            return 'فقط مدیر کل می‌تواند نقش مدیر مدرسه را اختصاص دهد.';
         }
 
         return null;

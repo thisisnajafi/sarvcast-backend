@@ -84,7 +84,7 @@ class ContributorStoryAccessService
             return false;
         }
 
-        // Admin OTP / panel login: staff roles only (not parent/child/basic).
+        // Staff roles, or a consumer account that was given panel permissions.
         return $this->isFullAdmin($user)
             || $this->isHeadWriter($user)
             || $this->isWriterStaff($user)
@@ -93,7 +93,36 @@ class ContributorStoryAccessService
             || $user->role === User::ROLE_IMAGE_ASSISTANT
             || $user->isImageAssistant()
             || $user->isSchoolManager()
+            || $this->hasSchoolPanelGrant($user)
             || $this->hasImageAssistantAssignments($user);
+    }
+
+    /**
+     * Where the dashboard should send the user after admin login.
+     */
+    public function adminLandingPath(User $user): string
+    {
+        if ($user->isSchoolManager() || $this->hasSchoolPanelGrant($user)) {
+            return '/school-panel';
+        }
+
+        return '/dashboard';
+    }
+
+    /**
+     * School-panel permissions on a non-admin account (direct or via a role).
+     * Full admins are excluded so super_admin does not land on the school panel.
+     */
+    public function hasSchoolPanelGrant(User $user): bool
+    {
+        if ($this->isFullAdmin($user) || $user->isSchoolManager()) {
+            return false;
+        }
+
+        $names = SchoolAccessCatalog::panelPermissionNames();
+
+        return $user->directPermissions()->whereIn('name', $names)->exists()
+            || $user->permissions()->whereIn('name', $names)->exists();
     }
 
     /**
@@ -603,7 +632,7 @@ class ContributorStoryAccessService
      */
     public function accessPayload(User $user): array
     {
-        if ($user->isSchoolManager()) {
+        if ($user->isSchoolManager() || $this->hasSchoolPanelGrant($user)) {
             return $this->schoolManagerAccessPayload();
         }
 
@@ -683,7 +712,7 @@ class ContributorStoryAccessService
             return [];
         }
 
-        if ($user->isSchoolManager()) {
+        if ($user->isSchoolManager() || $this->hasSchoolPanelGrant($user)) {
             return SchoolAccessCatalog::panelPermissionNames();
         }
 

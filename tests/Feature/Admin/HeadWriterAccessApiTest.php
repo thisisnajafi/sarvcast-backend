@@ -309,15 +309,24 @@ class HeadWriterAccessApiTest extends TestCase
             'phone_number' => '09123333333',
         ]);
 
-        $this->postJson('/api/admin/v1/auth/send-otp', ['phone_number' => $head->phone_number])
+        $this->postJson('/api/admin/v1/auth/send-otp', array_merge(
+            ['phone_number' => $head->phone_number],
+            $this->adminCaptchaPayload(),
+        ))
             ->assertOk()
             ->assertJsonPath('success', true);
 
-        $this->postJson('/api/admin/v1/auth/send-otp', ['phone_number' => $writer->phone_number])
+        $this->postJson('/api/admin/v1/auth/send-otp', array_merge(
+            ['phone_number' => $writer->phone_number],
+            $this->adminCaptchaPayload(),
+        ))
             ->assertOk()
             ->assertJsonPath('success', true);
 
-        $this->postJson('/api/admin/v1/auth/send-otp', ['phone_number' => $parent->phone_number])
+        $this->postJson('/api/admin/v1/auth/send-otp', array_merge(
+            ['phone_number' => $parent->phone_number],
+            $this->adminCaptchaPayload(),
+        ))
             ->assertNotFound();
     }
 

@@ -17,7 +17,7 @@ class UserRole extends Pivot
             $role = Role::find($userRole->role_id);
             $user = User::find($userRole->user_id);
             
-            if ($role && $user && in_array($role->name, ['admin', 'super_admin'])) {
+            if ($role && $user && in_array($role->name, ['admin', 'super_admin', 'school_manager'], true)) {
                 $user->update(['requires_2fa' => true]);
             }
         });
@@ -28,8 +28,8 @@ class UserRole extends Pivot
             
             if ($user) {
                 // Check if user still has any admin roles
-                $hasAdminRole = $user->hasAnyRole(['admin', 'super_admin']) || 
-                               in_array($user->role, ['admin', 'super_admin']);
+                $hasAdminRole = $user->hasAnyRole(['admin', 'super_admin', 'school_manager']) ||
+                               in_array($user->role, ['admin', 'super_admin', 'school_manager'], true);
                 
                 if (!$hasAdminRole) {
                     $user->update(['requires_2fa' => false]);
