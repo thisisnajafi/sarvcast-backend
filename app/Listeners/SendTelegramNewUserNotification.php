@@ -37,9 +37,10 @@ class SendTelegramNewUserNotification implements ShouldQueue
                 'user_role' => $user->role
             ]);
 
-            // Use cache marker to prevent duplicate notifications (do not release after send)
+            // Hold a long-lived marker so a second dispatch for the same user
+            // cannot send again (do not release after send). Match admin push TTL.
             $dedupeKey = "telegram_new_user_{$user->id}";
-            if (! \Cache::add($dedupeKey, true, now()->addMinutes(10))) {
+            if (! \Cache::add($dedupeKey, true, now()->addDays(30))) {
                 Log::info('Skipping Telegram new user notification - already sent', [
                     'user_id' => $user->id,
                 ]);

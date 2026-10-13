@@ -21,9 +21,12 @@ use App\Listeners\SendWelcomeInAppNotification;
 use App\Models\Notification;
 use App\Models\User;
 use App\Providers\EventServiceProvider;
+use App\Services\TelegramNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Mockery;
 use Tests\TestCase;
 
 /**
@@ -150,6 +153,34 @@ class TelegramListenersWiredTest extends TestCase
             ->count();
 
         $this->assertSame(1, $welcomeCount);
+    }
+
+    public function test_telegram_new_user_dedupe_survives_beyond_10_minutes(): void
+    {
+        $user = User::withoutEvents(fn () => User::factory()->create([
+            'status' => 'active',
+            'role' => 'user',
+        ]));
+        Cache::flush();
+
+        $svc = Mockery::mock(TelegramNotificationService::class);
+        $svc->shouldReceive('sendNewUserNotification')
+            ->once()
+            ->with(Mockery::type(User::class))
+            ->andReturn(true);
+
+        $listener = new SendTelegramNewUserNotification($svc);
+        $event = new NewUserRegistrationEvent($user);
+
+        $listener->handle($event);
+        $listener->handle($event); // second dispatch skipped
+
+        $this->travel(11)->minutes();
+
+        $this->assertTrue(
+            Cache::has("telegram_new_user_{$user->id}"),
+            'Telegram dedupe key must survive beyond 10 minutes (TTL is 30 days)'
+        );
     }
 }
 
