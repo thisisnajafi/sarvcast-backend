@@ -11,6 +11,13 @@ return [
     |
     */
 
+    /*
+    | The log/fake driver records the send and does not call a provider.
+    | PHPUnit sets SMS_DRIVER=log. AppServiceProvider also forces log
+    | whenever the application environment is testing.
+    */
+    'driver' => env('SMS_DRIVER', 'melipayamak'),
+
     'default_provider' => env('SMS_DEFAULT_PROVIDER', 'kavenegar'),
 
     'providers' => [

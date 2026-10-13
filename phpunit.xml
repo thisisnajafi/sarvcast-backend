@@ -36,5 +36,21 @@
         <env name="NOTIFICATION_RATE_LIMITING_ENABLED" value="false"/>
         <env name="ZARINPAL_SANDBOX" value="true"/>
         <env name="PAYIR_SANDBOX" value="true"/>
+        <env name="SMS_DRIVER" value="log"/>
+        <env name="MELIPAYAMAK_USERNAME" value=""/>
+        <env name="MELIPAYAMAK_PASSWORD" value=""/>
+        <env name="MELIPAYAMK_TOKEN" value=""/>
+        <env name="MELIPAYAMK_SENDER" value=""/>
+        <env name="SMS_MELIPAYAMAK_ENABLED" value="false"/>
+        <env name="SMS_MELIPAYAMAK_USERNAME" value=""/>
+        <env name="SMS_MELIPAYAMAK_PASSWORD" value=""/>
+        <env name="SMS_MELIPAYAMAK_SENDER" value=""/>
+        <env name="SMS_API_KEY" value=""/>
+        <env name="SMS_KAVENEGAR_API_KEY" value=""/>
+        <env name="SMS_SMSIR_API_KEY" value=""/>
+        <env name="FIREBASE_SERVER_KEY" value=""/>
+        <env name="CAFEBAZAAR_API_KEY" value=""/>
+        <env name="MYKET_API_KEY" value=""/>
+        <env name="MYKET_PARTNER_TOKEN" value=""/>
     </php>
 </phpunit>

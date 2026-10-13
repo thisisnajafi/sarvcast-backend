@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 
 class FirebaseAuthService
@@ -45,6 +46,12 @@ class FirebaseAuthService
     protected function generateAccessToken(): ?string
     {
         try {
+            if (app()->environment('testing') && ! config('notification.push.enabled', true)) {
+                return null;
+            }
+
+            TestingHttpGuard::assertFaked('Firebase access token');
+
             $serviceAccountPath = $this->resolveServiceAccountPath(config('notification.firebase.service_account_path'));
 
             if (!$serviceAccountPath || !file_exists($serviceAccountPath)) {

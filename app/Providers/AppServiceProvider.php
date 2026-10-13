@@ -43,6 +43,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->environment('testing')) {
+            config([
+                'sms.driver' => 'log',
+                'melipayamak.username' => '',
+                'melipayamak.password' => '',
+                'services.melipayamk.token' => '',
+                'services.melipayamk.sender' => '',
+                'notification.sms.api_key' => '',
+                'notification.firebase.server_key' => '',
+                'notification.push.enabled' => false,
+                'mail.default' => 'array',
+                'services.zarinpal.sandbox' => true,
+            ]);
+        }
+
         if ($this->app->environment('production')) {
             $appUrl = config('app.url');
             if (is_string($appUrl) && $appUrl !== '') {

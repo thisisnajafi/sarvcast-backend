@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Events\SalesNotificationEvent;
+use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -66,6 +67,7 @@ class PaymentService
                 ]
             ]);
 
+            TestingHttpGuard::assertFaked('Zarinpal payment request');
             $response = Http::post($apiUrl, $data);
 
             // Log response details for debugging
@@ -242,6 +244,7 @@ class PaymentService
                 'api_url' => $apiUrl
             ]);
 
+            TestingHttpGuard::assertFaked('Zarinpal payment verify');
             $response = Http::post($apiUrl, $data);
 
             if ($response->successful()) {
@@ -642,6 +645,7 @@ class PaymentService
                 ? 'https://sandbox.zarinpal.com/pg/v4/payment/request.json'
                 : 'https://api.zarinpal.com/pg/v4/payment/request.json';
 
+            TestingHttpGuard::assertFaked('Zarinpal connectivity check');
             $testResponse = Http::timeout(10)->get($testUrl);
 
             return [

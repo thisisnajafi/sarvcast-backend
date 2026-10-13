@@ -5,9 +5,9 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Melipayamak\MelipayamakApi;
 use App\Models\SmsLog;
 use App\Models\SmsTemplate;
+use App\Support\TestingHttpGuard;
 
 class SmsService
 {
@@ -29,6 +29,57 @@ class SmsService
         if (empty($this->apiToken) || empty($this->username)) {
             throw new \RuntimeException('Melipayamak credentials are not configured. Please set MELIPAYAMAK_USERNAME and MELIPAYAMAK_PASSWORD in your .env file.');
         }
+    }
+
+    /**
+     * Testing defaults to the log driver. A test opts into the HTTP client
+     * by setting sms.driver to melipayamak and stubbing Http::fake().
+     */
+    private function usesLogDriver(): bool
+    {
+        $driver = (string) config('sms.driver', 'melipayamak');
+
+        if (app()->environment('testing')) {
+            return $driver !== 'melipayamak';
+        }
+
+        return in_array($driver, ['log', 'fake', 'array'], true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     * @return array<string, mixed>
+     */
+    private function logDriverResult(string $method, array $response = []): array
+    {
+        Log::info('SMS suppressed by log driver', [
+            'method' => $method,
+            'driver' => (string) config('sms.driver', 'log'),
+        ]);
+
+        return [
+            'success' => true,
+            'response' => array_merge([
+                'RetStatus' => 0,
+                'StrRetStatus' => 'FAKE',
+                'Value' => 'log-driver',
+            ], $response),
+            'message_id' => 'log-driver',
+            'method' => $method,
+            'error' => null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logProviderExchange(string $message, array $context): void
+    {
+        if (app()->environment('testing')) {
+            return;
+        }
+
+        Log::info($message, $context);
     }
 
     /**
@@ -84,6 +135,10 @@ class SmsService
     public function sendSms(string $to, string $message): array
     {
         try {
+            if ($this->usesLogDriver()) {
+                return $this->logDriverResult('log', ['text' => $message]);
+            }
+
             $this->ensureCredentials();
             // Use Melipayamak library exactly as documented
             $username = $this->username;
@@ -115,8 +170,7 @@ class SmsService
             ]);
             $json = json_decode($response);
 
-            // Log the response
-            Log::info('SMS sent via Melipayamk', [
+            $this->logProviderExchange('SMS sent via Melipayamk', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $this->redactSendingData($sendingData),
                 'response' => $json,
@@ -170,6 +224,16 @@ class SmsService
      */
     public function sendSmsWithTemplate(string $to, int $templateId, array $parameters = [], array $logContext = []): array
     {
+        if ($this->usesLogDriver()) {
+            return $this->finalizeTemplateResult(
+                $to,
+                $templateId,
+                $parameters,
+                $this->logDriverResult('log'),
+                $logContext
+            );
+        }
+
         $this->ensureCredentials();
 
         // Use procedural PHP method as primary (it works!)
@@ -188,13 +252,10 @@ class SmsService
             ]);
         }
 
-        // Fallback to GitHub package method if procedural fails
+        // Fallback uses the same guarded HTTP client. The Melipayamak package opens its own cURL handle.
         try {
-            // Use Melipayamak library with REST method
             $username = $this->username;
             $password = $this->apiToken;
-            $api = new MelipayamakApi($username, $password);
-            $sms = $api->sms('rest');
 
             $from = config('services.melipayamk.sender');
 
@@ -213,14 +274,12 @@ class SmsService
                 'isFlash' => false
             ];
 
-            // Send SMS with template exactly as documented
-            // Parameters: text (semicolon-separated string), to (phone), bodyId (pattern code)
+            // Same endpoint as the procedural client, through the HTTP guard (no package cURL).
             $text = implode(';', $parameters);
-            $response = $sms->sendByBaseNumber($text, $to, $templateId);
+            $response = $this->sendByBaseNumber($text, $to, $templateId);
             $json = json_decode($response);
 
-            // Log the response
-            Log::info('SMS sent via Melipayamk with template (GitHub package fallback)', [
+            $this->logProviderExchange('SMS sent via Melipayamk with template (GitHub package fallback)', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $this->redactSendingData($sendingData),
                 'response' => $json,
@@ -334,13 +393,19 @@ class SmsService
      */
     public function sendOtp(string $phoneNumber, string $purpose = 'verification'): array
     {
-        $this->ensureCredentials();
-
         $otpCode = $this->generateOtpCode();
 
         // Store OTP in cache for 5 minutes
         $cacheKey = "otp_{$phoneNumber}_{$purpose}";
         Cache::put($cacheKey, $otpCode, 300); // 5 minutes
+
+        if ($this->usesLogDriver()) {
+            $this->storeOtpAttempt($phoneNumber, $otpCode, $purpose);
+
+            return $this->logDriverResult('log');
+        }
+
+        $this->ensureCredentials();
 
         // Try template SMS first (pattern 485459)
         $templateResult = $this->sendOtpWithTemplate($phoneNumber, $otpCode, $purpose);
@@ -393,13 +458,10 @@ class SmsService
             ]);
         }
 
-        // Fallback to GitHub package method if procedural fails
+        // Fallback uses the guarded HTTP client. The package client would cURL past Http::fake().
         try {
-            // Use Melipayamak library for template SMS (REST method)
             $username = $this->username;
             $password = $this->apiToken;
-            $api = new MelipayamakApi($username, $password);
-            $sms = $api->sms('rest');
 
             // Prepare sending data for logging
             $sendingData = [
@@ -411,14 +473,11 @@ class SmsService
                 'template_message' => "کد ورود شما: {$otpCode} این کد 5 دقیقه اعتبار دارد مانجی"
             ];
 
-            // Send SMS with template pattern 485459
-            // Parameters: text (semicolon-separated string), to (phone), bodyId (pattern code)
-            $text = $otpCode; // Single parameter, no need for semicolon
-            $response = $sms->sendByBaseNumber($text, $phoneNumber, $templateId);
+            $text = $otpCode;
+            $response = $this->sendByBaseNumber($text, $phoneNumber, $templateId);
             $json = json_decode($response);
 
-            // Log the response
-            Log::info('SMS sent via Melipayamk template pattern 485459 (GitHub package fallback)', [
+            $this->logProviderExchange('SMS sent via Melipayamk template pattern 485459 (GitHub package fallback)', [
                 'melipayamak_username' => $this->username,
                 'sending_data' => $this->redactSendingData($sendingData),
                 'response' => $json,
@@ -610,6 +669,16 @@ class SmsService
      */
     private function postPayamak(string $action, array $data): string
     {
+        if ($this->usesLogDriver()) {
+            return json_encode([
+                'RetStatus' => 0,
+                'StrRetStatus' => 'FAKE',
+                'Value' => 'log-driver',
+            ]);
+        }
+
+        TestingHttpGuard::assertFaked('Melipayamak '.$action);
+
         $response = Http::asForm()
             ->timeout(30)
             ->connectTimeout(10)
@@ -624,27 +693,35 @@ class SmsService
     }
 
     /**
-     * Send SMS using procedural PHP cURL method (fallback)
-     * Based on procedural PHP example from Melipayamak documentation
+     * Shared template send. Procedural PHP and the package fallback both land here
+     * so neither path can open its own cURL handle.
+     */
+    private function sendByBaseNumber(string $text, string $to, int $bodyId): string
+    {
+        return $this->postPayamak('BaseServiceNumber', [
+            'username' => $this->username,
+            'password' => $this->apiToken,
+            'text' => $text,
+            'to' => $to,
+            'bodyId' => $bodyId,
+        ]);
+    }
+
+    /**
+     * Send SMS using the procedural Melipayamak payload.
+     * The historical cURL sample is intentionally not used: that client ignored Http::fake().
      */
     private function sendSmsWithProceduralPhp(string $to, int $bodyId, string $otpCode): array
     {
         try {
-            $username = $this->username;
-            $password = $this->apiToken;
+            if ($this->usesLogDriver()) {
+                return $this->logDriverResult('procedural_php');
+            }
 
-            $data = array(
-                'username' => $username,
-                'password' => $password,
-                'text' => $otpCode, // Single parameter, no semicolon needed
-                'to' => $to,
-                'bodyId' => $bodyId
-            );
-
-            $response = $this->postPayamak('BaseServiceNumber', $data);
+            $response = $this->sendByBaseNumber($otpCode, $to, $bodyId);
             $httpCode = 200;
 
-            Log::info('Procedural PHP SMS response', [
+            $this->logProviderExchange('Procedural PHP SMS response', [
                 'phone' => $to,
                 'bodyId' => $bodyId,
                 'otp_code' => $otpCode,
@@ -700,33 +777,24 @@ class SmsService
     public function checkDeliveryStatus(string|int $recId): array
     {
         try {
+            if ($this->usesLogDriver()) {
+                return [
+                    'success' => true,
+                    'delivered' => false,
+                    'status' => null,
+                    'response' => null,
+                ];
+            }
+
             $this->ensureCredentials();
 
-            $data = [
+            $response = $this->postPayamak('GetDeliveries2', [
                 'username' => $this->username,
                 'password' => $this->apiToken,
                 'recId' => (string) $recId,
-            ];
+            ]);
 
-            $handle = curl_init('https://rest.payamak-panel.com/api/SendSMS/GetDeliveries2');
-            curl_setopt($handle, CURLOPT_HTTPHEADER, ['content-type: application/x-www-form-urlencoded']);
-            curl_setopt($handle, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($handle, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($handle, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($handle, CURLOPT_POST, true);
-            curl_setopt($handle, CURLOPT_POSTFIELDS, http_build_query($data));
-            curl_setopt($handle, CURLOPT_TIMEOUT, 20);
-            curl_setopt($handle, CURLOPT_CONNECTTIMEOUT, 10);
-
-            $response = curl_exec($handle);
-            $curlError = curl_error($handle);
-            curl_close($handle);
-
-            if ($curlError) {
-                throw new \RuntimeException($curlError);
-            }
-
-            $json = json_decode($response ?? '');
+            $json = json_decode($response);
             $status = isset($json->Value) ? (int) $json->Value : null;
             $delivered = $status === 1;
 

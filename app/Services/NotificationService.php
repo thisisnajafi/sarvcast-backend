@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -244,6 +245,14 @@ class NotificationService
             if (!$user->phone_number) {
                 return false;
             }
+
+            if (app()->environment('testing') || in_array((string) config('sms.driver'), ['log', 'fake', 'array'], true)) {
+                Log::info('SMS notification suppressed by log driver', ['user_id' => $user->id]);
+
+                return false;
+            }
+
+            TestingHttpGuard::assertFaked('SMS.ir notification');
 
             $payload = [
                 'api_key' => $this->smsApiKey,

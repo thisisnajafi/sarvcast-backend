@@ -33,7 +33,7 @@ class SmsServiceTest extends TestCase
             ], 200)
         ]);
 
-        $result = $this->smsService->sendSms('09136708883', 'Test message from Manji');
+        $result = $this->smsServiceOverHttp()->sendSms('09120000000', 'Test message from Manji');
 
         $this->assertTrue($result['success']);
         $this->assertArrayHasKey('response', $result);
@@ -55,7 +55,7 @@ class SmsServiceTest extends TestCase
             ], 200)
         ]);
 
-        $result = $this->smsService->sendSms('09136708883', 'Test message');
+        $result = $this->smsServiceOverHttp()->sendSms('09120000000', 'Test message');
 
         $this->assertFalse($result['success']);
         $this->assertArrayHasKey('response', $result);
@@ -71,7 +71,7 @@ class SmsServiceTest extends TestCase
             'rest.payamak-panel.com/*' => Http::response([], 500)
         ]);
 
-        $result = $this->smsService->sendSms('09136708883', 'Test message');
+        $result = $this->smsServiceOverHttp()->sendSms('09120000000', 'Test message');
 
         $this->assertFalse($result['success']);
         $this->assertArrayHasKey('error', $result);
@@ -172,5 +172,17 @@ class SmsServiceTest extends TestCase
         // For this test, we'll just verify the method exists and returns expected types
         $this->assertIsBool($this->smsService->hasTooManyAttempts($phoneNumber, $purpose));
         $this->assertIsInt($this->smsService->getRemainingAttempts($phoneNumber, $purpose));
+    }
+
+    private function smsServiceOverHttp(): SmsService
+    {
+        config([
+            'sms.driver' => 'melipayamak',
+            'melipayamak.username' => 'phpunit-user',
+            'melipayamak.password' => 'phpunit-pass',
+            'services.melipayamk.sender' => '1000',
+        ]);
+
+        return new SmsService();
     }
 }
