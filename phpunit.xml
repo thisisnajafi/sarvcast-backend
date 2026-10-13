@@ -25,32 +25,35 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
-        <env name="MAIL_MAILER" value="array"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="FILESYSTEM_DISK" value="local"/>
-        <env name="PUSH_NOTIFICATIONS_ENABLED" value="false"/>
+        <env name="PUSH_NOTIFICATIONS_ENABLED" value="false" force="true"/>
         <env name="IN_APP_NOTIFICATIONS_ENABLED" value="true"/>
         <env name="LOG_NOTIFICATIONS" value="false"/>
         <env name="NOTIFICATION_RATE_LIMITING_ENABLED" value="false"/>
-        <env name="ZARINPAL_SANDBOX" value="true"/>
-        <env name="PAYIR_SANDBOX" value="true"/>
-        <env name="SMS_DRIVER" value="log"/>
-        <env name="MELIPAYAMAK_USERNAME" value=""/>
-        <env name="MELIPAYAMAK_PASSWORD" value=""/>
-        <env name="MELIPAYAMK_TOKEN" value=""/>
-        <env name="MELIPAYAMK_SENDER" value=""/>
-        <env name="SMS_MELIPAYAMAK_ENABLED" value="false"/>
-        <env name="SMS_MELIPAYAMAK_USERNAME" value=""/>
-        <env name="SMS_MELIPAYAMAK_PASSWORD" value=""/>
-        <env name="SMS_MELIPAYAMAK_SENDER" value=""/>
-        <env name="SMS_API_KEY" value=""/>
-        <env name="SMS_KAVENEGAR_API_KEY" value=""/>
-        <env name="SMS_SMSIR_API_KEY" value=""/>
-        <env name="FIREBASE_SERVER_KEY" value=""/>
-        <env name="CAFEBAZAAR_API_KEY" value=""/>
-        <env name="MYKET_API_KEY" value=""/>
-        <env name="MYKET_PARTNER_TOKEN" value=""/>
+        <env name="ZARINPAL_SANDBOX" value="true" force="true"/>
+        <env name="PAYIR_SANDBOX" value="true" force="true"/>
+        <env name="SMS_DRIVER" value="log" force="true"/>
+        <env name="MELIPAYAMAK_USERNAME" value="" force="true"/>
+        <env name="MELIPAYAMAK_PASSWORD" value="" force="true"/>
+        <env name="MELIPAYAMK_TOKEN" value="" force="true"/>
+        <env name="MELIPAYAMK_SENDER" value="" force="true"/>
+        <env name="SMS_MELIPAYAMAK_ENABLED" value="false" force="true"/>
+        <env name="SMS_MELIPAYAMAK_USERNAME" value="" force="true"/>
+        <env name="SMS_MELIPAYAMAK_PASSWORD" value="" force="true"/>
+        <env name="SMS_MELIPAYAMAK_SENDER" value="" force="true"/>
+        <env name="SMS_API_KEY" value="" force="true"/>
+        <env name="SMS_KAVENEGAR_API_KEY" value="" force="true"/>
+        <env name="SMS_SMSIR_API_KEY" value="" force="true"/>
+        <env name="FIREBASE_SERVER_KEY" value="" force="true"/>
+        <env name="CAFEBAZAAR_API_KEY" value="" force="true"/>
+        <env name="MYKET_API_KEY" value="" force="true"/>
+        <env name="MYKET_PARTNER_TOKEN" value="" force="true"/>
+        <env name="TELEGRAM_BOT_TOKEN" value="" force="true"/>
+        <env name="TELEGRAM_CHAT_ID" value="" force="true"/>
+        <env name="TELEGRAM_NOTIFICATIONS_ENABLED" value="false" force="true"/>
     </php>
 </phpunit>

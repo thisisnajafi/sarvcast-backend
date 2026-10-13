@@ -78,6 +78,8 @@ class NotificationService
                 return false;
             }
 
+            TestingHttpGuard::assertFaked('FCM v1 push');
+
             $successCount = 0;
             $projectId = $this->firebaseProjectId;
             $apiUrl = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
@@ -165,6 +167,8 @@ class NotificationService
             Log::error('Firebase server key not configured for legacy API');
             return false;
         }
+
+        TestingHttpGuard::assertFaked('FCM legacy push');
 
         $payload = [
             'registration_ids' => $fcmTokens,

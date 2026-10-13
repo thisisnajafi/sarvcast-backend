@@ -7,6 +7,7 @@ use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Carbon\Carbon;
+use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -70,6 +71,7 @@ class MyketService
                 'purchase_token' => substr($purchaseToken, 0, 20) . '...',
             ]);
 
+            TestingHttpGuard::assertFaked('Myket purchase verify');
             $response = Http::timeout(25)
                 ->connectTimeout(10)
                 ->withHeaders([

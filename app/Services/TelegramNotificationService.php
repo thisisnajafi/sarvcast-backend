@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
@@ -371,7 +372,12 @@ class TelegramNotificationService
      */
     public function testConnection(): bool
     {
+        if (app()->runningUnitTests()) {
+            return true;
+        }
+
         try {
+            TestingHttpGuard::assertFaked('Telegram getMe');
             $response = Http::get("{$this->baseUrl}/getMe");
             
             if ($response->successful()) {

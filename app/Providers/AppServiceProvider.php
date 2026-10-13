@@ -55,6 +55,12 @@ class AppServiceProvider extends ServiceProvider
                 'notification.push.enabled' => false,
                 'mail.default' => 'array',
                 'services.zarinpal.sandbox' => true,
+                'services.cafebazaar.api_key' => '',
+                'services.myket.api_key' => '',
+                'services.myket.partner_token' => '',
+                'services.telegram.bot_token' => '',
+                'services.telegram.chat_id' => '',
+                'services.telegram.enabled' => false,
             ]);
         }
 

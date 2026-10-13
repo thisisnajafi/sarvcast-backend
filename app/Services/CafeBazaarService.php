@@ -7,6 +7,7 @@ use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Carbon\Carbon;
+use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -74,6 +75,7 @@ class CafeBazaarService
                 'purchase_token' => substr($purchaseToken, 0, 20) . '...'
             ]);
 
+            TestingHttpGuard::assertFaked('CafeBazaar purchase verify');
             $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
                 config('services.cafebazaar.api_header_name', 'CAFEBAZAAR-PISHKHAN-API-SECRET') => $this->apiKey,
                 'Content-Type' => 'application/json',
@@ -193,6 +195,7 @@ class CafeBazaarService
                 'api_url' => $base . '/applications/***/subscriptions/***/purchases/***',
             ]);
 
+            TestingHttpGuard::assertFaked('CafeBazaar subscription verify');
             $response = Http::timeout(25)->connectTimeout(10)->withHeaders([
                 config('services.cafebazaar.api_header_name', 'CAFEBAZAAR-PISHKHAN-API-SECRET') => $this->apiKey,
                 'Accept' => 'application/json',
@@ -314,6 +317,7 @@ class CafeBazaarService
             $acknowledgeUrl = config('services.cafebazaar.acknowledge_url',
                 'https://pardakht.cafebazaar.ir/devapi/v2/api/acknowledge');
 
+            TestingHttpGuard::assertFaked('CafeBazaar acknowledge');
             $response = Http::timeout(15)->connectTimeout(8)->withHeaders([
                 config('services.cafebazaar.api_header_name', 'CAFEBAZAAR-PISHKHAN-API-SECRET') => $this->apiKey,
                 'Content-Type' => 'application/json',
@@ -1005,6 +1009,7 @@ class CafeBazaarService
 
         try {
             Log::info('CafeBazaar notifyTelegramPayment: sending', ['user_id' => $user->id]);
+            TestingHttpGuard::assertFaked('CafeBazaar Telegram payment notice');
             Http::timeout(5)
                 ->post("https://api.telegram.org/bot{$token}/sendMessage", [
                     'chat_id' => $chatId,
