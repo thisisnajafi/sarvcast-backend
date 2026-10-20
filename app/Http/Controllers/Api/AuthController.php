@@ -805,15 +805,21 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user->update($request->only([
+        $payload = $request->only([
             'first_name',
             'last_name',
             'profile_image_url',
             'background_photo_url',
             'bio',
             'timezone',
-            'preferences'
-        ]));
+        ]);
+
+        if ($request->has('preferences')) {
+            $incoming = is_array($request->input('preferences')) ? $request->input('preferences') : [];
+            $payload['preferences'] = array_merge($user->preferences ?? [], $incoming);
+        }
+
+        $user->update($payload);
 
         $jsonResponse = response()->json([
             'success' => true,

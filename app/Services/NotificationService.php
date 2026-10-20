@@ -479,6 +479,7 @@ class NotificationService
 
     /**
      * Whether the user has push notifications enabled in preferences.
+     * Missing key defaults to true. Boolean-like values (1, "1", "true") are honored.
      */
     public function userAllowsPushNotifications(User $user): bool
     {
@@ -488,7 +489,14 @@ class NotificationService
             return true;
         }
 
-        return ($preferences['push_notifications_enabled'] ?? true) === true;
+        if (! array_key_exists('push_notifications_enabled', $preferences)) {
+            return true;
+        }
+
+        $raw = $preferences['push_notifications_enabled'];
+        $parsed = filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        return $parsed ?? true;
     }
 
     /**
