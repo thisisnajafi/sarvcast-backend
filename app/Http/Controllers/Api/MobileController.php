@@ -366,10 +366,21 @@ class MobileController extends Controller
             'accessibility.screen_reader' => 'boolean',
         ]);
 
-        // Update user preferences
+        // Update user preferences (merge; never wipe existing keys)
         $currentPreferences = $user->preferences ?? [];
         $newPreferences = array_merge($currentPreferences, $validated);
-        
+
+        // Keep flat push flag in sync with nested notifications.push when provided
+        if (array_key_exists('notifications', $validated)
+            && is_array($validated['notifications'])
+            && array_key_exists('push', $validated['notifications'])
+        ) {
+            $newPreferences['push_notifications_enabled'] = filter_var(
+                $validated['notifications']['push'],
+                FILTER_VALIDATE_BOOLEAN
+            );
+        }
+
         $user->update(['preferences' => $newPreferences]);
 
         return response()->json([

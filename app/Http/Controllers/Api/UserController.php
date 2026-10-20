@@ -407,8 +407,10 @@ class UserController extends Controller
         ]);
 
         $user = Auth::user();
-        $preferences = $user->preferences ?? [];
-        $preferences['push_notifications_enabled'] = $request->boolean('push_notifications_enabled');
+        $enabled = $request->boolean('push_notifications_enabled');
+        $preferences = array_merge($user->preferences ?? [], [
+            'push_notifications_enabled' => $enabled,
+        ]);
         $user->preferences = $preferences;
         $user->save();
 
@@ -416,7 +418,7 @@ class UserController extends Controller
             'success' => true,
             'message' => 'Notification preferences updated',
             'data' => [
-                'push_notifications_enabled' => $preferences['push_notifications_enabled'],
+                'push_notifications_enabled' => $enabled,
             ],
         ]);
     }

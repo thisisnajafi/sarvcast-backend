@@ -1006,7 +1006,13 @@ class User extends Authenticatable
             if (empty($user->timezone)) {
                 $user->timezone = 'Asia/Tehran';
             }
-            
+
+            $preferences = is_array($user->preferences) ? $user->preferences : [];
+            if (! array_key_exists('push_notifications_enabled', $preferences)) {
+                $preferences['push_notifications_enabled'] = true;
+                $user->preferences = $preferences;
+            }
+
             if (in_array($user->role, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN, self::ROLE_SCHOOL_MANAGER], true)) {
                 $user->requires_2fa = true;
             }
