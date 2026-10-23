@@ -869,12 +869,15 @@ class UserController extends Controller
             'timezone' => 'nullable|string|max:50',
             'member_limit' => 'nullable|integer|min:0|max:100000',
             'label' => 'nullable|string|max:120',
+            'premium_grant_expires_at' => 'nullable|date',
+            'allowed_grant_plan_ids' => 'nullable|array',
+            'allowed_grant_plan_ids.*' => 'integer|exists:subscription_plans,id',
         ], [
             'member_limit.min' => 'سقف اعضا نمی‌تواند منفی باشد.',
             'label.max' => 'نام پنل حداکثر ۱۲۰ کاراکتر است.',
         ]);
 
-        $data = $request->except(['password_confirmation', 'member_limit', 'label']);
+        $data = $request->except(['password_confirmation', 'member_limit', 'label', 'premium_grant_expires_at', 'allowed_grant_plan_ids']);
         $data['password'] = Hash::make($request->password);
 
         $actor = $request->user() ?? auth('sanctum')->user();
@@ -910,10 +913,10 @@ class UserController extends Controller
         $user->applyLegacyRoleChange($user->role);
 
         if ($user->role === User::ROLE_SCHOOL_MANAGER) {
-            app(SchoolManagerService::class)->ensureActiveProfile($user, $actor instanceof User ? $actor : null, true, [
+            app(SchoolManagerService::class)->ensureActiveProfile($user, $actor instanceof User ? $actor : null, true, array_merge([
                 'member_limit' => (int) $request->input('member_limit'),
                 'label' => $request->input('label'),
-            ]);
+            ], $request->only(['premium_grant_expires_at', 'allowed_grant_plan_ids'])));
         }
 
         $user->load(['profiles', 'activeSubscription', 'roles', 'schoolManagerProfile']);
@@ -965,12 +968,15 @@ class UserController extends Controller
             'direct_permission_ids.*' => 'integer|exists:permissions,id',
             'member_limit' => 'nullable|integer|min:0|max:100000',
             'label' => 'nullable|string|max:120',
+            'premium_grant_expires_at' => 'nullable|date',
+            'allowed_grant_plan_ids' => 'nullable|array',
+            'allowed_grant_plan_ids.*' => 'integer|exists:subscription_plans,id',
         ], [
             'member_limit.min' => 'سقف اعضا نمی‌تواند منفی باشد.',
             'label.max' => 'نام پنل حداکثر ۱۲۰ کاراکتر است.',
         ]);
 
-        $data = $request->except(['password_confirmation', 'role_ids', 'direct_permission_ids', 'member_limit', 'label']);
+        $data = $request->except(['password_confirmation', 'role_ids', 'direct_permission_ids', 'member_limit', 'label', 'premium_grant_expires_at', 'allowed_grant_plan_ids']);
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
@@ -1002,14 +1008,17 @@ class UserController extends Controller
         }
 
         $willBeSchoolManager = $newRole === User::ROLE_SCHOOL_MANAGER || $postedSchoolManager;
-        $hasProfileFields = $request->exists('member_limit') || $request->exists('label');
+        $hasProfileFields = $request->exists('member_limit')
+            || $request->exists('label')
+            || $request->exists('premium_grant_expires_at')
+            || $request->exists('allowed_grant_plan_ids');
         $existingProfile = $user->schoolManagerProfile;
 
         if ($hasProfileFields || ($willBeSchoolManager && ! $existingProfile)) {
             if (! $actor instanceof User || ! $actor->isSuperAdmin()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'فقط مدیر کل می‌تواند سقف اعضا یا نام پنل مدیر مدرسه را تغییر دهد.',
+                    'message' => 'فقط مدیر کل می‌تواند پارامترهای مدیر مدرسه (سقف اعضا، نام پنل، مهلت و طرح‌های اهدای پریمیوم) را تغییر دهد.',
                     'error' => 'FORBIDDEN',
                 ], 403);
             }
@@ -1066,6 +1075,12 @@ class UserController extends Controller
         }
         if ($request->exists('label')) {
             $profileInput['label'] = $request->input('label');
+        }
+        if ($request->exists('premium_grant_expires_at')) {
+            $profileInput['premium_grant_expires_at'] = $request->input('premium_grant_expires_at');
+        }
+        if ($request->exists('allowed_grant_plan_ids')) {
+            $profileInput['allowed_grant_plan_ids'] = (array) $request->input('allowed_grant_plan_ids', []);
         }
         $schoolManagers->assignFromUserForm(
             $user,
@@ -1522,8 +1537,12 @@ class UserController extends Controller
             'member_limit' => (int) $profile->member_limit,
             'label' => $profile->label,
             'status' => $profile->status,
+            'premium_grant_expires_at' => $profile->premium_grant_expires_at?->toIso8601String(),
+            'allowed_grant_plan_ids' => $profile->allowedGrantPlanIds(),
         ] : null;
         $data['member_limit'] = $profile ? (int) $profile->member_limit : null;
+        $data['premium_grant_expires_at'] = $profile?->premium_grant_expires_at?->toIso8601String();
+        $data['allowed_grant_plan_ids'] = $profile ? $profile->allowedGrantPlanIds() : [];
         $data['label'] = $profile?->label;
 
         $licensePremium = app(\App\Services\SchoolLicenseEntitlementService::class)->resolveForUser((int) $user->id);

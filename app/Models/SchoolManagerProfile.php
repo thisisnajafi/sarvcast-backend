@@ -18,6 +18,8 @@ class SchoolManagerProfile extends Model
     protected $fillable = [
         'user_id',
         'member_limit',
+        'premium_grant_expires_at',
+        'allowed_grant_plan_ids',
         'label',
         'status',
         'created_by',
@@ -27,6 +29,8 @@ class SchoolManagerProfile extends Model
     {
         return [
             'member_limit' => 'integer',
+            'premium_grant_expires_at' => 'datetime',
+            'allowed_grant_plan_ids' => 'array',
         ];
     }
 
@@ -63,6 +67,26 @@ class SchoolManagerProfile extends Model
     public function grants(): HasMany
     {
         return $this->hasMany(SchoolPremiumGrant::class);
+    }
+
+    /**
+     * Plan ids the manager may grant for free; empty means "use the premium window duration".
+     *
+     * @return list<int>
+     */
+    public function allowedGrantPlanIds(): array
+    {
+        return collect($this->allowed_grant_plan_ids ?? [])
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function premiumGrantPeriodEnded(): bool
+    {
+        return $this->premium_grant_expires_at !== null && $this->premium_grant_expires_at->lessThanOrEqualTo(now());
     }
 
     /**

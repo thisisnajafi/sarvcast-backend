@@ -8,6 +8,9 @@ use App\Models\PlayHistory;
 use App\Models\SchoolManagerProfile;
 use App\Models\SchoolMembership;
 use App\Models\SchoolPremiumWindow;
+use Carbon\Carbon;
+use App\Helpers\JalaliHelper;
+use App\Models\SubscriptionPlan;
 use App\Models\Subscription;
 use App\Models\Permission;
 use App\Models\Role;
@@ -159,15 +162,16 @@ class SchoolManagerService
         $profile = SchoolManagerProfile::query()->where('user_id', $user->id)->first();
         $hasLimit = array_key_exists('member_limit', $profileInput);
         $hasLabel = array_key_exists('label', $profileInput);
+        $policy = $this->grantPolicyAttributes($profileInput);
 
         if (! $profile) {
-            return SchoolManagerProfile::query()->create([
+            return SchoolManagerProfile::query()->create(array_merge([
                 'user_id' => $user->id,
                 'member_limit' => $hasLimit ? (int) $profileInput['member_limit'] : 0,
                 'label' => $hasLabel ? $this->nullableLabel($profileInput['label']) : null,
                 'status' => SchoolManagerProfile::STATUS_ACTIVE,
                 'created_by' => $actor?->id,
-            ]);
+            ], $policy));
         }
 
         $attributes = [];
@@ -180,6 +184,7 @@ class SchoolManagerService
         if ($hasLabel) {
             $attributes['label'] = $this->nullableLabel($profileInput['label']);
         }
+        $attributes = array_merge($attributes, $policy);
         if ($attributes !== []) {
             $profile->update($attributes);
         }
@@ -234,6 +239,7 @@ class SchoolManagerService
         if (array_key_exists('status', $input)) {
             $attributes['status'] = $input['status'];
         }
+        $attributes = array_merge($attributes, $this->grantPolicyAttributes($input));
 
         if ($attributes !== []) {
             $profile->update($attributes);
@@ -365,7 +371,62 @@ class SchoolManagerService
             'created_at' => $profile->created_at?->toIso8601String(),
             'active_grant_count' => app(SchoolPremiumGrantService::class)->activeGrantCount($profile),
             'premium_window' => app(SchoolPremiumGrantService::class)->windowPayload($profile),
+            'premium_grant_policy' => $this->grantPolicyPayload($profile),
         ];
+    }
+
+    /**
+     * Super-admin rules for free premium grants: deadline + allowed plans.
+     *
+     * @return array<string, mixed>
+     */
+    public function grantPolicyPayload(SchoolManagerProfile $profile): array
+    {
+        $expiresAt = $profile->premium_grant_expires_at;
+        $planIds = $profile->allowedGrantPlanIds();
+        $plans = $planIds === [] ? collect() : SubscriptionPlan::query()
+            ->whereIn('id', $planIds)
+            ->orderBy('sort_order')
+            ->get(['id', 'name', 'slug', 'duration_days']);
+
+        return [
+            'expires_at' => $expiresAt?->toIso8601String(),
+            'expires_at_jalali' => $expiresAt ? JalaliHelper::formatForDisplay($expiresAt, 'Y/m/d') : null,
+            'seconds_remaining' => $expiresAt ? max(0, now()->diffInSeconds($expiresAt, false)) : null,
+            'days_remaining' => $expiresAt ? max(0, (int) ceil(now()->diffInSeconds($expiresAt, false) / 86400)) : null,
+            'ended' => $profile->premiumGrantPeriodEnded(),
+            'allowed_plan_ids' => $planIds,
+            'allowed_plans' => $plans->map(static fn (SubscriptionPlan $plan): array => [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'slug' => $plan->slug,
+                'duration_days' => (int) $plan->duration_days,
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function grantPolicyAttributes(array $input): array
+    {
+        $attributes = [];
+        if (array_key_exists('premium_grant_expires_at', $input)) {
+            $value = $input['premium_grant_expires_at'];
+            $attributes['premium_grant_expires_at'] = $value === null || $value === '' ? null : Carbon::parse($value);
+        }
+        if (array_key_exists('allowed_grant_plan_ids', $input)) {
+            $ids = collect((array) ($input['allowed_grant_plan_ids'] ?? []))
+                ->map(static fn ($id): int => (int) $id)
+                ->filter(static fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+            $attributes['allowed_grant_plan_ids'] = $ids === [] ? null : $ids;
+        }
+
+        return $attributes;
     }
 
     /**

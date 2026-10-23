@@ -112,6 +112,9 @@ class SchoolManagerAdminController extends Controller
             'member_limit' => ['sometimes', 'required', 'integer', 'min:0', 'max:100000'],
             'label' => ['sometimes', 'nullable', 'string', 'max:120'],
             'status' => ['sometimes', 'required', 'in:active,suspended'],
+            'premium_grant_expires_at' => ['sometimes', 'nullable', 'date'],
+            'allowed_grant_plan_ids' => ['sometimes', 'nullable', 'array'],
+            'allowed_grant_plan_ids.*' => ['integer', 'exists:subscription_plans,id'],
         ], [
             'member_limit.min' => 'سقف اعضا نمی‌تواند منفی باشد.',
             'status.in' => 'وضعیت باید فعال یا معلق باشد.',

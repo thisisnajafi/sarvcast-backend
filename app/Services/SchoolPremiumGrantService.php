@@ -9,6 +9,7 @@ use App\Models\SchoolMembership;
 use App\Models\SchoolPremiumGrant;
 use App\Models\SchoolPremiumWindow;
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -121,13 +122,23 @@ class SchoolPremiumGrantService
     /**
      * @return array{grant: array<string, mixed>, subscription: array<string, mixed>, premium_window: array<string, mixed>|null}
      */
-    public function grant(SchoolManagerProfile $profile, User $actor, int $userId): array
+    public function grant(SchoolManagerProfile $profile, User $actor, int $userId, ?int $planId = null): array
     {
-        return DB::transaction(function () use ($profile, $actor, $userId) {
+        return DB::transaction(function () use ($profile, $actor, $userId, $planId) {
             $locked = SchoolManagerProfile::query()->whereKey($profile->id)->lockForUpdate()->first();
             if (! $locked || $locked->status !== SchoolManagerProfile::STATUS_ACTIVE) {
                 throw new SchoolPanelException('panel_inactive', 'پنل مدرسه فعال نیست.', 403);
             }
+
+            if ($locked->premiumGrantPeriodEnded()) {
+                throw new SchoolPanelException(
+                    'grant_period_ended',
+                    'مهلت اهدای پریمیوم رایگان برای این پنل به پایان رسیده است.',
+                    422,
+                );
+            }
+
+            $plan = $this->resolveGrantPlan($locked, $planId);
 
             $membership = SchoolMembership::query()
                 ->where('school_manager_profile_id', $locked->id)
@@ -171,7 +182,9 @@ class SchoolPremiumGrantService
                 throw new SchoolPanelException('not_found', 'این کاربر در پنل شما نیست.', 404);
             }
 
-            [$subscription, $endsAt, $previousEnd] = $this->writeSubscription($member, (int) $window->duration_months);
+            $months = $plan ? $this->planMonths($plan) : (int) $window->duration_months;
+
+            [$subscription, $endsAt, $previousEnd] = $this->writeSubscription($member, $months);
 
             try {
                 $grant = SchoolPremiumGrant::query()->create([
@@ -180,7 +193,7 @@ class SchoolPremiumGrantService
                     'school_membership_id' => $membership->id,
                     'user_id' => $member->id,
                     'subscription_id' => $subscription->id,
-                    'duration_months' => (int) $window->duration_months,
+                    'duration_months' => $months,
                     'premium_ends_at' => $endsAt,
                     'previous_end_date' => $previousEnd,
                     'status' => SchoolPremiumGrant::STATUS_ACTIVE,
@@ -197,6 +210,10 @@ class SchoolPremiumGrantService
             $metadata = $subscription->subscription_metadata ?? [];
             $metadata['source'] = 'school_grant';
             $metadata['grant_id'] = $grant->id;
+            if ($plan) {
+                $metadata['plan_id'] = $plan->id;
+                $metadata['plan_name'] = $plan->name;
+            }
             $subscription->subscription_metadata = $metadata;
             $subscription->save();
 
@@ -204,7 +221,7 @@ class SchoolPremiumGrantService
                 (int) $member->id,
                 'subscription',
                 'اشتراک رایگان برای شما فعال شد',
-                $this->grantMessage((int) $window->duration_months, $endsAt),
+                $this->grantMessage($months, $endsAt),
                 [
                     'category' => 'subscription',
                     'priority' => 'high',
@@ -212,7 +229,8 @@ class SchoolPremiumGrantService
                     'subscription_id' => $subscription->id,
                     'data' => [
                         'grant_id' => $grant->id,
-                        'duration_months' => (int) $window->duration_months,
+                        'duration_months' => $months,
+                        'plan_id' => $plan?->id,
                         'premium_ends_at' => $endsAt->toIso8601String(),
                     ],
                 ],
@@ -473,6 +491,53 @@ class SchoolPremiumGrantService
             'accepting_grants' => $open && $used < $limit,
             'notes' => $window->notes,
         ];
+    }
+
+    /**
+     * Enforce the super-admin plan whitelist. Without a whitelist the window duration applies.
+     */
+    private function resolveGrantPlan(SchoolManagerProfile $profile, ?int $planId): ?SubscriptionPlan
+    {
+        $allowed = $profile->allowedGrantPlanIds();
+
+        if ($allowed === []) {
+            if ($planId !== null) {
+                throw new SchoolPanelException(
+                    'plan_not_allowed',
+                    'برای این پنل طرحی جهت اهدای رایگان تعیین نشده است.',
+                    422,
+                );
+            }
+
+            return null;
+        }
+
+        if ($planId === null) {
+            if (count($allowed) > 1) {
+                throw new SchoolPanelException('plan_required', 'طرح اشتراک را برای اهدا انتخاب کنید.', 422);
+            }
+            $planId = $allowed[0];
+        }
+
+        if (! in_array($planId, $allowed, true)) {
+            throw new SchoolPanelException(
+                'plan_not_allowed',
+                'اهدای رایگان این طرح برای پنل شما مجاز نیست.',
+                422,
+            );
+        }
+
+        $plan = SubscriptionPlan::query()->find($planId);
+        if (! $plan) {
+            throw new SchoolPanelException('plan_not_allowed', 'طرح انتخاب‌شده یافت نشد.', 422);
+        }
+
+        return $plan;
+    }
+
+    private function planMonths(SubscriptionPlan $plan): int
+    {
+        return max(1, (int) round(((int) $plan->duration_days) / 30));
     }
 
     private function grantMessage(int $months, Carbon $endsAt): string

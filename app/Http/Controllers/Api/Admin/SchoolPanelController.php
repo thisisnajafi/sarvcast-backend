@@ -141,8 +141,17 @@ class SchoolPanelController extends Controller
             return $denied;
         }
 
+        $data = $request->validate([
+            'plan_id' => ['nullable', 'integer'],
+        ]);
+
         try {
-            $payload = $this->premiumGrants->grant($profile, $request->user(), $user);
+            $payload = $this->premiumGrants->grant(
+                $profile,
+                $request->user(),
+                $user,
+                isset($data['plan_id']) ? (int) $data['plan_id'] : null,
+            );
         } catch (SchoolPanelException $exception) {
             return $this->schoolError($exception);
         }
