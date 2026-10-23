@@ -196,6 +196,47 @@ class AuthController extends Controller
             'status' => $user->status,
             'needs_profile_completion' => $user->needsProfileCompletion(),
             'onboarding_completed' => (bool) $user->onboarding_completed,
+            'is_school_manager' => $user->role === User::ROLE_SCHOOL_MANAGER,
+            'school_manager' => $this->schoolManagerPayload($user),
+        ];
+    }
+
+    /**
+     * School panel summary for app clients (badge, panel name, grant deadline).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function schoolManagerPayload(User $user): ?array
+    {
+        if ($user->role !== User::ROLE_SCHOOL_MANAGER) {
+            return null;
+        }
+
+        $profile = \App\Models\SchoolManagerProfile::query()->where('user_id', $user->id)->first();
+        if (! $profile || $profile->status === \App\Models\SchoolManagerProfile::STATUS_DELETED) {
+            return [
+                'role_label' => 'مدیر مدرسه',
+                'panel_name' => null,
+                'status' => $profile?->status,
+                'member_limit' => null,
+                'premium_grant_policy' => null,
+            ];
+        }
+
+        $policy = app(\App\Services\SchoolManagerService::class)->grantPolicyPayload($profile);
+
+        return [
+            'role_label' => 'مدیر مدرسه',
+            'panel_name' => $profile->label,
+            'status' => $profile->status,
+            'member_limit' => (int) $profile->member_limit,
+            'premium_grant_policy' => [
+                'expires_at' => $policy['expires_at'],
+                'expires_at_jalali' => $policy['expires_at_jalali'],
+                'days_remaining' => $policy['days_remaining'],
+                'ended' => $policy['ended'],
+                'allowed_plans' => $policy['allowed_plans'],
+            ],
         ];
     }
 
@@ -773,6 +814,8 @@ class AuthController extends Controller
                 'premium' => $premiumInfo,
                 'permissions' => $permissions,
                 'access' => $access,
+                'is_school_manager' => $user->role === User::ROLE_SCHOOL_MANAGER,
+                'school_manager' => $this->schoolManagerPayload($user),
             ]
         ]);
         // Disable caching for user profile - it needs to be retrieved immediately

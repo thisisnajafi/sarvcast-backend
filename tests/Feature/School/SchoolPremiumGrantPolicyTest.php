@@ -97,6 +97,27 @@ class SchoolPremiumGrantPolicyTest extends TestCase
             ->assertJsonPath('error', 'grant_period_ended');
     }
 
+    public function test_app_profile_exposes_school_manager_badge_data(): void
+    {
+        [$manager, $profile] = $this->panel('09141100009');
+        $profile->update(['label' => 'دبستان نمونه', 'premium_grant_expires_at' => now()->addDays(3)]);
+        $parent = User::factory()->create(['phone_number' => '09141100010', 'role' => User::ROLE_PARENT]);
+
+        Sanctum::actingAs($manager);
+        $this->getJson('/api/v1/auth/profile')
+            ->assertOk()
+            ->assertJsonPath('data.is_school_manager', true)
+            ->assertJsonPath('data.school_manager.role_label', 'مدیر مدرسه')
+            ->assertJsonPath('data.school_manager.panel_name', 'دبستان نمونه')
+            ->assertJsonPath('data.school_manager.premium_grant_policy.days_remaining', 3);
+
+        Sanctum::actingAs($parent);
+        $this->getJson('/api/v1/auth/profile')
+            ->assertOk()
+            ->assertJsonPath('data.is_school_manager', false)
+            ->assertJsonPath('data.school_manager', null);
+    }
+
     private function panel(string $phone): array
     {
         $manager = User::factory()->schoolManager()->create(['phone_number' => $phone]);
