@@ -446,7 +446,9 @@ class AuthController extends Controller
         );
 
         $token = $user->createToken('admin-auth-token')->plainTextToken;
-        $twoFactorRequired = (bool) ($user->requires_2fa ?? false);
+        // Admin 2FA is disabled: the phone OTP login is the only factor.
+        // The requires_2fa column is kept but no longer enforced.
+        $twoFactorRequired = false;
         $twoFactorCodeSent = false;
 
         if ($twoFactorRequired) {
@@ -490,7 +492,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        if (!($user->requires_2fa ?? false)) {
+        if (! $this->adminTwoFactorEnabled($user)) {
             return response()->json([
                 'success' => true,
                 'message' => 'تایید دو مرحله‌ای برای این حساب غیرفعال است',
@@ -542,7 +544,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        if (!($user->requires_2fa ?? false)) {
+        if (! $this->adminTwoFactorEnabled($user)) {
             return response()->json([
                 'success' => true,
                 'message' => 'تایید دو مرحله‌ای برای این حساب غیرفعال است',
@@ -1175,5 +1177,12 @@ class AuthController extends Controller
                 'token' => $token
             ]
         ]);
+    }
+    /**
+     * Admin 2FA has been turned off; the second SMS code is no longer required.
+     */
+    private function adminTwoFactorEnabled($user): bool
+    {
+        return false;
     }
 }

@@ -89,9 +89,11 @@ class SchoolManagerAdminLoginTest extends TestCase
             'verification_code' => $adminCode,
         ])->assertOk()
             ->assertJsonPath('data.user.role', 'school_manager')
-            ->assertJsonPath('data.redirect_to', '/school-panel');
+            ->assertJsonPath('data.redirect_to', '/school-panel')
+            ->assertJsonPath('data.two_factor_required', false);
 
         $this->assertNotEmpty($login->json('data.token'));
+        $this->assertNull(Cache::get('otp_'.$phone.'_admin_2fa'));
 
         Sanctum::actingAs($parent->fresh());
 
@@ -99,9 +101,10 @@ class SchoolManagerAdminLoginTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.manager.id', $parent->id);
 
+        // Admin 2FA is disabled: the legacy verify endpoint always reports verified.
         $this->postJson('/api/admin/v1/auth/2fa/verify', [
-            'code' => Cache::get('otp_'.$phone.'_admin_2fa'),
-        ])->assertOk();
+            'code' => '000000',
+        ])->assertOk()->assertJsonPath('data.two_factor_verified', true);
     }
 
     public function test_school_manager_created_from_the_managers_screen_can_log_in_to_the_school_panel(): void

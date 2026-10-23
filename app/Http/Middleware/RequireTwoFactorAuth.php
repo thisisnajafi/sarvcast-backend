@@ -24,7 +24,8 @@ class RequireTwoFactorAuth
         }
         
         // Check if 2FA is required and not completed
-        if ($user->requires_2fa && !session('2fa_verified')) {
+        // Admin 2FA is disabled; requires_2fa is no longer enforced.
+        if (false) {
             // Skip 2FA for the 2FA verification route itself
             if ($request->routeIs('admin.2fa.*')) {
                 return $next($request);
