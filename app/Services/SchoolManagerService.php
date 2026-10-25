@@ -329,21 +329,26 @@ class SchoolManagerService
 
     public function detach(SchoolManagerProfile $profile, User $actor, User $member): void
     {
-        $membership = SchoolMembership::query()
-            ->where('school_manager_profile_id', $profile->id)
-            ->where('user_id', $member->id)
-            ->active()
-            ->first();
+        DB::transaction(function () use ($profile, $actor, $member): void {
+            $membership = SchoolMembership::query()
+                ->where('school_manager_profile_id', $profile->id)
+                ->where('user_id', $member->id)
+                ->active()
+                ->lockForUpdate()
+                ->first();
 
-        if (! $membership) {
-            throw new SchoolPanelException('not_found', 'این کاربر در پنل شما نیست.', 404);
-        }
+            if (! $membership) {
+                throw new SchoolPanelException('not_found', 'این کاربر در پنل شما نیست.', 404);
+            }
 
-        $membership->update([
-            'active_user_id' => null,
-            'detached_at' => now(),
-            'detached_by' => $actor->id,
-        ]);
+            app(SchoolPremiumGrantService::class)->revokeActiveForMember($profile, $member, $actor);
+
+            $membership->update([
+                'active_user_id' => null,
+                'detached_at' => now(),
+                'detached_by' => $actor->id,
+            ]);
+        });
     }
 
     /**

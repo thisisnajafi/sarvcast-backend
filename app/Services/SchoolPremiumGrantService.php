@@ -22,6 +22,8 @@ class SchoolPremiumGrantService
 
     public const BILLING_PLATFORM = 'school_manager';
 
+    public const GRANT_SOURCE_SCHOOL_PANEL = 'school_panel';
+
     public function __construct(private readonly InAppNotificationService $notifications) {}
 
     public static function subscriptionTypeForMonths(int $months): string
@@ -184,7 +186,11 @@ class SchoolPremiumGrantService
 
             $months = $plan ? $this->planMonths($plan) : (int) $window->duration_months;
 
-            [$subscription, $endsAt, $previousEnd] = $this->writeSubscription($member, $months);
+            [$subscription, $endsAt, $previousEnd] = $this->writeSubscription(
+                $member,
+                $months,
+                $locked->premium_grant_expires_at?->copy(),
+            );
 
             try {
                 $grant = SchoolPremiumGrant::query()->create([
@@ -198,6 +204,9 @@ class SchoolPremiumGrantService
                     'previous_end_date' => $previousEnd,
                     'status' => SchoolPremiumGrant::STATUS_ACTIVE,
                     'granted_by' => $actor->id,
+                    'grant_source' => self::GRANT_SOURCE_SCHOOL_PANEL,
+                    'source_profile_id' => $locked->id,
+                    'source_manager_user_id' => $actor->id,
                 ]);
             } catch (QueryException) {
                 throw new SchoolPanelException(
@@ -270,20 +279,29 @@ class SchoolPremiumGrantService
                 throw new SchoolPanelException('already_revoked', 'این اعطا قبلاً لغو شده است.', 422);
             }
 
-            $subscription = $locked->subscription_id
-                ? Subscription::query()->whereKey($locked->subscription_id)->lockForUpdate()->first()
-                : null;
-
-            if ($subscription && $this->sameMoment($subscription->end_date, $locked->premium_ends_at)) {
-                $this->rollBackSubscription($subscription, $locked->previous_end_date);
-            }
-
-            $locked->status = SchoolPremiumGrant::STATUS_REVOKED;
-            $locked->revoked_at = now();
-            $locked->revoked_by = $actor->id;
-            $locked->save();
+            $this->revokeLockedGrant($locked, $actor);
 
             return $this->grantPayload($locked->fresh(['user', 'window']));
+        });
+    }
+
+    public function revokeActiveForMember(SchoolManagerProfile $profile, User $member, User $actor): int
+    {
+        return DB::transaction(function () use ($profile, $member, $actor): int {
+            $grants = SchoolPremiumGrant::query()
+                ->where('school_manager_profile_id', $profile->id)
+                ->where('user_id', $member->id)
+                ->where('grant_source', self::GRANT_SOURCE_SCHOOL_PANEL)
+                ->where('status', SchoolPremiumGrant::STATUS_ACTIVE)
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($grants as $grant) {
+                $this->revokeLockedGrant($grant, $actor);
+            }
+
+            return $grants->count();
         });
     }
 
@@ -397,7 +415,7 @@ class SchoolPremiumGrantService
     /**
      * @return array{0: Subscription, 1: Carbon, 2: Carbon|null}
      */
-    private function writeSubscription(User $member, int $months): array
+    private function writeSubscription(User $member, int $months, ?Carbon $policyLimit): array
     {
         $existing = Subscription::query()
             ->where('user_id', $member->id)
@@ -415,6 +433,7 @@ class SchoolPremiumGrantService
             $previousEnd = $existing->end_date ? Carbon::parse($existing->end_date)->copy() : null;
             $anchor = $previousEnd && $previousEnd->greaterThan(now()) ? $previousEnd->copy() : now();
             $endsAt = $anchor->copy()->addMonths($months);
+            $this->assertEndDateWithinPolicy($endsAt, $policyLimit);
             $existing->end_date = $endsAt;
             $existing->status = 'active';
             $existing->auto_renew = false;
@@ -425,6 +444,7 @@ class SchoolPremiumGrantService
 
         $start = now();
         $endsAt = $start->copy()->addMonths($months);
+        $this->assertEndDateWithinPolicy($endsAt, $policyLimit);
         $subscription = Subscription::query()->create([
             'user_id' => $member->id,
             'type' => self::subscriptionTypeForMonths($months),
@@ -440,6 +460,40 @@ class SchoolPremiumGrantService
         ]);
 
         return [$subscription, $endsAt, null];
+    }
+
+    private function revokeLockedGrant(SchoolPremiumGrant $grant, User $actor): void
+    {
+        $subscription = $grant->subscription_id
+            ? Subscription::query()->whereKey($grant->subscription_id)->lockForUpdate()->first()
+            : null;
+
+        if ($subscription && $this->sameMoment($subscription->end_date, $grant->premium_ends_at)) {
+            $this->rollBackSubscription($subscription, $grant->previous_end_date);
+        }
+
+        $grant->status = SchoolPremiumGrant::STATUS_REVOKED;
+        $grant->revoked_at = now();
+        $grant->revoked_by = $actor->id;
+        $grant->save();
+    }
+
+    private function assertEndDateWithinPolicy(Carbon $endsAt, ?Carbon $policyLimit): void
+    {
+        if (! $policyLimit || ! $endsAt->greaterThan($policyLimit)) {
+            return;
+        }
+
+        throw new SchoolPanelException(
+            'grant_end_exceeds_limit',
+            'تاریخ پایان پریمیوم از سقف تعیین‌شدهٔ مدیر کل عبور می‌کند. حداکثر تا '.$this->formatPolicyLimit($policyLimit).' مجاز است.',
+            422,
+        );
+    }
+
+    private function formatPolicyLimit(Carbon $policyLimit): string
+    {
+        return JalaliHelper::formatForDisplay($policyLimit, 'Y/m/d');
     }
 
     private function rollBackSubscription(Subscription $subscription, mixed $previousEnd): void

@@ -67,11 +67,13 @@ class SchoolPremiumGrantPolicyTest extends TestCase
         $other = SubscriptionPlan::factory()->create(['duration_days' => 30]);
         $memberA = User::factory()->create(['phone_number' => '09141100003']);
         $memberB = User::factory()->create(['phone_number' => '09141100004']);
+        $memberC = User::factory()->create(['phone_number' => '09141100005']);
         $this->attach($manager, $profile, $memberA);
         $this->attach($manager, $profile, $memberB);
+        $this->attach($manager, $profile, $memberC);
 
         $profile->update([
-            'premium_grant_expires_at' => now()->addDays(5),
+            'premium_grant_expires_at' => now()->addDays(180),
             'allowed_grant_plan_ids' => [$allowed->id],
         ]);
 
@@ -91,10 +93,36 @@ class SchoolPremiumGrantPolicyTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.grant.duration_months', 3);
 
-        $this->travelTo(now()->addDays(6));
+        $profile->update([
+            'premium_grant_expires_at' => now()->addDays(30),
+        ]);
         $this->postJson('/api/admin/v1/school-panel/members/'.$memberB->id.'/premium-grant')
             ->assertStatus(422)
+            ->assertJsonPath('error', 'grant_end_exceeds_limit');
+
+        $this->travelTo(now()->addDays(31));
+        $this->postJson('/api/admin/v1/school-panel/members/'.$memberC->id.'/premium-grant')
+            ->assertStatus(422)
             ->assertJsonPath('error', 'grant_period_ended');
+    }
+
+    public function test_grant_rejects_non_member_with_not_found(): void
+    {
+        $super = User::factory()->superAdmin()->create();
+        [$manager, $profile] = $this->panel('09141100020');
+        $notMember = User::factory()->create(['phone_number' => '09141100021']);
+
+        Sanctum::actingAs($super);
+        $this->putJson('/api/admin/v1/school-managers/'.$profile->id.'/premium-window', [
+            'duration_months' => 1,
+            'seat_limit' => 10,
+            'expires_at' => now()->addDays(30)->toIso8601String(),
+        ])->assertCreated();
+
+        Sanctum::actingAs($manager);
+        $this->postJson('/api/admin/v1/school-panel/members/'.$notMember->id.'/premium-grant')
+            ->assertNotFound()
+            ->assertJsonPath('error', 'not_found');
     }
 
     public function test_app_profile_exposes_school_manager_badge_data(): void

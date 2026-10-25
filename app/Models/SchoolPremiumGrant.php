@@ -25,6 +25,9 @@ class SchoolPremiumGrant extends Model
         'status',
         'notification_id',
         'granted_by',
+        'grant_source',
+        'source_profile_id',
+        'source_manager_user_id',
         'revoked_at',
         'revoked_by',
     ];
