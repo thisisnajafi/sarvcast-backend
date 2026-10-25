@@ -11,10 +11,12 @@ use App\Services\ContributorStoryAccessService;
 use App\Services\SchoolManagerService;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -629,7 +631,19 @@ class AuthController extends Controller
             );
         }
 
-        $request->user()->currentAccessToken()->delete();
+        $currentAccessToken = $request->user()->currentAccessToken();
+        $currentAccessTokenId = $currentAccessToken?->id;
+
+        $this->unlinkPushTokensForUser(
+            $request->user(),
+            $currentAccessTokenId ? (int) $currentAccessTokenId : null,
+            $this->normalizedDeviceId($request),
+            $this->normalizedFcmToken($request),
+        );
+
+        if ($currentAccessToken) {
+            $currentAccessToken->delete();
+        }
 
         return response()->json([
             'success' => true,
@@ -650,6 +664,7 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $this->unlinkAllPushTokensForUser($user);
         $user->tokens()->delete();
 
         return response()->json([
@@ -707,6 +722,12 @@ class AuthController extends Controller
         $current = $user->currentAccessToken();
         $wasCurrent = $current && (int) $current->id === (int) $token->id;
 
+        $this->unlinkPushTokensForUser(
+            $user,
+            (int) $token->id,
+            $wasCurrent ? $this->normalizedDeviceId($request) : null,
+            $wasCurrent ? $this->normalizedFcmToken($request) : null,
+        );
         $token->delete();
 
         return response()->json([
@@ -1206,12 +1227,28 @@ class AuthController extends Controller
     public function refresh(Request $request)
     {
         $user = $request->user();
+        $currentAccessToken = $request->user()->currentAccessToken();
+        $currentAccessTokenId = $currentAccessToken?->id;
 
-        // Revoke current token
-        $request->user()->currentAccessToken()->delete();
+        // Mint a new token first, then move device-session links to avoid dropping push access.
+        $newToken = $user->createToken('auth-token');
+        $token = $newToken->plainTextToken;
+        $newTokenId = $newToken->accessToken->id ?? null;
 
-        // Create new token
-        $token = $user->createToken('auth-token')->plainTextToken;
+        if ($currentAccessTokenId && $newTokenId) {
+            DB::table('user_devices')
+                ->where('user_id', $user->id)
+                ->where('personal_access_token_id', (int) $currentAccessTokenId)
+                ->update([
+                    'personal_access_token_id' => (int) $newTokenId,
+                    'updated_at' => now(),
+                ]);
+        }
+
+        // Revoke previous token after re-linking.
+        if ($currentAccessToken) {
+            $currentAccessToken->delete();
+        }
 
         return response()->json([
             'success' => true,
@@ -1220,6 +1257,57 @@ class AuthController extends Controller
                 'token' => $token
             ]
         ]);
+    }
+
+    private function normalizedDeviceId(Request $request): ?string
+    {
+        if (! $request->filled('device_id')) {
+            return null;
+        }
+
+        return Str::limit((string) $request->input('device_id'), 100, '');
+    }
+
+    private function normalizedFcmToken(Request $request): ?string
+    {
+        if (! $request->filled('fcm_token')) {
+            return null;
+        }
+
+        return Str::limit((string) $request->input('fcm_token'), 4096, '');
+    }
+
+    private function unlinkPushTokensForUser(User $user, ?int $accessTokenId, ?string $deviceId = null, ?string $fcmToken = null): int
+    {
+        $query = DB::table('user_devices')
+            ->where('user_id', $user->id);
+
+        if (! empty($fcmToken)) {
+            $query->where('fcm_token', $fcmToken);
+        } elseif (! empty($deviceId)) {
+            $query->where('device_id', $deviceId);
+        } elseif ($accessTokenId) {
+            $query->where('personal_access_token_id', $accessTokenId);
+        } else {
+            return 0;
+        }
+
+        return $query->update([
+            'fcm_token' => null,
+            'personal_access_token_id' => null,
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function unlinkAllPushTokensForUser(User $user): int
+    {
+        return DB::table('user_devices')
+            ->where('user_id', $user->id)
+            ->update([
+                'fcm_token' => null,
+                'personal_access_token_id' => null,
+                'updated_at' => now(),
+            ]);
     }
     /**
      * Admin 2FA has been turned off; the second SMS code is no longer required.
