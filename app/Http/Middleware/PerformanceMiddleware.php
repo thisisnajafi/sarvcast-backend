@@ -4,10 +4,19 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 class PerformanceMiddleware
 {
+    /**
+     * Cached column listing for the performance_metrics table.
+     *
+     * @var array<int, string>|null
+     */
+    private static ?array $performanceMetricColumns = null;
+
     /**
      * Handle an incoming request.
      *
@@ -110,7 +119,37 @@ class PerformanceMiddleware
             \Cache::put($cacheKey, $existingMetrics, 3600); // Store for 1 hour
 
             // Store in database for historical analysis
-            \DB::table('performance_metrics')->insert([
+            $payload = $this->buildDatabasePayload($request, $executionTime, $memoryUsage, $peakMemory);
+            if ($payload === []) {
+                return;
+            }
+
+            \DB::table('performance_metrics')->insert($payload);
+
+        } catch (QueryException $queryException) {
+            // Do not fail request flow if schema/table is missing or partially migrated.
+            return;
+        } catch (\Throwable $throwable) {
+            // Keep middleware best-effort; performance logging must never break requests.
+            return;
+        }
+    }
+
+    /**
+     * Build a DB payload using only columns that actually exist.
+     */
+    private function buildDatabasePayload(Request $request, $executionTime, $memoryUsage, $peakMemory): array
+    {
+        if (!Schema::hasTable('performance_metrics')) {
+            return [];
+        }
+
+        $columns = $this->getPerformanceMetricColumns();
+        if ($columns === []) {
+            return [];
+        }
+
+        $data = [
                 'url' => $request->fullUrl(),
                 'method' => $request->method(),
                 'route_name' => $request->route() ? $request->route()->getName() : null,
@@ -121,11 +160,29 @@ class PerformanceMiddleware
                 'ip_address' => $request->ip(),
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+        ];
 
-        } catch (\Exception $e) {
-            // If storing metrics fails, continue without throwing error
-            \Log::error('Failed to store performance metrics: ' . $e->getMessage());
+        $allowed = array_flip($columns);
+        return array_intersect_key($data, $allowed);
+    }
+
+    /**
+     * Resolve and cache performance_metrics columns to avoid repetitive schema checks.
+     *
+     * @return array<int, string>
+     */
+    private function getPerformanceMetricColumns(): array
+    {
+        if (self::$performanceMetricColumns !== null) {
+            return self::$performanceMetricColumns;
+        }
+
+        try {
+            self::$performanceMetricColumns = Schema::getColumnListing('performance_metrics');
+            return self::$performanceMetricColumns;
+        } catch (\Throwable $throwable) {
+            self::$performanceMetricColumns = [];
+            return self::$performanceMetricColumns;
         }
     }
 }
