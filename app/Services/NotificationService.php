@@ -8,6 +8,7 @@ use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationService
 {
@@ -597,11 +598,16 @@ class NotificationService
     private function getUserFcmTokens(User $user): array
     {
         try {
-            $tokens = \DB::table('user_devices')
-                ->where('user_id', $user->id)
-                ->whereNotNull('fcm_token')
-                ->where('fcm_token', '!=', '')
-                ->pluck('fcm_token')
+            if (! Schema::hasColumn('user_devices', 'personal_access_token_id')) {
+                return [];
+            }
+
+            $tokens = \DB::table('user_devices as devices')
+                ->join('personal_access_tokens as sessions', 'sessions.id', '=', 'devices.personal_access_token_id')
+                ->where('devices.user_id', $user->id)
+                ->whereNotNull('devices.fcm_token')
+                ->where('devices.fcm_token', '!=', '')
+                ->pluck('devices.fcm_token')
                 ->unique()
                 ->values()
                 ->toArray();

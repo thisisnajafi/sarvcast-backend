@@ -6,10 +6,15 @@ use App\Models\AffiliateCommission;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class AdminPushNotificationService
 {
+    private const NEW_USER_NOTIFICATION_EVENT_MARKER = 'new_user_registration_notification';
+    private const NOTIFICATIONS_LOG_CHANNEL = 'notifications';
+
     public function __construct(
         protected InAppNotificationService $inAppNotificationService
     ) {}
@@ -20,12 +25,7 @@ class AdminPushNotificationService
      */
     public function notifyAdmins(string $title, string $message, array $options = []): int
     {
-        $admins = User::query()
-            ->admins()
-            ->whereIn('status', User::loginAllowedStatuses())
-            ->orderByRaw("CASE WHEN role = 'super_admin' THEN 0 ELSE 1 END")
-            ->orderBy('id')
-            ->get();
+        $admins = $this->getActiveAdmins();
 
         if ($admins->isEmpty()) {
             Log::warning('Admin push skipped: no active admin users found');
@@ -149,14 +149,95 @@ class AdminPushNotificationService
         $message .= "نقش: {$this->getUserRoleText($user->role)}\n";
         $message .= "تاریخ ثبت‌نام: " . $this->formatJalaliDate($user->created_at) . "\n";
         $message .= "کل کاربران: " . User::count();
+        $admins = $this->getActiveAdmins();
+        $adminIds = $admins->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+        if ($admins->isEmpty()) {
+            $this->logNewUserRegistrationChannel(
+                (int) $user->id,
+                [],
+                'db',
+                'skip',
+                'no_active_admin_users'
+            );
+            $this->logNewUserRegistrationChannel(
+                (int) $user->id,
+                [],
+                'push',
+                'skip',
+                'no_active_admin_users'
+            );
 
-        return $this->notifyAdmins('کاربر جدید', $message, [
-            'type' => 'info',
-            'data' => [
-                'user_id' => $user->id,
-                'alert_kind' => 'registration',
-            ],
-        ]);
+            return 0;
+        }
+        $title = 'کاربر جدید';
+        $pushData = [
+            'type' => 'admin_alert',
+            'admin_alert' => true,
+            'user_id' => $user->id,
+            'alert_kind' => 'registration',
+        ];
+        $primaryAdmin = $admins->first();
+        try {
+            $this->inAppNotificationService->createNotification(
+                $primaryAdmin->id,
+                'info',
+                $title,
+                $message,
+                [
+                    'category' => 'system',
+                    'priority' => 'high',
+                    'is_important' => true,
+                    'send_push' => false,
+                    'data' => $pushData,
+                ]
+            );
+            $this->logNewUserRegistrationChannel(
+                (int) $user->id,
+                $adminIds,
+                'db',
+                'success',
+                'in_app_notification_created'
+            );
+        } catch (Throwable $throwable) {
+            $this->logNewUserRegistrationChannel(
+                (int) $user->id,
+                $adminIds,
+                'db',
+                'fail',
+                'in_app_notification_exception'
+            );
+        }
+        $notificationService = app(NotificationService::class);
+        $successfulPushAdminIds = [];
+        $failedPushAdminIds = [];
+        foreach ($admins as $admin) {
+            try {
+                $notificationService->sendPushNotification($admin, $title, $message, $pushData);
+                $successfulPushAdminIds[] = (int) $admin->id;
+            } catch (Throwable $throwable) {
+                $failedPushAdminIds[] = (int) $admin->id;
+            }
+        }
+        if ($successfulPushAdminIds !== []) {
+            $this->logNewUserRegistrationChannel(
+                (int) $user->id,
+                $successfulPushAdminIds,
+                'push',
+                'success',
+                $failedPushAdminIds === [] ? 'push_sent_to_all_admins' : 'push_sent_to_some_admins'
+            );
+        }
+        if ($failedPushAdminIds !== []) {
+            $this->logNewUserRegistrationChannel(
+                (int) $user->id,
+                $failedPushAdminIds,
+                'push',
+                'fail',
+                $successfulPushAdminIds === [] ? 'push_failed_for_all_admins' : 'push_failed_for_some_admins'
+            );
+        }
+
+        return count($successfulPushAdminIds);
     }
 
     public function sendSubscriptionRenewalNotification(Subscription $subscription): int
@@ -284,5 +365,36 @@ class AdminPushNotificationService
     private function formatJalaliDate($date): string
     {
         return \App\Helpers\JalaliHelper::formatForDisplay($date, 'Y/m/d H:i');
+    }
+
+    private function getActiveAdmins(): Collection
+    {
+        return User::query()
+            ->admins()
+            ->whereIn('status', User::loginAllowedStatuses())
+            ->orderByRaw("CASE WHEN role = 'super_admin' THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function logNewUserRegistrationChannel(
+        int $newUserId,
+        array $recipientAdminIds,
+        string $channel,
+        string $result,
+        string $reason
+    ): void {
+        try {
+            Log::channel(self::NOTIFICATIONS_LOG_CHANNEL)->info(self::NEW_USER_NOTIFICATION_EVENT_MARKER, [
+                'event_marker' => self::NEW_USER_NOTIFICATION_EVENT_MARKER,
+                'new_user_id' => $newUserId,
+                'recipient_admin_ids' => $recipientAdminIds,
+                'channel' => $channel,
+                'result' => $result,
+                'reason' => $reason,
+            ]);
+        } catch (Throwable $throwable) {
+            // Logging issues must never interrupt notification delivery.
+        }
     }
 }

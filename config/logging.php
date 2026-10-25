@@ -89,6 +89,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'notifications' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/notifications.log'),
+            'level' => env('LOG_NOTIFICATIONS_LEVEL', 'info'),
+            'days' => env('LOG_NOTIFICATIONS_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

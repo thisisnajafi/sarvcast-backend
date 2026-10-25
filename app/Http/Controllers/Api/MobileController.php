@@ -589,9 +589,15 @@ class MobileController extends Controller
         $fcmToken = isset($validated['fcm_token'])
             ? Str::limit((string) $validated['fcm_token'], 4096, '')
             : null;
+        $currentAccessTokenId = Auth::user()?->currentAccessToken()?->id;
 
         try {
             $now = now();
+
+            if (! empty($fcmToken)) {
+                $this->detachFcmTokenFromOtherDevices((int) $user->id, $deviceId, $fcmToken);
+            }
+
             $exists = DB::table('user_devices')
                 ->where('user_id', $user->id)
                 ->where('device_id', $deviceId)
@@ -607,6 +613,7 @@ class MobileController extends Controller
                         'os_version' => $osVersion,
                         'app_version' => $appVersion,
                         'fcm_token' => $fcmToken,
+                        'personal_access_token_id' => $currentAccessTokenId,
                         'last_active' => $now,
                         'updated_at' => $now,
                     ]);
@@ -619,6 +626,7 @@ class MobileController extends Controller
                     'os_version' => $osVersion,
                     'app_version' => $appVersion,
                     'fcm_token' => $fcmToken,
+                    'personal_access_token_id' => $currentAccessTokenId,
                     'last_active' => $now,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -654,12 +662,19 @@ class MobileController extends Controller
         ]);
 
         $user = Auth::user();
+        $deviceId = Str::limit((string) $validated['device_id'], 100, '');
+        $fcmToken = Str::limit((string) $validated['fcm_token'], 4096, '');
+        $currentAccessTokenId = Auth::user()?->currentAccessToken()?->id;
+
+        $this->detachFcmTokenFromOtherDevices((int) $user->id, $deviceId, $fcmToken);
 
         DB::table('user_devices')
             ->where('user_id', $user->id)
-            ->where('device_id', Str::limit((string) $validated['device_id'], 100, ''))
+            ->where('device_id', $deviceId)
             ->update([
-                'fcm_token' => Str::limit((string) $validated['fcm_token'], 4096, ''),
+                'fcm_token' => $fcmToken,
+                'personal_access_token_id' => $currentAccessTokenId,
+                'last_active' => now(),
                 'updated_at' => now(),
             ]);
 
@@ -723,5 +738,23 @@ class MobileController extends Controller
             'success' => true,
             'message' => 'دستگاه حذف شد'
         ]);
+    }
+
+    /**
+     * Ensure one push token is linked to exactly one user+device at a time.
+     */
+    private function detachFcmTokenFromOtherDevices(int $userId, string $deviceId, string $fcmToken): void
+    {
+        DB::table('user_devices')
+            ->where('fcm_token', $fcmToken)
+            ->where(function ($query) use ($userId, $deviceId) {
+                $query->where('user_id', '!=', $userId)
+                    ->orWhere('device_id', '!=', $deviceId);
+            })
+            ->update([
+                'fcm_token' => null,
+                'personal_access_token_id' => null,
+                'updated_at' => now(),
+            ]);
     }
 }
