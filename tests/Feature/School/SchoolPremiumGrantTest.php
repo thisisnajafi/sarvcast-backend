@@ -320,6 +320,63 @@ class SchoolPremiumGrantTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_removing_member_revokes_school_grant_but_keeps_purchased_premium(): void
+    {
+        $super = User::factory()->superAdmin()->create();
+        [$manager, $profile] = $this->panel('09141000075', 5);
+        $member = User::factory()->create();
+        $this->attach($manager, $profile, $member);
+
+        $previousEnd = now()->addDays(20);
+        $subscription = Subscription::query()->create([
+            'user_id' => $member->id,
+            'type' => '1month',
+            'status' => 'active',
+            'start_date' => now()->subDays(5),
+            'end_date' => $previousEnd,
+            'price' => 75000,
+            'currency' => 'IRR',
+            'auto_renew' => true,
+            'payment_method' => 'zarinpal',
+            'billing_platform' => 'website',
+        ]);
+
+        $profile->update(['premium_grant_expires_at' => now()->addDays(90)]);
+
+        Sanctum::actingAs($super);
+        $this->putJson($this->windowUrl($profile), $this->windowBody(1, 2))->assertCreated();
+
+        Sanctum::actingAs($manager);
+        $granted = $this->postJson('/api/admin/v1/school-panel/members/'.$member->id.'/premium-grant')
+            ->assertCreated()
+            ->assertJsonPath('data.subscription.id', $subscription->id);
+        $grantId = (int) $granted->json('data.grant.id');
+        $this->assertDatabaseHas('school_premium_grants', [
+            'id' => $grantId,
+            'status' => 'active',
+            'grant_source' => 'school_panel',
+            'source_profile_id' => $profile->id,
+        ]);
+
+        $this->deleteJson('/api/admin/v1/school-panel/members/'.$member->id)->assertOk();
+
+        $subscription->refresh();
+        $this->assertSame($previousEnd->format('Y-m-d H:i'), $subscription->end_date->format('Y-m-d H:i'));
+        $this->assertSame('active', $subscription->status);
+        $this->assertTrue(app(AccessControlService::class)->hasPremiumAccess($member->id));
+
+        $this->assertDatabaseHas('school_premium_grants', [
+            'id' => $grantId,
+            'status' => 'revoked',
+            'revoked_by' => $manager->id,
+        ]);
+        $this->assertDatabaseHas('school_memberships', [
+            'school_manager_profile_id' => $profile->id,
+            'user_id' => $member->id,
+            'active_user_id' => null,
+        ]);
+    }
+
     public function test_revoke_ends_a_free_grant_immediately(): void
     {
         $super = User::factory()->superAdmin()->create();
