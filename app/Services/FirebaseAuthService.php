@@ -4,6 +4,8 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use App\Support\NewUserNotificationHttp;
+use App\Support\NewUserNotificationLogger;
 use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 
@@ -72,7 +74,11 @@ class FirebaseAuthService
             $jwt = $this->createJWT($serviceAccount);
 
             // Exchange JWT for access token
-            $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+            $pending = Http::asForm();
+            if (NewUserNotificationLogger::isTracing()) {
+                $pending = NewUserNotificationHttp::client()->asForm();
+            }
+            $response = $pending->post('https://oauth2.googleapis.com/token', [
                 'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
                 'assertion' => $jwt,
             ]);

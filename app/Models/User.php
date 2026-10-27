@@ -1021,13 +1021,13 @@ class User extends Authenticatable
 
         static::created(function ($user) {
             // Fire new user registration event
-            $queueConnection = (string) config('queue.default');
             NewUserNotificationLogger::debug('user_created_dispatching_event', [
                 'source' => 'user.created',
                 'new_user_id' => (int) $user->id,
                 'role' => $user->role,
                 'event' => NewUserRegistrationEvent::class,
-                'queue_connection' => $queueConnection,
+                'queued' => false,
+                'queue_connection' => null,
             ]);
             event(new NewUserRegistrationEvent($user));
         });

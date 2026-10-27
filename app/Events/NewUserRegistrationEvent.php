@@ -24,26 +24,20 @@ class NewUserRegistrationEvent
     public function __construct(User $user)
     {
         $this->user = $user;
-        $queueConnection = (string) config('queue.default');
         NewUserNotificationLogger::debug('event_fired', [
             'event' => self::class,
             'new_user_id' => (int) $user->id,
             'listeners' => [
                 [
                     'listener' => 'App\\Listeners\\SendAdminPushNewUserNotification',
-                    'queued' => true,
-                    'queue_connection' => $queueConnection,
+                    'queued' => false,
+                    'queue_connection' => null,
                     'after_commit' => true,
                 ],
                 [
                     'listener' => 'App\\Listeners\\SendWelcomeInAppNotification',
                     'queued' => false,
                     'queue_connection' => null,
-                ],
-                [
-                    'listener' => 'App\\Listeners\\SendTelegramNewUserNotification',
-                    'queued' => true,
-                    'queue_connection' => $queueConnection,
                 ],
             ],
         ]);

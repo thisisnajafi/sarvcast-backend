@@ -80,9 +80,14 @@ class TelegramListenersWiredTest extends TestCase
         $this->assertListenerWired(NewUserRegistrationEvent::class, SendWelcomeInAppNotification::class);
     }
 
-    public function test_new_user_registration_has_telegram_listener(): void
+    public function test_new_user_registration_does_not_run_telegram_listener(): void
     {
-        $this->assertListenerWired(NewUserRegistrationEvent::class, SendTelegramNewUserNotification::class);
+        $map = $this->providerListeners();
+        $this->assertArrayHasKey(NewUserRegistrationEvent::class, $map);
+        $this->assertNotContains(
+            SendTelegramNewUserNotification::class,
+            $map[NewUserRegistrationEvent::class]
+        );
     }
 
     public function test_sales_event_has_push_listener(): void

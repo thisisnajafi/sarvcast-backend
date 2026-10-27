@@ -13,7 +13,6 @@ use App\Listeners\SendAdminPushSalesNotification;
 use App\Listeners\SendAdminPushSubscriptionCancellationNotification;
 use App\Listeners\SendAdminPushSubscriptionRenewalNotification;
 use App\Listeners\SendTelegramInfluencerCommissionNotification;
-use App\Listeners\SendTelegramNewUserNotification;
 use App\Listeners\SendTelegramSalesNotification;
 use App\Listeners\SendTelegramSubscriptionCancellationNotification;
 use App\Listeners\SendTelegramSubscriptionRenewalNotification;
@@ -37,10 +36,11 @@ class EventServiceProvider extends ServiceProvider
             SendEmailVerificationNotification::class,
         ],
 
+        // Telegram new-user alerts are not registered. The listener class stays
+        // in the tree, but it must not run and must not be queued.
         NewUserRegistrationEvent::class => [
             SendAdminPushNewUserNotification::class,
             SendWelcomeInAppNotification::class,
-            SendTelegramNewUserNotification::class,
         ],
 
         SalesNotificationEvent::class => [

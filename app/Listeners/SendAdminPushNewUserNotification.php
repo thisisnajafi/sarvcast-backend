@@ -5,27 +5,17 @@ namespace App\Listeners;
 use App\Events\NewUserRegistrationEvent;
 use App\Models\User;
 use App\Services\AdminPushNotificationService;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 use App\Support\NewUserNotificationLogger;
+use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class SendAdminPushNewUserNotification implements ShouldQueue
+class SendAdminPushNewUserNotification implements ShouldHandleEventsAfterCommit
 {
-    use InteractsWithQueue;
     private const NEW_USER_NOTIFICATION_EVENT_MARKER = 'new_user_registration_notification';
     private const NOTIFICATIONS_LOG_CHANNEL = 'notifications';
-
-    /**
-     * Dispatch only after the user row is committed, so queue workers
-     * never process a missing user on database/cPanel hosts.
-     */
-    public bool $afterCommit = true;
-
-    /** Retry a few times if FCM/network is flaky. */
-    public int $tries = 3;
+    private const SYNC_ATTEMPT = 1;
 
     public function __construct(
         protected AdminPushNotificationService $adminPushService
@@ -38,8 +28,10 @@ class SendAdminPushNewUserNotification implements ShouldQueue
         NewUserNotificationLogger::debug('listener_started', array_merge($queueContext, [
             'listener' => self::class,
             'new_user_id' => $newUserId,
-            'after_commit' => $this->afterCommit,
-            'attempt' => $this->attempts(),
+            'after_commit' => true,
+            'attempt' => self::SYNC_ATTEMPT,
+            'queued' => false,
+            'queue_connection' => null,
         ]));
         try {
             $user = $event->user;

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\NewUserNotificationHttp;
 use App\Support\NewUserNotificationLogger;
 use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
@@ -177,7 +178,7 @@ class NotificationService
                     ],
                 ];
 
-                $response = Http::withHeaders([
+                $response = $this->fcmHttp($data)->withHeaders([
                     'Authorization' => 'Bearer ' . $accessToken,
                     'Content-Type' => 'application/json',
                 ])->post($apiUrl, $message);
@@ -247,7 +248,7 @@ class NotificationService
             'priority' => 'high'
         ];
 
-        $response = Http::withHeaders([
+        $response = $this->fcmHttp($data)->withHeaders([
             'Authorization' => 'key=' . $serverKey,
             'Content-Type' => 'application/json'
         ])->post('https://fcm.googleapis.com/fcm/send', $payload);
@@ -275,6 +276,20 @@ class NotificationService
         }
 
         return false;
+    }
+
+    /**
+     * Cap only the new-user registration push. Other queued FCM jobs keep the default client.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function fcmHttp(array $data): \Illuminate\Http\Client\PendingRequest
+    {
+        if (! $this->shouldTraceNewUserPush($data)) {
+            return Http::withOptions([]);
+        }
+
+        return NewUserNotificationHttp::client();
     }
 
     /**
