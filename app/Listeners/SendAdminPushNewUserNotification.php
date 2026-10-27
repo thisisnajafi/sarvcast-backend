@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\AdminPushNotificationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -32,6 +33,14 @@ class SendAdminPushNewUserNotification implements ShouldQueue
 
     public function handle(NewUserRegistrationEvent $event): void
     {
+        $queueContext = NewUserNotificationLogger::queueContext($this);
+        $newUserId = (int) $event->user->id;
+        NewUserNotificationLogger::debug('listener_started', array_merge($queueContext, [
+            'listener' => self::class,
+            'new_user_id' => $newUserId,
+            'after_commit' => $this->afterCommit,
+            'attempt' => $this->attempts(),
+        ]));
         try {
             $user = $event->user;
             // Hold a long-lived marker so a second dispatch for the same user
@@ -39,6 +48,12 @@ class SendAdminPushNewUserNotification implements ShouldQueue
             $dedupeKey = "admin_push_new_user_{$user->id}";
             if (! Cache::add($dedupeKey, true, now()->addDays(30))) {
                 $recipientAdminIds = $this->resolveActiveAdminIds();
+                NewUserNotificationLogger::debug('recipients_resolved', [
+                    'listener' => self::class,
+                    'new_user_id' => $newUserId,
+                    'recipient_admin_ids' => $recipientAdminIds,
+                    'recipient_count' => count($recipientAdminIds),
+                ]);
                 $this->logNewUserRegistrationChannel(
                     (int) $user->id,
                     $recipientAdminIds,
@@ -53,11 +68,27 @@ class SendAdminPushNewUserNotification implements ShouldQueue
                     'skip',
                     'duplicate_event_deduped'
                 );
+                NewUserNotificationLogger::warning('listener_early_return', array_merge($queueContext, [
+                    'listener' => self::class,
+                    'new_user_id' => $newUserId,
+                    'reason' => 'duplicate_event_deduped',
+                    'recipient_admin_ids' => $recipientAdminIds,
+                ]));
 
                 return;
             }
 
-            $this->adminPushService->sendNewUserNotification($user);
+            NewUserNotificationLogger::debug('notification_dispatched', array_merge($queueContext, [
+                'listener' => self::class,
+                'new_user_id' => $newUserId,
+                'channel' => 'admin_push',
+            ]));
+            $sentCount = $this->adminPushService->sendNewUserNotification($user);
+            NewUserNotificationLogger::debug('listener_succeeded', [
+                'listener' => self::class,
+                'new_user_id' => $newUserId,
+                'sent_count' => $sentCount,
+            ]);
         } catch (Throwable $throwable) {
             $recipientAdminIds = $this->resolveActiveAdminIds();
             $this->logNewUserRegistrationChannel(
@@ -74,6 +105,11 @@ class SendAdminPushNewUserNotification implements ShouldQueue
                 'fail',
                 'listener_exception'
             );
+            NewUserNotificationLogger::error('listener_failed', array_merge([
+                'listener' => self::class,
+                'new_user_id' => $newUserId,
+                'recipient_admin_ids' => $recipientAdminIds,
+            ], NewUserNotificationLogger::exceptionContext($throwable)));
             Log::error('Failed to handle admin new user notification listener', [
                 'user_id' => $event->user->id,
                 'exception_class' => get_class($throwable),

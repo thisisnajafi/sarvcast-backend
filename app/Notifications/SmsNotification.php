@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Jobs\SendSmsNotification;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -32,6 +33,17 @@ class SmsNotification extends Notification implements ShouldQueue
      */
     public function via($notifiable): array
     {
+        if ($this->templateKey === 'welcome') {
+            NewUserNotificationLogger::debug('welcome_sms_notification_via', [
+                'listener' => self::class,
+                'template_key' => 'welcome',
+                'channel' => 'sms',
+                'queued' => true,
+                'queue_connection' => $this->connection ?: (string) config('queue.default'),
+                'queue' => $this->queue,
+            ]);
+        }
+
         return ['sms'];
     }
 

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Services\SmsService;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -47,6 +48,19 @@ class SendSmsNotification implements ShouldQueue
      */
     public function handle(SmsService $smsService): void
     {
+        $isWelcome = $this->templateKey === 'welcome';
+        $queueConnection = $this->connection ?: (string) config('queue.default');
+        if ($isWelcome) {
+            NewUserNotificationLogger::debug('welcome_sms_job_started', [
+                'source' => self::class,
+                'template_key' => 'welcome',
+                'channel' => 'sms',
+                'queued' => true,
+                'queue_connection' => $queueConnection,
+                'queue' => $this->queue,
+                'attempt' => $this->attempts(),
+            ]);
+        }
         try {
             if ($this->templateKey) {
                 $result = $smsService->sendTemplateSms(
@@ -61,6 +75,18 @@ class SendSmsNotification implements ShouldQueue
                     $this->message,
                     $this->provider
                 );
+            }
+
+            if ($isWelcome) {
+                $succeeded = (bool) ($result['success'] ?? false);
+                NewUserNotificationLogger::write($succeeded ? 'debug' : 'error', $succeeded ? 'welcome_sms_job_succeeded' : 'welcome_sms_job_failed', [
+                    'source' => self::class,
+                    'template_key' => 'welcome',
+                    'channel' => 'sms',
+                    'queue_connection' => $queueConnection,
+                    'success' => $succeeded,
+                    'provider' => $result['data']['provider'] ?? $this->provider,
+                ]);
             }
 
             if (!$result['success']) {
@@ -84,6 +110,14 @@ class SendSmsNotification implements ShouldQueue
             }
 
         } catch (\Exception $e) {
+            if ($isWelcome) {
+                NewUserNotificationLogger::error('welcome_sms_job_failed', array_merge([
+                    'source' => self::class,
+                    'template_key' => 'welcome',
+                    'channel' => 'sms',
+                    'queue_connection' => $queueConnection,
+                ], NewUserNotificationLogger::exceptionContext($e)));
+            }
             Log::error('SMS notification job failed', [
                 'phone_number' => $this->phoneNumber,
                 'template_key' => $this->templateKey,
@@ -99,6 +133,14 @@ class SendSmsNotification implements ShouldQueue
      */
     public function failed(\Throwable $exception): void
     {
+        if ($this->templateKey === 'welcome') {
+            NewUserNotificationLogger::error('welcome_sms_job_permanently_failed', array_merge([
+                'source' => self::class,
+                'template_key' => 'welcome',
+                'channel' => 'sms',
+                'queue_connection' => $this->connection ?: (string) config('queue.default'),
+            ], NewUserNotificationLogger::exceptionContext($exception)));
+        }
         Log::error('SMS notification job permanently failed', [
             'phone_number' => $this->phoneNumber,
             'template_key' => $this->templateKey,

@@ -3,8 +3,10 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Events\NewUserRegistrationEvent;
 use App\Models\User;
 use App\Models\Role;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Support\Facades\Hash;
 
 class CreateSuperAdmin extends Command
@@ -21,6 +23,11 @@ class CreateSuperAdmin extends Command
         $user = User::where('phone_number', $phoneNumber)->first();
         
         if ($user) {
+            NewUserNotificationLogger::warning('registration_early_return', [
+                'source' => 'admin:create-super-admin',
+                'reason' => 'user_already_exists',
+                'existing_user_id' => (int) $user->id,
+            ]);
             $this->info("User with phone number {$phoneNumber} already exists.");
             
             // Check if user already has super admin role
@@ -30,6 +37,12 @@ class CreateSuperAdmin extends Command
             }
         } else {
             // Create new user
+            NewUserNotificationLogger::debug('user_record_creating', [
+                'source' => 'admin:create-super-admin',
+                'role' => 'super_admin',
+                'event' => NewUserRegistrationEvent::class,
+                'queue_connection' => (string) config('queue.default'),
+            ]);
             $user = User::create([
                 'phone_number' => $phoneNumber,
                 'email' => 'abolfazl@manji.com',
@@ -38,6 +51,12 @@ class CreateSuperAdmin extends Command
                 'last_name' => 'Super Admin',
                 'status' => 'active',
                 'phone_verified_at' => now(),
+            ]);
+            NewUserNotificationLogger::debug('user_record_created', [
+                'source' => 'admin:create-super-admin',
+                'new_user_id' => (int) $user->id,
+                'role' => $user->role,
+                'event' => NewUserRegistrationEvent::class,
             ]);
             
             $this->info("User created successfully with phone number: {$phoneNumber}");

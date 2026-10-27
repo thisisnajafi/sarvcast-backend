@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -89,8 +90,32 @@ class InAppNotificationService
                     }
 
                     // Send push notification (unless explicitly disabled)
+                    $traceNewUser = NewUserNotificationLogger::isTracing()
+                        || (($pushData['alert_kind'] ?? null) === 'registration');
                     if ($options['send_push'] ?? true) {
-                        $this->notificationService->sendPushNotification($user, $title, $message, $pushData);
+                        if ($traceNewUser) {
+                            NewUserNotificationLogger::debug('in_app_push_send_attempt', [
+                                'recipient_user_id' => $userId,
+                                'channel' => 'push',
+                                'queued' => false,
+                                'queue_connection' => null,
+                                'alert_kind' => $pushData['alert_kind'] ?? null,
+                            ]);
+                        }
+                        $accepted = $this->notificationService->sendPushNotification($user, $title, $message, $pushData);
+                        if ($traceNewUser) {
+                            NewUserNotificationLogger::debug('in_app_push_send_finished', [
+                                'recipient_user_id' => $userId,
+                                'channel' => 'push',
+                                'accepted' => (bool) $accepted,
+                            ]);
+                        }
+                    } elseif ($traceNewUser) {
+                        NewUserNotificationLogger::debug('in_app_push_skipped', [
+                            'recipient_user_id' => $userId,
+                            'channel' => 'push',
+                            'reason' => 'send_push_disabled',
+                        ]);
                     }
                 } catch (\Exception $e) {
                     // Log but don't fail if push notification fails
@@ -98,7 +123,19 @@ class InAppNotificationService
                         'user_id' => $userId,
                         'error' => $e->getMessage()
                     ]);
+                    if (NewUserNotificationLogger::isTracing() || (($options['data']['alert_kind'] ?? null) === 'registration')) {
+                        NewUserNotificationLogger::error('in_app_push_failed', array_merge([
+                            'recipient_user_id' => $userId,
+                            'channel' => 'push',
+                        ], NewUserNotificationLogger::exceptionContext($e)));
+                    }
                 }
+            } elseif (NewUserNotificationLogger::isTracing()) {
+                NewUserNotificationLogger::warning('in_app_push_early_return', [
+                    'recipient_user_id' => $userId,
+                    'reason' => 'recipient_not_found',
+                    'channel' => 'push',
+                ]);
             }
 
             Log::info('In-app notification created', [
@@ -186,14 +223,40 @@ class InAppNotificationService
      */
     public function createWelcomeNotification(int $userId): Notification
     {
-        return $this->createNotification($userId, 'success', 'خوش آمدید!', 'به مانجی خوش آمدید! از شنیدن داستان‌های زیبا لذت ببرید.', [
-            'category' => 'system',
-            'priority' => 'normal',
-            'is_important' => true,
-            'action_type' => 'button',
-            'action_text' => 'شروع کنید',
-            'action_url' => '/stories'
-        ]);
+        return NewUserNotificationLogger::within(function () use ($userId): Notification {
+            NewUserNotificationLogger::debug('welcome_notification_send_attempt', [
+                'source' => self::class,
+                'new_user_id' => $userId,
+                'channel' => 'in_app',
+                'queued' => false,
+                'queue_connection' => null,
+            ]);
+            try {
+                $notification = $this->createNotification($userId, 'success', 'خوش آمدید!', 'به مانجی خوش آمدید! از شنیدن داستان‌های زیبا لذت ببرید.', [
+                    'category' => 'system',
+                    'priority' => 'normal',
+                    'is_important' => true,
+                    'action_type' => 'button',
+                    'action_text' => 'شروع کنید',
+                    'action_url' => '/stories'
+                ]);
+                NewUserNotificationLogger::debug('welcome_notification_succeeded', [
+                    'source' => self::class,
+                    'new_user_id' => $userId,
+                    'notification_id' => (int) $notification->id,
+                    'channel' => 'in_app',
+                ]);
+
+                return $notification;
+            } catch (\Throwable $throwable) {
+                NewUserNotificationLogger::error('welcome_notification_failed', array_merge([
+                    'source' => self::class,
+                    'new_user_id' => $userId,
+                    'channel' => 'in_app',
+                ], NewUserNotificationLogger::exceptionContext($throwable)));
+                throw $throwable;
+            }
+        });
     }
 
     /**

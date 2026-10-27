@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\NewUserRegistrationEvent;
 use App\Services\TelegramNotificationService;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +28,13 @@ class SendTelegramNewUserNotification implements ShouldQueue
      */
     public function handle(NewUserRegistrationEvent $event): void
     {
+        $queueContext = NewUserNotificationLogger::queueContext($this);
+        $newUserId = (int) $event->user->id;
+        NewUserNotificationLogger::debug('listener_started', array_merge($queueContext, [
+            'listener' => self::class,
+            'new_user_id' => $newUserId,
+            'attempt' => $this->attempts(),
+        ]));
         try {
             $user = $event->user;
 
@@ -36,6 +44,12 @@ class SendTelegramNewUserNotification implements ShouldQueue
                 'user_phone' => $user->phone_number,
                 'user_role' => $user->role
             ]);
+            NewUserNotificationLogger::debug('recipients_resolved', [
+                'listener' => self::class,
+                'new_user_id' => $newUserId,
+                'recipient' => 'telegram_chat',
+                'recipient_count' => 1,
+            ]);
 
             // Hold a long-lived marker so a second dispatch for the same user
             // cannot send again (do not release after send). Match admin push TTL.
@@ -44,10 +58,20 @@ class SendTelegramNewUserNotification implements ShouldQueue
                 Log::info('Skipping Telegram new user notification - already sent', [
                     'user_id' => $user->id,
                 ]);
+                NewUserNotificationLogger::warning('listener_early_return', array_merge($queueContext, [
+                    'listener' => self::class,
+                    'new_user_id' => $newUserId,
+                    'reason' => 'duplicate_event_deduped',
+                ]));
 
                 return;
             }
 
+            NewUserNotificationLogger::debug('notification_dispatched', array_merge($queueContext, [
+                'listener' => self::class,
+                'new_user_id' => $newUserId,
+                'channel' => 'telegram',
+            ]));
             $success = $this->telegramService->sendNewUserNotification($user);
 
             if ($success) {
@@ -55,10 +79,21 @@ class SendTelegramNewUserNotification implements ShouldQueue
                     'user_id' => $user->id,
                     'user_name' => $user->first_name . ' ' . $user->last_name
                 ]);
+                NewUserNotificationLogger::debug('listener_succeeded', [
+                    'listener' => self::class,
+                    'new_user_id' => $newUserId,
+                    'channel' => 'telegram',
+                ]);
             } else {
                 Log::error('Failed to send Telegram new user notification', [
                     'user_id' => $user->id,
                     'telegram_service_error' => true
+                ]);
+                NewUserNotificationLogger::error('listener_failed', [
+                    'listener' => self::class,
+                    'new_user_id' => $newUserId,
+                    'channel' => 'telegram',
+                    'reason' => 'telegram_service_returned_false',
                 ]);
             }
         } catch (\Exception $e) {
@@ -67,6 +102,11 @@ class SendTelegramNewUserNotification implements ShouldQueue
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            NewUserNotificationLogger::error('listener_failed', array_merge([
+                'listener' => self::class,
+                'new_user_id' => $newUserId,
+                'channel' => 'telegram',
+            ], NewUserNotificationLogger::exceptionContext($e)));
         }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\SmsService;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -231,6 +232,10 @@ class SmsController extends Controller
         ]);
 
         if ($validator->fails()) {
+            NewUserNotificationLogger::warning('welcome_sms_early_return', [
+                'source' => 'api.sms.welcome',
+                'reason' => 'validation_failed',
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'خطا در اعتبارسنجی داده‌ها',
@@ -238,15 +243,34 @@ class SmsController extends Controller
             ], 422);
         }
 
+        $provider = $request->input('provider');
+        NewUserNotificationLogger::debug('welcome_sms_send_attempt', [
+            'source' => 'api.sms.welcome',
+            'provider' => $provider,
+            'queued' => false,
+            'queue_connection' => null,
+        ]);
+
         try {
             $phoneNumber = $request->input('phone_number');
-            $provider = $request->input('provider');
 
             $result = $this->smsService->sendWelcomeMessage($phoneNumber, $provider);
+            $succeeded = (bool) ($result['success'] ?? false);
+            NewUserNotificationLogger::write($succeeded ? 'debug' : 'error', $succeeded ? 'welcome_sms_succeeded' : 'welcome_sms_failed', [
+                'source' => 'api.sms.welcome',
+                'provider' => $provider,
+                'success' => $succeeded,
+                'channel' => 'sms',
+            ]);
 
             return response()->json($result);
 
         } catch (\Exception $e) {
+            NewUserNotificationLogger::error('welcome_sms_failed', array_merge([
+                'source' => 'api.sms.welcome',
+                'provider' => $provider,
+                'channel' => 'sms',
+            ], NewUserNotificationLogger::exceptionContext($e)));
             Log::error('Failed to send welcome message', [
                 'phone_number' => $request->input('phone_number'),
                 'error' => $e->getMessage()

@@ -6,6 +6,7 @@ use App\Models\AffiliateCommission;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Support\NewUserNotificationLogger;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -143,6 +144,14 @@ class AdminPushNotificationService
 
     public function sendNewUserNotification(User $user): int
     {
+        return NewUserNotificationLogger::within(function () use ($user): int {
+            return $this->deliverNewUserNotification($user);
+        });
+    }
+
+    private function deliverNewUserNotification(User $user): int
+    {
+        $newUserId = (int) $user->id;
         $message = "کاربر جدید\n\n";
         $message .= "نام: {$user->first_name} {$user->last_name}\n";
         $message .= "تلفن: {$user->phone_number}\n";
@@ -151,21 +160,33 @@ class AdminPushNotificationService
         $message .= "کل کاربران: " . User::count();
         $admins = $this->getActiveAdmins();
         $adminIds = $admins->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+        NewUserNotificationLogger::debug('recipients_resolved', [
+            'source' => self::class,
+            'new_user_id' => $newUserId,
+            'recipient_admin_ids' => $adminIds,
+            'recipient_count' => count($adminIds),
+        ]);
         if ($admins->isEmpty()) {
             $this->logNewUserRegistrationChannel(
-                (int) $user->id,
+                $newUserId,
                 [],
                 'db',
                 'skip',
                 'no_active_admin_users'
             );
             $this->logNewUserRegistrationChannel(
-                (int) $user->id,
+                $newUserId,
                 [],
                 'push',
                 'skip',
                 'no_active_admin_users'
             );
+            NewUserNotificationLogger::warning('notification_early_return', [
+                'source' => self::class,
+                'new_user_id' => $newUserId,
+                'reason' => 'no_active_admin_users',
+                'channel' => 'admin_push',
+            ]);
 
             return 0;
         }
@@ -177,6 +198,14 @@ class AdminPushNotificationService
             'alert_kind' => 'registration',
         ];
         $primaryAdmin = $admins->first();
+        NewUserNotificationLogger::debug('in_app_send_attempt', [
+            'source' => self::class,
+            'new_user_id' => $newUserId,
+            'recipient_admin_id' => (int) $primaryAdmin->id,
+            'channel' => 'db',
+            'queued' => false,
+            'queue_connection' => null,
+        ]);
         try {
             $this->inAppNotificationService->createNotification(
                 $primaryAdmin->id,
@@ -192,35 +221,68 @@ class AdminPushNotificationService
                 ]
             );
             $this->logNewUserRegistrationChannel(
-                (int) $user->id,
+                $newUserId,
                 $adminIds,
                 'db',
                 'success',
                 'in_app_notification_created'
             );
+            NewUserNotificationLogger::debug('in_app_send_succeeded', [
+                'source' => self::class,
+                'new_user_id' => $newUserId,
+                'recipient_admin_id' => (int) $primaryAdmin->id,
+                'channel' => 'db',
+            ]);
         } catch (Throwable $throwable) {
             $this->logNewUserRegistrationChannel(
-                (int) $user->id,
+                $newUserId,
                 $adminIds,
                 'db',
                 'fail',
                 'in_app_notification_exception'
             );
+            NewUserNotificationLogger::error('in_app_send_failed', array_merge([
+                'source' => self::class,
+                'new_user_id' => $newUserId,
+                'recipient_admin_id' => (int) $primaryAdmin->id,
+                'channel' => 'db',
+            ], NewUserNotificationLogger::exceptionContext($throwable)));
         }
         $notificationService = app(NotificationService::class);
         $successfulPushAdminIds = [];
         $failedPushAdminIds = [];
         foreach ($admins as $admin) {
+            NewUserNotificationLogger::debug('push_send_attempt', [
+                'source' => self::class,
+                'new_user_id' => $newUserId,
+                'recipient_admin_id' => (int) $admin->id,
+                'channel' => 'push',
+                'queued' => false,
+                'queue_connection' => null,
+            ]);
             try {
-                $notificationService->sendPushNotification($admin, $title, $message, $pushData);
+                $accepted = $notificationService->sendPushNotification($admin, $title, $message, $pushData);
                 $successfulPushAdminIds[] = (int) $admin->id;
+                NewUserNotificationLogger::debug('push_send_finished', [
+                    'source' => self::class,
+                    'new_user_id' => $newUserId,
+                    'recipient_admin_id' => (int) $admin->id,
+                    'channel' => 'push',
+                    'accepted' => (bool) $accepted,
+                ]);
             } catch (Throwable $throwable) {
                 $failedPushAdminIds[] = (int) $admin->id;
+                NewUserNotificationLogger::error('push_send_failed', array_merge([
+                    'source' => self::class,
+                    'new_user_id' => $newUserId,
+                    'recipient_admin_id' => (int) $admin->id,
+                    'channel' => 'push',
+                ], NewUserNotificationLogger::exceptionContext($throwable)));
             }
         }
         if ($successfulPushAdminIds !== []) {
             $this->logNewUserRegistrationChannel(
-                (int) $user->id,
+                $newUserId,
                 $successfulPushAdminIds,
                 'push',
                 'success',
@@ -229,7 +291,7 @@ class AdminPushNotificationService
         }
         if ($failedPushAdminIds !== []) {
             $this->logNewUserRegistrationChannel(
-                (int) $user->id,
+                $newUserId,
                 $failedPushAdminIds,
                 'push',
                 'fail',

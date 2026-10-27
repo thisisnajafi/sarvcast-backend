@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\NewUserNotificationLogger;
 use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -29,8 +30,24 @@ class TelegramNotificationService
      */
     public function sendMessage(string $message, array $options = []): bool
     {
+        $tracing = NewUserNotificationLogger::isTracing();
         if (app()->runningUnitTests()) {
+            if ($tracing) {
+                NewUserNotificationLogger::debug('telegram_send_early_return', [
+                    'channel' => 'telegram',
+                    'reason' => 'unit_tests',
+                ]);
+            }
+
             return true;
+        }
+
+        if ($tracing) {
+            NewUserNotificationLogger::debug('telegram_http_send_attempt', [
+                'channel' => 'telegram',
+                'queued' => false,
+                'queue_connection' => null,
+            ]);
         }
 
         try {
@@ -47,16 +64,34 @@ class TelegramNotificationService
                     'chat_id' => $this->chatId,
                     'message_length' => strlen($message)
                 ]);
+                if ($tracing) {
+                    NewUserNotificationLogger::debug('telegram_http_succeeded', [
+                        'channel' => 'telegram',
+                        'status' => $response->status(),
+                    ]);
+                }
                 return true;
             } else {
                 Log::error('Failed to send Telegram message', [
                     'status' => $response->status(),
                     'response' => $response->body()
                 ]);
+                if ($tracing) {
+                    NewUserNotificationLogger::error('telegram_http_failed', [
+                        'channel' => 'telegram',
+                        'status' => $response->status(),
+                        'reason' => 'http_error',
+                    ]);
+                }
                 return false;
             }
         } catch (\Exception $e) {
             Log::error('Telegram notification error: ' . $e->getMessage());
+            if ($tracing) {
+                NewUserNotificationLogger::error('telegram_http_failed', array_merge([
+                    'channel' => 'telegram',
+                ], NewUserNotificationLogger::exceptionContext($e)));
+            }
             return false;
         }
     }
@@ -148,23 +183,50 @@ class TelegramNotificationService
      */
     public function sendNewUserNotification(User $user): bool
     {
-        $message = "👋 <b>کاربر جدید!</b>\n\n";
-        $message .= "👤 <b>نام:</b> {$user->first_name} {$user->last_name}\n";
-        $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n";
-        $message .= "🆔 <b>شناسه:</b> {$user->id}\n";
-        $message .= "👶 <b>نوع کاربر:</b> {$this->getUserRoleText($user->role)}\n";
-        $message .= "📅 <b>تاریخ ثبت‌نام:</b> " . $this->formatJalaliDate($user->created_at) . "\n\n";
-        
-        if ($user->parent_id) {
-            $parent = $user->parent;
-            $message .= "👨‍👩‍👧‍👦 <b>والد:</b> {$parent->first_name} {$parent->last_name}\n";
-        }
-        
-        $message .= "📊 <b>آمار کل:</b>\n";
-        $message .= "• تعداد کل کاربران: " . User::count() . "\n";
-        $message .= "• کاربران امروز: " . User::whereDate('created_at', today())->count() . "\n";
-        
-        return $this->sendMessage($message);
+        return NewUserNotificationLogger::within(function () use ($user): bool {
+            $newUserId = (int) $user->id;
+            NewUserNotificationLogger::debug('telegram_send_attempt', [
+                'source' => self::class,
+                'new_user_id' => $newUserId,
+                'channel' => 'telegram',
+                'queued' => false,
+                'queue_connection' => null,
+                'recipient' => 'telegram_chat',
+            ]);
+            $message = "👋 <b>کاربر جدید!</b>\n\n";
+            $message .= "👤 <b>نام:</b> {$user->first_name} {$user->last_name}\n";
+            $message .= "📱 <b>تلفن:</b> {$user->phone_number}\n";
+            $message .= "🆔 <b>شناسه:</b> {$user->id}\n";
+            $message .= "👶 <b>نوع کاربر:</b> {$this->getUserRoleText($user->role)}\n";
+            $message .= "📅 <b>تاریخ ثبت‌نام:</b> " . $this->formatJalaliDate($user->created_at) . "\n\n";
+
+            if ($user->parent_id) {
+                $parent = $user->parent;
+                $message .= "👨‍👩‍👧‍👦 <b>والد:</b> {$parent->first_name} {$parent->last_name}\n";
+            }
+
+            $message .= "📊 <b>آمار کل:</b>\n";
+            $message .= "• تعداد کل کاربران: " . User::count() . "\n";
+            $message .= "• کاربران امروز: " . User::whereDate('created_at', today())->count() . "\n";
+
+            $success = $this->sendMessage($message);
+            if ($success) {
+                NewUserNotificationLogger::debug('telegram_send_succeeded', [
+                    'source' => self::class,
+                    'new_user_id' => $newUserId,
+                    'channel' => 'telegram',
+                ]);
+            } else {
+                NewUserNotificationLogger::error('telegram_send_failed', [
+                    'source' => self::class,
+                    'new_user_id' => $newUserId,
+                    'channel' => 'telegram',
+                    'reason' => 'send_message_returned_false',
+                ]);
+            }
+
+            return $success;
+        });
     }
 
     /**

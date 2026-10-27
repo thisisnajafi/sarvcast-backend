@@ -9,6 +9,8 @@ use App\Services\ActivityLogService;
 use App\Services\AdminLoginCaptchaService;
 use App\Services\ContributorStoryAccessService;
 use App\Services\SchoolManagerService;
+use App\Events\NewUserRegistrationEvent;
+use App\Support\NewUserNotificationLogger;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -99,6 +101,10 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
+            NewUserNotificationLogger::warning('registration_early_return', [
+                'source' => 'api.auth.register',
+                'reason' => 'validation_failed',
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'اطلاعات وارد شده نامعتبر است',
@@ -113,6 +119,10 @@ class AuthController extends Controller
         $verification = $this->smsService->verifyOtp($phoneNumber, $verificationCode, 'login');
 
         if (!$verification) {
+            NewUserNotificationLogger::warning('registration_early_return', [
+                'source' => 'api.auth.register',
+                'reason' => 'verification_failed',
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'کد تایید نامعتبر یا منقضی شده است'
@@ -122,6 +132,11 @@ class AuthController extends Controller
         // Check if user already exists
         $existingUser = User::where('phone_number', $phoneNumber)->first();
         if ($existingUser) {
+            NewUserNotificationLogger::warning('registration_early_return', [
+                'source' => 'api.auth.register',
+                'reason' => 'user_already_exists',
+                'existing_user_id' => (int) $existingUser->id,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'کاربری با این شماره تلفن قبلاً ثبت شده است'
@@ -130,6 +145,12 @@ class AuthController extends Controller
 
         // Create user — must complete onboarding before full app access.
         // NewUserRegistrationEvent is fired once from User::created (do not dispatch again here).
+        NewUserNotificationLogger::debug('user_record_creating', [
+            'source' => 'api.auth.register',
+            'role' => $request->role ?? 'basic',
+            'event' => NewUserRegistrationEvent::class,
+            'queue_connection' => (string) config('queue.default'),
+        ]);
         $user = User::create([
             'phone_number' => $phoneNumber,
             'first_name' => $request->first_name,
@@ -139,6 +160,12 @@ class AuthController extends Controller
             'status' => User::STATUS_PROFILE_COMPLETION_NEEDED,
             'onboarding_completed' => false,
             'phone_verified_at' => now(),
+        ]);
+        NewUserNotificationLogger::debug('user_record_created', [
+            'source' => 'api.auth.register',
+            'new_user_id' => (int) $user->id,
+            'role' => $user->role,
+            'event' => NewUserRegistrationEvent::class,
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;

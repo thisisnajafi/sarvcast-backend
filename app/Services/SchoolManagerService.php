@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\NewUserRegistrationEvent;
 use App\Exceptions\SchoolPanelException;
+use App\Support\NewUserNotificationLogger;
 use App\Models\Payment;
 use App\Models\PlayHistory;
 use App\Models\SchoolManagerProfile;
@@ -34,6 +36,10 @@ class SchoolManagerService
                 $first = trim((string) ($input['first_name'] ?? ''));
                 $last = trim((string) ($input['last_name'] ?? ''));
                 if ($first === '' || $last === '') {
+                    NewUserNotificationLogger::warning('registration_early_return', [
+                        'source' => 'school_manager.create_or_promote',
+                        'reason' => 'name_required',
+                    ]);
                     throw new SchoolPanelException(
                         'name_required',
                         'برای شمارهٔ جدید، نام و نام خانوادگی لازم است.',
@@ -41,6 +47,12 @@ class SchoolManagerService
                     );
                 }
 
+                NewUserNotificationLogger::debug('user_record_creating', [
+                    'source' => 'school_manager.create_or_promote',
+                    'role' => User::ROLE_SCHOOL_MANAGER,
+                    'event' => NewUserRegistrationEvent::class,
+                    'queue_connection' => (string) config('queue.default'),
+                ]);
                 $user = User::query()->create([
                     'phone_number' => $phone,
                     'first_name' => $first,
@@ -51,7 +63,18 @@ class SchoolManagerService
                     'onboarding_completed' => true,
                     'requires_2fa' => true,
                 ]);
+                NewUserNotificationLogger::debug('user_record_created', [
+                    'source' => 'school_manager.create_or_promote',
+                    'new_user_id' => (int) $user->id,
+                    'role' => $user->role,
+                    'event' => NewUserRegistrationEvent::class,
+                ]);
             } else {
+                NewUserNotificationLogger::warning('registration_early_return', [
+                    'source' => 'school_manager.create_or_promote',
+                    'reason' => 'existing_user_promoted',
+                    'existing_user_id' => (int) $user->id,
+                ]);
                 $this->assertPromotable($user);
                 $this->fillNamesIfPresent($user, $input);
             }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\NewUserNotificationLogger;
 use App\Support\TestingHttpGuard;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -35,12 +36,27 @@ class NotificationService
     public function sendPushNotification(User $user, string $title, string $body, array $data = []): bool
     {
         self::$lastPushFailureCode = null;
+        $trace = $this->shouldTraceNewUserPush($data);
+        $traceContext = $this->newUserPushContext($user, $data);
+        if ($trace) {
+            NewUserNotificationLogger::debug('push_sender_started', $traceContext);
+        }
         if (! config('notification.push.enabled', true)) {
+            if ($trace) {
+                NewUserNotificationLogger::warning('push_sender_early_return', $traceContext + [
+                    'reason' => 'push_disabled',
+                ]);
+            }
             Log::info('Push notifications disabled via config', ['user_id' => $user->id]);
             return false;
         }
 
         if (! $this->userAllowsPushNotifications($user)) {
+            if ($trace) {
+                NewUserNotificationLogger::warning('push_sender_early_return', $traceContext + [
+                    'reason' => 'user_push_preference_disabled',
+                ]);
+            }
             Log::info('Push notifications disabled by user preference', ['user_id' => $user->id]);
             return false;
         }
@@ -50,16 +66,40 @@ class NotificationService
             $fcmTokens = $this->getUserFcmTokens($user);
 
             if (empty($fcmTokens)) {
+                if ($trace) {
+                    NewUserNotificationLogger::warning('push_sender_early_return', $traceContext + [
+                        'reason' => 'no_fcm_tokens',
+                        'token_count' => 0,
+                    ]);
+                }
                 return false;
             }
 
-            // Use FCM v1 API if enabled, otherwise fallback to legacy
-            if ($this->useV1Api) {
-                return $this->sendPushNotificationV1($fcmTokens, $title, $body, $data, $user);
-            } else {
-                return $this->sendPushNotificationLegacy($fcmTokens, $title, $body, $data, $user);
+            if ($trace) {
+                NewUserNotificationLogger::debug('push_sender_attempt', $traceContext + [
+                    'token_count' => count($fcmTokens),
+                    'fcm_api' => $this->useV1Api ? 'v1' : 'legacy',
+                    'queued' => false,
+                    'queue_connection' => null,
+                ]);
             }
+
+            // Use FCM v1 API if enabled, otherwise fallback to legacy
+            $sent = $this->useV1Api
+                ? $this->sendPushNotificationV1($fcmTokens, $title, $body, $data, $user)
+                : $this->sendPushNotificationLegacy($fcmTokens, $title, $body, $data, $user);
+            if ($trace) {
+                NewUserNotificationLogger::write($sent ? 'debug' : 'warning', $sent ? 'push_sender_succeeded' : 'push_sender_failed', $traceContext + [
+                    'accepted' => $sent,
+                    'failure_code' => self::$lastPushFailureCode,
+                ]);
+            }
+
+            return $sent;
         } catch (\Exception $e) {
+            if ($trace) {
+                NewUserNotificationLogger::error('push_sender_failed', $traceContext + NewUserNotificationLogger::exceptionContext($e));
+            }
             Log::error('Push notification failed: ' . $e->getMessage());
             return false;
         }
@@ -76,6 +116,11 @@ class NotificationService
 
             if (!$accessToken) {
                 Log::error('Failed to get Firebase access token');
+                if ($this->shouldTraceNewUserPush($data)) {
+                    NewUserNotificationLogger::error('fcm_v1_send_failed', $this->newUserPushContext($user, $data) + [
+                        'reason' => 'firebase_access_token_unavailable',
+                    ]);
+                }
                 return false;
             }
 
@@ -150,9 +195,22 @@ class NotificationService
                 'total_tokens' => count($fcmTokens),
             ]);
 
+            if ($this->shouldTraceNewUserPush($data)) {
+                NewUserNotificationLogger::debug('fcm_v1_send_finished', $this->newUserPushContext($user, $data) + [
+                    'token_count' => count($fcmTokens),
+                    'success_count' => $successCount,
+                    'accepted' => $successCount > 0,
+                ]);
+            }
+
             return $successCount > 0;
         } catch (\Exception $e) {
             Log::error('FCM v1 push notification failed: ' . $e->getMessage());
+            if ($this->shouldTraceNewUserPush($data)) {
+                NewUserNotificationLogger::error('fcm_v1_send_failed', $this->newUserPushContext($user, $data) + NewUserNotificationLogger::exceptionContext($e) + [
+                    'token_count' => count($fcmTokens),
+                ]);
+            }
             return false;
         }
     }
@@ -166,6 +224,12 @@ class NotificationService
 
         if (!$serverKey) {
             Log::error('Firebase server key not configured for legacy API');
+            if ($this->shouldTraceNewUserPush($data)) {
+                NewUserNotificationLogger::error('fcm_legacy_send_failed', $this->newUserPushContext($user, $data) + [
+                    'reason' => 'firebase_server_key_missing',
+                    'token_count' => count($fcmTokens),
+                ]);
+            }
             return false;
         }
 
@@ -191,10 +255,49 @@ class NotificationService
         if ($response->successful()) {
             $result = $response->json();
             $this->logNotification($user, 'push', $title, $body, $data, $result);
-            return $result['success'] > 0;
+            $accepted = ($result['success'] ?? 0) > 0;
+            if ($this->shouldTraceNewUserPush($data)) {
+                NewUserNotificationLogger::write($accepted ? 'debug' : 'warning', $accepted ? 'fcm_legacy_send_succeeded' : 'fcm_legacy_send_failed', $this->newUserPushContext($user, $data) + [
+                    'token_count' => count($fcmTokens),
+                    'accepted' => $accepted,
+                    'status' => $response->status(),
+                ]);
+            }
+            return $accepted;
+        }
+
+        if ($this->shouldTraceNewUserPush($data)) {
+            NewUserNotificationLogger::error('fcm_legacy_send_failed', $this->newUserPushContext($user, $data) + [
+                'token_count' => count($fcmTokens),
+                'status' => $response->status(),
+                'reason' => 'http_error',
+            ]);
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function shouldTraceNewUserPush(array $data): bool
+    {
+        return NewUserNotificationLogger::isTracing()
+            || (($data['alert_kind'] ?? null) === 'registration');
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function newUserPushContext(User $user, array $data): array
+    {
+        return [
+            'recipient_user_id' => (int) $user->id,
+            'new_user_id' => isset($data['user_id']) ? (int) $data['user_id'] : (int) $user->id,
+            'alert_kind' => $data['alert_kind'] ?? null,
+            'channel' => 'fcm',
+        ];
     }
 
     /**
@@ -568,6 +671,15 @@ class NotificationService
         ) {
             $this->removeInvalidFcmToken($user->id, $token);
         }
+
+        if (NewUserNotificationLogger::isTracing()) {
+            NewUserNotificationLogger::warning('fcm_token_send_failed', [
+                'recipient_user_id' => (int) $user->id,
+                'status' => $response->status(),
+                'failure_code' => self::$lastPushFailureCode,
+                'channel' => 'fcm',
+            ]);
+        }
     }
 
     /**
@@ -615,6 +727,12 @@ class NotificationService
             return array_values(array_filter($tokens)); // Remove any empty values
         } catch (\Exception $e) {
             Log::error('Failed to get user FCM tokens: ' . $e->getMessage());
+            if (NewUserNotificationLogger::isTracing()) {
+                NewUserNotificationLogger::error('fcm_tokens_lookup_failed', array_merge([
+                    'recipient_user_id' => (int) $user->id,
+                    'channel' => 'fcm',
+                ], NewUserNotificationLogger::exceptionContext($e)));
+            }
             return [];
         }
     }

@@ -9,10 +9,13 @@ use App\Models\Person;
 use App\Models\Character;
 use App\Models\Episode;
 use App\Models\EpisodeVoiceActor;
+use App\Events\NewUserRegistrationEvent;
+use App\Support\NewUserNotificationLogger;
 use App\Services\UserResumeService;
 use App\Services\UserStoryContributionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -500,14 +503,28 @@ class VoiceActorController extends Controller
 
     public function apiStore(Request $request)
     {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:100',
-            'last_name' => 'required|string|max:100',
-            'phone_number' => 'required|string|regex:/^09[0-9]{9}$/|unique:users,phone_number',
-            'password' => 'nullable|string|min:8',
-            'status' => 'nullable|in:active,inactive,suspended,pending',
-        ]);
+        try {
+            $validated = $request->validate([
+                'first_name' => 'required|string|max:100',
+                'last_name' => 'required|string|max:100',
+                'phone_number' => 'required|string|regex:/^09[0-9]{9}$/|unique:users,phone_number',
+                'password' => 'nullable|string|min:8',
+                'status' => 'nullable|in:active,inactive,suspended,pending',
+            ]);
+        } catch (ValidationException $exception) {
+            NewUserNotificationLogger::warning('registration_early_return', [
+                'source' => 'admin.voice_actors.api_store',
+                'reason' => 'validation_failed',
+            ]);
+            throw $exception;
+        }
 
+        NewUserNotificationLogger::debug('user_record_creating', [
+            'source' => 'admin.voice_actors.api_store',
+            'role' => User::ROLE_VOICE_ACTOR,
+            'event' => NewUserRegistrationEvent::class,
+            'queue_connection' => (string) config('queue.default'),
+        ]);
         $user = User::create([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
@@ -515,6 +532,12 @@ class VoiceActorController extends Controller
             'password' => Hash::make($validated['password'] ?? bin2hex(random_bytes(8))),
             'role' => User::ROLE_VOICE_ACTOR,
             'status' => $validated['status'] ?? 'active',
+        ]);
+        NewUserNotificationLogger::debug('user_record_created', [
+            'source' => 'admin.voice_actors.api_store',
+            'new_user_id' => (int) $user->id,
+            'role' => $user->role,
+            'event' => NewUserRegistrationEvent::class,
         ]);
 
         app(UserResumeService::class)->firstOrCreateDraft($user, $request->user()?->id);

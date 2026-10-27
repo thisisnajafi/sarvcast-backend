@@ -6,6 +6,7 @@ use App\Events\NewUserRegistrationEvent;
 use App\Listeners\SendAdminPushNewUserNotification;
 use App\Models\User;
 use App\Services\AdminPushNotificationService;
+use App\Models\Notification;
 use App\Services\InAppNotificationService;
 use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +36,7 @@ class NewUserRegistrationNotificationLoggingTest extends TestCase
                     && ($options['data']['user_id'] ?? null) === $newUser->id
                     && ($options['data']['alert_kind'] ?? null) === 'registration';
             })
-            ->andReturnNull();
+            ->andReturn(new Notification());
         $notificationService = Mockery::mock(NotificationService::class);
         $notificationService->shouldReceive('sendPushNotification')
             ->once()
@@ -46,7 +47,7 @@ class NewUserRegistrationNotificationLoggingTest extends TestCase
                     && ($data['user_id'] ?? null) === $newUser->id
                     && ($data['alert_kind'] ?? null) === 'registration';
             })
-            ->andReturnNull();
+            ->andReturn(true);
         $notificationService->shouldReceive('sendPushNotification')
             ->once()
             ->withArgs(function (User $admin, string $title, string $message, array $data) use ($newUser, $secondAdmin): bool {
@@ -56,23 +57,17 @@ class NewUserRegistrationNotificationLoggingTest extends TestCase
                     && ($data['user_id'] ?? null) === $newUser->id
                     && ($data['alert_kind'] ?? null) === 'registration';
             })
-            ->andReturnNull();
+            ->andReturn(true);
         $this->app->instance(NotificationService::class, $notificationService);
         $loggedContexts = [];
-        Log::shouldReceive('channel')->with('notifications')->twice()->andReturnSelf();
-        Log::shouldReceive('info')->twice()->withArgs(function (string $message, array $context) use (&$loggedContexts, $newUser): bool {
-            $loggedContexts[] = $context;
-            return $message === 'new_user_registration_notification'
-                && ($context['event_marker'] ?? null) === 'new_user_registration_notification'
-                && ($context['new_user_id'] ?? null) === (int) $newUser->id
-                && in_array(($context['channel'] ?? ''), ['db', 'push'], true)
-                && ($context['result'] ?? null) === 'success';
-        });
+        $this->captureNewUserRegistrationLogs($loggedContexts);
         $service = new AdminPushNotificationService($inAppNotificationService);
         $actualSentCount = $service->sendNewUserNotification($newUser);
         $this->assertSame(2, $actualSentCount);
-        $this->assertCount(2, $loggedContexts);
-        foreach ($loggedContexts as $context) {
+        $successContexts = $this->contextsForResult($loggedContexts, 'success');
+        $this->assertCount(2, $successContexts);
+        foreach ($successContexts as $context) {
+            $this->assertSame((int) $newUser->id, $context['new_user_id'] ?? null);
             $this->assertContextHasNoSensitiveData($context, (string) $newUser->phone_number);
         }
     }
@@ -86,21 +81,51 @@ class NewUserRegistrationNotificationLoggingTest extends TestCase
         $service = Mockery::mock(AdminPushNotificationService::class);
         $listener = new SendAdminPushNewUserNotification($service);
         $loggedContexts = [];
-        Log::shouldReceive('channel')->with('notifications')->twice()->andReturnSelf();
-        Log::shouldReceive('info')->twice()->withArgs(function (string $message, array $context) use (&$loggedContexts, $newUser): bool {
-            $loggedContexts[] = $context;
-            return $message === 'new_user_registration_notification'
-                && ($context['event_marker'] ?? null) === 'new_user_registration_notification'
-                && ($context['new_user_id'] ?? null) === (int) $newUser->id
-                && in_array(($context['channel'] ?? ''), ['db', 'push'], true)
-                && ($context['result'] ?? null) === 'skip'
-                && ($context['reason'] ?? null) === 'duplicate_event_deduped';
-        });
+        $this->captureNewUserRegistrationLogs($loggedContexts);
         $listener->handle(new NewUserRegistrationEvent($newUser));
-        $this->assertCount(2, $loggedContexts);
-        foreach ($loggedContexts as $context) {
+        $skipContexts = $this->contextsForResult($loggedContexts, 'skip', 'duplicate_event_deduped');
+        $this->assertCount(2, $skipContexts);
+        foreach ($skipContexts as $context) {
+            $this->assertSame((int) $newUser->id, $context['new_user_id'] ?? null);
             $this->assertContextHasNoSensitiveData($context, (string) $newUser->phone_number);
         }
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $loggedContexts
+     */
+    private function captureNewUserRegistrationLogs(array &$loggedContexts): void
+    {
+        Log::shouldReceive('channel')->zeroOrMoreTimes()->andReturnSelf();
+        Log::shouldReceive('debug')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+        Log::shouldReceive('error')->zeroOrMoreTimes();
+        Log::shouldReceive('info')->zeroOrMoreTimes()->andReturnUsing(
+            function (string $message, array $context = []) use (&$loggedContexts): void {
+                if ($message !== 'new_user_registration_notification') {
+                    return;
+                }
+                $loggedContexts[] = $context;
+            }
+        );
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $loggedContexts
+     * @return array<int, array<string, mixed>>
+     */
+    private function contextsForResult(array $loggedContexts, string $result, ?string $reason = null): array
+    {
+        return array_values(array_filter($loggedContexts, function (array $context) use ($result, $reason): bool {
+            $matches = ($context['event_marker'] ?? null) === 'new_user_registration_notification'
+                && in_array(($context['channel'] ?? ''), ['db', 'push'], true)
+                && ($context['result'] ?? null) === $result;
+            if ($reason !== null) {
+                $matches = $matches && ($context['reason'] ?? null) === $reason;
+            }
+
+            return $matches;
+        }));
     }
 
     private function assertContextHasNoSensitiveData(array $context, string $phoneNumber): void

@@ -13,6 +13,8 @@ use App\Models\Favorite;
 use App\Models\Rating;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Events\NewUserRegistrationEvent;
+use App\Support\NewUserNotificationLogger;
 use App\Services\InAppNotificationService;
 use App\Services\SchoolManagerService;
 use App\Services\UserDeletionService;
@@ -21,6 +23,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -240,22 +243,42 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'phone_number' => 'required|string|unique:users',
-            'first_name' => 'required|string|max:100',
-            'last_name' => 'required|string|max:100',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:'.implode(',', User::appRoleValues()),
-            'parent_id' => 'nullable|exists:users,id',
-            'status' => 'required|in:active,inactive,suspended,pending,profile_completion_needed',
-            'language' => 'nullable|string|max:10',
-            'timezone' => 'nullable|string|max:50',
-        ]);
+        try {
+            $request->validate([
+                'phone_number' => 'required|string|unique:users',
+                'first_name' => 'required|string|max:100',
+                'last_name' => 'required|string|max:100',
+                'password' => 'required|string|min:8|confirmed',
+                'role' => 'required|in:'.implode(',', User::appRoleValues()),
+                'parent_id' => 'nullable|exists:users,id',
+                'status' => 'required|in:active,inactive,suspended,pending,profile_completion_needed',
+                'language' => 'nullable|string|max:10',
+                'timezone' => 'nullable|string|max:50',
+            ]);
+        } catch (ValidationException $exception) {
+            NewUserNotificationLogger::warning('registration_early_return', [
+                'source' => 'admin.users.store',
+                'reason' => 'validation_failed',
+            ]);
+            throw $exception;
+        }
 
         $data = $request->except(['password_confirmation']);
         $data['password'] = Hash::make($request->password);
 
-        User::create($data);
+        NewUserNotificationLogger::debug('user_record_creating', [
+            'source' => 'admin.users.store',
+            'role' => $data['role'] ?? null,
+            'event' => NewUserRegistrationEvent::class,
+            'queue_connection' => (string) config('queue.default'),
+        ]);
+        $user = User::create($data);
+        NewUserNotificationLogger::debug('user_record_created', [
+            'source' => 'admin.users.store',
+            'new_user_id' => (int) $user->id,
+            'role' => $user->role,
+            'event' => NewUserRegistrationEvent::class,
+        ]);
 
         return redirect()->route('admin.users.index')
             ->with('success', 'کاربر با موفقیت ایجاد شد.');
@@ -883,6 +906,10 @@ class UserController extends Controller
         $actor = $request->user() ?? auth('sanctum')->user();
         $block = $this->resolveAppRoleAssignmentBlock($actor instanceof User ? $actor : null, null, $data['role'] ?? User::ROLE_BASIC);
         if ($block !== null) {
+            NewUserNotificationLogger::warning('registration_early_return', [
+                'source' => 'admin.users.api_store',
+                'reason' => 'role_assignment_forbidden',
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => $block,
@@ -893,6 +920,10 @@ class UserController extends Controller
         $isSchoolManager = ($data['role'] ?? null) === User::ROLE_SCHOOL_MANAGER;
         if ($isSchoolManager) {
             if (! $actor instanceof User || ! $actor->isSuperAdmin()) {
+                NewUserNotificationLogger::warning('registration_early_return', [
+                    'source' => 'admin.users.api_store',
+                    'reason' => 'school_manager_requires_super_admin',
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'فقط مدیر کل می‌تواند نقش مدیر مدرسه را اختصاص دهد.',
@@ -900,6 +931,10 @@ class UserController extends Controller
                 ], 403);
             }
             if (! $request->filled('member_limit') && $request->input('member_limit') !== 0 && $request->input('member_limit') !== '0') {
+                NewUserNotificationLogger::warning('registration_early_return', [
+                    'source' => 'admin.users.api_store',
+                    'reason' => 'member_limit_required',
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'سقف اعضا را وارد کنید.',
@@ -909,7 +944,19 @@ class UserController extends Controller
             }
         }
 
+        NewUserNotificationLogger::debug('user_record_creating', [
+            'source' => 'admin.users.api_store',
+            'role' => $data['role'] ?? null,
+            'event' => NewUserRegistrationEvent::class,
+            'queue_connection' => (string) config('queue.default'),
+        ]);
         $user = User::create($data);
+        NewUserNotificationLogger::debug('user_record_created', [
+            'source' => 'admin.users.api_store',
+            'new_user_id' => (int) $user->id,
+            'role' => $user->role,
+            'event' => NewUserRegistrationEvent::class,
+        ]);
         $user->applyLegacyRoleChange($user->role);
 
         if ($user->role === User::ROLE_SCHOOL_MANAGER) {

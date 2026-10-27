@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Events\NewUserRegistrationEvent;
+use App\Support\NewUserNotificationLogger;
 use App\UserAnalytics;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Models\TeacherAccount;
@@ -1020,6 +1021,14 @@ class User extends Authenticatable
 
         static::created(function ($user) {
             // Fire new user registration event
+            $queueConnection = (string) config('queue.default');
+            NewUserNotificationLogger::debug('user_created_dispatching_event', [
+                'source' => 'user.created',
+                'new_user_id' => (int) $user->id,
+                'role' => $user->role,
+                'event' => NewUserRegistrationEvent::class,
+                'queue_connection' => $queueConnection,
+            ]);
             event(new NewUserRegistrationEvent($user));
         });
 
