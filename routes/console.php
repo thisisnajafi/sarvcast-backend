@@ -60,3 +60,18 @@ Schedule::command('sms:poll-deliveries')
     ->name('poll-sms-deliveries')
     ->description('Update SMS log delivery status from Melipayamak')
     ->appendOutputTo(storage_path('logs/scheduler.log'));
+
+// Drain the database queue from the cPanel cron, including the queued
+// new-user listeners. This stays in the foreground on purpose.
+// runInBackground() launches `(command) > /dev/null 2>&1 &` with no nohup.
+// cPanel ends that process group when schedule:run exits, so the worker
+// dies before schedule:finish and the withoutOverlapping mutex sticks
+// until it expires (24 hours by default). --max-time=50 keeps a normal
+// tick inside the one-minute cron. The 10-minute mutex expiry only
+// applies if cron kills the worker; a healthy run releases the lock
+// as soon as queue:work exits.
+Schedule::command('queue:work database --stop-when-empty --tries=3 --max-time=50')
+    ->everyMinute()
+    ->name('database-queue-worker')
+    ->withoutOverlapping(10)
+    ->description('Process queued database jobs until the queue is empty');
